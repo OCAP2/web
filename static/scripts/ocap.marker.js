@@ -1,6 +1,7 @@
 class Marker {
 	constructor(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush) {
 		this._type = type;
+		this._typeLower = type.toLowerCase();
 		this._text = text;
 		this._player = player; // Entity obj
 		this._color = `#${color}`; // 00FF00 (hex color)
@@ -36,7 +37,10 @@ class Marker {
 		// "RECTANGLE"
 		// "ELLIPSE"
 		// "POLYLINE"
-		if (!this._shape || !this._size) {
+
+		if (this._type.search("magIcons") > -1) {
+			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}/${color}.png` });
+		} else if (!this._shape || !this._size) {
 			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${color}.png` });
 		} else if (this._shape == "ICON") {
 			this._size = this._size.map(value => {
@@ -46,8 +50,6 @@ class Marker {
 		} else {
 			this._icon = null;
 		}
-
-
 
 		// "Solid" (default)
 		// "SolidFull" (A3 only)
