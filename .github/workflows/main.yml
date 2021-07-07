@@ -12,32 +12,29 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  
+
 env:
   REGISTRY: ghcr.io
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
 
   docker-build-and-push-image:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: write
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      
+
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
@@ -47,27 +44,25 @@ jobs:
 
   windows-build:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      
+
       - name: Install cross compile dependencies
         run: sudo apt-get install -y gcc-mingw-w64 gcc-multilib
-        
+
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.16'
-      
-      - name: build windows binary
+
+      - name: Build windows binary
         run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -o ocap-webserver.exe ./src/web/
-      
-      - name: Upload math result for job 2
+
+      - name: Upload windows binary
         uses: actions/upload-artifact@v2
         with:
-          name: ocap-webserver.exe
+          name: webserver
           path: ocap-webserver.exe
