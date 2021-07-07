@@ -18,9 +18,8 @@ env:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build-and-push-image:
-    # The type of runner that the job will run on
+
+  docker-build-and-push-image:
     runs-on: ubuntu-latest
     
     permissions:
@@ -45,3 +44,30 @@ jobs:
           context: .
           push: true
           tags: ${{ env.REGISTRY }}/ocapv2/web:latest
+
+  windows-build:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      
+      - name: Install cross compile dependencies
+        run: sudo apt-get install -y gcc-mingw-w64 gcc-multilib
+        
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16'
+      
+      - name: build windows binary
+        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -o ocap-webserver.exe ./src/web/
+      
+      - name: Upload math result for job 2
+        uses: actions/upload-artifact@v2
+        with:
+          name: ocap-webserver.exe
+          path: ocap-webserver.exe
