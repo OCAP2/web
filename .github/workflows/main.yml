@@ -16,7 +16,6 @@ on:
 env:
   REGISTRY: ghcr.io
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
 
   docker-build-and-push-image:
@@ -26,9 +25,7 @@ jobs:
       contents: read
       packages: write
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
       - name: Log in to the Container registry
@@ -51,9 +48,7 @@ jobs:
     permissions:
       contents: read
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
       - name: Install cross compile dependencies
@@ -63,10 +58,10 @@ jobs:
         with:
           go-version: '^1.16'
       
-      - name: build windows binary
+      - name: Build windows binary
         run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -o ocap-webserver.exe ./src/web/
       
-      - name: Upload math result for job 2
+      - name: Upload windows binary
         uses: actions/upload-artifact@v2
         with:
           name: ocap-webserver.exe
