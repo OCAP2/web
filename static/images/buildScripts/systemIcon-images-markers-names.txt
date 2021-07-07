@@ -1,0 +1,15 @@
+apc
+car
+ellipse
+heli
+magIcons
+help
+moduleCoverMap
+ObjectMarker
+parachute
+plane
+safeStart
+ship
+tank
+truck
+unknown
