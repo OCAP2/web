@@ -1,3 +1,7 @@
+# IDE
+.idea
+
+# Data
 data.db
 static/data
 static/images/maps
