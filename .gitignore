@@ -1,7 +1,10 @@
 # IDE
 .idea
 
-# Data
+# builds
+ocap-webserver.exe
+
+# data
 data.db
 static/data
 static/images/maps
