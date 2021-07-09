@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/OCAPv2/ocap-web/server"
+	"github.com/OCAP2/web/server"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

@@ -1,4 +1,4 @@
-module github.com/OCAPv2/ocap-web
+module github.com/OCAP2/web
 
 go 1.16
 

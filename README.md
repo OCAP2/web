@@ -10,20 +10,36 @@ The configuration file is called `option.json`
 
 ## Docker
 
+### Environment Variables
+
+**OCAP_SECRET**
+
+This specifies the secret that will be used to authorize record to be uploaded.
+
+### Volumes
+
+**/var/lib/ocap/data**
+
+This is the folder where all the records is being stored in a gzipped json format `json.gz`.
+
+**/var/lib/ocap/maps**
+
+All maps are stored here. Maps can be downloaded from [here](https://drive.google.com/drive/folders/1qtT0Fr4Dfwd48ihZNc8YN-xgxHchKoiu).
+
+**/var/lib/ocap/db**
+
+Database location stored in SQLite3 format.
+
+### Start an OCAP webserver instance
+
 ```
 docker run --name ocap-web -d \
-  -v ocap-config:/etc/ocap \
-  -v ocap-records:/usr/local/ocap-web/static/data \
-  -v ocap-maps:/usr/local/ocap-web/static/images/maps \
-  -v ocap-database:/var/lib/ocap \
+  -e OCAP_SECRET="same-secret"
+  -v ocap-records:/var/lib/ocap/data \
+  -v ocap-maps:/var/lib/ocap/maps \
+  -v ocap-database:/var/lib/ocap/db \
   docker pull ghcr.io/ocapv2/web:latest
 ```
-
-volumes are available:
-- `/etc/ocap` place here your `option.json`
-- `/usr/local/ocap-web/static/data` store for all uploaded json records
-- `/usr/local/ocap-web/static/images/maps` map images from ...
-- `/var/lib/ocap` can be changed in the `option.json` with the `db` key
 
 ## Build from source
 

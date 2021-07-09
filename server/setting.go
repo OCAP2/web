@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -20,6 +21,8 @@ type Setting struct {
 
 func NewSetting() (setting Setting, err error) {
 	viper.AutomaticEnv()
+	viper.SetEnvPrefix("ocap")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetConfigName("option")
 	viper.SetConfigName("setting")
 
@@ -37,6 +40,15 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
 	viper.SetDefault("logger", true)
+
+	// workaround for https://github.com/spf13/viper/issues/761
+	envKeys := []string{"listen", "secret", "db", "marker", "map", "data", "static"}
+	for _, key := range envKeys {
+		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+		if err = viper.BindEnv(key, env); err != nil {
+			return
+		}
+	}
 
 	if err = viper.ReadInConfig(); err != nil {
 		return
