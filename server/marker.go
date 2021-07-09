@@ -140,17 +140,22 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 		err error
 	)
 
-	_, err = fmt.Sscanf(scolor, "%02x%02x%02x", &c.R, &c.G, &c.B)
-	if err == nil {
-		return c, nil
+	if len(scolor) == 6 {
+		_, err = fmt.Sscanf(scolor, "%02x%02x%02x", &c.R, &c.G, &c.B)
+		if err == nil {
+			return c, nil
+		}
 	}
 
-	_, err = fmt.Sscanf(scolor, "%01x%01x%01x", &c.R, &c.G, &c.B)
-	if err == nil {
-		c.R *= 17
-		c.G *= 17
-		c.B *= 17
-		return c, nil
+	// fix "dead" it is invalid hex
+	if len(scolor) == 3 {
+		_, err = fmt.Sscanf(scolor, "%01x%01x%01x", &c.R, &c.G, &c.B)
+		if err == nil {
+			c.R *= 17
+			c.G *= 17
+			c.B *= 17
+			return c, nil
+		}
 	}
 
 	switch scolor {
