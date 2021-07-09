@@ -26,7 +26,7 @@ func main() {
 	operation, err := server.NewRepoOperation(setting.DB)
 	check(err)
 
-	marker, err := server.NewRepoMarker(setting.Marker)
+	marker, err := server.NewRepoMarker(setting.Markers)
 	check(err)
 
 	e := echo.New()

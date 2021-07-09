@@ -9,14 +9,14 @@ import (
 
 // Setting server
 type Setting struct {
-	Listen string `json:"listen" yaml:"listen"`
-	Secret string `json:"secret" yaml:"secret"`
-	DB     string `json:"db" yaml:"db"`
-	Marker string `json:"marker" yaml:"marker"`
-	Map    string `json:"map" yaml:"map"`
-	Data   string `json:"data" yaml:"data"`
-	Static string `json:"static" yaml:"static"`
-	Logger bool   `json:"logger" yaml:"logger"`
+	Listen  string `json:"listen" yaml:"listen"`
+	Secret  string `json:"secret" yaml:"secret"`
+	DB      string `json:"db" yaml:"db"`
+	Markers string `json:"markers" yaml:"markers"`
+	Maps    string `json:"maps" yaml:"maps"`
+	Data    string `json:"data" yaml:"data"`
+	Static  string `json:"static" yaml:"static"`
+	Logger  bool   `json:"logger" yaml:"logger"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -35,14 +35,14 @@ func NewSetting() (setting Setting, err error) {
 
 	viper.SetDefault("listen", "127.0.0.1:5000")
 	viper.SetDefault("db", "data.db")
-	viper.SetDefault("marker", "marker")
-	viper.SetDefault("map", "map")
+	viper.SetDefault("markers", "markers")
+	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
 	viper.SetDefault("logger", true)
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "secret", "db", "marker", "map", "data", "static"}
+	envKeys := []string{"listen", "secret", "db", "markers", "maps", "data", "static"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
