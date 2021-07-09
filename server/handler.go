@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"io"
 	"mime"
 	"net/http"
@@ -134,6 +135,9 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	img, err := h.repoMarker.Get(ctx, name, color)
+	if errors.Is(err, ErrNotFound) {
+		return c.NoContent(http.StatusNotFound)
+	}
 	if err != nil {
 		return err
 	}

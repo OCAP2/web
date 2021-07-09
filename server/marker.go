@@ -40,7 +40,7 @@ func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, e
 	upath, ok := r.markers[name]
 	r.mu.RUnlock()
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, ErrNotFound
 	}
 
 	color, err := r.scanColor(scolor)
@@ -54,7 +54,7 @@ func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, e
 	case ".svg":
 		return paintSVG(upath, color)
 	default:
-		return nil, errors.New("not found")
+		return nil, ErrNotFound
 	}
 }
 

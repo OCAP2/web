@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -35,7 +36,24 @@ func NewRepoOperation(pathDB string) (*RepoOperation, error) {
 		return nil, err
 	}
 
-	_, err = db.Exec(`
+	r := &RepoOperation{
+		db: db,
+	}
+
+	if err := r.magration(); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *RepoOperation) magration() (err error) {
+	_, err = r.db.Exec(`
+		CREATE TABLE IF NOT EXISTS version (
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			db INTEGER
+		);
+
 		CREATE TABLE IF NOT EXISTS operations (
 			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			world_name TEXT NOT NULL,
@@ -47,12 +65,33 @@ func NewRepoOperation(pathDB string) (*RepoOperation, error) {
 		)
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("could be create table operation: %w", err)
+		return fmt.Errorf("could be create table operation: %w", err)
 	}
 
-	return &RepoOperation{
-		db: db,
-	}, nil
+	var version int
+	err = r.db.QueryRow(`SELECT db FROM version ORDER BY db ASC LIMIT 1`).Scan(&version)
+	if errors.Is(err, sql.ErrNoRows) {
+		version = 0
+	} else if err != nil {
+		return err
+	}
+
+	if version < 1 {
+		_, err = r.db.Exec(`
+			UPDATE operations SET type = 'PvE' WHERE type = 'pve';
+			UPDATE operations SET type = 'TvT' WHERE type = 'tvt';
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (1)`)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
