@@ -77,7 +77,8 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		MissionName: c.FormValue("missionName"),
 		Filename:    filename,
 		Date:        time.Now().Format("2006-01-02"),
-		Type:        c.FormValue("type"),
+		// Support old extension version tag or type
+		Tag: c.FormValue("tag") + c.FormValue("type"),
 	}
 	op.MissionDuration, err = strconv.ParseFloat(c.FormValue("missionDuration"), 64)
 	if err != nil {

@@ -45,7 +45,7 @@ class UI {
 		this.currentSide = "";
 		this.toggleNickname = null;
 		this.nicknameEnable = true;
-		this.filterTypeGameInput = null;
+		this.filterTagGameInput = null;
 		this.filterGameInput = null;
 		this.calendar1 = null;
 		this.calendar2 = null;
@@ -170,7 +170,7 @@ class UI {
 		this.filterEventsInput = document.getElementById("filterEventsInput");
 
 		// Setup filter panel
-		this.filterTypeGameInput = document.getElementById("filterTypeGameInput");
+		this.filterTagGameInput = document.getElementById("filterTagGameInput");
 		this.filterGameInput = document.getElementById("filterGameInput");
 		this.calendar1 = document.getElementById("calendar1");
 		this.calendar2 = document.getElementById("calendar2");
@@ -391,8 +391,8 @@ class UI {
 
 	setModalOpList() {
 		var OpList;
-		var n = filterTypeGameInput.options.selectedIndex;
-		var type = n != -1 ? filterTypeGameInput.options[n].value : "";
+		var n = filterTagGameInput.options.selectedIndex;
+		var tag = n != -1 ? filterTagGameInput.options[n].value : "";
 		var name = filterGameInput.value;
 		var DateNewer = calendar1.value;
 		var DateOlder = calendar2.value;
@@ -401,28 +401,28 @@ class UI {
 			type : "get",
 			async : false,
 			cache : false,
-			data: `type=${type}&name=${name}&newer=${DateNewer}&older=${DateOlder}`,
+			data: `tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`,
 			success: function(data){
 				OpList = data
 			}
 		});
 
 		// Set select
-		if (filterTypeGameInput.innerHTML == "") {
+		if (filterTagGameInput.innerHTML == "") {
 			var tags = [];
 			var option = document.createElement("option");
 			option.value = "";
 			option.text = "All";
-			filterTypeGameInput.appendChild(option);
+			filterTagGameInput.appendChild(option);
 	
 			OpList.forEach(op => {
-				if (!tags.includes(op.type)) {
-					tags.push(op.type);
+				if (!tags.includes(op.tag)) {
+					tags.push(op.tag);
 					var option = document.createElement("option");
-					option.value = op.type;
-					option.text = op.type;
+					option.value = op.tag;
+					option.text = op.tag;
 	
-					filterTypeGameInput.appendChild(option);
+					filterTagGameInput.appendChild(option);
 				}
 			})
 		}
@@ -449,7 +449,7 @@ class UI {
 				op.world_name,
 				dateToLittleEndianString(new Date(op.date)),
 				secondsToTimeString(op.mission_duration),
-				op.type
+				op.tag
 			];
 			vals.forEach(function(val) {
 				var cell = document.createElement("td");

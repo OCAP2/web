@@ -16,14 +16,14 @@ type Operation struct {
 	MissionDuration float64 `json:"mission_duration"`
 	Filename        string  `json:"filename"`
 	Date            string  `json:"date"`
-	Type            string  `json:"type"`
+	Tag             string  `json:"tag"`
 }
 
 type Filter struct {
 	Name  string `query:"name"`
 	Older string `query:"older"`
 	Newer string `query:"newer"`
-	Type  string `query:"type"`
+	Tag   string `query:"tag"`
 }
 
 type RepoOperation struct {
@@ -69,7 +69,7 @@ func (r *RepoOperation) magration() (err error) {
 	}
 
 	var version int
-	err = r.db.QueryRow(`SELECT db FROM version ORDER BY db ASC LIMIT 1`).Scan(&version)
+	err = r.db.QueryRow(`SELECT db FROM version ORDER BY db DESC LIMIT 1`).Scan(&version)
 	if errors.Is(err, sql.ErrNoRows) {
 		version = 0
 	} else if err != nil {
@@ -82,12 +82,26 @@ func (r *RepoOperation) magration() (err error) {
 			UPDATE operations SET type = 'TvT' WHERE type = 'tvt';
 		`)
 		if err != nil {
-			return err
+			return fmt.Errorf("merge db to v1 failed: %w", err)
 		}
 
 		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (1)`)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to increase version 1: %w", err)
+		}
+	}
+
+	if version < 2 {
+		_, err = r.db.Exec(`
+			ALTER TABLE operations RENAME COLUMN type TO tag;
+		`)
+		if err != nil {
+			return fmt.Errorf("merge db to v2 failed: %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (2)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 2: %w", err)
 		}
 	}
 
@@ -96,7 +110,7 @@ func (r *RepoOperation) magration() (err error) {
 
 func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT DISTINCT type FROM operations
+		SELECT DISTINCT tag FROM operations
 	`)
 	if err != nil {
 		return nil, err
@@ -104,24 +118,24 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 	defer rows.Close()
 
 	var (
-		t     string
-		types = []string{}
+		t    string
+		tags = []string{}
 	)
 	for rows.Next() {
 		rows.Scan(&t)
-		types = append(types, t)
+		tags = append(tags, t)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return types, nil
+	return tags, nil
 }
 
 func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO operations
-			(world_name, mission_name, mission_duration, filename, date, type)
+			(world_name, mission_name, mission_duration, filename, date, tag)
 		VALUES
 			($1, $2, $3, $4, $5, $6)
 	`)
@@ -141,7 +155,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 			mission_name LIKE "%" || $2 || "%"
 			AND date <= $3
 			AND date >= $4
-			AND type LIKE "%" || $1;
+			AND tag LIKE "%" || $1;
 	`
 	rows, err := r.db.QueryContext(
 		ctx,
@@ -149,7 +163,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 		filter.Name,
 		filter.Older,
 		filter.Newer,
-		filter.Type,
+		filter.Tag,
 	)
 	if err != nil {
 		return nil, err
@@ -172,7 +186,7 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 			&o.MissionDuration,
 			&o.Filename,
 			&o.Date,
-			&o.Type,
+			&o.Tag,
 		)
 		if err != nil {
 			return nil, err
