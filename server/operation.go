@@ -40,14 +40,14 @@ func NewRepoOperation(pathDB string) (*RepoOperation, error) {
 		db: db,
 	}
 
-	if err := r.magration(); err != nil {
+	if err := r.migration(); err != nil {
 		return nil, err
 	}
 
 	return r, nil
 }
 
-func (r *RepoOperation) magration() (err error) {
+func (r *RepoOperation) migration() (err error) {
 	_, err = r.db.Exec(`
 		CREATE TABLE IF NOT EXISTS version (
 			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +69,7 @@ func (r *RepoOperation) magration() (err error) {
 	}
 
 	var version int
-	err = r.db.QueryRow(`SELECT db FROM version ORDER BY db DESC LIMIT 1`).Scan(&version)
+	err = r.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version)
 	if errors.Is(err, sql.ErrNoRows) {
 		version = 0
 	} else if err != nil {
