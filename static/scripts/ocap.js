@@ -550,9 +550,12 @@ function processOp (filepath) {
 					groups.addGroup(group);
 				}
 
+
 				// Create unit and add to entities list
-				var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired);
+				var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired, entityJSON.role);
 				entities.add(unit);
+
+				
 
 				// Show title side
 				if (arrSideSelect.indexOf(entityJSON.side) == -1) {
