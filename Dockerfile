@@ -10,7 +10,7 @@ RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps 
 
 ENV OCAP_MARKERS /usr/local/ocap/markers
 ENV OCAP_MAGAZINES /usr/local/ocap/magazines
-ENV OCAP_STATIC /var/local/ocap/static
+ENV OCAP_STATIC /usr/local/ocap/static
 
 ENV OCAP_DB /var/lib/ocap/db/data.db
 ENV OCAP_MAPS /var/lib/ocap/maps
