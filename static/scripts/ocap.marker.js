@@ -276,6 +276,11 @@ class Marker {
 		let dir = frameData[2];
 		let alpha = frameData[3];
 
+		if (this._shape == "RECTANGLE" && Array.isArray(pos[0])) {
+			console.warn("wrong RECTANGLE positions, converting to POLYLINE");
+			this._shape = "POLYLINE";
+		}
+
 		let latLng;
 		let points;
 		if (this._marker == null) {
