@@ -12,7 +12,7 @@ class Unit extends Entity {
 				this._role = role
 			}
 		} else {
-			this._role = false;
+			this._role = null;
 		}
 		this.killCount = 0;
 		this.deathCount = 0;
@@ -124,7 +124,11 @@ class Unit extends Entity {
 	makeElement(liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
 		liUnit.className = "liUnit";
-		liUnit.textContent = `(${this._role}) ` + this._name + " (" + this.killCount.toString() + ")";
+		if (this._role) {
+			liUnit.textContent = `(${this._role}) ` + this._name + " (" + this.killCount.toString() + ")";
+		} else {
+			liUnit.textContent = this._name + " (" + this.killCount.toString() + ")";
+		}
 		liUnit.addEventListener("click", () => {
 			let marker = this.getMarker();
 			if (marker != null) {
