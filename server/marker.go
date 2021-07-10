@@ -35,26 +35,28 @@ func NewRepoMarker(root string) (*RepoMarker, error) {
 	return r, nil
 }
 
-func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, error) {
+func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, string, error) {
 	r.mu.RLock()
 	upath, ok := r.markers[name]
 	r.mu.RUnlock()
 	if !ok {
-		return nil, ErrNotFound
+		return nil, "", ErrNotFound
 	}
 
 	color, err := r.scanColor(scolor)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	switch path.Ext(upath) {
 	case ".png":
-		return paintPNG(upath, color)
+		r, err := paintPNG(upath, color)
+		return r, "image/png", err
 	case ".svg":
-		return paintSVG(upath, color)
+		r, err := paintSVG(upath, color)
+		return r, "image/svg+xml", err
 	default:
-		return nil, ErrNotFound
+		return nil, "", ErrNotFound
 	}
 }
 

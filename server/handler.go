@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -126,24 +125,22 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	var (
 		ctx   = c.Request().Context()
 		color = c.Param("color")
-		ext   = path.Ext(color)
 		name  = c.Param("name")
 	)
 
+	// Deprecated: support old version
 	pos := strings.IndexByte(color, '.')
 	if pos != -1 {
 		color = color[:pos]
 	}
 
-	img, err := h.repoMarker.Get(ctx, name, color)
+	img, ct, err := h.repoMarker.Get(ctx, name, color)
 	if errors.Is(err, ErrNotFound) {
 		return c.NoContent(http.StatusNotFound)
 	}
 	if err != nil {
 		return err
 	}
-
-	ct := mime.TypeByExtension(ext)
 
 	return c.Stream(http.StatusOK, ct, img)
 }
