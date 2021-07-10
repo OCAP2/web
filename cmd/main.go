@@ -29,12 +29,15 @@ func main() {
 	marker, err := server.NewRepoMarker(setting.Markers)
 	check(err)
 
+	magazine, err := server.NewRepoMagazine(setting.Magazines)
+	check(err)
+
 	e := echo.New()
 	e.Use(
 		middleware.Logger(),
 		NoCache,
 	)
-	server.NewHandler(e, operation, marker, setting)
+	server.NewHandler(e, operation, marker, magazine, setting)
 
 	err = e.Start(setting.Listen)
 	check(err)

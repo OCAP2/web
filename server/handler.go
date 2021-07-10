@@ -16,6 +16,7 @@ import (
 type Handler struct {
 	repoOperation *RepoOperation
 	repoMarker    *RepoMarker
+	repoMagazine  *RepoMagazine
 	setting       Setting
 }
 
@@ -23,11 +24,13 @@ func NewHandler(
 	e *echo.Echo,
 	repoOperation *RepoOperation,
 	repoMarker *RepoMarker,
+	repoMagazine *RepoMagazine,
 	setting Setting,
 ) {
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
+		repoMagazine:  repoMagazine,
 		setting:       setting,
 	}
 
@@ -35,6 +38,7 @@ func NewHandler(
 	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
+	e.GET("/images/markers/magIcons/:name", hdlr.GetMagazines)
 	e.Static("/images/maps/", setting.Maps)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
@@ -143,4 +147,26 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	return c.Stream(http.StatusOK, ct, img)
+}
+
+func (h *Handler) GetMagazines(c echo.Context) error {
+	var (
+		ctx  = c.Request().Context()
+		name = removeExt(c.Param("name"))
+	)
+
+	upath, err := h.repoMagazine.GetPath(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	return c.File(upath)
+}
+
+func removeExt(name string) string {
+	pos := strings.IndexByte(name, '.')
+	if pos != -1 {
+		name = name[:pos]
+	}
+	return name
 }

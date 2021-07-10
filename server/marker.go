@@ -28,7 +28,7 @@ func NewRepoMarker(root string) (*RepoMarker, error) {
 		markers: make(map[string]string),
 	}
 
-	if err := r.scanDir(root); err != nil {
+	if err := scanDir(root, r.markers); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 	return c, nil
 }
 
-func (r *RepoMarker) scanDir(dir string) error {
+func scanDir(dir string, files map[string]string) error {
 	entrys, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -217,7 +217,7 @@ func (r *RepoMarker) scanDir(dir string) error {
 	for _, e := range entrys {
 		name := e.Name()
 		if e.IsDir() {
-			err = r.scanDir(path.Join(dir, name))
+			err = scanDir(path.Join(dir, name), files)
 			if err != nil {
 				return err
 			}
@@ -228,7 +228,7 @@ func (r *RepoMarker) scanDir(dir string) error {
 			continue
 		}
 
-		r.markers[name[:pos]] = path.Join(dir, name)
+		files[name[:pos]] = path.Join(dir, name)
 	}
 
 	return err

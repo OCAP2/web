@@ -69,7 +69,7 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	var version int
-	err = r.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version)
+	err = r.db.QueryRow(`SELECT db FROM version ORDER BY db DESC LIMIT 1`).Scan(&version)
 	if errors.Is(err, sql.ErrNoRows) {
 		version = 0
 	} else if err != nil {
