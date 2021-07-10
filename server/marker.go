@@ -201,6 +201,8 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 		c = color.RGBA{0, 127, 0, 255}
 	case "civ", "civilian":
 		c = color.RGBA{102, 0, 127, 255}
+	case "unconscious":
+		c = color.RGBA{255, 168, 26, 255}
 	default:
 		return c, errors.New("not found")
 	}
