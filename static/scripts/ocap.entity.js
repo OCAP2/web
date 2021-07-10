@@ -95,8 +95,12 @@ class Entity {
 		if (marker != null) {
 			map.removeLayer(marker);
 			this._marker = null;
+			this.remove();
 		}
 	};
+
+	// NOOP
+	remove() {}
 
 	/*	getMarkerEditableGroup() {
 			let doc = this._marker.getElement().contentDocument;
