@@ -550,15 +550,10 @@ function processOp (filepath) {
 					groups.addGroup(group);
 				}
 
-				if (entityJSON.role) {
-					// Create unit and add to entities list
-					var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired, entityJSON.role);
-					entities.add(unit);
-				} else {
-					// Create unit and add to entities list
-					var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired);
-					entities.add(unit);
-				}
+
+				// Create unit and add to entities list
+				var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired, entityJSON.role);
+				entities.add(unit);
 
 				
 

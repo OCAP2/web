@@ -11,8 +11,6 @@ class Unit extends Entity {
 			} else {
 				this._role = role
 			}
-		} else {
-			this._role = null;
 		}
 		this.killCount = 0;
 		this.deathCount = 0;
