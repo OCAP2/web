@@ -38,7 +38,7 @@ func NewHandler(
 	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
-	e.GET("/images/markers/magIcons/:name", hdlr.GetMagazines)
+	e.GET("/images/markers/magicons/:name", hdlr.GetMagazines)
 	e.Static("/images/maps/", setting.Maps)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
