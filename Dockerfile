@@ -9,6 +9,7 @@ RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps 
     echo '{}' > /etc/ocap/setting.json
 
 ENV OCAP_MARKERS /usr/local/ocap/markers
+ENV OCAP_MAGAZINES /usr/local/ocap/magazines
 ENV OCAP_STATIC /var/local/ocap/static
 
 ENV OCAP_DB /var/lib/ocap/db/data.db
@@ -19,6 +20,7 @@ ENV OCAP_LISTEN 0.0.0.0:5000
 EXPOSE 5000/tcp
 
 COPY markers /usr/local/ocap/markers
+COPY magazines /usr/local/ocap/magazines
 COPY static /usr/local/ocap/static
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
 
