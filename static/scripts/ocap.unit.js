@@ -1,10 +1,17 @@
 class Unit extends Entity {
-	constructor(startFrameNum, id, name, group, side, isPlayer, positions, framesFired) {
+	constructor(startFrameNum, id, name, group, side, isPlayer, positions, framesFired, role) {
 		super(startFrameNum, id, name, positions);
 		this._group = group;
 		this._side = side;
 		this.isPlayer = isPlayer;
 		this._framesFired = framesFired;
+		if (role) {
+			if (role.search("@") > -1) {
+				this._role = (role.split("@"))[0]
+			} else {
+				this._role = role
+			}
+		}
 		this.killCount = 0;
 		this.deathCount = 0;
 		this._sideClass = "";
@@ -50,8 +57,13 @@ class Unit extends Entity {
 		}
 		if (this._name != name) {
 			this._name = name;
-			this._element.textContent = name + " (" + this.killCount.toString() + ")";
-			this._marker.getPopup()._contentNode.innerHTML = name;
+			if (this._role) {
+				this._element.textContent = `(${this._role}) ` + name + " (" + this.killCount.toString() + ")";
+				this._marker.getPopup()._contentNode.innerHTML = name;
+			} else {
+				this._element.textContent = name + " (" + this.killCount.toString() + ")";
+				this._marker.getPopup()._contentNode.innerHTML = name;
+			}
 		}
 	};
 
@@ -110,7 +122,11 @@ class Unit extends Entity {
 	makeElement(liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
 		liUnit.className = "liUnit";
-		liUnit.textContent = this._name + " (" + this.killCount.toString() + ")";
+		if (this._role) {
+			liUnit.textContent = `(${this._role}) ` + this._name + " (" + this.killCount.toString() + ")";
+		} else {
+			liUnit.textContent = this._name + " (" + this.killCount.toString() + ")";
+		}
 		liUnit.addEventListener("click", () => {
 			let marker = this.getMarker();
 			if (marker != null) {
