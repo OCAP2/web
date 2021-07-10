@@ -2,16 +2,9 @@
 
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -40,7 +33,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/ocapv2/web:latest
+          tags: ${{ env.REGISTRY }}/ocap2/web:latest
 
   windows-build:
     runs-on: ubuntu-latest
