@@ -62,9 +62,10 @@ class Unit extends Entity {
 			if (this._role) {
 				this._element.textContent = `(${this._role}) ` + name + " (" + this.killCount.toString() + ")";
 				this._marker.getPopup()._contentNode.innerHTML = name;
+			} else {
+				this._element.textContent = name + " (" + this.killCount.toString() + ")";
+				this._marker.getPopup()._contentNode.innerHTML = name;
 			}
-			this._element.textContent = name + " (" + this.killCount.toString() + ")";
-			this._marker.getPopup()._contentNode.innerHTML = name;
 		}
 	};
 
