@@ -518,11 +518,11 @@ input[type=range]::-webkit-slider-runnable-track {
 	border:1px solid black;
 }
 
-#filterTypeGameInput, #filterGameInput, #calendar1, #calendar2 {
+#filterTagGameInput, #filterGameInput, #calendar1, #calendar2 {
 	margin: 4px;
 }
 
-#filterTypeGameInput {
+#filterTagGameInput {
 	height: 24px;
 	width: 60px;
 }
