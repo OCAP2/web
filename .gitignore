@@ -8,3 +8,6 @@ ocap-webserver.exe
 data.db
 static/data
 static/images/maps
+
+# logs
+ocap.log
