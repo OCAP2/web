@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"image/color"
 	"image/draw"
@@ -161,7 +160,7 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 		}
 	}
 
-	switch scolor {
+	switch strings.ToLower(scolor) {
 	case "follow":
 		c = color.RGBA{255, 168, 26, 255}
 	case "hit":
@@ -205,7 +204,7 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 	case "unconscious":
 		c = color.RGBA{255, 168, 26, 255}
 	default:
-		return c, errors.New("not found")
+		return c, ErrNotFound
 	}
 
 	return c, nil
