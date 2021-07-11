@@ -144,28 +144,39 @@ class CaptureFlagEvent {
 		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
 		this.unitName = unitName;
+		this.side = side;
 		this._element = null;
 
 		// Create list element for this event (for later use)
-		var span = document.createElement("span");
-		span.className = "medium";
+		var unitSpan = document.createElement("span");
+		unitSpan.className = "medium";
+		unitSpan.textContent = `${this.unitName} `;
 
-		if (this.side == "") {
-			span.textContent = msg;
-		} else {
-			localizable(span, "captured_flag", "", `${this.unitName} `);
+		var messageSpan = document.createElement("span");
+		messageSpan.className = "medium";
+		localizable(messageSpan, "captured_flag", " ", `${this.unitName} `);
+
+		var img = document.createElement("img");
+		img.src = "/images/markers/mil_flag/FFFFFF.png";
+		img.style.height = "12px";
+
+		if (this.side != "") {
 			switch (true) {
-				case (side == "EAST"):
-					span.className = "opfor";
+				case (this.side == "EAST"):
+					unitSpan.className = "opfor";
+					img.src = "/images/markers/mil_flag/ff0000.png";
 					break;
-				case (side == "WEST"):
-					span.className = "blufor";
+				case (this.side == "WEST"):
+					unitSpan.className = "blufor";
+					img.src = "/images/markers/mil_flag/00a8ff.png";
 					break;
-				case (side == "IND"):
-					span.className = "ind";
+				case (this.side == "IND"):
+					unitSpan.className = "ind";
+					img.src = "/images/markers/mil_flag/00cc00.png";
 					break;
-				case (side == "CIV"):
-					span.className = "civ";
+				case (this.side == "CIV"):
+					unitSpan.className = "civ";
+					img.src = "/images/markers/mil_flag/C900FF.png";
 					break;
 			}
 		}
@@ -175,7 +186,9 @@ class CaptureFlagEvent {
 		detailsDiv.textContent = this.timecode;
 
 		var li = document.createElement("li");
-		li.appendChild(span);
+		li.appendChild(unitSpan);
+		li.appendChild(messageSpan);
+		li.appendChild(img);
 		li.appendChild(detailsDiv);
 		this._element = li;
 	};
@@ -202,16 +215,16 @@ class endMissionEvent {
 		} else {
 			localizable(span, "win", ` ${side}. ${msg}`);
 			switch (true) {
-				case (side == "EAST"):
+				case (this.side == "EAST"):
 					span.className = "opfor";
 					break;
-				case (side == "WEST"):
+				case (this.side == "WEST"):
 					span.className = "blufor";
 					break;
-				case (side == "IND"):
+				case (this.side == "IND"):
 					span.className = "ind";
 					break;
-				case (side == "CIV"):
+				case (this.side == "CIV"):
 					span.className = "civ";
 					break;
 			}
