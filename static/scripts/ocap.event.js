@@ -139,7 +139,7 @@ class ConnectEvent {
 }
 
 class CaptureFlagEvent {
-	constructor(frameNum, type, unitName) {
+	constructor(frameNum, type, unitName, side) {
 		this.frameNum = frameNum;
 		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
@@ -149,7 +149,26 @@ class CaptureFlagEvent {
 		// Create list element for this event (for later use)
 		var span = document.createElement("span");
 		span.className = "medium";
-		localizable(span, "captured_flag", "", `${this.unitName} `);
+
+		if (this.side == "") {
+			span.textContent = msg;
+		} else {
+			localizable(span, "captured_flag", "", `${this.unitName} `);
+			switch (true) {
+				case (side == "EAST"):
+					span.className = "opfor";
+					break;
+				case (side == "WEST"):
+					span.className = "blufor";
+					break;
+				case (side == "IND"):
+					span.className = "ind";
+					break;
+				case (side == "CIV"):
+					span.className = "civ";
+					break;
+			}
+		}
 
 		var detailsDiv = document.createElement("div");
 		detailsDiv.className = "eventDetails";
@@ -191,6 +210,9 @@ class endMissionEvent {
 					break;
 				case (side == "IND"):
 					span.className = "ind";
+					break;
+				case (side == "CIV"):
+					span.className = "civ";
 					break;
 			}
 		}

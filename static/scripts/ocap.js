@@ -691,8 +691,8 @@ function processOp (filepath) {
 				case (type == "connected" || type == "disconnected"):
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
 					break;
-				case (type == "captureFlag"):
-					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2]);
+				case (type == "capturedFlag"):
+					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
 					break;
 				case (type == "endMission"):
 					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);

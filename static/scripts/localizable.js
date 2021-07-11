@@ -32,7 +32,7 @@ let _localizable = {
 	"captured_flag": {
 		"ru": "захватил флаг",
 		"en": "captured the flag",
-		"de": "hat die Flag gekapert"
+		"de": "hat die Flagge gekapert"
 	},
 	"by_injured": {
 		"ru": " был ранен ",
