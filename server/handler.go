@@ -119,7 +119,7 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	}
 	defer file.Close()
 
-	writer, err := os.Create(path.Join(h.setting.Data, path.Base(filename)))
+	writer, err := os.Create(path.Join(h.setting.Data, path.Base(filename)+".gz"))
 	if err != nil {
 		return err
 	}
