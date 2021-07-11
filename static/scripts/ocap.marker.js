@@ -39,7 +39,7 @@ class Marker {
 		// "POLYLINE"
 
 		if (this._type.search("magIcons") > -1) {
-			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}/${color}.png` });
+			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}.png` });
 		} else if (!this._shape || !this._size) {
 			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${color}.png` });
 		} else if (this._shape == "ICON") {

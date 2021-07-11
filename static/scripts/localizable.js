@@ -85,7 +85,7 @@ let _localizable = {
 		"de": "Treffer"
 	},
 	"event_dis-connected": {
-		"ru": "Эвенты подключения/отключения",
+		"ru": "Подключения/отключения",
 		"en": "Connects / Disconnects",
 		"de": "Verbunden / Getrennt"
 	},
@@ -125,7 +125,7 @@ let _localizable = {
 		"de": "Dauer"
 	},
 	"tag": {
-		"ru": "Type",
+		"ru": "Тег",
 		"en": "Tag",
 		"de": "Tag"
 	},

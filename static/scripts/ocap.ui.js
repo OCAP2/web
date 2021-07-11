@@ -45,7 +45,7 @@ class UI {
 		this.currentSide = "";
 		this.toggleNickname = null;
 		this.nicknameEnable = true;
-		this.filterTypeGameInput = null;
+		this.filterTagGameInput = null;
 		this.filterGameInput = null;
 		this.calendar1 = null;
 		this.calendar2 = null;
@@ -170,7 +170,7 @@ class UI {
 		this.filterEventsInput = document.getElementById("filterEventsInput");
 
 		// Setup filter panel
-		this.filterTypeGameInput = document.getElementById("filterTypeGameInput");
+		this.filterTagGameInput = document.getElementById("filterTagGameInput");
 		this.filterGameInput = document.getElementById("filterGameInput");
 		this.calendar1 = document.getElementById("calendar1");
 		this.calendar2 = document.getElementById("calendar2");
@@ -391,8 +391,8 @@ class UI {
 
 	setModalOpList() {
 		var OpList;
-		var n = filterTypeGameInput.options.selectedIndex;
-		var type = filterTypeGameInput.options[n].value;
+		var n = filterTagGameInput.options.selectedIndex;
+		var tag = n != -1 ? filterTagGameInput.options[n].value : "";
 		var name = filterGameInput.value;
 		var DateNewer = calendar1.value;
 		var DateOlder = calendar2.value;
@@ -401,11 +401,31 @@ class UI {
 			type : "get",
 			async : false,
 			cache : false,
-			data: `type=${type}&name=${name}&newer=${DateNewer}&older=${DateOlder}`,
+			data: `tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`,
 			success: function(data){
 				OpList = data
 			}
 		});
+
+		// Set select
+		if (filterTagGameInput.innerHTML == "") {
+			var tags = [];
+			var option = document.createElement("option");
+			option.value = "";
+			option.text = "All";
+			filterTagGameInput.appendChild(option);
+	
+			OpList.forEach(op => {
+				if (!tags.includes(op.tag)) {
+					tags.push(op.tag);
+					var option = document.createElement("option");
+					option.value = op.tag;
+					option.text = op.tag;
+	
+					filterTagGameInput.appendChild(option);
+				}
+			})
+		}
 
 		// Set body
 		var table = document.createElement("table");
@@ -429,7 +449,7 @@ class UI {
 				op.world_name,
 				dateToLittleEndianString(new Date(op.date)),
 				secondsToTimeString(op.mission_duration),
-				op.type
+				op.tag
 			];
 			vals.forEach(function(val) {
 				var cell = document.createElement("td");
@@ -461,8 +481,7 @@ class UI {
 
 		this.modalBody.innerHTML = `
 			<img src="images/ocap-logo.png" height="60px" alt="OCAP">
-			<h4 style=line-height:0>${appDesc} (BETA)</h4>
-			<h5 style=line-height:0>v${appVersion}</h5>
+			<h4 style=line-height:0>Operation Capture And Playback (BETA)</h4>
 			Author: MisterGoodson (aka Goodson [3CB]) <br/>
 			<a href="https://forums.bistudio.com/forums/topic/194164-ocap-operation-capture-and-playback-aar-system/" target="_blank">BI Forum Post</a><br/>
 			<a href="https://github.com/mistergoodson/OCAP" target="_blank">GitHub Link</a>
@@ -474,6 +493,8 @@ class UI {
 			<br/>
 			Further Modified: IndigoFox, Zealot<br/>
 			<a href="https://github.com/indig0fox/OCAP" target="_blank">GitHub Link</a>
+			<br/>
+			<a href="https://github.com/OCAPv2/web" target="_blank">GitHub Link</a>
 			<br/>
 			<br/>
 			<span id="keyControl-playPause"></span><br/>
