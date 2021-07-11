@@ -692,7 +692,7 @@ function processOp (filepath) {
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
 					break;
 				case (type == "capturedFlag"):
-					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
+					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
 					break;
 				case (type == "endMission"):
 					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
