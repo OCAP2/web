@@ -137,6 +137,33 @@ class ConnectEvent {
 
 	getElement() { return this._element };
 }
+
+class CaptureFlagEvent {
+	constructor(frameNum, type, unitName) {
+		this.frameNum = frameNum;
+		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
+		this.type = type;
+		this.unitName = unitName;
+		this._element = null;
+
+		// Create list element for this event (for later use)
+		var span = document.createElement("span");
+		span.className = "medium";
+		localizable(span, "captured_flag", "", `${this.unitName} `);
+
+		var detailsDiv = document.createElement("div");
+		detailsDiv.className = "eventDetails";
+		detailsDiv.textContent = this.timecode;
+
+		var li = document.createElement("li");
+		li.appendChild(span);
+		li.appendChild(detailsDiv);
+		this._element = li;
+	};
+
+	getElement() { return this._element };
+}
+
 // [4639, "endMission", ["EAST", "Offar Factory зазахвачена. Победа Сил РФ."]]
 class endMissionEvent {
 	constructor(frameNum, type, side, msg) {
