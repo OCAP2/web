@@ -36,6 +36,7 @@ func NewRepoMarker(root string) (*RepoMarker, error) {
 }
 
 func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, string, error) {
+	name = strings.ToLower(name)
 	r.mu.RLock()
 	upath, ok := r.markers[name]
 	r.mu.RUnlock()
@@ -217,20 +218,22 @@ func scanDir(dir string, files map[string]string) error {
 	}
 
 	for _, e := range entrys {
-		name := e.Name()
+		fullname := e.Name()
 		if e.IsDir() {
-			err = scanDir(path.Join(dir, name), files)
+			err = scanDir(path.Join(dir, fullname), files)
 			if err != nil {
 				return err
 			}
 		}
 
-		pos := strings.IndexByte(name, '.')
+		pos := strings.IndexByte(fullname, '.')
 		if pos == -1 {
 			continue
 		}
 
-		files[name[:pos]] = path.Join(dir, name)
+		name := strings.ToLower(fullname[:pos])
+
+		files[name] = path.Join(dir, fullname)
 	}
 
 	return err

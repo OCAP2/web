@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"sync"
 )
 
@@ -25,6 +26,8 @@ func NewRepoAmmo(root string) (*RepoAmmo, error) {
 }
 
 func (r *RepoAmmo) GetPath(ctx context.Context, name string) (string, error) {
+	name = strings.ToLower(name)
+
 	r.mu.RLock()
 	upath, ok := r.ammo[name]
 	r.mu.RUnlock()

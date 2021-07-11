@@ -34,6 +34,8 @@ func NewHandler(
 		setting:       setting,
 	}
 
+	e.Use(hdlr.errorHandler)
+
 	e.GET("/api/v1/operations/get", hdlr.GetOperations)
 	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
 	e.GET("/data/:name", hdlr.GetCapture)
@@ -42,6 +44,21 @@ func NewHandler(
 	e.Static("/images/maps/", setting.Maps)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
+}
+
+func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		err := next(c)
+		if err != nil {
+			switch true {
+			case errors.Is(err, ErrNotFound):
+				return c.NoContent(http.StatusNotFound)
+			default:
+				return err
+			}
+		}
+		return nil
+	}
 }
 
 func (h *Handler) GetOperations(c echo.Context) error {
@@ -139,9 +156,6 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	img, ct, err := h.repoMarker.Get(ctx, name, color)
-	if errors.Is(err, ErrNotFound) {
-		return c.NoContent(http.StatusNotFound)
-	}
 	if err != nil {
 		return err
 	}
