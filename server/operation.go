@@ -133,12 +133,22 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 }
 
 func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
-	_, err := r.db.ExecContext(ctx, `
+	query := `
 		INSERT INTO operations
 			(world_name, mission_name, mission_duration, filename, date, tag)
 		VALUES
 			($1, $2, $3, $4, $5, $6)
-	`)
+	`
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		operation.WorldName,
+		operation.MissionName,
+		operation.MissionDuration,
+		operation.Filename,
+		operation.Date,
+		operation.Tag,
+	)
 	if err != nil {
 		return err
 	}
