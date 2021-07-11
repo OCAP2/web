@@ -125,11 +125,15 @@ function initOCAP () {
 				let coords = [parseFloat(args.x), parseFloat(args.y)];
 				let zoom = parseFloat(args.zoom);
 				map.setView(coords, zoom);
+			} else {
+				map.setView([0, 0], mapMaxNativeZoom);
 			}
 			if (args.frame) {
 				ui.setMissionCurTime(parseInt(args.frame));
 			}
 		}, false);
+	} else {
+		map.setView([0, 0], mapMaxNativeZoom);
 	}
 }
 
@@ -187,7 +191,7 @@ function initMap () {
 		zoomDelta: 1,
 		closePopupOnClick: false,
 		preferCanvas: false
-	}).setView([0, 0], mapMaxNativeZoom);
+	});
 
 	mapPanes = map.getPanes();
 
