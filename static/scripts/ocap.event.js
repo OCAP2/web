@@ -171,7 +171,7 @@ class CaptureFlagEvent {
 
 		const messageSpan = document.createElement("span");
 		messageSpan.className = "medium";
-		localizable(messageSpan, "captured_flag", " ", `${this.unitName} `);
+		localizable(messageSpan, "captured_flag", " ", " ");
 
 		const img = document.createElement("img");
 		img.src = "/images/markers/mil_flag/ffffff.png";
