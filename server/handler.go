@@ -16,7 +16,7 @@ import (
 type Handler struct {
 	repoOperation *RepoOperation
 	repoMarker    *RepoMarker
-	repoMagazine  *RepoMagazine
+	repoAmmo      *RepoAmmo
 	setting       Setting
 }
 
@@ -24,13 +24,13 @@ func NewHandler(
 	e *echo.Echo,
 	repoOperation *RepoOperation,
 	repoMarker *RepoMarker,
-	repoMagazine *RepoMagazine,
+	repoAmmo *RepoAmmo,
 	setting Setting,
 ) {
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
-		repoMagazine:  repoMagazine,
+		repoAmmo:      repoAmmo,
 		setting:       setting,
 	}
 
@@ -38,7 +38,7 @@ func NewHandler(
 	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
-	e.GET("/images/markers/magicons/:name", hdlr.GetMagazines)
+	e.GET("/images/markers/magicons/:name", hdlr.GetAmmo)
 	e.Static("/images/maps/", setting.Maps)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
@@ -149,13 +149,17 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	return c.Stream(http.StatusOK, ct, img)
 }
 
-func (h *Handler) GetMagazines(c echo.Context) error {
+func (h *Handler) GetAmmo(c echo.Context) error {
 	var (
 		ctx  = c.Request().Context()
 		name = removeExt(c.Param("name"))
 	)
 
-	upath, err := h.repoMagazine.GetPath(ctx, name)
+	// support format
+	// gear_smokegrenade_white_ca.paa.png
+	name = strings.Replace(name, ".paa", "", 1)
+
+	upath, err := h.repoAmmo.GetPath(ctx, name)
 	if err != nil {
 		return err
 	}

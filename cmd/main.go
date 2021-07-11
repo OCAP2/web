@@ -29,7 +29,7 @@ func main() {
 	marker, err := server.NewRepoMarker(setting.Markers)
 	check(err)
 
-	magazine, err := server.NewRepoMagazine(setting.Magazines)
+	ammo, err := server.NewRepoAmmo(setting.Ammo)
 	check(err)
 
 	e := echo.New()
@@ -37,7 +37,7 @@ func main() {
 		middleware.Logger(),
 		NoCache,
 	)
-	server.NewHandler(e, operation, marker, magazine, setting)
+	server.NewHandler(e, operation, marker, ammo, setting)
 
 	err = e.Start(setting.Listen)
 	check(err)
