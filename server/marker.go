@@ -175,7 +175,7 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 		c = color.RGBA{127, 127, 127, 255}
 	case "red":
 		c = color.RGBA{255, 0, 0, 255}
-	case "blown":
+	case "brown":
 		c = color.RGBA{127, 63, 0, 255}
 	case "orange":
 		c = color.RGBA{216, 102, 0, 255}
