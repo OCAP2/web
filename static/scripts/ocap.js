@@ -555,7 +555,7 @@ function processOp (filepath) {
 				var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired, entityJSON.role);
 				entities.add(unit);
 
-				
+
 
 				// Show title side
 				if (arrSideSelect.indexOf(entityJSON.side) == -1) {
@@ -690,6 +690,9 @@ function processOp (filepath) {
 					break;
 				case (type == "connected" || type == "disconnected"):
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
+					break;
+				case (type == "capturedFlag"):
+					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
 					break;
 				case (type == "endMission"):
 					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);

@@ -29,6 +29,11 @@ let _localizable = {
 		"en": "disconnected",
 		"de": "getrennt"
 	},
+	"captured_flag": {
+		"ru": "захватил флаг",
+		"en": "captured the flag",
+		"de": "hat die Flagge gekapert"
+	},
 	"by_injured": {
 		"ru": " был ранен ",
 		"en": " injured by ",

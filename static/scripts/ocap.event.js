@@ -137,6 +137,77 @@ class ConnectEvent {
 
 	getElement() { return this._element };
 }
+
+class CaptureFlagEvent {
+	constructor(frameNum, type, unitName, unitSide, flagSide) {
+		this.frameNum = frameNum;
+		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
+		this.type = type;
+		this.unitName = unitName;
+		this.unitSide = unitSide;
+		this.flagSide = flagSide;
+		this._element = null;
+
+		// Create list element for this event (for later use)
+		const unitSpan = document.createElement("span");
+		unitSpan.className = "medium";
+		unitSpan.textContent = `${this.unitName} `;
+		if (this.unitSide !== "") {
+			switch (true) {
+				case (this.unitSide === "EAST"):
+					unitSpan.className = "opfor";
+					break;
+				case (this.unitSide === "WEST"):
+					unitSpan.className = "blufor";
+					break;
+				case (this.unitSide === "IND"):
+					unitSpan.className = "ind";
+					break;
+				case (this.unitSide === "CIV"):
+					unitSpan.className = "civ";
+					break;
+			}
+		}
+
+		const messageSpan = document.createElement("span");
+		messageSpan.className = "medium";
+		localizable(messageSpan, "captured_flag", " ", " ");
+
+		const img = document.createElement("img");
+		img.src = "/images/markers/mil_flag/ffffff.png";
+		img.style.height = "12px";
+		if (this.flagSide !== "") {
+			switch (true) {
+				case (this.flagSide === "EAST"):
+					img.src = "/images/markers/mil_flag/ff0000.png";
+					break;
+				case (this.flagSide === "WEST"):
+					img.src = "/images/markers/mil_flag/00a8ff.png";
+					break;
+				case (this.flagSide === "IND"):
+					img.src = "/images/markers/mil_flag/00cc00.png";
+					break;
+				case (this.flagSide === "CIV"):
+					img.src = "/images/markers/mil_flag/C900FF.png";
+					break;
+			}
+		}
+
+		const detailsDiv = document.createElement("div");
+		detailsDiv.className = "eventDetails";
+		detailsDiv.textContent = this.timecode;
+
+		const li = document.createElement("li");
+		li.appendChild(unitSpan);
+		li.appendChild(messageSpan);
+		li.appendChild(img);
+		li.appendChild(detailsDiv);
+		this._element = li;
+	};
+
+	getElement() { return this._element };
+}
+
 // [4639, "endMission", ["EAST", "Offar Factory зазахвачена. Победа Сил РФ."]]
 class endMissionEvent {
 	constructor(frameNum, type, side, msg) {
@@ -156,14 +227,17 @@ class endMissionEvent {
 		} else {
 			localizable(span, "win", ` ${side}. ${msg}`);
 			switch (true) {
-				case (side == "EAST"):
+				case (this.side == "EAST"):
 					span.className = "opfor";
 					break;
-				case (side == "WEST"):
+				case (this.side == "WEST"):
 					span.className = "blufor";
 					break;
-				case (side == "IND"):
+				case (this.side == "IND"):
 					span.className = "ind";
+					break;
+				case (this.side == "CIV"):
+					span.className = "civ";
 					break;
 			}
 		}
