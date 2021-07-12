@@ -132,8 +132,6 @@ function initOCAP () {
 				ui.setMissionCurTime(parseInt(args.frame));
 			}
 		}, false);
-	} else {
-		map.setView([0, 0], mapMaxNativeZoom);
 	}
 }
 
