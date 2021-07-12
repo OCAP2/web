@@ -94,7 +94,7 @@ html, body, #map {
 
 #controlSide {
 	height: 50px;
-	width: 220px;
+	width: 350px;
 	background-color: rgba(0,0,0,0.5);
 }
 
@@ -121,7 +121,7 @@ html, body, #map {
 
 #leftPanel {
 	left: 0;
-	width: 220px;
+	width: 350px;
 	height: calc(100% - 40px - 60px);
 }
 
