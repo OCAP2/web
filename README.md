@@ -1,9 +1,8 @@
 # OCAP Web component
 
 ## Configuration
-The configuration file is called `option.json`
+The configuration file is called `setting.json`
 
-**"title"**: Title used in the web app   
 **"listen"**: Listener for the web server, change to "0.0.0.0:5000" to listen on all interfaces   
 **"secret"**: Secret used for authenticate on record upload   
 **"logger"**: Enables logging to "ocap.log" file
