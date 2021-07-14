@@ -248,12 +248,10 @@ class Marker {
 	};
 
 	manageFrame (f) {
-		if (
-			this._side != ui.currentSide &&
-			this._side != "GLOBAL" &&
-			this._marker != null) {
-			// console.log(this._side, ui.currentSide);
-			this.hide();
+		if (this._side != ui.currentSide && this._side != "GLOBAL") {
+			if (this._marker != null) {
+				this.hide();
+			}
 			return;
 		}
 		let frameIndex = this._markerOnFrame(f);
