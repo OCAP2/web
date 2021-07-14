@@ -179,6 +179,11 @@ let _localizable = {
 		"en": "Mission time",
 		"de": "Missionszeit"
 	},
+	"recording_time": {
+		"ru": "Время записи",
+		"en": "Recording time",
+		"de": "Aufnahmezeit"
+	},
 	"not_available": {
 		"ru": " недоступен",
 		"en": " not available",

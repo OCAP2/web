@@ -128,7 +128,7 @@ class UI {
 				text = getLocalizable("system_time") + getLocalizable("shown");
 			} else {
 				this.toggleTime.style.opacity = 0.5;
-				text = getLocalizable("mission_time") + getLocalizable("shown");
+				text = getLocalizable("recording_time") + getLocalizable("shown");
 			}
 			this.updateCurrentTime();
 			this.updateEndTime();
