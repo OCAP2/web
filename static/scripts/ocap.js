@@ -562,7 +562,6 @@ function processOp (filepath) {
 				// Show title side
 				if (arrSideSelect.indexOf(entityJSON.side) == -1) {
 					arrSideSelect.push(entityJSON.side);
-					ui.switchSide(entityJSON.side);
 					switch (entityJSON.side) {
 						case "WEST":
 							showWest = true;
@@ -647,6 +646,16 @@ function processOp (filepath) {
 		showTitleSide("sideWest", showWest);
 		showTitleSide("sideGuer", showGuer);
 		showTitleSide("sideCiv", showCiv);
+
+		if (showWest) {
+			ui.switchSide("WEST");
+		} else if (showEast) {
+			ui.switchSide("EAST");
+		} else if (showGuer) {
+			ui.switchSide("IND");
+		} else if (showCiv) {
+			ui.switchSide("CIV");
+		}
 
 		// Loop through events
 		data.events.forEach(function (eventJSON) {
