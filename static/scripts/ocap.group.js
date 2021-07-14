@@ -93,27 +93,22 @@ class Group {
 		switch (this.getSide()) {
 			case "WEST":
 				countWest++;
-                ui.listWest.style.display = 'block';
 				targetList = ui.listWest;
 				break;
 			case "EAST":
 				countEast++;
-                ui.listEast.style.display = 'block';
 				targetList = ui.listEast;
 				break;
 			case "GUER":
 				countGuer++;
-                ui.listGuer.style.display = 'block';
 				targetList = ui.listGuer;
 				break;
 			case "CIV":
 				countCiv++;
-                ui.listCiv.style.display = 'block';
 				targetList = ui.listCiv;
 				break;
 			default:
 				countCiv++;
-                ui.listCiv.style.display = 'block';
 				targetList = ui.listCiv;
 		}
 

@@ -414,14 +414,14 @@ class UI {
 			option.value = "";
 			option.text = "All";
 			filterTagGameInput.appendChild(option);
-	
+
 			OpList.forEach(op => {
 				if (!tags.includes(op.tag)) {
 					tags.push(op.tag);
 					var option = document.createElement("option");
 					option.value = op.tag;
 					option.text = op.tag;
-	
+
 					filterTagGameInput.appendChild(option);
 				}
 			})
