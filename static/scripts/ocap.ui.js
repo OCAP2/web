@@ -639,6 +639,9 @@ class UI {
 	};
 
 	addEvent(event) {
+		if (typeof event.updateTime === "function") {
+			event.updateTime();
+		}
 		this.activeEvents.push(event);
 		var el = event.getElement();
 
