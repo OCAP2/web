@@ -443,11 +443,16 @@ function test () {
 	// marker.setRadius(5);
 }
 
-function dateToTimeString (date) {
-	var hours = date.getUTCHours();
-	var minutes = date.getUTCMinutes();
-	var seconds = date.getUTCSeconds();
-	var string = "";
+function dateToTimeString(date, isUtc = false) {
+	let hours = date.getHours();
+	let minutes = date.getMinutes();
+	let seconds = date.getSeconds();
+	if (isUtc) {
+		hours = date.getUTCHours();
+		minutes = date.getUTCMinutes();
+		seconds = date.getUTCSeconds();
+	}
+	let string = "";
 
 	/*	if (hours < 10) {
 			string += "0";
@@ -502,6 +507,9 @@ function processOp (filepath) {
 		endFrame = data.endFrame;
 		frameCaptureDelay = data.captureDelay * 1000;
 		ui.setMissionEndTime(endFrame);
+		if (data.systemTimeUTC) {
+			ui.setSystemTime(data.systemTimeUTC);
+		}
 
 		var showCiv = false;
 		var showWest = false;

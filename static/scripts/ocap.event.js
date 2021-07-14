@@ -26,7 +26,6 @@ class GameEvents {
 class HitKilledEvent {
 	constructor(frameNum, type, causedBy, victim, distance, weapon) {
 		this.frameNum = frameNum; // Frame number that event occurred
-		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type; // "hit" or "killed"
 		this.causedBy = causedBy;
 		this.victim = victim;
@@ -77,15 +76,15 @@ class HitKilledEvent {
 				break;
 		}
 
-		var detailsDiv = document.createElement("div");
-		detailsDiv.className = "eventDetails";
-		detailsDiv.textContent = this.timecode + " - " + this.distance + "m - " + this.weapon;
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
 
 		var li = document.createElement("li");
 		li.appendChild(victimSpan);
 		li.appendChild(textSpan);
 		li.appendChild(causedBySpan);
-		li.appendChild(detailsDiv);
+		li.appendChild(this.detailsDiv);
 
 		// When clicking on event, skip playback to point of event, move camera to victim's position
 		li.addEventListener("click", () => {
@@ -110,12 +109,15 @@ class HitKilledEvent {
 	};
 
 	getElement() { return this._element };
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum) + " - " + this.distance + "m - " + this.weapon;
+	}
 }
 
 class ConnectEvent {
 	constructor(frameNum, type, unitName) {
 		this.frameNum = frameNum;
-		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
 		this.unitName = unitName;
 		this._element = null;
@@ -125,23 +127,26 @@ class ConnectEvent {
 		span.className = "medium";
 		localizable(span, this.type, "", `${this.unitName} `);
 
-		var detailsDiv = document.createElement("div");
-		detailsDiv.className = "eventDetails";
-		detailsDiv.textContent = this.timecode;
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
 
 		var li = document.createElement("li");
 		li.appendChild(span);
-		li.appendChild(detailsDiv);
+		li.appendChild(this.detailsDiv);
 		this._element = li;
 	};
 
 	getElement() { return this._element };
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
+	}
 }
 
 class CaptureFlagEvent {
 	constructor(frameNum, type, unitName, unitSide, flagSide) {
 		this.frameNum = frameNum;
-		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
 		this.unitName = unitName;
 		this.unitSide = unitSide;
@@ -193,26 +198,29 @@ class CaptureFlagEvent {
 			}
 		}
 
-		const detailsDiv = document.createElement("div");
-		detailsDiv.className = "eventDetails";
-		detailsDiv.textContent = this.timecode;
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
 
 		const li = document.createElement("li");
 		li.appendChild(unitSpan);
 		li.appendChild(messageSpan);
 		li.appendChild(img);
-		li.appendChild(detailsDiv);
+		li.appendChild(this.detailsDiv);
 		this._element = li;
 	};
 
 	getElement() { return this._element };
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
+	}
 }
 
 // [4639, "endMission", ["EAST", "Offar Factory зазахвачена. Победа Сил РФ."]]
 class endMissionEvent {
 	constructor(frameNum, type, side, msg) {
 		this.frameNum = frameNum;
-		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
 		this.msg = msg;
 		this.side = side;
@@ -253,7 +261,6 @@ class endMissionEvent {
 class customEvent {
 	constructor(frameNum, type, msg) {
 		this.frameNum = frameNum;
-		this.timecode = dateToTimeString(new Date(frameNum * frameCaptureDelay));
 		this.type = type;
 		this.msg = msg;
 		this._element = null;
@@ -263,15 +270,19 @@ class customEvent {
 		span.className = "medium";
 		localizable(span, this.type, "", `${this.msg} `);
 
-		var detailsDiv = document.createElement("div");
-		detailsDiv.className = "eventDetails";
-		detailsDiv.textContent = this.timecode;
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
 
 		var li = document.createElement("li");
 		li.appendChild(span);
-		li.appendChild(detailsDiv);
+		li.appendChild(this.detailsDiv);
 		this._element = li;
 	};
 
 	getElement () { return this._element };
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
+	}
 }

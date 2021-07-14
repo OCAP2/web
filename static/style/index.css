@@ -234,7 +234,7 @@ html, body, #map {
 
 
 
-#timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
+#timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #toggleTime, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
 	margin-top: 5px;
 	margin-left: 10px;
 	margin-right: 10px;
@@ -242,7 +242,7 @@ html, body, #map {
 }
 
 
-#toggleFirelines, #toggleMapMarker, #toggleNickname, .fullscreenButton {
+#toggleFirelines, #toggleMapMarker, #toggleNickname, #toggleTime, .fullscreenButton {
 	background-image: url("../images/bullets.svg");
 	background-size: auto 20px;
 	height: 20px;
@@ -258,6 +258,11 @@ html, body, #map {
 
 #toggleMapMarker {
 	background-image: url("../images/map.svg");
+}
+
+#toggleTime {
+	opacity: 0.5;
+	background-image: url("../images/more_time.svg");
 }
 
 .fullscreenButton {
