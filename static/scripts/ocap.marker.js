@@ -248,12 +248,6 @@ class Marker {
 	};
 
 	manageFrame (f) {
-		if (this._side != ui.currentSide && this._side != "GLOBAL") {
-			if (this._marker != null) {
-				this.hide();
-			}
-			return;
-		}
 		let frameIndex = this._markerOnFrame(f);
 		// if (this._shape == "RECTANGLE") { console.log(frameIndex) };
 		if (frameIndex != null) {
@@ -425,7 +419,7 @@ class Marker {
 	};
 
 	show (alpha) {
-		// if (this._isShow == false) {
+		if (this._side == ui.currentSide || this._side == "GLOBAL") {
 			this._isShow = true;
 			if (this._shape == "ICON") {
 				this.setMarkerOpacity(alpha);
@@ -436,7 +430,9 @@ class Marker {
 			} else if (this._shape == "POLYLINE") {
 				this.setMarkerOpacity(alpha);
 			}
-		// };
+		} else {
+			this.hide()
+		}
 	};
 
 
@@ -535,7 +531,7 @@ class Marker {
 		}
 
 		this._marker = marker;
-		// this.show(alpha);
+		this.show(alpha);
 
 	};
 
