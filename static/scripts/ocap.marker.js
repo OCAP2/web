@@ -76,9 +76,9 @@ class Marker {
 				// 	opacity: 1
 				// });
 				// brushPattern.addShape(patternShape);
-				brushPattern = new L.StripePattern({ renderer: L.svg()});
+				brushPattern = new L.StripePattern({ renderer: L.svg() });
 			} else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
-				brushPattern = new L.StripePattern({ renderer: L.svg()});
+				brushPattern = new L.StripePattern({ renderer: L.svg() });
 			}
 			this._brushPattern = brushPattern;
 			this._brushPatternOptions = null;
@@ -249,13 +249,9 @@ class Marker {
 
 	manageFrame (f) {
 		let frameIndex = this._markerOnFrame(f);
-		// if (this._shape == "RECTANGLE") { console.log(frameIndex) };
-		if (frameIndex != null) {
-			// setTimeout(() => {
-				this._updateAtFrame(frameIndex);
-			// }, 150);
+		if (frameIndex != null && (this._side == ui.currentSide || this._side == "GLOBAL")) {
+			this._updateAtFrame(frameIndex);
 		} else {
-			// this._updateAtFrame(0);
 			this.hide();
 		}
 		return;
@@ -342,7 +338,7 @@ class Marker {
 				variance = variance + Math.abs((Math.abs(curMarkerCenter.lng) - Math.abs(latLng.lng)));
 
 				// if (variance > 5) {
-					this._marker.setLatLng(latLng).redraw();
+				this._marker.setLatLng(latLng).redraw();
 				// };
 			} else if (this._shape == "RECTANGLE") {
 				latLng = armaToLatLng(pos);
@@ -370,16 +366,16 @@ class Marker {
 				variance = variance + Math.abs((Math.abs(curMarkerCenter.lng) - Math.abs(latLng.lng)));
 
 				// if (variance > 5) {
-					// process rotation around center
-					let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
-					this._marker.setLatLngs(pointsRotate).redraw();
+				// process rotation around center
+				let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
+				this._marker.setLatLngs(pointsRotate).redraw();
 				// };
 			} else if (this._shape == "POLYLINE") {
 				if (null === alpha || alpha == 0) { alpha = 1 }
 				// do nothing, polylines can't be moved
 			}
 
-			this.show(alpha);
+				this.show(alpha);
 		}
 	};
 
@@ -413,25 +409,21 @@ class Marker {
 
 	hide () {
 		// if (this._isShow == true) {
-			this._isShow = false;
-			this.setMarkerOpacity(0);
+		this._isShow = false;
+		this.setMarkerOpacity(0);
 		// };
 	};
 
 	show (alpha) {
-		if (this._side == ui.currentSide || this._side == "GLOBAL") {
-			this._isShow = true;
-			if (this._shape == "ICON") {
-				this.setMarkerOpacity(alpha);
-			} else if (this._shape == "ELLIPSE") {
-				this.setMarkerOpacity(alpha);
-			} else if (this._shape == "RECTANGLE") {
-				this.setMarkerOpacity(alpha);
-			} else if (this._shape == "POLYLINE") {
-				this.setMarkerOpacity(alpha);
-			}
-		} else {
-			this.hide()
+		this._isShow = true;
+		if (this._shape == "ICON") {
+			this.setMarkerOpacity(alpha);
+		} else if (this._shape == "ELLIPSE") {
+			this.setMarkerOpacity(alpha);
+		} else if (this._shape == "RECTANGLE") {
+			this.setMarkerOpacity(alpha);
+		} else if (this._shape == "POLYLINE") {
+			this.setMarkerOpacity(alpha);
 		}
 	};
 
@@ -519,7 +511,7 @@ class Marker {
 			if (this._brushPattern) {
 				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
 				this._brushPattern.addTo(map);
-				marker = L.polygon(latLng, { noClip: false, interactive: false, fillPattern: this._brushPattern});
+				marker = L.polygon(latLng, { noClip: false, interactive: false, fillPattern: this._brushPattern });
 				L.Util.setOptions(marker, this._shapeOptions);
 			} else {
 				marker = L.polygon(latLng, { noClip: false, interactive: false/* , renderer: L.canvas() */ });
