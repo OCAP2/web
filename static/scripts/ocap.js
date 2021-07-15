@@ -713,6 +713,29 @@ function processOp (filepath) {
 				case (type == "capturedFlag"):
 					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
 					break;
+				case (type === "terminalHackStarted"):
+					gameEvent = new TerminalHackStartEvent(
+						frameNum,
+						type,
+						eventJSON[2][0], // unit name
+						eventJSON[2][1], // unit color
+						eventJSON[2][2], // terminal color
+						eventJSON[2][3], // terminal identifier
+						eventJSON[2][4], // terminal position
+						eventJSON[2][5], // countdown timer
+					);
+					break;
+				case (type === "terminalHackCanceled"):
+					gameEvent = new TerminalHackUpdateEvent(
+						frameNum,
+						type,
+						eventJSON[2][0], // unit name
+						eventJSON[2][1], // unit color
+						eventJSON[2][2], // terminal color
+						eventJSON[2][3], // terminal identifier
+						eventJSON[2][4], // terminal state
+					);
+					break;
 				case (type == "endMission"):
 					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
 					break;
@@ -723,6 +746,7 @@ function processOp (filepath) {
 			}
 		});
 
+		gameEvents.init();
 
 		console.log("Finished processing operation (" + (new Date() - time) + "ms).");
 		initMap();
@@ -899,4 +923,43 @@ function startPlaybackLoop () {
 	}
 
 	var playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
+}
+
+function colorElement(element, color) {
+	if (!color) {
+		return;
+	}
+
+	if (color === "EAST") {
+		element.className = "opfor";
+	} else if (color === "WEST") {
+		element.className = "blufor";
+	} else if (color === "IND") {
+		element.className = "ind";
+	} else if (color === "CIV") {
+		element.className = "civ";
+	} else if (color && color.startsWith('#')) {
+		element.style.color = color;
+	}
+}
+function colorMarkerIcon(element, icon, color) {
+	if (!color) {
+		element.src = `/images/markers/${icon}/ffffff.png`;
+		return;
+	}
+
+	if (color === "EAST") {
+		element.src = `/images/markers/${icon}/ff0000.png`;
+	} else if (color === "WEST") {
+		element.src = `/images/markers/${icon}/00a8ff.png`;
+	} else if (color === "IND") {
+		element.src = `/images/markers/${icon}/00cc00.png`;
+	} else if (color === "CIV") {
+		element.src = `/images/markers/${icon}/C900FF.png`;
+	} else if (color && color.startsWith('#')) {
+		element.src = `/images/markers/${icon}/${color.substring(1)}.png`;
+	} else {
+		console.warn("unknown icon color", color, icon);
+		element.src = `/images/markers/${icon}/ffffff.png`;
+	}
 }

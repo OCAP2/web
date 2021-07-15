@@ -188,6 +188,16 @@ let _localizable = {
 		"ru": " недоступен",
 		"en": " not available",
 		"de": " nicht Verfügbar"
+	},
+	"is_hacking_terminal": {
+		"ru": " is hacking terminal",
+		"en": " is hacking terminal",
+		"de": " hackt das Terminal"
+	},
+	"interrupted_hack": {
+		"ru": " has interrupted the hack",
+		"en": " has interrupted the hack",
+		"de": " hat den Hack unterbrochen"
 	}
 };
 let localizableElement = [];
