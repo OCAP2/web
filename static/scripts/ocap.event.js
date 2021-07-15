@@ -197,13 +197,13 @@ class ConnectEvent extends GameEvent {
 }
 
 class CapturedEvent extends GameEvent {
-	constructor(frameNum, type, unitName, unitColor, objectColor, objectPosition, objectType) {
+	constructor(frameNum, type, objectType, unitName, unitColor, objectColor, objectPosition) {
 		super(frameNum, type);
+		this.objectType = objectType;
 		this.unitName = unitName;
 		this.unitColor = unitColor;
 		this.objectColor = objectColor;
 		this.objectPosition = objectPosition;
-		this.objectType = objectType;
 		this._marker = null;
 
 		let icon = "hd_unknown";
