@@ -30,9 +30,18 @@ class GameEvent {
 		this.type = type;
 	}
 
-	needsUpdate(f) {
-		return f >= this.frameNum && this.lastFrameNumUpdate !== f
+	// check if update() call is needed
+	needsUpdate(f, onlyVisible = true) {
+		return (!onlyVisible || f >= this.frameNum) && this.lastFrameNumUpdate !== f
 	}
+
+	// update element
+	update(f) {
+		this.lastFrameNumUpdate = f;
+	}
+
+	// update time related to frameNum
+	updateTime() {}
 }
 
 // TODO: Handle case where victim is a vehicle
@@ -239,6 +248,7 @@ class TerminalHackStartEvent extends GameEvent {
 		this.terminalPosition = terminalPosition;
 		this.countDownTimer = countDownTimer;
 		this._element = null;
+		this._marker = null;
 
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
@@ -277,17 +287,36 @@ class TerminalHackStartEvent extends GameEvent {
 	getElement() { return this._element };
 
 	update(f) {
-		if (!this.timerSpan) return;
-		if (!this.needsUpdate(+f)) return;
-		const secondsRunning = ((+f - this.frameNum) * frameCaptureDelay / 1000);
-		const secondsLeft = this.countDownTimer - secondsRunning;
-		if (secondsRunning < 0) return;
-		if (secondsLeft > 0) {
-			this.timerSpan.textContent = ` (${secondsLeft} seconds left)`;
-		} else {
-			this.timerSpan.textContent = ` (complete)`;
+		if (!this.needsUpdate(f, false)) return;
+
+		const markerVisible = this.markerIsVisible(f);
+		if (!this._marker && markerVisible) {
+			this._marker = L.marker.pulse(armaToLatLng(this.terminalPosition), {iconSize: [50,50], color: 'red', fillColor: 'transparent'}).addTo(map);
+		} else if (this._marker && !markerVisible) {
+			this._marker.remove();
+			this._marker = null;
 		}
-		this.lastFrameNumUpdate = f;
+
+		if (this.timerSpan) {
+			const secondsRunning = ((+f - this.frameNum) * frameCaptureDelay / 1000);
+			const secondsLeft = this.countDownTimer - secondsRunning;
+			if (secondsRunning < 0) return;
+			if (secondsLeft > 0) {
+				this.timerSpan.textContent = ` (${secondsLeft} seconds left)`;
+			} else {
+				this.timerSpan.textContent = ` (complete)`;
+			}
+		}
+
+		super.update(f);
+	}
+
+	markerIsVisible(f) {
+		if (!this.terminalPosition) return false;
+		if (f < this.frameNum) return false;
+		const secondsRunning = ((f - this.frameNum) * frameCaptureDelay / 1000);
+		const secondsLeft = this.countDownTimer - secondsRunning;
+		return secondsLeft > 0;
 	}
 
 	updateTime() {
