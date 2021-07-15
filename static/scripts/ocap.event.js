@@ -384,7 +384,11 @@ class TerminalHackUpdateEvent extends GameEvent {
 
 		const messageSpan = document.createElement("span");
 		messageSpan.className = "medium";
-		localizable(messageSpan, "is_hacking_terminal", " ", " ");
+		if (this.type === "terminalHackCanceled") {
+			localizable(messageSpan, "interrupted_hack", " ", " ");
+		} else {
+			messageSpan.textContent = "ERROR UNKNOWN TYPE";
+		}
 
 		const img = document.createElement("img");
 		img.style.height = "12px";
