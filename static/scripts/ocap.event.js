@@ -22,6 +22,19 @@ class GameEvents {
 	getEvents() { return this._events };
 }
 
+class GameEvent {
+	lastFrameNumUpdate = null;
+
+	constructor(frameNum, type) {
+		this.frameNum = frameNum;
+		this.type = type;
+	}
+
+	needsUpdate(f) {
+		return f >= this.frameNum && this.lastFrameNumUpdate !== f
+	}
+}
+
 // TODO: Handle case where victim is a vehicle
 class HitKilledEvent {
 	constructor(frameNum, type, causedBy, victim, distance, weapon) {
@@ -211,6 +224,71 @@ class CaptureFlagEvent {
 	};
 
 	getElement() { return this._element };
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
+	}
+}
+
+class TerminalHackStartEvent extends GameEvent {
+	constructor(frameNum, type, unitName, unitColor, terminalColor, terminalPosition, countDownTimer) {
+		super(frameNum, type);
+		this.unitName = unitName;
+		this.unitColor = unitColor;
+		this.terminalColor = terminalColor;
+		this.terminalPosition = terminalPosition;
+		this.countDownTimer = countDownTimer;
+		this._element = null;
+
+		// Create list element for this event (for later use)
+		const unitSpan = document.createElement("span");
+		unitSpan.className = "medium";
+		unitSpan.textContent = `${this.unitName}`;
+		colorElement(unitSpan, this.unitColor);
+
+		const messageSpan = document.createElement("span");
+		messageSpan.className = "medium";
+		localizable(messageSpan, "is_hacking_terminal", " ", " ");
+
+		const img = document.createElement("img");
+		img.style.height = "12px";
+		colorMarkerIcon(img, "loc_Transmitter", this.terminalColor);
+
+		if (this.countDownTimer > 0) {
+			this.timerSpan = document.createElement("span");
+			this.timerSpan.className = "medium";
+		}
+
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
+
+		const li = document.createElement("li");
+		li.appendChild(unitSpan);
+		li.appendChild(messageSpan);
+		li.appendChild(img);
+		if (this.timerSpan) {
+			li.appendChild(this.timerSpan);
+		}
+		li.appendChild(this.detailsDiv);
+		this._element = li;
+	};
+
+	getElement() { return this._element };
+
+	update(f) {
+		if (!this.timerSpan) return;
+		if (!this.needsUpdate(+f)) return;
+		const secondsRunning = ((+f - this.frameNum) * frameCaptureDelay / 1000);
+		const secondsLeft = this.countDownTimer - secondsRunning;
+		if (secondsRunning < 0) return;
+		if (secondsLeft > 0) {
+			this.timerSpan.textContent = ` (${secondsLeft} seconds left)`;
+		} else {
+			this.timerSpan.textContent = ` (complete)`;
+		}
+		this.lastFrameNumUpdate = f;
+	}
 
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);

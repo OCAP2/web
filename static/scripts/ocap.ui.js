@@ -332,6 +332,12 @@ class UI {
 		this.updateCurrentTime(f);
 		this.setFrameSliderVal(f);
 		playbackFrame = f;
+
+		for (const event of this.activeEvents) {
+			if (typeof event.update === "function") {
+				event.update(f);
+			}
+		}
 	};
 
 	updateCurrentTime(f = playbackFrame) {
@@ -649,7 +655,7 @@ class UI {
 		if (el.parentNode == null) {
 			this.eventList.insertBefore(el, this.eventList.childNodes[0]);
 
-			// Fade element in if occured on current frame
+			// Fade element in if occurred on current frame
 			if (event.frameNum != playbackFrame) {
 				el.className = "liEvent reveal";
 			} else {
