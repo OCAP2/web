@@ -413,10 +413,12 @@ input[type=range]::-webkit-slider-runnable-track {
 	border-bottom: 1px solid rgba(0, 0, 0, 0.3);
 	opacity: 0;
 }
-
 .liEvent.reveal {
 	opacity: 1;
 	transition: opacity 1s;
+}
+.liEvent.action {
+	cursor: pointer;
 }
 
 .eventDetails {

@@ -710,11 +710,31 @@ function processOp (filepath) {
 				case (type == "connected" || type == "disconnected"):
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
 					break;
-				// case (type == "capturedFlag"):
-				// 	gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
-				// 	break;
 				case (type == "capturedFlag"):
-					gameEvent = new TerminalHackStartEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3], 20);
+					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
+					break;
+				case (type === "terminalHackStarted"):
+					gameEvent = new TerminalHackStartEvent(
+						frameNum,
+						type,
+						eventJSON[2][0], // unit name
+						eventJSON[2][1], // unit color
+						eventJSON[2][2], // terminal color
+						eventJSON[2][3], // terminal identifier
+						eventJSON[2][4], // terminal position
+						eventJSON[2][5], // countdown timer
+					);
+					break;
+				case (type === "terminalHackCanceled"):
+					gameEvent = new TerminalHackUpdateEvent(
+						frameNum,
+						type,
+						eventJSON[2][0], // unit name
+						eventJSON[2][1], // unit color
+						eventJSON[2][2], // terminal color
+						eventJSON[2][3], // terminal identifier
+						eventJSON[2][4], // terminal state
+					);
 					break;
 				case (type == "endMission"):
 					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
@@ -726,6 +746,7 @@ function processOp (filepath) {
 			}
 		});
 
+		gameEvents.init();
 
 		console.log("Finished processing operation (" + (new Date() - time) + "ms).");
 		initMap();

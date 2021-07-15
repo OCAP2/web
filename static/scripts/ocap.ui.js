@@ -53,7 +53,6 @@ class UI {
 		this.filterSubmit = null;
 		this.systemTime = null;
 		this.systemTimeEnable = false;
-		this.activeEvents = [];
 
 		this._init();
 	};
@@ -333,10 +332,8 @@ class UI {
 		this.setFrameSliderVal(f);
 		playbackFrame = f;
 
-		for (const event of this.activeEvents) {
-			if (typeof event.update === "function") {
-				event.update(f);
-			}
+		for (const event of gameEvents.getEvents().reverse()) {
+			event.update(f);
 		}
 	};
 
@@ -632,15 +629,11 @@ class UI {
 
 	removeEvent(event) {
 		var el = event.getElement();
+		el.classList.remove("reveal");
 
 		// Remove element if not already removed
 		if (el.parentNode != null) {
 			this.eventList.removeChild(el);
-		}
-
-		const index = this.activeEvents.indexOf(event);
-		if (index > -1) {
-			this.activeEvents.splice(index, 1);
 		}
 	};
 
@@ -648,8 +641,8 @@ class UI {
 		if (typeof event.updateTime === "function") {
 			event.updateTime();
 		}
-		this.activeEvents.push(event);
 		var el = event.getElement();
+		el.classList.add("liEvent");
 
 		// Add element if not already added
 		if (el.parentNode == null) {
@@ -657,11 +650,10 @@ class UI {
 
 			// Fade element in if occurred on current frame
 			if (event.frameNum != playbackFrame) {
-				el.className = "liEvent reveal";
+				el.classList.add("reveal");
 			} else {
-				el.className = "liEvent";
 				setTimeout(() => {
-					el.className = "liEvent reveal";
+					el.classList.add("reveal");
 				}, 100);
 			}
 		}
@@ -678,10 +670,8 @@ class UI {
 	}
 
 	updateEventTimes() {
-		for (const event of this.activeEvents) {
-			if (typeof event.updateTime === "function") {
-				event.updateTime();
-			}
+		for (const event of gameEvents.getActiveEvents()) {
+			event.updateTime();
 		}
 	}
 

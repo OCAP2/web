@@ -1,11 +1,17 @@
 class GameEvents {
 	constructor() {
 		this._events = [];
-	};
+	}
 
 	addEvent(event) {
 		this._events.push(event);
-	};
+	}
+
+	init() {
+		for (const event of this._events) {
+			event.init();
+		}
+	}
 
 	// Return an array of events that occured on the given frame
 	getEventsAtFrame(f) {
@@ -17,38 +23,69 @@ class GameEvents {
 		});
 
 		return events;
-	};
+	}
 
-	getEvents() { return this._events };
+	getEvents() { return this._events }
+
+	getActiveEvents() {
+		return this._events.filter((event) => event.frameNum <= playbackFrame);
+	}
 }
 
 class GameEvent {
 	lastFrameNumUpdate = null;
+	objectID = null;
+	_forceUpdate = false;
+	_element = null;
 
-	constructor(frameNum, type) {
+	constructor(frameNum, type, objectID = null) {
 		this.frameNum = frameNum;
 		this.type = type;
+		this.objectID = objectID;
 	}
 
+	getElement() { return this._element };
+
+	// initialize event once all events are known
+	init() {}
+
+	// forces an update for the next frame
+	forceUpdate() {
+		this._forceUpdate = true;
+	}
 	// check if update() call is needed
 	needsUpdate(f, onlyVisible = true) {
-		return (!onlyVisible || f >= this.frameNum) && this.lastFrameNumUpdate !== f
+		return ((!onlyVisible || f >= this.frameNum) && this.lastFrameNumUpdate !== f) || this._forceUpdate;
 	}
-
 	// update element
 	update(f) {
 		this.lastFrameNumUpdate = f;
+		this._forceUpdate = false;
 	}
 
 	// update time related to frameNum
 	updateTime() {}
+
+	// get previous event for the same objectID based given constructor
+	getPreviousObjectEvent(type) {
+		const events = gameEvents.getEvents();
+		const thisIndex = events.indexOf(this);
+		if (thisIndex === -1) return null;
+
+		for (const event of events.slice(0, thisIndex).reverse()) {
+			if (event instanceof type && event.objectID === this.objectID) {
+				return event;
+			}
+		}
+
+		return null;
+	}
 }
 
 // TODO: Handle case where victim is a vehicle
-class HitKilledEvent {
+class HitKilledEvent extends GameEvent {
 	constructor(frameNum, type, causedBy, victim, distance, weapon) {
-		this.frameNum = frameNum; // Frame number that event occurred
-		this.type = type; // "hit" or "killed"
+		super(frameNum, type);
 		this.causedBy = causedBy;
 		this.victim = victim;
 		this.distance = distance;
@@ -62,7 +99,6 @@ class HitKilledEvent {
 			this.weapon = "N/A";
 			this.causedBy = new Unit(null, null, getLocalizable("something"), null, null, null, null); // Dummy unit
 		}
-
 
 		// === Create UI element for this event (for later use)
 		// Victim
@@ -130,19 +166,15 @@ class HitKilledEvent {
 		this._element = li;
 	};
 
-	getElement() { return this._element };
-
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum) + " - " + this.distance + "m - " + this.weapon;
 	}
 }
 
-class ConnectEvent {
+class ConnectEvent extends GameEvent {
 	constructor(frameNum, type, unitName) {
-		this.frameNum = frameNum;
-		this.type = type;
+		super(frameNum, type);
 		this.unitName = unitName;
-		this._element = null;
 
 		// Create list element for this event (for later use)
 		var span = document.createElement("span");
@@ -159,21 +191,17 @@ class ConnectEvent {
 		this._element = li;
 	};
 
-	getElement() { return this._element };
-
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 }
 
-class CaptureFlagEvent {
+class CaptureFlagEvent extends GameEvent {
 	constructor(frameNum, type, unitName, unitSide, flagSide) {
-		this.frameNum = frameNum;
-		this.type = type;
+		super(frameNum, type);
 		this.unitName = unitName;
 		this.unitSide = unitSide;
 		this.flagSide = flagSide;
-		this._element = null;
 
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
@@ -232,23 +260,21 @@ class CaptureFlagEvent {
 		this._element = li;
 	};
 
-	getElement() { return this._element };
-
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 }
 
 class TerminalHackStartEvent extends GameEvent {
-	constructor(frameNum, type, unitName, unitColor, terminalColor, terminalPosition, countDownTimer) {
-		super(frameNum, type);
+	constructor(frameNum, type, unitName, unitColor, terminalColor, terminalID, terminalPosition, countDownTimer) {
+		super(frameNum, type, terminalID);
 		this.unitName = unitName;
 		this.unitColor = unitColor;
 		this.terminalColor = terminalColor;
 		this.terminalPosition = terminalPosition;
 		this.countDownTimer = countDownTimer;
-		this._element = null;
 		this._marker = null;
+		this._state = "running";
 
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
@@ -282,9 +308,14 @@ class TerminalHackStartEvent extends GameEvent {
 		}
 		li.appendChild(this.detailsDiv);
 		this._element = li;
-	};
 
-	getElement() { return this._element };
+		if (this.terminalPosition) {
+			this._element.classList.add("action");
+			this._element.addEventListener("click", () => {
+				map.setView(armaToLatLng(this.terminalPosition), map.getZoom(), { animate: true });
+			});
+		}
+	};
 
 	update(f) {
 		if (!this.needsUpdate(f, false)) return;
@@ -298,13 +329,17 @@ class TerminalHackStartEvent extends GameEvent {
 		}
 
 		if (this.timerSpan) {
-			const secondsRunning = ((+f - this.frameNum) * frameCaptureDelay / 1000);
-			const secondsLeft = this.countDownTimer - secondsRunning;
-			if (secondsRunning < 0) return;
-			if (secondsLeft > 0) {
-				this.timerSpan.textContent = ` (${secondsLeft} seconds left)`;
-			} else {
-				this.timerSpan.textContent = ` (complete)`;
+			if (this._state === "interrupted") {
+				this.timerSpan.textContent = ` (interrupted)`;
+			} else if (this._state === "running") {
+				const secondsRunning = ((+f - this.frameNum) * frameCaptureDelay / 1000);
+				const secondsLeft = this.countDownTimer - secondsRunning;
+				if (secondsRunning < 0) return;
+				if (secondsLeft > 0) {
+					this.timerSpan.textContent = ` (${secondsLeft} seconds left)`;
+				} else {
+					this.timerSpan.textContent = ` (complete)`;
+				}
 			}
 		}
 
@@ -314,6 +349,7 @@ class TerminalHackStartEvent extends GameEvent {
 	markerIsVisible(f) {
 		if (!this.terminalPosition) return false;
 		if (f < this.frameNum) return false;
+		if (this._state !== "running") return false;
 		const secondsRunning = ((f - this.frameNum) * frameCaptureDelay / 1000);
 		const secondsLeft = this.countDownTimer - secondsRunning;
 		return secondsLeft > 0;
@@ -322,13 +358,88 @@ class TerminalHackStartEvent extends GameEvent {
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
+
+	getState() { return this._state; }
+	setState(state) {
+		this._state = state;
+		this.forceUpdate();
+	}
+}
+
+class TerminalHackUpdateEvent extends GameEvent {
+	constructor(frameNum, type, unitName, unitColor, terminalColor, terminalID, state) {
+		super(frameNum, type, terminalID);
+		this.unitName = unitName;
+		this.unitColor = unitColor;
+		this.terminalColor = terminalColor;
+		this.state = state;
+		this._triggered = false;
+		this._oldState = null;
+
+		// Create list element for this event (for later use)
+		const unitSpan = document.createElement("span");
+		unitSpan.className = "medium";
+		unitSpan.textContent = `${this.unitName}`;
+		colorElement(unitSpan, this.unitColor);
+
+		const messageSpan = document.createElement("span");
+		messageSpan.className = "medium";
+		localizable(messageSpan, "is_hacking_terminal", " ", " ");
+
+		const img = document.createElement("img");
+		img.style.height = "12px";
+		colorMarkerIcon(img, "loc_Transmitter", this.terminalColor);
+
+		this.detailsDiv = document.createElement("div");
+		this.detailsDiv.className = "eventDetails";
+		this.updateTime();
+
+		const li = document.createElement("li");
+		li.appendChild(unitSpan);
+		li.appendChild(messageSpan);
+		li.appendChild(img);
+		li.appendChild(this.detailsDiv);
+		this._element = li;
+	}
+
+	init() {
+		this._parent = this.getPreviousObjectEvent(TerminalHackStartEvent);
+		if (this._parent && this._parent.terminalPosition) {
+			this._element.classList.add("action");
+			this._element.addEventListener("click", () => {
+				map.setView(armaToLatLng(this._parent.terminalPosition), map.getZoom(), { animate: true });
+			});
+		}
+	}
+
+	update(f) {
+		if (!this.needsUpdate(f, false)) return;
+
+		if (f >= this.frameNum && !this._triggered) {
+			if (this._parent) {
+				this._oldState = this._parent.getState();
+				this._parent.setState(this.state);
+			}
+			this._triggered = true;
+		} else if (f < this.frameNum && this._triggered) {
+			if (this._parent) {
+				this._parent.setState(this._oldState);
+			}
+			this._triggered = false;
+		}
+
+		super.update(f);
+	}
+
+	updateTime() {
+		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
+	}
 }
 
 // [4639, "endMission", ["EAST", "Offar Factory зазахвачена. Победа Сил РФ."]]
-class endMissionEvent {
+class endMissionEvent extends GameEvent {
 	constructor(frameNum, type, side, msg) {
-		this.frameNum = frameNum;
-		this.type = type;
+		super(frameNum, type);
 		this.msg = msg;
 		this.side = side;
 		this._element = null;
@@ -338,9 +449,9 @@ class endMissionEvent {
 		span.className = "medium";
 
 		if (this.side == "") {
-			span.textContent = msg;
+			span.textContent = this.msg;
 		} else {
-			localizable(span, "win", ` ${side}. ${msg}`);
+			localizable(span, "win", ` ${side}. ${this.msg}`);
 			switch (true) {
 				case (this.side == "EAST"):
 					span.className = "opfor";
@@ -361,35 +472,4 @@ class endMissionEvent {
 		li.appendChild(span);
 		this._element = li;
 	};
-
-	getElement() { return this._element };
-}
-
-class customEvent {
-	constructor(frameNum, type, msg) {
-		this.frameNum = frameNum;
-		this.type = type;
-		this.msg = msg;
-		this._element = null;
-
-		// Create list element for this event (for later use)
-		var span = document.createElement("span");
-		span.className = "medium";
-		localizable(span, this.type, "", `${this.msg} `);
-
-		this.detailsDiv = document.createElement("div");
-		this.detailsDiv.className = "eventDetails";
-		this.updateTime();
-
-		var li = document.createElement("li");
-		li.appendChild(span);
-		li.appendChild(this.detailsDiv);
-		this._element = li;
-	};
-
-	getElement () { return this._element };
-
-	updateTime() {
-		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
-	}
 }
