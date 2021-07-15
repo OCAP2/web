@@ -168,6 +168,26 @@ let _localizable = {
 		"ru": "Язык:",
 		"en": "Language:",
 		"de": "Sprache:"
+	},
+	"system_time": {
+		"ru": "Системное время",
+		"en": "System time",
+		"de": "System zeit"
+	},
+	"mission_time": {
+		"ru": "Время миссии",
+		"en": "Mission time",
+		"de": "Missionszeit"
+	},
+	"recording_time": {
+		"ru": "Время записи",
+		"en": "Recording time",
+		"de": "Aufnahmezeit"
+	},
+	"not_available": {
+		"ru": " недоступен",
+		"en": " not available",
+		"de": " nicht Verfügbar"
 	}
 };
 let localizableElement = [];

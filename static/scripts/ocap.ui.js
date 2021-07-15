@@ -44,12 +44,16 @@ class UI {
 		this.cursorTooltip = null;
 		this.currentSide = "";
 		this.toggleNickname = null;
+		this.toggleTime = null;
 		this.nicknameEnable = true;
 		this.filterTagGameInput = null;
 		this.filterGameInput = null;
 		this.calendar1 = null;
 		this.calendar2 = null;
 		this.filterSubmit = null;
+		this.systemTime = null;
+		this.systemTimeEnable = false;
+		this.activeEvents = [];
 
 		this._init();
 	};
@@ -79,55 +83,75 @@ class UI {
 		});
 
 		// Nickname show/hide vehicle && player
-		var toggleNicknameButton = document.getElementById("toggleNickname");
-		toggleNicknameButton.addEventListener("click", () => {
+		this.toggleNicknameButton = document.getElementById("toggleNickname");
+		this.toggleNicknameButton.addEventListener("click", () => {
 			this.nicknameEnable = !this.nicknameEnable;
 			var text;
 			if (this.nicknameEnable) {
-				toggleNicknameButton.style.opacity = 1;
+				this.toggleNicknameButton.style.opacity = 1;
 				text = getLocalizable("shown");
 			} else {
-				toggleNicknameButton.style.opacity = 0.5;
+				this.toggleNicknameButton.style.opacity = 0.5;
 				text = getLocalizable("hidden");
 			}
 			this.showHint(getLocalizable("nickname") + text);
 		});
-		this.toggleNicknameButton = toggleNicknameButton;
+
 		// Toggle firelines button
-		var toggleFirelinesButton = document.getElementById("toggleFirelines");
-		toggleFirelinesButton.addEventListener("click", () => {
+		this.toggleFirelinesButton = document.getElementById("toggleFirelines");
+		this.toggleFirelinesButton.addEventListener("click", () => {
 			this.firelinesEnabled = !this.firelinesEnabled;
 
 			var text;
 			if (this.firelinesEnabled) {
-				toggleFirelinesButton.style.opacity = 1;
+				this.toggleFirelinesButton.style.opacity = 1;
 				text = getLocalizable("shown");
 			} else {
-				toggleFirelinesButton.style.opacity = 0.5;
+				this.toggleFirelinesButton.style.opacity = 0.5;
 				text = getLocalizable("hidden");
 			}
 
 			this.showHint(getLocalizable("line_fire") + text);
 		});
-		this.toggleFirelinesButton = toggleFirelinesButton;
+
+		// Change time view
+		this.toggleTime = document.getElementById("toggleTime");
+		this.toggleTime.addEventListener("click", () => {
+			if (!this.systemTime) {
+				this.showHint(getLocalizable("system_time") + getLocalizable("not_available"));
+				return;
+			}
+			this.systemTimeEnable = !this.systemTimeEnable;
+			let text;
+			if (this.systemTimeEnable) {
+				this.toggleTime.style.opacity = 1;
+				text = getLocalizable("system_time") + getLocalizable("shown");
+			} else {
+				this.toggleTime.style.opacity = 0.5;
+				text = getLocalizable("recording_time") + getLocalizable("shown");
+			}
+			this.updateCurrentTime();
+			this.updateEndTime();
+			this.updateEventTimes();
+			this.showHint(text);
+		});
 
 		// Toggle markers button
-		var toggleMarkersButton = document.getElementById("toggleMapMarker");
-		toggleMarkersButton.addEventListener("click", () => {
+		this.toggleMarkersButton = document.getElementById("toggleMapMarker");
+		this.toggleMarkersButton.addEventListener("click", () => {
 			this.markersEnable = !this.markersEnable;
 
 			var text;
 			if (this.markersEnable) {
-				toggleMarkersButton.style.opacity = 1;
+				this.toggleMarkersButton.style.opacity = 1;
 				text = getLocalizable("shown");
 			} else {
-				toggleMarkersButton.style.opacity = 0.5;
+				this.toggleMarkersButton.style.opacity = 0.5;
 				text = getLocalizable("hidden");
 			}
 
 			this.showHint(getLocalizable("markers") + text);
 		});
-		this.toggleMarkersButton = toggleMarkersButton;
 
 		// Setup left panel
 		this.leftPanel = document.getElementById("leftPanel");
@@ -260,6 +284,16 @@ class UI {
 		this.frameSliderWidthInPercent = (this.frameSlider.offsetWidth / this.frameSlider.parentElement.offsetWidth) * 100;
 	};
 
+	getTimeString(frame) {
+		let date = new Date(frame * frameCaptureDelay);
+		let isUTC = true;
+		if (this.systemTime && this.systemTimeEnable) {
+			date = new Date(new Date(this.systemTime).getTime() + (frame * frameCaptureDelay));
+			isUTC = false;
+		}
+		return dateToTimeString(date, isUTC);
+	}
+
 	showCursorTooltip(text) {
 		let tooltip = this.cursorTooltip;
 		tooltip.textContent = text;
@@ -286,19 +320,38 @@ class UI {
 		this.missionName.textContent = name;
 	};
 
+	setSystemTime(time) {
+		this.systemTime = time + "Z";
+		this.updateEndTime();
+	}
+
 	// Set mission time based on given frame
 	// Move playback + slider to given frame in time
 	setMissionCurTime(f) {
 		missionCurDate.setTime(f*frameCaptureDelay);
-		this.missionCurTime.textContent = dateToTimeString(missionCurDate);
+		this.updateCurrentTime(f);
 		this.setFrameSliderVal(f);
 		playbackFrame = f;
 	};
 
+	updateCurrentTime(f = playbackFrame) {
+		this.missionCurTime.textContent = ui.getTimeString(f);
+	}
+
 	setMissionEndTime(f) {
-		this.missionEndTime.textContent = dateToTimeString(new Date(f*frameCaptureDelay));
+		this.updateEndTime(f);
 		this.setFrameSliderMax(f);
-	};
+	}
+
+	updateEndTime(f = this.frameSlider.max) {
+		let endDate = new Date(f*frameCaptureDelay);
+		let isUTC = true;
+		if (this.systemTime && this.systemTimeEnable) {
+			endDate = new Date(new Date(this.systemTime).getTime() + (this.frameSlider.max * frameCaptureDelay));
+			isUTC = false;
+		}
+		this.missionEndTime.textContent = dateToTimeString(endDate, isUTC);
+	}
 
 	setFrameSliderMax(f) {
 		this.frameSlider.max = f;
@@ -578,9 +631,18 @@ class UI {
 		if (el.parentNode != null) {
 			this.eventList.removeChild(el);
 		}
+
+		const index = this.activeEvents.indexOf(event);
+		if (index > -1) {
+			this.activeEvents.splice(index, 1);
+		}
 	};
 
 	addEvent(event) {
+		if (typeof event.updateTime === "function") {
+			event.updateTime();
+		}
+		this.activeEvents.push(event);
 		var el = event.getElement();
 
 		// Add element if not already added
@@ -607,7 +669,15 @@ class UI {
 		};*/
 
 		this.filterEvent(event);
-	};
+	}
+
+	updateEventTimes() {
+		for (const event of this.activeEvents) {
+			if (typeof event.updateTime === "function") {
+				event.updateTime();
+			}
+		}
+	}
 
 	showHint(text) {
 		this.hint.textContent = text;
