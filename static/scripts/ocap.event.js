@@ -256,7 +256,8 @@ class CapturedEvent extends GameEvent {
 
 		const markerVisible = this.markerIsVisible(f);
 		if (!this._marker && markerVisible) {
-			this._marker = L.marker.pulse(armaToLatLng(this.objectPosition), {iconSize: [50,50], color: 'red', fillColor: 'transparent', iterationCount: 1}).addTo(map);
+			const color = "#" + getMarkerColor(this.unitColor, "000000");
+			this._marker = L.marker.pulse(armaToLatLng(this.objectPosition), {iconSize: [50,50], color: color, fillColor: 'transparent', iterationCount: 1}).addTo(map);
 		} else if (this._marker && !markerVisible) {
 			this._marker.remove();
 			this._marker = null;

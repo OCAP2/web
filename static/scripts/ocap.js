@@ -945,24 +945,29 @@ function colorElement(element, color) {
 		element.style.color = color;
 	}
 }
-function colorMarkerIcon(element, icon, color) {
+
+function getMarkerColor(color, defaultColor = "ffffff") {
+	let hexColor = defaultColor;
 	if (!color) {
-		element.src = `/images/markers/${icon}/ffffff.png`;
-		return;
+		return hexColor;
 	}
 
 	if (color === "EAST") {
-		element.src = `/images/markers/${icon}/ff0000.png`;
+		hexColor = "ff0000";
 	} else if (color === "WEST") {
-		element.src = `/images/markers/${icon}/00a8ff.png`;
+		hexColor = "00a8ff";
 	} else if (color === "IND") {
-		element.src = `/images/markers/${icon}/00cc00.png`;
+		hexColor = "00cc00";
 	} else if (color === "CIV") {
-		element.src = `/images/markers/${icon}/C900FF.png`;
+		hexColor = "C900FF";
 	} else if (color && color.startsWith('#')) {
-		element.src = `/images/markers/${icon}/${color.substring(1)}.png`;
+		hexColor = color.substring(1);
 	} else {
-		console.warn("unknown icon color", color, icon);
-		element.src = `/images/markers/${icon}/ffffff.png`;
+		console.warn("unknown color", color);
 	}
+
+	return hexColor;
+}
+function colorMarkerIcon(element, icon, color) {
+	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
