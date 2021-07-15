@@ -971,3 +971,27 @@ function getMarkerColor(color, defaultColor = "ffffff") {
 function colorMarkerIcon(element, icon, color) {
 	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
+
+
+function getPulseMarkerColor(color, defaultColor = "000000") {
+	let hexColor = defaultColor;
+	if (!color) {
+		return hexColor;
+	}
+
+	if (color === "EAST") {
+		hexColor = "ff0000";
+	} else if (color === "WEST") {
+		hexColor = "004c99";
+	} else if (color === "IND") {
+		hexColor = "00cc00";
+	} else if (color === "CIV") {
+		hexColor = "C900FF";
+	} else if (color && color.startsWith('#')) {
+		hexColor = color.substring(1);
+	} else {
+		console.warn("unknown color", color);
+	}
+
+	return hexColor;
+}
