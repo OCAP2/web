@@ -196,57 +196,38 @@ class ConnectEvent extends GameEvent {
 	}
 }
 
-class CaptureFlagEvent extends GameEvent {
-	constructor(frameNum, type, unitName, unitSide, flagSide) {
+class CapturedEvent extends GameEvent {
+	constructor(frameNum, type, unitName, unitColor, objectColor, objectPosition, objectType) {
 		super(frameNum, type);
 		this.unitName = unitName;
-		this.unitSide = unitSide;
-		this.flagSide = flagSide;
+		this.unitColor = unitColor;
+		this.objectColor = objectColor;
+		this.objectPosition = objectPosition;
+		this.objectType = objectType;
+		this._marker = null;
+
+		let icon = "hd_unknown";
+		let translation = "captured_something";
+		switch (this.objectType) {
+			case "flag":
+				icon = "mil_flag";
+				translation = "captured_flag";
+				break;
+		}
 
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
 		unitSpan.className = "medium";
 		unitSpan.textContent = `${this.unitName} `;
-		if (this.unitSide !== "") {
-			switch (true) {
-				case (this.unitSide === "EAST"):
-					unitSpan.className = "opfor";
-					break;
-				case (this.unitSide === "WEST"):
-					unitSpan.className = "blufor";
-					break;
-				case (this.unitSide === "IND"):
-					unitSpan.className = "ind";
-					break;
-				case (this.unitSide === "CIV"):
-					unitSpan.className = "civ";
-					break;
-			}
-		}
+		colorElement(unitSpan, this.unitColor);
 
 		const messageSpan = document.createElement("span");
 		messageSpan.className = "medium";
 		localizable(messageSpan, "captured_flag", " ", " ");
 
 		const img = document.createElement("img");
-		img.src = "/images/markers/mil_flag/ffffff.png";
 		img.style.height = "12px";
-		if (this.flagSide !== "") {
-			switch (true) {
-				case (this.flagSide === "EAST"):
-					img.src = "/images/markers/mil_flag/ff0000.png";
-					break;
-				case (this.flagSide === "WEST"):
-					img.src = "/images/markers/mil_flag/00a8ff.png";
-					break;
-				case (this.flagSide === "IND"):
-					img.src = "/images/markers/mil_flag/00cc00.png";
-					break;
-				case (this.flagSide === "CIV"):
-					img.src = "/images/markers/mil_flag/C900FF.png";
-					break;
-			}
-		}
+		colorMarkerIcon(img, icon, this.objectColor);
 
 		this.detailsDiv = document.createElement("div");
 		this.detailsDiv.className = "eventDetails";
@@ -256,9 +237,39 @@ class CaptureFlagEvent extends GameEvent {
 		li.appendChild(unitSpan);
 		li.appendChild(messageSpan);
 		li.appendChild(img);
+		if (this.timerSpan) {
+			li.appendChild(this.timerSpan);
+		}
 		li.appendChild(this.detailsDiv);
 		this._element = li;
+
+		if (this.objectPosition) {
+			this._element.classList.add("action");
+			this._element.addEventListener("click", () => {
+				map.setView(armaToLatLng(this.objectPosition), map.getZoom(), { animate: true });
+			});
+		}
 	};
+
+	update(f) {
+		if (!this.needsUpdate(f, false)) return;
+
+		const markerVisible = this.markerIsVisible(f);
+		if (!this._marker && markerVisible) {
+			this._marker = L.marker.pulse(armaToLatLng(this.objectPosition), {iconSize: [50,50], color: 'red', fillColor: 'transparent', iterationCount: 1}).addTo(map);
+		} else if (this._marker && !markerVisible) {
+			this._marker.remove();
+			this._marker = null;
+		}
+
+		super.update(f);
+	}
+
+	markerIsVisible(f) {
+		if (!this.objectPosition) return false;
+		return f >= this.frameNum;
+
+	}
 
 	updateTime() {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);

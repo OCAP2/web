@@ -9,6 +9,7 @@
             color: 'red',
             animate: true,
             heartbeat: 1,
+            iterationCount: 'infinite'
         },
 
         initialize: function (options) {
@@ -24,7 +25,7 @@
                 'box-shadow: 0 0 6px 2px '+this.options.color,
 
                 'animation: pulsate ' + this.options.heartbeat + 's ease-out',
-                'animation-iteration-count: infinite',
+                `animation-iteration-count: ${this.options.iterationCount}`,
                 // 'animation-delay: '+ (this.options.heartbeat + .1) + 's',
                 'position:absolute',
                 'left:0',

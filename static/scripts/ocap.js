@@ -710,8 +710,11 @@ function processOp (filepath) {
 				case (type == "connected" || type == "disconnected"):
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
 					break;
-				case (type == "capturedFlag"):
-					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
+				case (type === "capturedFlag"):
+					gameEvent = new CapturedEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3], "flag");
+					break;
+				case (type === "captured"):
+					gameEvent = new CapturedEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3], eventJSON[2][4]);
 					break;
 				case (type === "terminalHackStarted"):
 					gameEvent = new TerminalHackStartEvent(
