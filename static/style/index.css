@@ -17,11 +17,7 @@ html, body, #map {
 	top: 0;
 }
 
-#uk3cbLogoWatermark {
-	background-image: url("../images/3cb-logo.png");
-	background-size: 25px 25px;
-	width: 25px;
-	height: 25px;
+.customize.logo {
 	position: absolute;
 	bottom: 65px;
 	right: 5px;

@@ -7,17 +7,23 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Setting server
 type Setting struct {
-	Listen  string `json:"listen" yaml:"listen"`
-	Secret  string `json:"secret" yaml:"secret"`
-	DB      string `json:"db" yaml:"db"`
-	Markers string `json:"markers" yaml:"markers"`
-	Ammo    string `json:"ammo" yaml:"ammo"`
-	Maps    string `json:"maps" yaml:"maps"`
-	Data    string `json:"data" yaml:"data"`
-	Static  string `json:"static" yaml:"static"`
-	Logger  bool   `json:"logger" yaml:"logger"`
+	Listen    string    `json:"listen" yaml:"listen"`
+	Secret    string    `json:"secret" yaml:"secret"`
+	DB        string    `json:"db" yaml:"db"`
+	Markers   string    `json:"markers" yaml:"markers"`
+	Ammo      string    `json:"ammo" yaml:"ammo"`
+	Maps      string    `json:"maps" yaml:"maps"`
+	Data      string    `json:"data" yaml:"data"`
+	Static    string    `json:"static" yaml:"static"`
+	Logger    bool      `json:"logger" yaml:"logger"`
+	Customize Customize `json:"customize" yaml:"customize"`
+}
+
+type Customize struct {
+	WebsiteURL      string `json:"websiteURL" yaml:"websiteURL"`
+	WebsiteLogo     string `json:"websiteLogo" yaml:"websiteLogo"`
+	WebsiteLogoSize string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -42,9 +48,10 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
 	viper.SetDefault("logger", true)
+	viper.SetDefault("customize.websiteLogoSize", "32px")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static"}
+	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
@@ -59,6 +66,9 @@ func NewSetting() (setting Setting, err error) {
 	if err = viper.Unmarshal(&setting); err != nil {
 		return
 	}
+
+	fmt.Println(setting.Customize.WebsiteURL)
+	viper.Debug()
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {
 		return setting, fmt.Errorf("change the `secret` value to your own")

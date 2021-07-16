@@ -36,8 +36,9 @@ func NewHandler(
 
 	e.Use(hdlr.errorHandler)
 
-	e.GET("/api/v1/operations/get", hdlr.GetOperations)
-	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
+	e.GET("/api/v1/operations", hdlr.GetOperations)
+	e.POST("/api/v1/operations", hdlr.StoreOperation)
+	e.GET("/api/v1/customize", hdlr.GetCustomize)
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
 	e.GET("/images/markers/magicons/:name", hdlr.GetAmmo)
@@ -77,6 +78,10 @@ func (h *Handler) GetOperations(c echo.Context) error {
 	}
 
 	return c.JSONPretty(http.StatusOK, ops, "\t")
+}
+
+func (h *Handler) GetCustomize(c echo.Context) error {
+	return c.JSONPretty(http.StatusOK, h.setting.Customize, "\t")
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {

@@ -464,7 +464,7 @@ class UI {
 		var DateNewer = calendar1.value;
 		var DateOlder = calendar2.value;
 		$.ajax({
-			url: '/api/v1/operations/get',
+			url: '/api/v1/operations',
 			type : "get",
 			async : false,
 			cache : false,
@@ -548,20 +548,8 @@ class UI {
 
 		this.modalBody.innerHTML = `
 			<img src="images/ocap-logo.png" height="60px" alt="OCAP">
-			<h4 style=line-height:0>Operation Capture And Playback (BETA)</h4>
-			Author: MisterGoodson (aka Goodson [3CB]) <br/>
-			<a href="https://forums.bistudio.com/forums/topic/194164-ocap-operation-capture-and-playback-aar-system/" target="_blank">BI Forum Post</a><br/>
-			<a href="https://github.com/mistergoodson/OCAP" target="_blank">GitHub Link</a>
-			<br/>
-			<br/>
-			Modified: Dell, Zealot, Kurt<br/>
-			<a href="https://github.com/Zealot111/OCAP" target="_blank">GitHub Link</a>
-			<br/>
-			<br/>
-			Further Modified: IndigoFox, Zealot<br/>
-			<a href="https://github.com/indig0fox/OCAP" target="_blank">GitHub Link</a>
-			<br/>
-			<a href="https://github.com/OCAPv2/web" target="_blank">GitHub Link</a>
+			<h4 style=line-height:0>Operation Capture And Playback</h4>
+			<a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
 			<br/>
 			<br/>
 			<span id="keyControl-playPause"></span><br/>
@@ -725,6 +713,36 @@ class UI {
 		} else {
 			el.style.display = "none";
 		}
-	};
+	}
+
+	updateCustomize() {
+		$.ajax({
+			url: '/api/v1/customize',
+			type : "get",
+			cache : false
+		}).done((data) => {
+			console.log(data);
+			const container = document.getElementById("container");
+
+			if (data.websiteLogo) {
+				const logo = document.createElement("div");
+				logo.className = "customize logo"
+				logo.style.backgroundImage = `url("${data.websiteLogo}")`;
+				logo.style.backgroundSize = data.websiteLogoSize;
+				logo.style.width = data.websiteLogoSize;
+				logo.style.height = data.websiteLogoSize;
+
+				if (data.websiteURL) {
+					const link = document.createElement("a");
+					link.target = "_blank";
+					link.href = data.websiteURL;
+					link.append(logo);
+					container.prepend(link);
+				} else {
+					container.prepend(logo);
+				}
+			}
+		});
+	}
 }
 
