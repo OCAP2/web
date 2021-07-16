@@ -52,7 +52,6 @@ class UI {
 		this.calendar2 = null;
 		this.filterSubmit = null;
 		this.systemTime = null;
-		this.systemTimeEnable = false;
 
 		this._init();
 	};
@@ -115,24 +114,28 @@ class UI {
 
 		// Change time view
 		this.toggleTime = document.getElementById("toggleTime");
-		this.toggleTime.addEventListener("click", () => {
-			if (!this.systemTime) {
-				this.showHint(getLocalizable("system_time") + getLocalizable("not_available"));
+		for (const timeValue of ["elapsed","mission","system"]) {
+			const option = document.createElement("option");
+			option.value = timeValue;
+			localizable(option, `time_${timeValue}`, "", "");
+			if (timeValue !== "elapsed") {
+				option.disabled = true;
+			}
+			this.toggleTime.appendChild(option);
+		}
+		this.toggleTime.addEventListener("change", (event) => {
+			const value = event.target.value;
+			console.log(value);
+
+			if (value === "system" && !this.systemTime) {
+				console.error("system time select, but no system time available");
 				return;
 			}
-			this.systemTimeEnable = !this.systemTimeEnable;
-			let text;
-			if (this.systemTimeEnable) {
-				this.toggleTime.style.opacity = 1;
-				text = getLocalizable("system_time") + getLocalizable("shown");
-			} else {
-				this.toggleTime.style.opacity = 0.5;
-				text = getLocalizable("recording_time") + getLocalizable("shown");
-			}
+
+			this.timeToShow = value;
 			this.updateCurrentTime();
 			this.updateEndTime();
 			this.updateEventTimes();
-			this.showHint(text);
 		});
 
 		// Toggle markers button
@@ -283,10 +286,18 @@ class UI {
 		this.frameSliderWidthInPercent = (this.frameSlider.offsetWidth / this.frameSlider.parentElement.offsetWidth) * 100;
 	};
 
+	checkAvailableTimes() {
+		for (const option of this.toggleTime.options) {
+			if (option.value === "system") {
+				option.disabled = !this.systemTime;
+			}
+		}
+	}
+
 	getTimeString(frame) {
 		let date = new Date(frame * frameCaptureDelay);
 		let isUTC = true;
-		if (this.systemTime && this.systemTimeEnable) {
+		if (this.systemTime && this.timeToShow === "system") {
 			date = new Date(new Date(this.systemTime).getTime() + (frame * frameCaptureDelay));
 			isUTC = false;
 		}
@@ -349,7 +360,7 @@ class UI {
 	updateEndTime(f = this.frameSlider.max) {
 		let endDate = new Date(f*frameCaptureDelay);
 		let isUTC = true;
-		if (this.systemTime && this.systemTimeEnable) {
+		if (this.systemTime && this.timeToShow === "system") {
 			endDate = new Date(new Date(this.systemTime).getTime() + (this.frameSlider.max * frameCaptureDelay));
 			isUTC = false;
 		}

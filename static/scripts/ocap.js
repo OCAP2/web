@@ -510,6 +510,7 @@ function processOp (filepath) {
 		if (data.systemTimeUTC) {
 			ui.setSystemTime(data.systemTimeUTC);
 		}
+		ui.checkAvailableTimes();
 
 		var showCiv = false;
 		var showWest = false;
@@ -899,6 +900,7 @@ function startPlaybackLoop () {
 					marker.hideMarkerPopup(true);
 				}
 			});
+
 			// Handle entityToFollow
 			if (entityToFollow != null) {
 				var pos = entityToFollow.getPosAtFrame(playbackFrame);

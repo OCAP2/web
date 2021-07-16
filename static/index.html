@@ -69,9 +69,9 @@
 		</div>
 		<div id="bottomPanel">
 			<div id="frameSliderContainer">
-					<input type="range" id="frameSlider" min="0" value="0">
-						<div id="eventTimeline"></div>
-					</input>
+				<input type="range" id="frameSlider" min="0" value="0">
+					<div id="eventTimeline"></div>
+				</input>
 			</div>
 			<div class="panelContent">
 				<div id="playPauseButton" onclick="playPause()">
@@ -89,7 +89,9 @@
 				<span id="toggleFirelines"></span>
 				<span id="toggleNickname"></span>
 				<span id="toggleMapMarker"></span>
-				<span id="toggleTime"></span>
+				<span class="a3-theme select toggleTime">
+					<select id="toggleTime"></select>
+				</span>
 			</div>
 		</div>
 	</div>
@@ -98,10 +100,12 @@
 		<div class="modalContent">
 			<div id="modalHeader" class="modalHeader medium">Header</div>
 			<div id="modalFilter" class="modalFilter">
-				<select id="filterTagGameInput"></select>
-				<input type="text" id="filterGameInput" placeholder="" data-lb="name_missions" />
-				<input type="date" id="calendar1" value="2017-06-01">
-				<input type="date" id="calendar2" value="2099-12-12">
+				<span class="a3-theme select filterTagGameInput">
+					<select id="filterTagGameInput"></select>
+				</span>
+				<input type="text" id="filterGameInput" class="a3-theme input" placeholder="" data-lb="name_missions" />
+				<input type="date" id="calendar1" class="a3-theme input" value="2017-06-01">
+				<input type="date" id="calendar2" class="a3-theme input" value="2099-12-12">
 				<div id="filterSubmit"></div>
 			</div>
 			<div id="modalBody" class="modalBody">Body</div>
