@@ -37,7 +37,7 @@ func NewHandler(
 	e.Use(hdlr.errorHandler)
 
 	e.GET("/api/v1/operations", hdlr.GetOperations)
-	e.POST("/api/v1/operations", hdlr.StoreOperation)
+	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
 	e.GET("/api/v1/customize", hdlr.GetCustomize)
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
