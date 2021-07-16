@@ -5,7 +5,7 @@ The configuration file is called `setting.json`
 
 **"listen"**: Listener for the web server, change to "0.0.0.0:5000" to listen on all interfaces   
 **"secret"**: Secret used for authenticate on record upload   
-**"logger"**: Enables logging to "ocap.log" file
+**"logger"**: Enables request logging to STDOUT
 
 ## Docker
 
@@ -14,6 +14,18 @@ The configuration file is called `setting.json`
 **OCAP_SECRET**
 
 This specifies the secret that will be used to authorize record to be uploaded.
+
+**OCAP_CUSTOMIZE_WEBSITEURL**
+
+Link on the logo to your website
+
+**OCAP_CUSTOMIZE_WEBSITELOGO**
+
+URL to your website logo
+
+**OCAP_CUSTOMIZE_WEBSITELOGOSIZE**
+
+Size of the logo shown on the page, default 32px
 
 ### Volumes
 

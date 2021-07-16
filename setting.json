@@ -1,5 +1,9 @@
 {
 	"listen": "127.0.0.1:5000",
 	"secret": "same-secret",
-	"logger": true
+	"logger": true,
+	"customize": {
+		"websiteURL": "",
+		"websiteLogo": ""
+	}
 }
