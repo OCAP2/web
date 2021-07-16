@@ -51,7 +51,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo"}
+	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
@@ -66,9 +66,6 @@ func NewSetting() (setting Setting, err error) {
 	if err = viper.Unmarshal(&setting); err != nil {
 		return
 	}
-
-	fmt.Println(setting.Customize.WebsiteURL)
-	viper.Debug()
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {
 		return setting, fmt.Errorf("change the `secret` value to your own")
