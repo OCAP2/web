@@ -80,6 +80,12 @@ class GameEvent {
 
 		return null;
 	}
+
+	// move the camera on position
+	focusOnPosition(position) {
+		entityToFollow = null;
+		map.setView(armaToLatLng(position), map.getZoom(), { animate: true });
+	}
 }
 
 // TODO: Handle case where victim is a vehicle
@@ -312,7 +318,7 @@ class TerminalHackStartEvent extends GameEvent {
 		if (this.terminalPosition) {
 			this._element.classList.add("action");
 			this._element.addEventListener("click", () => {
-				map.setView(armaToLatLng(this.terminalPosition), map.getZoom(), { animate: true });
+				this.focusOnPosition(this.terminalPosition);
 			});
 		}
 	};
@@ -411,7 +417,7 @@ class TerminalHackUpdateEvent extends GameEvent {
 		if (this._parent && this._parent.terminalPosition) {
 			this._element.classList.add("action");
 			this._element.addEventListener("click", () => {
-				map.setView(armaToLatLng(this._parent.terminalPosition), map.getZoom(), { animate: true });
+				this.focusOnPosition(this._parent.terminalPosition);
 			});
 		}
 	}
