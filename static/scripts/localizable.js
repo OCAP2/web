@@ -169,20 +169,20 @@ let _localizable = {
 		"en": "Language:",
 		"de": "Sprache:"
 	},
-	"system_time": {
+	"time_elapsed": {
+		"ru": "Время записи",
+		"en": "Recording Time Elapsed",
+		"de": "Verstrichene Aufnahmezeit"
+	},
+	"time_mission": {
+		"ru": "Время миссии",
+		"en": "Mission Time Elapsed",
+		"de": "Verstrichene Missionszeit"
+	},
+	"time_system": {
 		"ru": "Системное время",
 		"en": "System time",
-		"de": "System zeit"
-	},
-	"mission_time": {
-		"ru": "Время миссии",
-		"en": "Mission time",
-		"de": "Missionszeit"
-	},
-	"recording_time": {
-		"ru": "Время записи",
-		"en": "Recording time",
-		"de": "Aufnahmezeit"
+		"de": "Systemzeit"
 	},
 	"not_available": {
 		"ru": " недоступен",

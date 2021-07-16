@@ -234,7 +234,7 @@ html, body, #map {
 
 
 
-#timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #toggleTime, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
+#timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
 	margin-top: 5px;
 	margin-left: 10px;
 	margin-right: 10px;
@@ -242,7 +242,7 @@ html, body, #map {
 }
 
 
-#toggleFirelines, #toggleMapMarker, #toggleNickname, #toggleTime, .fullscreenButton {
+#toggleFirelines, #toggleMapMarker, #toggleNickname, .fullscreenButton {
 	background-image: url("../images/bullets.svg");
 	background-size: auto 20px;
 	height: 20px;
@@ -251,6 +251,12 @@ html, body, #map {
 	float: right;
 	cursor: pointer;
 }
+.toggleTime {
+	float: right;
+	height: 26px;
+	width: 200px;
+	margin-top: 2px;
+}
 
 #toggleNickname {
 	background-image: url("../images/player.svg");
@@ -258,11 +264,6 @@ html, body, #map {
 
 #toggleMapMarker {
 	background-image: url("../images/map.svg");
-}
-
-#toggleTime {
-	opacity: 0.5;
-	background-image: url("../images/more_time.svg");
 }
 
 .fullscreenButton {
@@ -493,7 +494,7 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 .modalBody {
 	box-sizing: border-box;
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgba(0,0,0,0.6);
 	width: 100%;
 	min-height: 200px;
 	max-height: 400px;
@@ -505,8 +506,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 .modalFilter {
 	box-sizing: border-box;
-	background-color: rgba(0,0,0);
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgba(0,0,0,0.6);
 	width: 100%;
 	height: 50px;
 	padding: 10px;
@@ -525,18 +525,18 @@ input[type=range]::-webkit-slider-runnable-track {
 	border:1px solid black;
 }
 
-#filterTagGameInput, #filterGameInput, #calendar1, #calendar2 {
+.filterTagGameInput, #filterGameInput, #calendar1, #calendar2 {
 	margin: 4px;
 }
 
-#filterTagGameInput {
-	height: 24px;
+.filterTagGameInput {
+	height: 26px;
 	width: 60px;
 }
 
 #filterGameInput {
-	height: 18px;
-	width: 225px;
+	height: 20px;
+	width: 315px;
 }
 
 #filterSubmit {

@@ -12,11 +12,48 @@ body {
     width: 8px;
     height: 8px;
 }
- 
+
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
     background-color: rgba(0,0,0,0.2);
 }
- 
+
 ::-webkit-scrollbar-thumb {
   background-color: #6E6E6E;
+}
+
+.a3-theme.select {
+	position: relative;
+	display: inline-block;
+}
+.a3-theme.select:after {
+	content: "";
+	position: absolute;
+	right: 0;
+	pointer-events: none;
+	font-size: 16px;
+	background-color: #282828;
+	width: 24px;
+	height: 26px;
+	background-image: url("/images/expand_more.svg");
+}
+.a3-theme.select select {
+	background-color: #0a0a0a;
+	color: #ffffff;
+	appearance: none;
+	border: 0;
+	padding-left: 4px;
+	height: inherit;
+	width: inherit;
+	outline: none;
+}
+
+.a3-theme.input {
+	background-color: rgba(10,10,10,0.8);
+	color: white;
+	border: 1px grey solid;
+	padding: 2px;
+	outline: none;
+}
+.a3-theme.input::-webkit-calendar-picker-indicator {
+	filter: invert(1);
 }
