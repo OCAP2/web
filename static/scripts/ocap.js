@@ -694,8 +694,7 @@ function processOp (filepath) {
 
 					// TODO: Find out why victim/causedBy can sometimes be null
 					if (causedBy == null || (victim == null)) {
-						console.log(victim);
-						console.log(causedBy);
+						console.warn("unknown victim/causedBy", victim, causedBy);
 					}
 
 					// Incrememt kill/death count for killer/victim

@@ -101,9 +101,15 @@ class HitKilledEvent extends GameEvent {
 		// If causedBy is null, victim was likely killed/hit by collision/fire/exploding vehicle
 		// TODO: Use better way of handling this
 		if (this.causedBy == null) {
+			const disconnectEvent = gameEvents.getEventsAtFrame(this.frameNum).find((v) => v instanceof ConnectEvent && v.type === "disconnected" && v.unitName === this.victim.getName());
+			if (disconnectEvent) {
+				this.causedBy = this.victim;
+				this.weapon = "Disconnect";
+			} else {
+				this.causedBy = new Unit(null, null, getLocalizable("something"), null, null, null, null); // Dummy unit
+				this.weapon = "N/A";
+			}
 			this.distance = 0;
-			this.weapon = "N/A";
-			this.causedBy = new Unit(null, null, getLocalizable("something"), null, null, null, null); // Dummy unit
 		}
 
 		// === Create UI element for this event (for later use)
