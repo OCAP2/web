@@ -582,7 +582,7 @@ function processOp (filepath) {
 						case "GUER":
 							showGuer = true;
 							break;
-						default:
+						case "CIV":
 							showCiv = true;
 							break;
 					}
