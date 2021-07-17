@@ -104,11 +104,12 @@ class HitKilledEvent extends GameEvent {
 			const disconnectEvent = gameEvents.getEventsAtFrame(this.frameNum).find((v) => v instanceof ConnectEvent && v.type === "disconnected" && v.unitName === this.victim.getName());
 			if (disconnectEvent) {
 				this.causedBy = this.victim;
+				this.weapon = "Disconnect";
 			} else {
 				this.causedBy = new Unit(null, null, getLocalizable("something"), null, null, null, null); // Dummy unit
+				this.weapon = "N/A";
 			}
 			this.distance = 0;
-			this.weapon = "N/A";
 		}
 
 		// === Create UI element for this event (for later use)
