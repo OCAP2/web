@@ -305,10 +305,10 @@ class UI {
 		let date = new Date(frame * frameCaptureDelay);
 		let isUTC = true;
 		if (this.timeToShow === "system") {
-			date = new Date(new Date(this.systemTime).getTime() + (frame * frameCaptureDelay));
+			date = new Date(this.systemTime.getTime() + (frame * frameCaptureDelay));
 			isUTC = false;
 		} else if (this.timeToShow === "mission") {
-			date = new Date(new Date(this.missionDate).getTime() + (frame * frameCaptureDelay * this.missionTimeMultiplier));
+			date = new Date(this.missionDate.getTime() + (frame * frameCaptureDelay * this.missionTimeMultiplier));
 			isUTC = false;
 		}
 		return dateToTimeString(date, isUTC);
@@ -339,17 +339,27 @@ class UI {
 	setMissionName(name) {
 		this.missionName.textContent = name;
 	}
-	setSystemTime(time) {
-		this.systemTime = time + "Z";
-	}
-	setMissionDate(date) {
-		this.missionDate = date;
-	}
-	setMissionTimeMultiplier(multiplier) {
-		this.missionTimeMultiplier = multiplier;
-	}
-	setElapsedTime(time) {
-		this.elapsedTime = time;
+
+	detectTimes(times) {
+		for (const time of times) {
+			if (time.frameNum === 0) {
+				this.systemTime = new Date(time.systemTimeUTC + "Z");
+				this.missionDate = new Date(time.date);
+				this.missionTimeMultiplier = time.timeMultiplier;
+				this.elapsedTime = time.time;
+			}
+			if (time.frameNum > 0 && this.missionDate) {
+				const missionDate = new Date(time.date);
+				const relativeInitialDate = new Date(this.missionDate.getTime() + (time.frameNum * time.timeMultiplier * frameCaptureDelay));
+				relativeInitialDate.setSeconds(0);
+
+				if (missionDate.getTime() !== relativeInitialDate.getTime()) {
+					this.missionDate = missionDate;
+					this.missionTimeMultiplier = time.timeMultiplier;
+				}
+				break;
+			}
+		}
 	}
 
 	// Set mission time based on given frame
@@ -375,13 +385,16 @@ class UI {
 	}
 
 	updateEndTime(f = this.frameSlider.max) {
-		let endDate = new Date(f*frameCaptureDelay);
+		let date = new Date(f*frameCaptureDelay);
 		let isUTC = true;
 		if (this.systemTime && this.timeToShow === "system") {
-			endDate = new Date(new Date(this.systemTime).getTime() + (this.frameSlider.max * frameCaptureDelay));
+			date = new Date(this.systemTime.getTime() + (this.frameSlider.max * frameCaptureDelay));
+			isUTC = false;
+		} else if (this.timeToShow === "mission") {
+			date = new Date(this.missionDate.getTime() + (this.frameSlider.max * frameCaptureDelay * this.missionTimeMultiplier));
 			isUTC = false;
 		}
-		this.missionEndTime.textContent = dateToTimeString(endDate, isUTC);
+		this.missionEndTime.textContent = dateToTimeString(date, isUTC);
 	}
 
 	setFrameSliderMax(f) {
@@ -738,7 +751,6 @@ class UI {
 			type : "get",
 			cache : false
 		}).done((data) => {
-			console.log(data);
 			const container = document.getElementById("container");
 
 			if (data.websiteLogo) {

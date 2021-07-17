@@ -508,10 +508,9 @@ function processOp (filepath) {
 		endFrame = data.endFrame;
 		frameCaptureDelay = data.captureDelay * 1000;
 		ui.setMissionEndTime(endFrame);
-		ui.setSystemTime(data.systemTimeUTC);
-		ui.setMissionDate(data.missionDate);
-		ui.setMissionTimeMultiplier(data.timeMultiplier || data.missionTimeMultiplier);
-		ui.setElapsedTime(data.time);
+		if (data.times) {
+			ui.detectTimes(data.times);
+		}
 		ui.checkAvailableTimes();
 
 		var showCiv = false;
