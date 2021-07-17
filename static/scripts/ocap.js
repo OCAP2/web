@@ -711,8 +711,19 @@ function processOp (filepath) {
 				case (type == "connected" || type == "disconnected"):
 					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
 					break;
-				case (type == "capturedFlag"):
-					gameEvent = new CaptureFlagEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1], eventJSON[2][2]);
+				case (type === "capturedFlag"): // deprecated
+					gameEvent = new CapturedEvent(frameNum, type, "flag", eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3]);
+					break;
+				case (type === "captured"):
+					gameEvent = new CapturedEvent(
+						frameNum,
+						type,
+						eventJSON[2][0], // capture type
+						eventJSON[2][1], // unit name
+						eventJSON[2][2], // unit color
+						eventJSON[2][3], // objective color
+						eventJSON[2][4], // objective position
+					);
 					break;
 				case (type === "terminalHackStarted"):
 					gameEvent = new TerminalHackStartEvent(
@@ -944,24 +955,53 @@ function colorElement(element, color) {
 		element.style.color = color;
 	}
 }
-function colorMarkerIcon(element, icon, color) {
+
+function getMarkerColor(color, defaultColor = "ffffff") {
+	let hexColor = defaultColor;
 	if (!color) {
-		element.src = `/images/markers/${icon}/ffffff.png`;
-		return;
+		return hexColor;
 	}
 
 	if (color === "EAST") {
-		element.src = `/images/markers/${icon}/ff0000.png`;
+		hexColor = "ff0000";
 	} else if (color === "WEST") {
-		element.src = `/images/markers/${icon}/00a8ff.png`;
+		hexColor = "00a8ff";
 	} else if (color === "IND") {
-		element.src = `/images/markers/${icon}/00cc00.png`;
+		hexColor = "00cc00";
 	} else if (color === "CIV") {
-		element.src = `/images/markers/${icon}/C900FF.png`;
+		hexColor = "C900FF";
 	} else if (color && color.startsWith('#')) {
-		element.src = `/images/markers/${icon}/${color.substring(1)}.png`;
+		hexColor = color.substring(1);
 	} else {
-		console.warn("unknown icon color", color, icon);
-		element.src = `/images/markers/${icon}/ffffff.png`;
+		console.warn("unknown color", color);
 	}
+
+	return hexColor;
+}
+function colorMarkerIcon(element, icon, color) {
+	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
+}
+
+
+function getPulseMarkerColor(color, defaultColor = "000000") {
+	let hexColor = defaultColor;
+	if (!color) {
+		return hexColor;
+	}
+
+	if (color === "EAST") {
+		hexColor = "ff0000";
+	} else if (color === "WEST") {
+		hexColor = "004c99";
+	} else if (color === "IND") {
+		hexColor = "00cc00";
+	} else if (color === "CIV") {
+		hexColor = "C900FF";
+	} else if (color && color.startsWith('#')) {
+		hexColor = color.substring(1);
+	} else {
+		console.warn("unknown color", color);
+	}
+
+	return hexColor;
 }
