@@ -46,6 +46,7 @@ func NewHandler(
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
 	e.GET("/images/markers/magicons/:name", hdlr.GetAmmo)
 	e.GET("/images/maps/:name/:z/:x/:y", hdlr.GetTitle)
+	e.GET("/images/maps/:name", hdlr.GetMapInfo)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
 }
@@ -219,6 +220,19 @@ func (h *Handler) GetTitle(c echo.Context) error {
 	defer title.Close()
 
 	return c.Stream(http.StatusOK, "image/png", title)
+}
+
+func (h *Handler) GetMapInfo(c echo.Context) error {
+	var (
+		name = c.Param("name")
+	)
+
+	conf, err := h.repoMap.Config(name)
+	if err != nil {
+		return err
+	}
+
+	return c.Blob(http.StatusOK, "application/json", conf)
 }
 
 func removeExt(name string) string {

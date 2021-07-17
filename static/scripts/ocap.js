@@ -159,7 +159,7 @@ function getWorldByName (worldName) {
 	};
 
 	$.ajax({
-		url: "images/maps/" + worldName + "/map.json",
+		url: "images/maps/" + worldName,
 		async: false,
 		success: function (data) {
 			map = data;

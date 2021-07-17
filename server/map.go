@@ -47,6 +47,25 @@ func NewRepoMap(dir string, max int) (*RepoMap, error) {
 	}, nil
 }
 
+func (t *RepoMap) Config(name string) (conf []byte, err error) {
+	name = path.Base(name)
+	upath := path.Join(
+		t.dir,
+		name,
+		"map.json",
+	)
+
+	conf, err = os.ReadFile(upath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("map config: %w", ErrNotFound)
+		}
+		return nil, err
+	}
+
+	return conf, nil
+}
+
 func (t *RepoMap) TitleMap(ctx context.Context, name string, z, x, y int) (img io.ReadCloser, err error) {
 	name = path.Base(name)
 	upath := path.Join(
@@ -68,6 +87,12 @@ func (t *RepoMap) TitleMap(ctx context.Context, name string, z, x, y int) (img i
 		return nil, ctx.Err()
 	case <-t.pool:
 		defer func() { t.pool <- struct{}{} }()
+	}
+
+	// It's been a long time, let's check the cache again
+	f, err = os.Open(upath)
+	if err == nil {
+		return f, nil
 	}
 
 	title, ok := t.maps[name]
