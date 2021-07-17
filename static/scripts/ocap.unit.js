@@ -40,6 +40,10 @@ class Unit extends Entity {
 				sideClass = "civ";
 				sideColour = "#650080";
 				break;
+			case "UNKNOWN":
+				sideClass = "unknown";
+				sideColour = "#b29900";
+				break;
 		}
 
 		this._sideClass = sideClass;

@@ -332,7 +332,7 @@ function defineIcons () {
 	let imgPathUnknown = "images/markers/unknown/";
 
 
-	let imgs = ["blufor", "opfor", "ind", "civ", "dead", "hit", "follow", "unconscious"];
+	let imgs = ["blufor", "opfor", "ind", "civ", "unknown", "dead", "hit", "follow", "unconscious"];
 	imgs.forEach((img, i) => {
 		icons.man[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
 		// icons.manMG[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
