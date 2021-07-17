@@ -32,12 +32,16 @@ func main() {
 	ammo, err := server.NewRepoAmmo(setting.Ammo)
 	check(err)
 
+	maps, err := server.NewRepoMap(setting.Maps, setting.MapsPool)
+	check(err)
+
 	e := echo.New()
 	e.Use(
 		middleware.Logger(),
 		NoCache,
 	)
-	server.NewHandler(e, operation, marker, ammo, setting)
+
+	server.NewHandler(e, operation, marker, ammo, maps, setting)
 
 	err = e.Start(setting.Listen)
 	check(err)

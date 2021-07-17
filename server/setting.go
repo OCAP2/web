@@ -14,6 +14,7 @@ type Setting struct {
 	Markers   string    `json:"markers" yaml:"markers"`
 	Ammo      string    `json:"ammo" yaml:"ammo"`
 	Maps      string    `json:"maps" yaml:"maps"`
+	MapsPool  int       `json:"maps_pool" yaml:"maps_pool"`
 	Data      string    `json:"data" yaml:"data"`
 	Static    string    `json:"static" yaml:"static"`
 	Logger    bool      `json:"logger" yaml:"logger"`
@@ -45,6 +46,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("markers", "markers")
 	viper.SetDefault("ammo", "ammo")
 	viper.SetDefault("maps", "maps")
+	viper.SetDefault("maps_pool", 4)
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
 	viper.SetDefault("logger", true)

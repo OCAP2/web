@@ -17,6 +17,7 @@ type Handler struct {
 	repoOperation *RepoOperation
 	repoMarker    *RepoMarker
 	repoAmmo      *RepoAmmo
+	repoMap       *RepoMap
 	setting       Setting
 }
 
@@ -25,12 +26,14 @@ func NewHandler(
 	repoOperation *RepoOperation,
 	repoMarker *RepoMarker,
 	repoAmmo *RepoAmmo,
+	repoMap *RepoMap,
 	setting Setting,
 ) {
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
+		repoMap:       repoMap,
 		setting:       setting,
 	}
 
@@ -42,7 +45,7 @@ func NewHandler(
 	e.GET("/data/:name", hdlr.GetCapture)
 	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
 	e.GET("/images/markers/magicons/:name", hdlr.GetAmmo)
-	e.Static("/images/maps/", setting.Maps)
+	e.GET("/images/maps/:name/:z/:x/:y", hdlr.GetTitle)
 	e.Static("/", setting.Static)
 	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
 }
@@ -184,6 +187,38 @@ func (h *Handler) GetAmmo(c echo.Context) error {
 	}
 
 	return c.File(upath)
+}
+
+func (h *Handler) GetTitle(c echo.Context) error {
+	var (
+		ctx  = c.Request().Context()
+		name = c.Param("name")
+	)
+
+	z, err := strconv.Atoi(c.Param("z"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	x, err := strconv.Atoi(c.Param("x"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	sy := strings.TrimSuffix(c.Param("y"), ".png")
+
+	y, err := strconv.Atoi(sy)
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	title, err := h.repoMap.TitleMap(ctx, name, z, x, y)
+	if err != nil {
+		return err
+	}
+	defer title.Close()
+
+	return c.Stream(http.StatusOK, "image/png", title)
 }
 
 func removeExt(name string) string {
