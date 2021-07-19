@@ -508,8 +508,8 @@ function processOp (filepath) {
 		endFrame = data.endFrame;
 		frameCaptureDelay = data.captureDelay * 1000;
 		ui.setMissionEndTime(endFrame);
-		if (data.systemTimeUTC) {
-			ui.setSystemTime(data.systemTimeUTC);
+		if (data.times) {
+			ui.detectTimes(data.times);
 		}
 		ui.checkAvailableTimes();
 

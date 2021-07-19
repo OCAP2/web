@@ -52,6 +52,9 @@ class UI {
 		this.calendar2 = null;
 		this.filterSubmit = null;
 		this.systemTime = null;
+		this.missionDate = null;
+		this.missionTimeMultiplier = null;
+		this.elapsedTime = null;
 
 		this._init();
 	};
@@ -125,10 +128,12 @@ class UI {
 		}
 		this.toggleTime.addEventListener("change", (event) => {
 			const value = event.target.value;
-			console.log(value);
 
 			if (value === "system" && !this.systemTime) {
 				console.error("system time select, but no system time available");
+				return;
+			} else if (value === "mission" && (!this.missionDate || !this.missionTimeMultiplier)) {
+				console.error("mission time select, but neither mission date nor time multiplier available");
 				return;
 			}
 
@@ -290,6 +295,8 @@ class UI {
 		for (const option of this.toggleTime.options) {
 			if (option.value === "system") {
 				option.disabled = !this.systemTime;
+			} else if (option.value === "mission") {
+				option.disabled = !this.missionDate || !this.missionTimeMultiplier;
 			}
 		}
 	}
@@ -297,8 +304,11 @@ class UI {
 	getTimeString(frame) {
 		let date = new Date(frame * frameCaptureDelay);
 		let isUTC = true;
-		if (this.systemTime && this.timeToShow === "system") {
-			date = new Date(new Date(this.systemTime).getTime() + (frame * frameCaptureDelay));
+		if (this.timeToShow === "system") {
+			date = new Date(this.systemTime.getTime() + (frame * frameCaptureDelay));
+			isUTC = false;
+		} else if (this.timeToShow === "mission") {
+			date = new Date(this.missionDate.getTime() + (frame * frameCaptureDelay * this.missionTimeMultiplier));
 			isUTC = false;
 		}
 		return dateToTimeString(date, isUTC);
@@ -320,19 +330,36 @@ class UI {
 			});
 		}, 2500);
 		console.log(this.cursorTooltip);
-	};
+	}
 
 	_moveCursorTooltip(event) {
 		ui.cursorTooltip.style.transform = `translate3d(${event.pageX}px, ${event.pageY}px, 0px)`;
-	};
+	}
 
 	setMissionName(name) {
 		this.missionName.textContent = name;
-	};
+	}
 
-	setSystemTime(time) {
-		this.systemTime = time + "Z";
-		this.updateEndTime();
+	detectTimes(times) {
+		for (const time of times) {
+			if (time.frameNum === 0) {
+				this.systemTime = new Date(time.systemTimeUTC + "Z");
+				this.missionDate = new Date(time.date);
+				this.missionTimeMultiplier = time.timeMultiplier;
+				this.elapsedTime = time.time;
+			}
+			if (time.frameNum > 0 && this.missionDate) {
+				const missionDate = new Date(time.date);
+				const relativeInitialDate = new Date(this.missionDate.getTime() + (time.frameNum * time.timeMultiplier * frameCaptureDelay));
+				relativeInitialDate.setSeconds(0);
+
+				if (missionDate.getTime() !== relativeInitialDate.getTime()) {
+					this.missionDate = missionDate;
+					this.missionTimeMultiplier = time.timeMultiplier;
+				}
+				break;
+			}
+		}
 	}
 
 	// Set mission time based on given frame
@@ -346,7 +373,7 @@ class UI {
 		for (const event of gameEvents.getEvents().reverse()) {
 			event.update(f);
 		}
-	};
+	}
 
 	updateCurrentTime(f = playbackFrame) {
 		this.missionCurTime.textContent = ui.getTimeString(f);
@@ -358,13 +385,16 @@ class UI {
 	}
 
 	updateEndTime(f = this.frameSlider.max) {
-		let endDate = new Date(f*frameCaptureDelay);
+		let date = new Date(f*frameCaptureDelay);
 		let isUTC = true;
 		if (this.systemTime && this.timeToShow === "system") {
-			endDate = new Date(new Date(this.systemTime).getTime() + (this.frameSlider.max * frameCaptureDelay));
+			date = new Date(this.systemTime.getTime() + (this.frameSlider.max * frameCaptureDelay));
+			isUTC = false;
+		} else if (this.timeToShow === "mission") {
+			date = new Date(this.missionDate.getTime() + (this.frameSlider.max * frameCaptureDelay * this.missionTimeMultiplier));
 			isUTC = false;
 		}
-		this.missionEndTime.textContent = dateToTimeString(endDate, isUTC);
+		this.missionEndTime.textContent = dateToTimeString(date, isUTC);
 	}
 
 	setFrameSliderMax(f) {
@@ -721,7 +751,6 @@ class UI {
 			type : "get",
 			cache : false
 		}).done((data) => {
-			console.log(data);
 			const container = document.getElementById("container");
 
 			if (data.websiteLogo) {
