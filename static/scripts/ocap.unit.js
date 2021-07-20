@@ -13,6 +13,7 @@ class Unit extends Entity {
 			}
 		}
 		this.killCount = 0;
+		this.teamKillCount = 0;
 		this.deathCount = 0;
 		this._sideClass = "";
 		this._sideColour = "#FFFFFF";

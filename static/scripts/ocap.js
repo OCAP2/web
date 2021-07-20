@@ -675,35 +675,43 @@ function processOp (filepath) {
 			var gameEvent = null;
 			switch (true) {
 				case (type == "killed" || type == "hit"):
-					var causedByInfo = eventJSON[3];
-					var victim = entities.getById(eventJSON[2]);
-					var causedBy = entities.getById(causedByInfo[0]); // In older captures, this will return null
-					var distance = eventJSON[4];
+					const causedByInfo = eventJSON[3];
+					const victim = entities.getById(eventJSON[2]);
+					const causedBy = entities.getById(causedByInfo[0]); // In older captures, this will return null
+					const distance = eventJSON[4];
 
 					//console.log(eventJSON[2]);
 					//if (victim == null) {return}; // Temp fix until vehicles are handled (victim is null if reference is a vehicle)
 
 					// Create event object
-					var weapon;
+					let weapon;
 					if (causedBy instanceof Unit) {
 						weapon = causedByInfo[1];
 					} else {
 						weapon = "N/A";
 					}
-					gameEvent = new HitKilledEvent(frameNum, type, causedBy, victim, distance, weapon);
 
 					// TODO: Find out why victim/causedBy can sometimes be null
-					if (causedBy == null || (victim == null)) {
+					if (causedBy == null || victim == null) {
 						console.warn("unknown victim/causedBy", victim, causedBy);
 					}
 
 					// Incrememt kill/death count for killer/victim
-					if (type == "killed" && (causedBy != null)) {
-						if (causedBy != victim) {
+					if (type === "killed" && (causedBy != null)) {
+
+						if (causedBy._name === "BlackPixxel") {
+							console.log(causedBy.killCount, causedBy.teamKillCount);
+						}
+						if (causedBy !== victim && causedBy._side === victim._side) {
+							console.log("teamkill", causedBy);
+							causedBy.teamKillCount++;
+						}
+						if (causedBy !== victim) {
 							causedBy.killCount++;
 						}
 						victim.deathCount++;
 					}
+					gameEvent = new HitKilledEvent(frameNum, type, causedBy, victim, distance, weapon);
 
 					// Add tick to timeline
 					ui.addTickToTimeline(frameNum);

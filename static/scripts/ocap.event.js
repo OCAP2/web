@@ -125,10 +125,10 @@ class HitKilledEvent extends GameEvent {
 			causedBySpan.className = this.causedBy.getSideClass()
 			switch (this.type) {
 				case "killed":
-					causedBySpan.textContent = this.causedBy.getName() + " (" + (causedBy.killCount + 1) + " kills)";
+					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount*2)} kills)`;
 					break;
 				case "hit":
-					causedBySpan.textContent = this.causedBy.getName() + " (" + (causedBy.killCount) + " kills)";
+					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount*2)} kills)`;
 					break;
 			}
 		} else {
