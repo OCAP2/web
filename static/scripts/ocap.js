@@ -698,12 +698,7 @@ function processOp (filepath) {
 
 					// Incrememt kill/death count for killer/victim
 					if (type === "killed" && (causedBy != null)) {
-
-						if (causedBy._name === "BlackPixxel") {
-							console.log(causedBy.killCount, causedBy.teamKillCount);
-						}
 						if (causedBy !== victim && causedBy._side === victim._side) {
-							console.log("teamkill", causedBy);
 							causedBy.teamKillCount++;
 						}
 						if (causedBy !== victim) {
