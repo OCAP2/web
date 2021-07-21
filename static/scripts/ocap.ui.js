@@ -20,6 +20,8 @@ class UI {
 		this.modalFilter = null;
 		this.modalBody = null;
 		this.modalButtons = null;
+		this.statsDialog = null;
+		this.statsDialogBody = null;
 		this.missionName = null;
 		//this.loadOpButton = null;
 		this.playPauseButton = null;
@@ -27,6 +29,8 @@ class UI {
 		this.playbackSpeedSlider = null;
 		this.playbackSpeedVal = null;
 		this.aboutButton = null;
+		this.shareButton = null;
+		this.statsButton = null;
 		this.toggleFirelinesButton = null;
 		this.toggleMarkersButton = null;
 		this.hint = null;
@@ -71,16 +75,18 @@ class UI {
 		});
 		this.loadOpButton = loadOpButton; */
 
-		// About button
-		var aboutButton = document.getElementById("aboutButton");
-		aboutButton.addEventListener("click", () => {
+		// Buttons
+		this.aboutButton = document.getElementById("aboutButton");
+		this.aboutButton.addEventListener("click", () => {
 			this.showModalAbout();
 		});
-		this.aboutButton = aboutButton;
-
 		this.shareButton = document.getElementById("shareButton");
 		this.shareButton.addEventListener("click", () => {
 			this.showModalShare();
+		});
+		this.statsButton = document.getElementById("statsButton");
+		this.statsButton.addEventListener("click", () => {
+			this.showModalStats();
 		});
 
 		// Nickname show/hide vehicle && player
@@ -253,14 +259,18 @@ class UI {
 
 
 		// Modal
-		this.setModal(
-			document.getElementById("modal"),
-			document.getElementById("modalHeader"),
-			document.getElementById("modalFilter"),
-			document.getElementById("modalBody"),
-			document.getElementById("modalButtons")
-		);
+		this.modal = document.getElementById("modal");
+		this.modalHeader = document.getElementById("modalHeader");
+		this.modalFilter = document.getElementById("modalFilter");
+		this.modalBody = document.getElementById("modalBody");
+		this.modalButtons = document.getElementById("modalButtons");
 		this.showModalOpSelection();
+
+		// Stats
+		this.statsDialog = document.getElementById("stats");
+		this.statsDialogHeader = document.getElementById("statsHeader");
+		this.statsDialogBody = document.getElementById("statsBody");
+		this.statsDialogFooter = document.getElementById("statsFooter");
 
 		// Small popup
 		this.hint = document.getElementById("hint");
@@ -453,14 +463,6 @@ class UI {
 		}
 	};
 
-	setModal(modal, modalHeader, modalFilter, modalBody, modalButtons) {
-		this.modal = modal;
-		this.modalHeader = modalHeader;
-		this.modalFilter = modalFilter;
-		this.modalBody = modalBody;
-		this.modalButtons = modalButtons;
-	};
-
 	showModalOpSelection() {
 		// Set header/body
 		localizable(this.modalHeader, "select_mission");
@@ -571,6 +573,62 @@ class UI {
 		button.addEventListener("click", func);
 
 		return button;
+	};
+
+	showModalStats() {
+		// localizable(this.statsDialogHeader, "info");
+
+		const units = [];
+		for (const entity of entities.getAll()) {
+			if (entity instanceof Unit) {
+				const unit = units.find((unit) => unit.name === entity._name);
+				if (unit) {
+					unit.killCount += entity.killCount;
+					unit.teamKillCount += entity.teamKillCount;
+					unit.deathCount += entity.deathCount;
+				} else {
+					units.push({
+						name: entity._name,
+						killCount: entity.killCount,
+						teamKillCount: entity.teamKillCount,
+						deathCount: entity.deathCount,
+					});
+				}
+			}
+		}
+		units.sort((a,b) => {
+			if (a.name < b.name) return -1;
+			if (a.name > b.name) return 1;
+			return 0;
+		});
+
+		let content = `
+		<table class="stats">
+			<tr>
+				<th class="name">Name</th>
+				<th class="kills">Kills</th>
+				<th class="tkills">TKills</th>
+				<th class="deaths">Deaths</th>
+			</tr>
+		`;
+		for (const unit of units) {
+			content += `
+			<tr>
+				<td class="name">${unit.name}</td>
+				<td class="kills">${unit.killCount}</td>
+				<td class="tkills">${unit.teamKillCount}</td>
+				<td class="deaths">${unit.deathCount}</td>
+			</tr>
+			`;
+		}
+		content += `</table>`;
+
+		this.statsDialogBody.innerHTML = content;
+
+		this.statsDialogFooter.appendChild(this.makeModalButton("Close", () => {
+			this.statsDialog.classList.add("closed");
+		}));
+		this.statsDialog.classList.remove("closed");
 	};
 
 	showModalAbout() {
@@ -772,6 +830,10 @@ class UI {
 				}
 			}
 		});
+	}
+
+	showExperimental() {
+		this.statsButton.classList.remove("hiddenExperimental");
 	}
 }
 

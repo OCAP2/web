@@ -41,7 +41,22 @@ html, body, #map {
 	background-repeat: no-repeat;
 }
 
+#shareButton {
+	background-image: url("../images/share.svg");
+	background-size: 25px 25px;
+	background-repeat: no-repeat;
+	float: right;
+}
 #aboutButton {
+	font-size: 30px;
+	position: relative;
+	top: -5px;
+	text-align: center;
+	display: inline-block;
+	float: right;
+	margin: 12px;
+}
+#statsButton {
 	font-size: 30px;
 	position: relative;
 	top: -5px;
@@ -471,9 +486,8 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 .modalContent {
 	background: none;
-	margin: auto;
-	margin-top: 10%;
-/*	border: 1px solid black;*/
+	margin: 10% auto auto;
+	/*	border: 1px solid black;*/
 	width: 800px;
     height: 65%;
 }
@@ -483,10 +497,18 @@ input[type=range]::-webkit-slider-runnable-track {
 	background-color: rgba(155,0,0,0.9);
 	width: 100%;
 	margin-bottom: 3px;
-	padding: 5px;
-	padding-left: 10px;
-	padding-right: 10px;
+	padding: 5px 10px;
 	font-weight: 500;
+}
+.modalFilter {
+	box-sizing: border-box;
+	background-color: rgba(0,0,0,0.6);
+	width: 100%;
+	height: 50px;
+	padding: 3px 10px 10px 16px;
+	margin-bottom: 3px;
+	overflow-y: auto;
+	overflow-x: auto;
 }
 .modalBody {
 	box-sizing: border-box;
@@ -500,17 +522,52 @@ input[type=range]::-webkit-slider-runnable-track {
 	overflow-x: auto;
 }
 
-.modalFilter {
-	box-sizing: border-box;
-	background-color: rgba(0,0,0,0.6);
-	width: 100%;
-	height: 50px;
-	padding: 10px;
-	padding-top: 3px;
-	padding-left: 16px;
+.modalDialog {
+	z-index: 600;
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100vh;
+	width: 100vw;
+	background-color: rgba(0,0,0,0.4);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.modalDialog.closed {
+	display: none;
+}
+.modalDialog .dialogBase {
+	position: relative;
+	z-index: 601;
+	display: flex;
+	flex-direction: column
+}
+.modalDialog .dialogHeader {
+	background-color: rgba(155,0,0,0.9);
 	margin-bottom: 3px;
-	overflow-y: auto;
-	overflow-x: auto;
+	color: white;
+	border-bottom: 1px solid black;
+	box-sizing: border-box;
+	padding: 5px 10px;
+	font-weight: 500;
+	font-size: 16px;
+}
+.modalDialog .dialogBody {
+	background-color: #000000ed;
+	overflow-y: scroll;
+	min-width: 1300px;
+	min-height: 700px;                     /*  title bar is 50 so we need the extra 70 here  */
+	max-height: calc(75vh - 50px);        /*  compensate for title bar                      */
+	max-width: 75vw;
+	flex:1;
+	padding: 5px;
+}
+.modalDialog .dialogFooter {
+	margin-top: 3px;
+}
+.modalDialog .dialogFooter .modalButton {
+	float: right;
 }
 
 #ShareLink {
@@ -696,13 +753,16 @@ input[type=range]::-webkit-slider-runnable-track {
 .leaflet-div-icon {
 	background: none;
 	border: none;
-	margin: none;
-	padding: none;
 }
 
-#shareButton {
-	background-image: url("../images/share.svg");
-	background-size: 25px 25px;
-	background-repeat: no-repeat;
-	float: right;
+.stats .name {
+	width: 200px;
+}
+.stats .kills, .stats .tkills, .stats .deaths {
+	width: 70px;
+	text-align: right;
+}
+
+.hiddenExperimental {
+	display: none !important;
 }
