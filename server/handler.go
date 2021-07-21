@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -142,7 +143,7 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		return echo.ErrForbidden
 	}
 
-	_, filename := path.Split(c.FormValue("filename"))
+	filename := filepath.Base(c.FormValue("filename"))
 
 	op := Operation{
 		WorldName:   c.FormValue("worldName"),
@@ -171,7 +172,7 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	}
 	defer file.Close()
 
-	writer, err := os.Create(path.Join(h.setting.Data, path.Base(filename)+".gz"))
+	writer, err := os.Create(filepath.Join(h.setting.Data, filename+".gz"))
 	if err != nil {
 		return err
 	}
@@ -184,9 +185,12 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 }
 
 func (h *Handler) GetCapture(c echo.Context) error {
-	name := path.Clean(c.Param("name"))
+	name, err := url.PathUnescape(c.Param("name"))
+	if err != nil {
+		return err
+	}
 
-	upath := path.Join(h.setting.Data, name+".gz")
+	upath := filepath.Join(h.setting.Data, filepath.Base(name+".gz"))
 
 	c.Response().Header().Set("Content-Encoding", "gzip")
 	c.Response().Header().Set("Content-Type", "application/json")
@@ -198,8 +202,12 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	var (
 		ctx   = c.Request().Context()
 		color = c.Param("color")
-		name  = c.Param("name")
 	)
+
+	name, err := url.PathUnescape(c.Param("name"))
+	if err != nil {
+		return err
+	}
 
 	// Deprecated: support old version
 	pos := strings.IndexByte(color, '.')
@@ -207,7 +215,7 @@ func (h *Handler) GetMarker(c echo.Context) error {
 		color = color[:pos]
 	}
 
-	img, ct, err := h.repoMarker.Get(ctx, name, color)
+	img, ct, err := h.repoMarker.Get(ctx, filepath.Base(name), color)
 	if err != nil {
 		return err
 	}
@@ -216,17 +224,21 @@ func (h *Handler) GetMarker(c echo.Context) error {
 }
 
 func (h *Handler) GetMapTitle(c echo.Context) error {
-	rpath := strings.ReplaceAll(c.Path(), "*", "")
-	upath := strings.TrimPrefix(c.Request().URL.Path, rpath)
-	upath = path.Join(h.setting.Maps, upath)
+	upath, err := url.PathUnescape(c.Param("*"))
+	if err != nil {
+		return err
+	}
+	upath = filepath.Join(h.setting.Maps, filepath.Clean(upath))
 
 	return c.File(upath)
 }
 
 func (h *Handler) GetStatic(c echo.Context) error {
-	rpath := strings.ReplaceAll(c.Path(), "*", "")
-	upath := strings.TrimPrefix(c.Request().URL.Path, rpath)
-	upath = path.Join(h.setting.Static, upath)
+	upath, err := url.PathUnescape(c.Param("*"))
+	if err != nil {
+		return err
+	}
+	upath = filepath.Join(h.setting.Static, filepath.Clean(upath))
 
 	return c.File(upath)
 }
@@ -234,25 +246,28 @@ func (h *Handler) GetStatic(c echo.Context) error {
 func (h *Handler) GetAmmo(c echo.Context) error {
 	var (
 		ctx  = c.Request().Context()
-		name = removeExt(c.Param("name"))
+		name = c.Param("name")
 	)
+
+	name, err := url.PathUnescape(name)
+	if err != nil {
+		return err
+	}
+
+	// remote extension
+	pos := strings.IndexByte(name, '.')
+	if pos != -1 {
+		name = name[:pos]
+	}
 
 	// support format
 	// gear_smokegrenade_white_ca.paa.png
 	name = strings.Replace(name, ".paa", "", 1)
 
-	upath, err := h.repoAmmo.GetPath(ctx, name)
+	upath, err := h.repoAmmo.GetPath(ctx, filepath.Base(name))
 	if err != nil {
 		return err
 	}
 
 	return c.File(upath)
-}
-
-func removeExt(name string) string {
-	pos := strings.IndexByte(name, '.')
-	if pos != -1 {
-		name = name[:pos]
-	}
-	return name
 }
