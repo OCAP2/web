@@ -12,13 +12,6 @@ func check(err error) {
 	}
 }
 
-func NoCache(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		c.Response().Header().Set("Cache-Control", "no-cache")
-		return next(c)
-	}
-}
-
 func main() {
 	setting, err := server.NewSetting()
 	check(err)
@@ -35,7 +28,6 @@ func main() {
 	e := echo.New()
 	e.Use(
 		middleware.Logger(),
-		NoCache,
 	)
 	server.NewHandler(e, operation, marker, ammo, setting)
 
