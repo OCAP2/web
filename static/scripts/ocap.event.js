@@ -114,13 +114,13 @@ class HitKilledEvent extends GameEvent {
 
 		// === Create UI element for this event (for later use)
 		// Victim
-		var victimSpan = document.createElement("span");
+		const victimSpan = document.createElement("span");
 		if (victim instanceof Unit) { victimSpan.className = this.victim.getSideClass() }
 		victimSpan.className += " bold";
 		victimSpan.textContent = this.victim.getName();
 
 		// CausedBy
-		var causedBySpan = document.createElement("span");
+		const causedBySpan = document.createElement("span");
 		if ((causedBy instanceof Unit) && (causedBy.getId() != null)) {
 			causedBySpan.className = this.causedBy.getSideClass()
 			switch (this.type) {
@@ -136,7 +136,7 @@ class HitKilledEvent extends GameEvent {
 		}
 		causedBySpan.className += " medium";
 
-		var textSpan = document.createElement("span");
+		const textSpan = document.createElement("span");
 		switch (this.type) {
 			case "killed":
 				localizable(textSpan, "by_killer");
@@ -150,7 +150,7 @@ class HitKilledEvent extends GameEvent {
 		this.detailsDiv.className = "eventDetails";
 		this.updateTime();
 
-		var li = document.createElement("li");
+		const li = document.createElement("li");
 		li.appendChild(victimSpan);
 		li.appendChild(textSpan);
 		li.appendChild(causedBySpan);
@@ -303,7 +303,7 @@ class TerminalHackStartEvent extends GameEvent {
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
 		unitSpan.className = "medium";
-		unitSpan.textContent = `${this.unitName}`;
+		unitSpan.textContent = this.unitName;
 		colorElement(unitSpan, this.unitColor);
 
 		const messageSpan = document.createElement("span");
@@ -403,7 +403,7 @@ class TerminalHackUpdateEvent extends GameEvent {
 		// Create list element for this event (for later use)
 		const unitSpan = document.createElement("span");
 		unitSpan.className = "medium";
-		unitSpan.textContent = `${this.unitName}`;
+		unitSpan.textContent = this.unitName;
 		colorElement(unitSpan, this.unitColor);
 
 		const messageSpan = document.createElement("span");
