@@ -80,16 +80,16 @@ class Vehicle extends Entity {
 			//this._marker.getPopup().setContent(`Test`); // Very slow (no need to recalc layout), use ._content instead
 
 			let crewLength = crew.length;
-			content = `${this._name} <i>(0)</i>`;
+			content = `${this._name.encodeHTMLEntities()} <i>(0)</i>`;
 			if (crewLength > 0) {
 				let crewLengthString = `<i>(${crewLength})</i>`;
 				let crewString = this.getCrewString();
 
 				if (crewString.length > 0) {
-					let title = `<u>${this._name}</u> ${crewLengthString}`;
+					let title = `<u>${this._name.encodeHTMLEntities()}</u> ${crewLengthString}`;
 					content = `${title}<br>${crewString}`;
 				} else {
-					content = `${this._name} ${crewLengthString}`;
+					content = `${this._name.encodeHTMLEntities()} ${crewLengthString}`;
 				}
 
 				// Change vehicle icon depending on driver's side
@@ -98,7 +98,7 @@ class Vehicle extends Entity {
 				//console.log(this);
 				//console.log(driver);
 				let icon = this.iconType[driver.sideClass];
-				if (this._realIcon != icon) {
+				if (this._realIcon !== icon) {
 					this.setMarkerIcon(icon);
 					this._realIcon = icon; // Vehicle icon will now remain this colour until a unit of a differet side becomes driver
 				}
@@ -106,7 +106,7 @@ class Vehicle extends Entity {
 		}
 		let popupNode = this._marker.getPopup()._contentNode;
 
-		if (popupNode.innerHTML != content) {
+		if (popupNode.innerHTML !== content) {
 			popupNode.innerHTML = content;
 		}
 	};
@@ -125,7 +125,7 @@ class Vehicle extends Entity {
 
 			// Only include player names
 			if (unit.isPlayer) {
-				str += (unit.getName() + "<br/>");
+				str += (unit.getName().encodeHTMLEntities() + "<br/>");
 			}
 			//};
 		});

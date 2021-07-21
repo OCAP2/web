@@ -191,7 +191,7 @@ class ConnectEvent extends GameEvent {
 		// Create list element for this event (for later use)
 		var span = document.createElement("span");
 		span.className = "medium";
-		localizable(span, this.type, "", `${this.unitName} `);
+		localizable(span, this.type, "", `${this.unitName.encodeHTMLEntities()} `);
 
 		this.detailsDiv = document.createElement("div");
 		this.detailsDiv.className = "eventDetails";
@@ -476,21 +476,21 @@ class endMissionEvent extends GameEvent {
 		var span = document.createElement("span");
 		span.className = "medium";
 
-		if (this.side == "") {
+		if (this.side === "") {
 			span.textContent = this.msg;
 		} else {
-			localizable(span, "win", ` ${side}. ${this.msg}`);
+			localizable(span, "win", ` ${side}. ${this.msg.encodeHTMLEntities()}`);
 			switch (true) {
-				case (this.side == "EAST"):
+				case (this.side === "EAST"):
 					span.className = "opfor";
 					break;
-				case (this.side == "WEST"):
+				case (this.side === "WEST"):
 					span.className = "blufor";
 					break;
-				case (this.side == "IND"):
+				case (this.side === "IND"):
 					span.className = "ind";
 					break;
-				case (this.side == "CIV"):
+				case (this.side === "CIV"):
 					span.className = "civ";
 					break;
 			}

@@ -552,25 +552,22 @@ function processOp (filepath) {
 				}
 			});
 
-			if (type == "unit") {
+			if (type === "unit") {
 				//if (entityJSON.name == "Error: No unit") {return}; // Temporary fix for old captures that initialised dead units
 
 				// Add group to global groups object (if new)
-				var group = groups.findGroup(entityJSON.group, entityJSON.side);
+				let group = groups.findGroup(entityJSON.group, entityJSON.side);
 				if (group == null) {
 					group = new Group(entityJSON.group, entityJSON.side);
 					groups.addGroup(group);
 				}
 
-
 				// Create unit and add to entities list
-				var unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer == 1), positions, entityJSON.framesFired, entityJSON.role);
+				const unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer === 1), positions, entityJSON.framesFired, entityJSON.role);
 				entities.add(unit);
 
-
-
 				// Show title side
-				if (arrSideSelect.indexOf(entityJSON.side) == -1) {
+				if (arrSideSelect.indexOf(entityJSON.side) === -1) {
 					arrSideSelect.push(entityJSON.side);
 					switch (entityJSON.side) {
 						case "WEST":
@@ -589,7 +586,7 @@ function processOp (filepath) {
 				}
 			} else {
 				// Create vehicle and add to entities list
-				var vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
+				const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
 				entities.add(vehicle);
 			}
 		});
@@ -1007,4 +1004,10 @@ function getPulseMarkerColor(color, defaultColor = "000000") {
 	}
 
 	return hexColor;
+}
+
+String.prototype.encodeHTMLEntities = function () {
+	return this.replace(/[\u00A0-\u9999<>\&]/gim, (i) => {
+		return '&#' + i.charCodeAt(0) + ';';
+	});
 }

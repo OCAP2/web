@@ -431,57 +431,56 @@ class Marker {
 
 	_createMarker (latLng, dir, alpha) {
 		let marker;
-		let startPos;
 		let popupText = "";
 
 
-		if ((this._player == -1 || this._player == false) && this._shape == "ICON") {
+		if ((this._player === -1 || this._player === false) && this._shape === "ICON") {
 			// objNull passed, no owner. system marker with basic popup
 
-			let interactiveVal = false;
 			let markerCustomText = "";
-			if (this._text) { markerCustomText = this._text }
-			popupText = `${this._text}`;
-			marker = L.marker(latLng, { interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
+			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
+			marker = L.marker(latLng, { interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
 			marker.setIcon(this._icon);
-			let popup = this._createPopup(popupText);
+			let popup = this._createPopup(markerCustomText);
 			marker.bindPopup(popup).openPopup();
 
 			// Set direction
 			marker.setRotationAngle(dir);
 
-		} else if (this._shape == "ICON") {
+		} else if (this._shape === "ICON") {
 			let interactiveVal = false;
 
 			let markerCustomText = "";
-			if (this._text) { markerCustomText = this._text }
+			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
 
 			if (
 				// objectives
 				markerCustomText.search("Terminal") > -1 ||
 				markerCustomText.search("Sector") > -1
 			) {
-				popupText = `${this._text}`;
+				popupText = markerCustomText;
 			} else if (
 				// map borders & custom objects
 				this._systemMarkers.includes(this._type) &&
-				this._side == "GLOBAL") {
+				this._side === "GLOBAL"
+			) {
 				// console.log("system marker")
 			} else if (
 				// projectiles
 				(
 					this._type.search("magIcons") > -1 ||
-					this._type == "Minefield" ||
-					this._type == "mil_triangle"
+					this._type === "Minefield" ||
+					this._type === "mil_triangle"
 				) &&
-				this._side == "GLOBAL") {
-				popupText = `${this._player.getName()} ${this._text}`;
-			} else if (this._side == "GLOBAL") {
-				popupText = `${this._text}`;
+				this._side === "GLOBAL"
+			) {
+				popupText = `${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
+			} else if (this._side === "GLOBAL") {
+				popupText = markerCustomText;
 			} else {
 				// all normal player marks
 				interactiveVal = true;
-				popupText = `${this._side} ${this._player.getName()} ${this._text}`;
+				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
 
 			marker = L.marker(latLng, { interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
@@ -493,7 +492,7 @@ class Marker {
 			marker.setRotationAngle(dir);
 		}
 
-		if (this._shape == "ELLIPSE") {
+		if (this._shape === "ELLIPSE") {
 			let rad = this._size[0] * 0.015 * window.multiplier;
 
 			if (this._brushPattern) {
@@ -506,7 +505,7 @@ class Marker {
 				L.Util.setOptions(marker, this._shapeOptions);
 			}
 			marker.addTo(map);
-		} else if (this._shape == "RECTANGLE") {
+		} else if (this._shape === "RECTANGLE") {
 
 			if (this._brushPattern) {
 				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
@@ -518,7 +517,7 @@ class Marker {
 				L.Util.setOptions(marker, this._shapeOptions);
 			}
 			marker.addTo(map);
-		} else if (this._shape == "POLYLINE") {
+		} else if (this._shape === "POLYLINE") {
 			marker = L.polyline(latLng, { color: this._color, opacity: 1, noClip: true, lineCap: 'butt', lineJoin: 'round', interactive: false }).addTo(map);
 		}
 
@@ -599,14 +598,7 @@ class Marker {
 				this._marker.setStyle({ opacity: opacity });
 			}
 		}
-	};
-
-	setPopup (popup) {
-		if (this._popup != popup) {
-			this._marker.getPopup()._contentNode.innerHTML = popup;
-			this._popup = popup;
-		}
-	};
+	}
 
 	hideMarkerPopup (bool) {
 		if (this._marker != null) {
@@ -621,5 +613,5 @@ class Marker {
 				element.style.display = display;
 			}
 		}
-	};
+	}
 }
