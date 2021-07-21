@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
+const CacheDuration = 7 * 24 * time.Hour
 
 type Handler struct {
 	repoOperation *RepoOperation
@@ -36,15 +39,59 @@ func NewHandler(
 
 	e.Use(hdlr.errorHandler)
 
-	e.GET("/api/v1/operations", hdlr.GetOperations)
-	e.POST("/api/v1/operations/add", hdlr.StoreOperation)
-	e.GET("/api/v1/customize", hdlr.GetCustomize)
-	e.GET("/data/:name", hdlr.GetCapture)
-	e.GET("/images/markers/:name/:color", hdlr.GetMarker)
-	e.GET("/images/markers/magicons/:name", hdlr.GetAmmo)
-	e.Static("/images/maps/", setting.Maps)
-	e.Static("/", setting.Static)
-	e.File("/favicon.ico", path.Join(setting.Static, "favicon.ico"))
+	e.GET(
+		"/api/v1/operations",
+		hdlr.GetOperations,
+	)
+	e.POST(
+		"/api/v1/operations/add",
+		hdlr.StoreOperation,
+	)
+	e.GET(
+		"/api/v1/customize",
+		hdlr.GetCustomize,
+		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/data/:name",
+		hdlr.GetCapture,
+		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/images/markers/:name/:color",
+		hdlr.GetMarker,
+		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/images/markers/magicons/:name",
+		hdlr.GetAmmo,
+		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/images/maps/*",
+		hdlr.GetMapTitle,
+		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/*",
+		hdlr.GetStatic,
+		hdlr.cacheControl(0),
+	)
+}
+
+func (*Handler) cacheControl(duration time.Duration) echo.MiddlewareFunc {
+	var header string
+	if duration < time.Second {
+		header = "no-cache"
+	} else {
+		header = fmt.Sprintf("max-age=%.0f", duration.Seconds())
+	}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set("Cache-Control", header)
+			return next(c)
+		}
+	}
 }
 
 func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
@@ -166,6 +213,22 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	return c.Stream(http.StatusOK, ct, img)
+}
+
+func (h *Handler) GetMapTitle(c echo.Context) error {
+	rpath := strings.ReplaceAll(c.Path(), "*", "")
+	upath := strings.TrimPrefix(c.Request().URL.Path, rpath)
+	upath = path.Join(h.setting.Maps, upath)
+
+	return c.File(upath)
+}
+
+func (h *Handler) GetStatic(c echo.Context) error {
+	rpath := strings.ReplaceAll(c.Path(), "*", "")
+	upath := strings.TrimPrefix(c.Request().URL.Path, rpath)
+	upath = path.Join(h.setting.Static, upath)
+
+	return c.File(upath)
 }
 
 func (h *Handler) GetAmmo(c echo.Context) error {
