@@ -180,9 +180,9 @@ function initMap () {
 	// Create map
 	map = L.map('map', {
 		//maxZoom: mapMaxZoom,
-		zoomControl: false,
-		zoomAnimation: true,
-		scrollWheelZoom: false,
+		zoomControl: true,
+		zoomAnimation: false,
+		scrollWheelZoom: true,
 		fadeAnimation: true,
 		crs: L.CRS.Simple,
 		attributionControl: false,
@@ -242,19 +242,19 @@ function initMap () {
 
 	// Add custom handling for mousewheel zooming
 	// Prevents map blurring when zooming in too quickly
-	mapDiv.addEventListener("wheel", function (event) {
+	// mapDiv.addEventListener("wheel", function (event) {
 		// We pause playback while zooming to prevent icon visual glitches
-		if (!playbackPaused) {
-			playbackPaused = true;
-			setTimeout(function () {
-				playbackPaused = false;
-			}, 250);
-		}
+		// if (!playbackPaused) {
+		// 	playbackPaused = true;
+		// 	setTimeout(function () {
+		// 		playbackPaused = false;
+		// 	}, 250);
+		// }
 		// 	console.log(event);
-		var zoom;
-		if (event.deltaY > 0) { zoom = -0.5 } else { zoom = 0.5 }
-		map.zoomIn(zoom, { animate: false });
-	});
+		// var zoom;
+		// if (event.deltaY > 0) { zoom = -0.5 } else { zoom = 0.5 }
+		// map.zoomIn(zoom, { animate: false });
+	// });
 
 	map.on("dragstart", function () {
 		if (entityToFollow != null) {
