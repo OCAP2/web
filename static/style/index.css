@@ -723,12 +723,15 @@ input[type=range]::-webkit-slider-runnable-track {
 	image-rendering: pixelated; /* 'pixelated' preserves sharpness of tiles */
 }
 
-.leaflet-marker-icon {
-	/*transition: transform .1s linear;*/
+#container:not(.zooming) .leaflet-marker-icon/*.animation*/ {
+	transition: transform .1s linear;
 }
 
 .leaflet-popup {
 	pointer-events: none;
+}
+#container:not(.zooming) .leaflet-popup/*.animation*/ {
+	transition: transform .1s linear !important;
 }
 
 .leaflet-popup-content-wrapper {

@@ -181,7 +181,7 @@ function initMap () {
 	map = L.map('map', {
 		//maxZoom: mapMaxZoom,
 		zoomControl: true,
-		zoomAnimation: false,
+		zoomAnimation: true,
 		scrollWheelZoom: true,
 		fadeAnimation: true,
 		crs: L.CRS.Simple,
@@ -196,12 +196,28 @@ function initMap () {
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
-		if (map.getZoom() <= 4) {
-			ui.hideMarkerPopups = true;
-		} else {
-			ui.hideMarkerPopups = false;
+		ui.hideMarkerPopups = map.getZoom() <= 4;
+	});
+
+	let playbackPausedBeforeZoom;
+	map.on("zoomstart", (e) => {
+		document.getElementById("container").classList.add("zooming");
+		playbackPausedBeforeZoom = playbackPaused;
+		if (!playbackPaused) {
+			playbackPaused = true;
 		}
 	});
+	map.on("zoomend", (e) => {
+		document.getElementById("container").classList.remove("zooming");
+		playbackPaused = playbackPausedBeforeZoom;
+	});
+	map.on("layeradd", (e) => {
+		// setTimeout(() => {
+		// 	if (e.layer._icon) e.layer._icon.classList.add("animation");
+		// 	if (e.layer._popup) e.layer._popup._container.classList.add("animation");
+		// }, 100);
+	});
+
 	console.log("Got world: ");
 	console.log(world);
 
@@ -239,22 +255,6 @@ function initMap () {
 				break;
 		}
 	});
-
-	// Add custom handling for mousewheel zooming
-	// Prevents map blurring when zooming in too quickly
-	// mapDiv.addEventListener("wheel", function (event) {
-		// We pause playback while zooming to prevent icon visual glitches
-		// if (!playbackPaused) {
-		// 	playbackPaused = true;
-		// 	setTimeout(function () {
-		// 		playbackPaused = false;
-		// 	}, 250);
-		// }
-		// 	console.log(event);
-		// var zoom;
-		// if (event.deltaY > 0) { zoom = -0.5 } else { zoom = 0.5 }
-		// map.zoomIn(zoom, { animate: false });
-	// });
 
 	map.on("dragstart", function () {
 		if (entityToFollow != null) {
@@ -815,14 +815,14 @@ function toggleConnectEvents (showHint = true) {
 	}
 }
 
+let lastDrawnFrame = -1;
 function startPlaybackLoop () {
 	var killlines = [];
 	var firelines = [];
 
 	function playbackFunction () {
 
-
-		requestAnimationFrame(() => {
+		if (!playbackPaused || lastDrawnFrame !== playbackFrame) requestAnimationFrame(() => {
 			// Remove killines & firelines from last frame
 			killlines.forEach(function (line) {
 				map.removeLayer(line);
@@ -837,7 +837,6 @@ function startPlaybackLoop () {
 			countWest = 0;
 
 			entities.getAll().forEach(function playbackEntity (entity) {
-				//console.log(entity);
 				entity.manageFrame(playbackFrame);
 
 				if (entity instanceof Unit) {
@@ -929,6 +928,8 @@ function startPlaybackLoop () {
 				playPauseButton.style.backgroundPosition = "0 0";
 			}
 			ui.setMissionCurTime(playbackFrame);
+
+			lastDrawnFrame = playbackFrame;
 		});
 
 		// Run timeout again (creating a loop, but with variable intervals)
@@ -1010,4 +1011,9 @@ String.prototype.encodeHTMLEntities = function () {
 	return this.replace(/[\u00A0-\u9999<>\&]/gim, (i) => {
 		return '&#' + i.charCodeAt(0) + ';';
 	});
+}
+
+function closestEquivalentAngle(from, to) {
+	const delta = ((((to - from) % 360) + 540) % 360) - 180;
+	return from + delta;
 }

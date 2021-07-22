@@ -378,7 +378,7 @@ class UI {
 		missionCurDate.setTime(f*frameCaptureDelay);
 		this.updateCurrentTime(f);
 		this.setFrameSliderVal(f);
-		playbackFrame = f;
+		playbackFrame = +f;
 
 		for (const event of gameEvents.getEvents().reverse()) {
 			event.update(f);

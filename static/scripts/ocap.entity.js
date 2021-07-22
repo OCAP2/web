@@ -81,9 +81,8 @@ class Entity {
 	}
 
 	createMarker(latLng) {
-		let marker = L.marker(latLng).addTo(map);
-		marker.setIcon(this._realIcon);
-		marker.setRotationOrigin(this._markerRotationOrigin);
+		let marker = L.marker(latLng, { icon: this._realIcon, rotationOrigin: this._markerRotationOrigin }).addTo(map);
+		// L.DomUtil.addClass(marker.getContainer(), "animation");
 		this._marker = marker;
 	}
 
@@ -183,7 +182,12 @@ class Entity {
 		}
 
 		// Set direction
-		this._marker.setRotationAngle(this._positions[relativeFrameIndex].direction);
+		if (relativeFrameIndex > 0) {
+			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, this._positions[relativeFrameIndex].direction);
+			this._marker.setRotationAngle(angle);
+		} else {
+			this._marker.setRotationAngle(this._positions[relativeFrameIndex].direction);
+		}
 
 		//Hide popup
 		this.hideMarkerPopup(ui.hideMarkerPopups);

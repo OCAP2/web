@@ -116,7 +116,7 @@ class Vehicle extends Entity {
 	};
 
 	getCrewString() {
-		if (this._crew.length == 0) { return " " }
+		if (this._crew.length === 0) { return " " }
 
 		let str = "";
 		this._crew.forEach(function (unitId) {
