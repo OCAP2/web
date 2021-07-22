@@ -614,7 +614,7 @@ class UI {
 		for (const unit of units) {
 			content += `
 			<tr>
-				<td class="name">${unit.name}</td>
+				<td class="name">${unit.name.encodeHTMLEntities()}</td>
 				<td class="kills">${unit.killCount}</td>
 				<td class="tkills">${unit.teamKillCount}</td>
 				<td class="deaths">${unit.deathCount}</td>

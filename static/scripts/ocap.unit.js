@@ -64,10 +64,10 @@ class Unit extends Entity {
 			this._name = name;
 			if (this._role) {
 				this._element.textContent = `(${this._role}) ` + name + " (" + this.killCount.toString() + ")";
-				this._marker.getPopup()._contentNode.innerHTML = name;
+				this._marker.getPopup()._contentNode.textContent = name;
 			} else {
 				this._element.textContent = name + " (" + this.killCount.toString() + ")";
-				this._marker.getPopup()._contentNode.innerHTML = name;
+				this._marker.getPopup()._contentNode.textContent = name;
 			}
 		}
 	};
@@ -78,9 +78,9 @@ class Unit extends Entity {
 		// Only create a nametag label (popup) for players
 		let popup;
 		if (this.isPlayer) {
-			popup = this._createPopup(this._name);
+			popup = this._createPopup(this._name.encodeHTMLEntities());
 		} else {
-			popup = this._createPopup(this._name + " <b>[AI]</b>");
+			popup = this._createPopup(this._name.encodeHTMLEntities() + " <b>[AI]</b>");
 		}
 		this._marker.bindPopup(popup).openPopup();
 	};

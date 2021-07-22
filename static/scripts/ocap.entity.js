@@ -15,7 +15,7 @@ class Entity {
 		this._sideColour = "#000000";
 		this._markerRotationOrigin = "50% 50%";
 		this._popupClassName = "";
-	};
+	}
 
 	// Correct index by taking into account startFrameNum.
 	// e.g. If requested frame is 31, and entity startFrameNum is 30,
@@ -23,51 +23,51 @@ class Entity {
 	// If relative index is < 0, then entity doesn't exist yet
 	getRelativeFrameIndex(f) {
 		return (f - this._startFrameNum);
-	};
+	}
 
 	getPosAtFrame(f) {
 		f = this.getRelativeFrameIndex(f);
 
-		var notExistYet = f < 0; // Unit doesn't exist yet
-		var notExistAnymore = f >= (this._positions.length); // Unit dead/doesn't exist anymore
+		const notExistYet = f < 0; // Unit doesn't exist yet
+		const notExistAnymore = f >= (this._positions.length); // Unit dead/doesn't exist anymore
 		if (notExistYet || notExistAnymore) {
 			return;
 		} else {
 			return this._positions[f].position;
 		}
-	};
+	}
 
 	// Get LatLng at specific frame
 	getLatLngAtFrame(f) {
-		var pos = this.getPosAtFrame(f);
-		if (pos != null) { return armaToLatLng(pos) }
+		const pos = this.getPosAtFrame(f);
+		if (pos) { return armaToLatLng(pos) }
 		return;
-	};
+	}
 
 	// Get LatLng at current frame
 	getLatLng() {
 		return this.getLatLngAtFrame(playbackFrame);
-	};
+	}
 
 	getMarker() {
 		return this._marker;
-	};
+	}
 
 	setElement(el) {
 		this._element = el;
-	};
+	}
 
 	getElement() {
 		return this._element;
-	};
+	}
 
 	getName() {
 		return this._name;
-	};
+	}
 
 	getId() {
 		return this._id;
-	};
+	}
 
 	_createPopup(content) {
 		let popup = L.popup({
@@ -78,14 +78,14 @@ class Entity {
 		});
 		popup.setContent(content);
 		return popup;
-	};
+	}
 
 	createMarker(latLng) {
 		let marker = L.marker(latLng).addTo(map);
 		marker.setIcon(this._realIcon);
 		marker.setRotationOrigin(this._markerRotationOrigin);
 		this._marker = marker;
-	};
+	}
 
 	// TODO: Optimise this. No need to remove marker (and recreate it later).
 	// 		 Instead, hide marker and then unhide it later when needed again
@@ -97,7 +97,7 @@ class Entity {
 			this._marker = null;
 			this.remove();
 		}
-	};
+	}
 
 	// NOOP
 	remove() {}
@@ -123,7 +123,7 @@ class Entity {
 		if (this._curIcon) {
 			this._curIcon = icon;
 		}
-	};
+	}
 
 	setMarkerOpacity(opacity) {
 		this._marker.setOpacity(opacity);
@@ -132,7 +132,7 @@ class Entity {
 		if (popup != null) {
 			popup.getElement().style.opacity = opacity;
 		}
-	};
+	}
 
 	hideMarkerPopup(bool) {
 		let popup = this._marker.getPopup();
@@ -145,32 +145,32 @@ class Entity {
 		if (element.style.display != display) {
 			element.style.display = display;
 		}
-	};
+	}
 
 	removeElement() {
 		this._element.parentElement.removeChild(this._element);
 		this._element = null;
-	};
+	}
 
 	// Does entity now exist (for the first time) at relativeFrameIndex
 	_existFirstTime(relativeFrameIndex) {
 		return (relativeFrameIndex == 0);
-	};
+	}
 
 	// Does entity exist yet (not connected/hasn't spawned) at relativeFrameIndex
 	_notExistYet(relativeFrameIndex) {
 		return (relativeFrameIndex < 0);
-	};
+	}
 
 	// Does entity exist anymore (disconnected/garbage collected) at relativeFrameIndex
 	_notExistAnymore(relativeFrameIndex) {
 		return (relativeFrameIndex >= this._positions.length);
-	};
+	}
 
 	// Is relativeFrameIndex out of bounds
 	isFrameOutOfBounds(relativeFrameIndex) {
 		return ((this._notExistYet(relativeFrameIndex)) || (this._notExistAnymore(relativeFrameIndex)));
-	};
+	}
 
 	// Update entiy position, direction, and alive status at valid frame
 	_updateAtFrame(relativeFrameIndex) {
@@ -191,7 +191,7 @@ class Entity {
 		// Set alive status
 		this.setAlive(this._positions[relativeFrameIndex].alive);
 
-	};
+	}
 
 	// Manage entity at given frame
 	manageFrame(f) {
@@ -202,7 +202,7 @@ class Entity {
 		} else {
 			this._updateAtFrame(f)
 		}
-	};
+	}
 
 	_flash(icon, framesToSpan) {
 		this.setMarkerIcon(icon);
@@ -211,15 +211,15 @@ class Entity {
 			//this._marker.setIcon(this._tempIcon);
 			this._lockMarkerIcon = false;
 		}, (frameCaptureDelay / playbackMultiplier) * framesToSpan);
-	};
+	}
 
 	flashHit() {
 		this._flash(this.iconType.hit, 3);
-	};
+	}
 
 	flashHighlight() {
 		this._flash(this.iconType.follow, 6);
-	};
+	}
 
 	setAlive(alive) {
 		switch (alive) {
@@ -227,7 +227,7 @@ class Entity {
 				let icon = this.iconType.dead;
 				this._alive = alive;
 
-				if (this._curIcon != icon) {
+				if (this._curIcon !== icon) {
 					this.setMarkerIcon(icon);
 				}
 				this._tempIcon = (icon);
@@ -236,13 +236,13 @@ class Entity {
 			case 1:
 				this._alive = alive;
 				//console.log(this._marker);
-				if ((!this._lockMarkerIcon) && (this._curIcon != this._realIcon)) {
+				if ((!this._lockMarkerIcon) && (this._curIcon !== this._realIcon)) {
 					this.setMarkerIcon(this._realIcon);
 				}
 				this.setMarkerOpacity(1);
 				break;
 			case 2:
-				if ((!this._lockMarkerIcon) && (this._curIcon != this.iconType.unconscious)) {
+				if ((!this._lockMarkerIcon) && (this._curIcon !== this.iconType.unconscious)) {
 					this.setMarkerIcon(this.iconType.unconscious);
 				}
 				this.setMarkerOpacity(1);
@@ -250,7 +250,7 @@ class Entity {
 			default:
 				break;
 		}
-	};
+	}
 
 	// Change unit's marker colour (highlight) and set as entity to follow
 	follow() {
@@ -263,7 +263,7 @@ class Entity {
 		this._tempIcon = icon;
 		*/
 		entityToFollow = this;
-	};
+	}
 
 	// Reset unit's marker colour and clear entityToFollow
 	unfollow() {
@@ -276,5 +276,5 @@ class Entity {
 		};
 		*/
 		entityToFollow = null;
-	};
+	}
 }
