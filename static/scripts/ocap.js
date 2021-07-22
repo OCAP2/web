@@ -180,7 +180,7 @@ function initMap () {
 	// Create map
 	map = L.map('map', {
 		//maxZoom: mapMaxZoom,
-		zoomControl: true,
+		zoomControl: false,
 		zoomAnimation: true,
 		scrollWheelZoom: true,
 		fadeAnimation: true,
