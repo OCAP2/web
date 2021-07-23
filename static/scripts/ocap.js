@@ -89,6 +89,8 @@ var followColour = "#FFA81A";
 var hitColour = "#FF0000";
 var deadColour = "#000000";
 
+const skipAnimationDistance = 100;
+
 
 function getArguments () {
 	let args = new Object();
@@ -134,15 +136,7 @@ function initOCAP () {
 			}
 		}, false);
 	}
-}
-
-function setWorld () {
-	let jsonPath = "images/maps/maps.json";
-
-	console.log("Getting worlds from " + jsonPath);
-	$.getJSON(jsonPath, function (data) {
-		worlds = data;
-	});
+	if (args.experimental) ui.showExperimental();
 }
 
 function getWorldByName (worldName) {
@@ -264,9 +258,9 @@ function initMap () {
 
 	createInitialMarkers();
 	let boundaryMarks = markers.filter(item => {
-		return item._type == "moduleCoverMap"
+		return item._type === "moduleCoverMap"
 	});
-	if (boundaryMarks.length == 4) {
+	if (boundaryMarks.length === 4) {
 		let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
 		let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
 		map.flyToBounds(boundaryPolygon.getBounds());
@@ -280,17 +274,9 @@ function initMap () {
 }
 
 function createInitialMarkers () {
-	/*	setTimeout(function() {
-			let svg = marker.getElement().contentDocument;
-			let g = svg.getElementById("layer1");
-			console.log();
-
-			g.setAttribute('fill', 'yellow');
-		}, 100);*/
-
 	entities.getAll().forEach(function (entity) {
 		// Create and set marker for unit
-		var pos = entity.getPosAtFrame(0);
+		const pos = entity.getPosAtFrame(0);
 		if (pos != null) { // If unit did exist at start of game
 			entity.createMarker(armaToLatLng(pos));
 		}
@@ -314,11 +300,11 @@ function defineIcons () {
 	};
 
 	let imgPathMan = "images/markers/man/";
-	let imgPathManMG = "images/markers/man/MG/";
-	let imgPathManGL = "images/markers/man/GL/";
-	let imgPathManAT = "images/markers/man/AT/";
-	let imgPathManSniper = "images/markers/man/Sniper/";
-	let imgPathManAA = "images/markers/man/AA/";
+	// let imgPathManMG = "images/markers/man/MG/";
+	// let imgPathManGL = "images/markers/man/GL/";
+	// let imgPathManAT = "images/markers/man/AT/";
+	// let imgPathManSniper = "images/markers/man/Sniper/";
+	// let imgPathManAA = "images/markers/man/AA/";
 	let imgPathShip = "images/markers/ship/";
 	let imgPathParachute = "images/markers/parachute/";
 	let imgPathHeli = "images/markers/heli/";
@@ -334,23 +320,23 @@ function defineIcons () {
 
 	let imgs = ["blufor", "opfor", "ind", "civ", "unknown", "dead", "hit", "follow", "unconscious"];
 	imgs.forEach((img, i) => {
-		icons.man[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
-		// icons.manMG[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
-		// icons.manGL[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManGL}${img}.svg` });
-		// icons.manAT[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManAT}${img}.svg` });
-		// icons.manSniper[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManSniper}${img}.svg` });
-		// icons.manAA[img] = L.icon({ iconSize: [16, 16], iconUrl: `${imgPathManAA}${img}.svg` });
-		icons.ship[img] = L.icon({ iconSize: [28, 28], iconUrl: `${imgPathShip}${img}.svg` });
-		icons.parachute[img] = L.icon({ iconSize: [20, 20], iconUrl: `${imgPathParachute}${img}.svg` });
-		icons.heli[img] = L.icon({ iconSize: [32, 32], iconUrl: `${imgPathHeli}${img}.svg` });
-		icons.plane[img] = L.icon({ iconSize: [32, 32], iconUrl: `${imgPathPlane}${img}.svg` });
-		icons.truck[img] = L.icon({ iconSize: [28, 28], iconUrl: `${imgPathTruck}${img}.svg` });
-		icons.car[img] = L.icon({ iconSize: [24, 24], iconUrl: `${imgPathCar}${img}.svg` });
-		icons.apc[img] = L.icon({ iconSize: [28, 28], iconUrl: `${imgPathApc}${img}.svg` });
-		icons.tank[img] = L.icon({ iconSize: [28, 28], iconUrl: `${imgPathTank}${img}.svg` });
-		icons.staticMortar[img] = L.icon({ iconSize: [20, 20], iconUrl: `${imgPathStaticMortar}${img}.svg` });
-		icons.staticWeapon[img] = L.icon({ iconSize: [20, 20], iconUrl: `${imgPathStaticWeapon}${img}.svg` });
-		icons.unknown[img] = L.icon({ iconSize: [28, 28], iconUrl: `${imgPathUnknown}${img}.svg` });
+		icons.man[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
+		// icons.manMG[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
+		// icons.manGL[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManGL}${img}.svg` });
+		// icons.manAT[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAT}${img}.svg` });
+		// icons.manSniper[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManSniper}${img}.svg` });
+		// icons.manAA[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAA}${img}.svg` });
+		icons.ship[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathShip}${img}.svg` });
+		icons.parachute[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathParachute}${img}.svg` });
+		icons.heli[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathHeli}${img}.svg` });
+		icons.plane[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathPlane}${img}.svg` });
+		icons.truck[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTruck}${img}.svg` });
+		icons.car[img] = L.icon({ className: "animation", iconSize: [24, 24], iconUrl: `${imgPathCar}${img}.svg` });
+		icons.apc[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathApc}${img}.svg` });
+		icons.tank[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTank}${img}.svg` });
+		icons.staticMortar[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticMortar}${img}.svg` });
+		icons.staticWeapon[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticWeapon}${img}.svg` });
+		icons.unknown[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathUnknown}${img}.svg` });
 	});
 }
 
@@ -373,7 +359,7 @@ function goFullscreen () {
 
 // Converts Arma coordinates [x,y] to LatLng
 function armaToLatLng (coords) {
-	var pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
+	const pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 	return map.unproject(pixelCoords, mapMaxNativeZoom);
 }
 
@@ -426,7 +412,7 @@ function test () {
 			[startX - sizeX, startY - sizeY] // bottom left
 		];
 
-		var sqMarker = L.polygon(pointsRaw, { noClip: true, interactive: false});
+		const sqMarker = L.polygon(pointsRaw, {noClip: true, interactive: false});
 		L.Util.setOptions(sqMarker, shapeOptions);
 		// if (brushPattern) {
 		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
@@ -496,7 +482,7 @@ function secondsToTimeString (seconds) {
 // Read operation JSON data and create unit objects
 function processOp (filepath) {
 	console.log("Processing operation: (" + filepath + ")...");
-	var time = new Date();
+	const time = new Date();
 	fileName = filepath.substr(5, filepath.length);
 	$.getJSON(filepath, function (data) {
 		worldName = data.worldName.toLowerCase();
@@ -520,7 +506,7 @@ function processOp (filepath) {
 		var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
 
 		// Loop through entities
-		data.entities.forEach(function (entityJSON) {
+		for (const entityJSON of data.entities) {
 			//console.log(entityJSON);
 
 			let type = entityJSON.type;
@@ -589,7 +575,7 @@ function processOp (filepath) {
 				const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
 				entities.add(vehicle);
 			}
-		});
+		}
 
 		if (data.Markers != null) {
 			data.Markers.forEach(function (markerJSON) {
@@ -821,116 +807,124 @@ function startPlaybackLoop () {
 	var firelines = [];
 
 	function playbackFunction () {
+		if (!playbackPaused || lastDrawnFrame !== playbackFrame) {
+			requestAnimationFrame(() => {
+				// Remove killines & firelines from last frame
+				killlines.forEach(function (line) {
+					map.removeLayer(line);
+				});
+				firelines.forEach(function (line) {
+					map.removeLayer(line);
+				});
 
-		if (!playbackPaused || lastDrawnFrame !== playbackFrame) requestAnimationFrame(() => {
-			// Remove killines & firelines from last frame
-			killlines.forEach(function (line) {
-				map.removeLayer(line);
-			});
-			firelines.forEach(function (line) {
-				map.removeLayer(line);
-			});
+				countCiv = 0;
+				countEast = 0;
+				countGuer = 0;
+				countWest = 0;
 
-			countCiv = 0;
-			countEast = 0;
-			countGuer = 0;
-			countWest = 0;
+				for (const entity of entities.getAll()) {
+					entity.updateRender(playbackFrame);
+					entity.manageFrame(playbackFrame);
 
-			entities.getAll().forEach(function playbackEntity (entity) {
-				entity.manageFrame(playbackFrame);
-
-				if (entity instanceof Unit) {
-					// Draw fire line (if enabled)
-					var projectilePos = entity.firedOnFrame(playbackFrame);
-					if (projectilePos != null && ui.firelinesEnabled) {
-						// console.log(entity);
-						// console.log(`Shooter pos: ${entity.getLatLng()}\nFired event: ${projectilePos} (is null: ${projectilePos == null})`);
-						var line = L.polyline([entity.getLatLng(), armaToLatLng(projectilePos)], {
-							color: entity.getSideColour(),
-							weight: 2,
-							opacity: 0.4
-						});
-						line.addTo(map);
-						firelines.push(line);
+					if (entity instanceof Unit) {
+						// Draw fire line (if enabled)
+						var projectilePos = entity.firedOnFrame(playbackFrame);
+						if (projectilePos != null && ui.firelinesEnabled) {
+							// console.log(entity);
+							// console.log(`Shooter pos: ${entity.getLatLng()}\nFired event: ${projectilePos} (is null: ${projectilePos == null})`);
+							var line = L.polyline([entity.getLatLng(), armaToLatLng(projectilePos)], {
+								color: entity.getSideColour(),
+								weight: 2,
+								opacity: 0.4
+							});
+							line.addTo(map);
+							firelines.push(line);
+						}
 					}
 				}
-			});
 
-			ui.updateTitleSide();
+				ui.updateTitleSide();
 
-			// Display events for this frame (if any)
-			gameEvents.getEvents().forEach(function playbackEvent (event) {
+				// Display events for this frame (if any)
+				for (const event of gameEvents.getEvents()) {
 
-				// Check if event is supposed to exist by this point
-				if (event.frameNum <= playbackFrame) {
-					ui.addEvent(event);
+					// Check if event is supposed to exist by this point
+					if (event.frameNum <= playbackFrame) {
+						ui.addEvent(event);
 
-					// Draw kill line
-					if (event.frameNum == playbackFrame) {
-						if (event.type == "killed") {
-							var victim = event.victim;
-							var killer = event.causedBy;
+						// Draw kill line
+						if (event.frameNum == playbackFrame) {
+							if (event.type == "killed") {
+								var victim = event.victim;
+								var killer = event.causedBy;
 
-							// Draw kill line
-							if (killer.id) {
-								//console.log(victim);
-								//console.log(killer);
-								var victimPos = victim.getLatLng();
-								var killerPos = killer.getLatLng();
+								// Draw kill line
+								if (killer.id) {
+									//console.log(victim);
+									//console.log(killer);
+									var victimPos = victim.getLatLng();
+									var killerPos = killer.getLatLng();
 
-								if (victimPos != null && killerPos != null) {
-									var line = L.polyline([victimPos, killerPos], {
-										color: killer.getSideColour(),
-										weight: 2,
-										opacity: 0.4
-									});
-									line.addTo(map);
-									killlines.push(line);
+									if (victimPos != null && killerPos != null) {
+										var line = L.polyline([victimPos, killerPos], {
+											color: killer.getSideColour(),
+											weight: 2,
+											opacity: 0.4
+										});
+										line.addTo(map);
+										killlines.push(line);
+									}
 								}
+							}
+
+							// Flash unit's icon
+							if (event.type == "hit") {
+								var victim = event.victim;
+								victim.flashHit();
 							}
 						}
 
-						// Flash unit's icon
-						if (event.type == "hit") {
-							var victim = event.victim;
-							victim.flashHit();
-						}
+					} else {
+						ui.removeEvent(event);
 					}
+				}
+				for (const marker of markers) {
+					if (ui.markersEnable) {
+						marker.manageFrame(playbackFrame);
+						marker.hideMarkerPopup(false);
+					} else {
+						marker.manageFrame(playbackFrame);
+						marker.hideMarkerPopup(true);
+					}
+				}
 
-				} else {
-					ui.removeEvent(event);
+				// Handle entityToFollow
+				if (entityToFollow != null) {
+					var pos = entityToFollow.getPosAtFrame(playbackFrame);
+					if (pos != null) {
+						map.setView(armaToLatLng(pos), map.getZoom());
+					} else { // Unit has died or does not exist, unfollow
+						entityToFollow.unfollow();
+					}
+				}
+				if (!playbackPaused && !(playbackFrame == endFrame)) {
+					playbackFrame++;
+				}
+				if (playbackFrame == endFrame) {
+					playbackPaused = true;
+					playPauseButton.style.backgroundPosition = "0 0";
+				}
+				ui.setMissionCurTime(playbackFrame);
+
+				lastDrawnFrame = playbackFrame;
+			});
+		} else {
+			requestAnimationFrame(() => {
+				for (const entity of entities.getAll()) {
+					entity.updateRender(playbackFrame);
 				}
 			});
-			markers.forEach(function playbackMarker (marker) {
-				if (ui.markersEnable) {
-					marker.manageFrame(playbackFrame);
-					marker.hideMarkerPopup(false);
-				} else {
-					marker.manageFrame(playbackFrame);
-					marker.hideMarkerPopup(true);
-				}
-			});
-
-			// Handle entityToFollow
-			if (entityToFollow != null) {
-				var pos = entityToFollow.getPosAtFrame(playbackFrame);
-				if (pos != null) {
-					map.setView(armaToLatLng(pos), map.getZoom());
-				} else { // Unit has died or does not exist, unfollow
-					entityToFollow.unfollow();
-				}
-			}
-			if (!playbackPaused && !(playbackFrame == endFrame)) {
-				playbackFrame++;
-			}
-			if (playbackFrame == endFrame) {
-				playbackPaused = true;
-				playPauseButton.style.backgroundPosition = "0 0";
-			}
-			ui.setMissionCurTime(playbackFrame);
-
-			lastDrawnFrame = playbackFrame;
-		});
+		}
 
 		// Run timeout again (creating a loop, but with variable intervals)
 		playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);

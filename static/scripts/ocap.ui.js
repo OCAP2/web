@@ -839,6 +839,8 @@ class UI {
 
 	showExperimental() {
 		this.statsButton.classList.remove("hiddenExperimental");
+		const container = document.getElementById("container");
+		container.classList.add("marker-transition");
 	}
 }
 

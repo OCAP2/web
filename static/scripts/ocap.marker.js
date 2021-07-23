@@ -255,7 +255,7 @@ class Marker {
 			this.hide();
 		}
 		return;
-	};
+	}
 
 	_updateAtFrame (f) {
 		let frameData = this._positions[f];
@@ -375,11 +375,9 @@ class Marker {
 				// do nothing, polylines can't be moved
 			}
 
-				this.show(alpha);
+			this.show(alpha);
 		}
-	};
-
-
+	}
 
 	_rotatePoints (center, points, yaw) {
 		const res = []
@@ -398,21 +396,14 @@ class Marker {
 			res.push(p4)
 		}
 		return res
-	};
-
-
-
-
-
-
-
+	}
 
 	hide () {
 		// if (this._isShow == true) {
 		this._isShow = false;
 		this.setMarkerOpacity(0);
 		// };
-	};
+	}
 
 	show (alpha) {
 		this._isShow = true;
@@ -425,9 +416,7 @@ class Marker {
 		} else if (this._shape == "POLYLINE") {
 			this.setMarkerOpacity(alpha);
 		}
-	};
-
-
+	}
 
 	_createMarker (latLng, dir, alpha) {
 		let marker;
@@ -522,7 +511,7 @@ class Marker {
 		this._marker = marker;
 		this.show(alpha);
 
-	};
+	}
 
 	_createPopup (content) {
 		let popup = L.popup({
@@ -533,7 +522,7 @@ class Marker {
 		});
 		popup.setContent(content);
 		return popup;
-	};
+	}
 
 	_markerOnFrame (f) {
 		if (this._startFrame <= f && this._endFrame >= f) {
@@ -556,7 +545,7 @@ class Marker {
 			return this._positions.length - 1;
 		}
 		return
-	};
+	}
 
 	setMarkerOpacity (opacity) {
 		if (this._marker != null) {
