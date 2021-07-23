@@ -293,9 +293,14 @@ class UI {
 		this.playbackSpeedSlider.step = playbackMultiplierStep;
 		this.playbackSpeedSlider.value = playbackMultiplier;
 		this.playbackSpeedSlider.addEventListener("input", () => {
+			const container = document.getElementById("container");
+
 			let sliderVal = this.playbackSpeedSlider.value;
 			this.playbackSpeedVal.textContent = sliderVal + "x";
-			playbackMultiplier = sliderVal;
+
+			container.classList.remove(`speed-${playbackMultiplier}`);
+			playbackMultiplier = +sliderVal;
+			container.classList.add(`speed-${playbackMultiplier}`);
 		});
 
 		this.frameSliderWidthInPercent = (this.frameSlider.offsetWidth / this.frameSlider.parentElement.offsetWidth) * 100;
