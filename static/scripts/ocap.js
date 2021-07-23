@@ -90,7 +90,7 @@ var hitColour = "#FF0000";
 var deadColour = "#000000";
 
 const skipAnimationDistance = 100;
-
+let requestedFrame;
 
 function getArguments () {
 	let args = new Object();
@@ -195,6 +195,7 @@ function initMap () {
 
 	let playbackPausedBeforeZoom;
 	map.on("zoomstart", () => {
+		cancelAnimationFrame(requestedFrame);
 		document.getElementById("container").classList.add("zooming");
 		playbackPausedBeforeZoom = playbackPaused;
 		if (!playbackPaused) {
@@ -808,7 +809,7 @@ function startPlaybackLoop () {
 
 	function playbackFunction () {
 		if (!playbackPaused || lastDrawnFrame !== playbackFrame) {
-			requestAnimationFrame(() => {
+			requestedFrame = requestAnimationFrame(() => {
 				// Remove killines & firelines from last frame
 				killlines.forEach(function (line) {
 					map.removeLayer(line);
