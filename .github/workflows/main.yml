@@ -33,6 +33,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+             build_commit=${GITHUB_SHA}
           tags: ${{ env.REGISTRY }}/ocap2/web:latest
 
   windows-build:
@@ -52,7 +54,7 @@ jobs:
           go-version: '^1.16'
 
       - name: Build windows binary
-        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -o ocap-webserver.exe ./cmd/
+        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/OCAP2/web/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/server.BuildCommit=$GITHUB_SHA" -o ocap-webserver.exe ./cmd/
 
       - name: Upload windows binary
         uses: actions/upload-artifact@v2

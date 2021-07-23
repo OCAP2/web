@@ -17,6 +17,11 @@ import (
 
 const CacheDuration = 7 * 24 * time.Hour
 
+var (
+	BuildCommit string
+	BuildDate   string
+)
+
 type Handler struct {
 	repoOperation *RepoOperation
 	repoMarker    *RepoMarker
@@ -51,7 +56,10 @@ func NewHandler(
 	e.GET(
 		"/api/v1/customize",
 		hdlr.GetCustomize,
-		hdlr.cacheControl(CacheDuration),
+	)
+	e.GET(
+		"/api/version",
+		hdlr.GetVersion,
 	)
 	e.GET(
 		"/data/:name",
@@ -130,6 +138,16 @@ func (h *Handler) GetOperations(c echo.Context) error {
 
 func (h *Handler) GetCustomize(c echo.Context) error {
 	return c.JSONPretty(http.StatusOK, h.setting.Customize, "\t")
+}
+
+func (h *Handler) GetVersion(c echo.Context) error {
+	return c.JSONPretty(http.StatusOK, struct {
+		BuildCommit string
+		BuildDate   string
+	}{
+		BuildCommit: BuildCommit,
+		BuildDate:   BuildDate,
+	}, "\t")
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {
