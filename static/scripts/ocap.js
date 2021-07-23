@@ -107,33 +107,35 @@ function initOCAP () {
 	defineIcons();
 	ui = new UI();
 	ui.updateCustomize();
-	ui.setModalOpList();
-	/*
-		window.addEventListener("keypress", function (event) {
-			switch (event.charCode) {
-				case 32: // Spacebar
-					event.preventDefault(); // Prevent space from scrolling page on some browsers
-					break;
-			};
-		});
-	*/
-	let args = getArguments();
-	if (args.file) {
-		processOp("data/" + args.file);
-		document.addEventListener("mapInited", function (event) {
+	ui.setModalOpList()
+		.then(() => {
+		/*
+			window.addEventListener("keypress", function (event) {
+				switch (event.charCode) {
+					case 32: // Spacebar
+						event.preventDefault(); // Prevent space from scrolling page on some browsers
+						break;
+				};
+			});
+		*/
 			let args = getArguments();
-			if (args.x && args.y && args.zoom) {
-				let coords = [parseFloat(args.x), parseFloat(args.y)];
-				let zoom = parseFloat(args.zoom);
-				map.setView(coords, zoom);
-			} else {
-				map.setView([0, 0], mapMaxNativeZoom);
+			if (args.file) {
+				processOp("data/" + args.file);
+				document.addEventListener("mapInited", function (event) {
+					let args = getArguments();
+					if (args.x && args.y && args.zoom) {
+						let coords = [parseFloat(args.x), parseFloat(args.y)];
+						let zoom = parseFloat(args.zoom);
+						map.setView(coords, zoom);
+					} else {
+						map.setView([0, 0], mapMaxNativeZoom);
+					}
+					if (args.frame) {
+						ui.setMissionCurTime(parseInt(args.frame));
+					}
+				}, false);
 			}
-			if (args.frame) {
-				ui.setMissionCurTime(parseInt(args.frame));
-			}
-		}, false);
-	}
+		});
 }
 
 function setWorld () {
