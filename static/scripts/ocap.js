@@ -200,14 +200,14 @@ function initMap () {
 	});
 
 	let playbackPausedBeforeZoom;
-	map.on("zoomstart", (e) => {
+	map.on("zoomstart", () => {
 		document.getElementById("container").classList.add("zooming");
 		playbackPausedBeforeZoom = playbackPaused;
 		if (!playbackPaused) {
 			playbackPaused = true;
 		}
 	});
-	map.on("zoomend", (e) => {
+	map.on("zoomend", () => {
 		document.getElementById("container").classList.remove("zooming");
 		playbackPaused = playbackPausedBeforeZoom;
 	});

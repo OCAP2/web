@@ -439,8 +439,7 @@ class Marker {
 
 			let markerCustomText = "";
 			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
-			marker = L.marker(latLng, { interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
-			marker.setIcon(this._icon);
+			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
 			let popup = this._createPopup(markerCustomText);
 			marker.bindPopup(popup).openPopup();
 
@@ -483,8 +482,7 @@ class Marker {
 				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
 
-			marker = L.marker(latLng, { interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
-			marker.setIcon(this._icon);
+			marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
 			let popup = this._createPopup(popupText);
 			marker.bindPopup(popup).openPopup();
 
