@@ -198,6 +198,8 @@ class Entity {
 		// Set alive status
 		this.setAlive(this._positions[relativeFrameIndex].alive);
 
+		//Hide popup
+		this.hideMarkerPopup(ui.hideMarkerPopups);
 	}
 
 	updateRender(f) {
@@ -205,41 +207,39 @@ class Entity {
 
 		if (this._restoreAnimation) {
 			if (this._marker) {
-
 				let distance = 0;
-				if (this._positions.length < relativeFrameIndex) {
+				if (relativeFrameIndex >= 0 && relativeFrameIndex+1 < this._positions.length) {
 					const posA = this._positions[relativeFrameIndex].position;
 					const posB = this._positions[relativeFrameIndex+1].position;
 					const a = posA[0] - posB[0];
 					const b = posA[1] - posB[1];
 					distance = Math.sqrt(a*a + b*b);
 				}
-
 				if (distance < skipAnimationDistance) {
 					const icon = this._marker.getElement();
 					const popup = this._marker.getPopup();
-					if (icon) L.DomUtil.addClass(icon, "animation");
-					if (popup) L.DomUtil.addClass(popup.getElement(), "animation");
+					if (icon) icon.style.display = "block";
+					if (popup) popup.getElement().style.display = "block";
 					this._restoreAnimation = false;
 				}
 			} else {
 				this._restoreAnimation = false;
 			}
-		} else {
+		} else if (this._marker) {
 			let distance = 0;
-			if (relativeFrameIndex > 0 && this._positions.length < relativeFrameIndex) {
+			if (relativeFrameIndex > 0 && relativeFrameIndex < this._positions.length) {
 				const posA = this._positions[relativeFrameIndex].position;
 				const posB = this._positions[relativeFrameIndex-1].position;
 				const a = posA[0] - posB[0];
 				const b = posA[1] - posB[1];
 				distance = Math.sqrt(a*a + b*b);
 			}
+
 			if (distance >= skipAnimationDistance) { // teleport should not jump through the map
 				const icon = this._marker.getElement();
 				const popup = this._marker.getPopup();
-				if (icon) L.DomUtil.removeClass(icon, "animation");
-				if (popup) L.DomUtil.removeClass(popup.getElement(), "animation");
-				console.log(relativeFrameIndex, this._positions[relativeFrameIndex].position, this._positions[relativeFrameIndex-1].position, this._name, icon, popup);
+				if (icon) icon.style.display = "none";
+				if (popup) popup.getElement().style.display = "none";
 				this._restoreAnimation = true;
 			}
 		}
