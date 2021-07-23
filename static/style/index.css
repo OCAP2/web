@@ -500,7 +500,7 @@ input[type=range]::-webkit-slider-runnable-track {
 	background: none;
 	margin: 10% auto auto;
 	/*	border: 1px solid black;*/
-	width: 800px;
+	width: 1200px;
     height: 65%;
 }
 .modalHeader {
@@ -601,7 +601,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 #filterGameInput {
 	height: 20px;
-	width: 315px;
+	width: 720px;
 }
 
 #filterSubmit {
