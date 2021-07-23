@@ -9469,7 +9469,7 @@
   		clearTimeout(this._removeTimeout);
 		this.update(); // OCAP CHANGE!!!
 		this.getPane().appendChild(this._container);
-		// this.update();
+		this.update();
 
   		if (map._fadeAnimated) {
   			setOpacity(this._container, 1);
