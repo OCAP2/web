@@ -227,7 +227,6 @@ html, body, #map {
 }
 
 #bottomPanel {
-	/*background-color: #343434;*/
 	background-color: rgba(0,0,0,0.8);
 	position: absolute;
 	bottom: 0;
@@ -243,15 +242,12 @@ html, body, #map {
 	height: 100%;
 }
 
-
-
 #timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
 	margin-top: 5px;
 	margin-left: 10px;
 	margin-right: 10px;
 	display: inline-block;
 }
-
 
 #toggleFirelines, #toggleMapMarker, #toggleNickname, .fullscreenButton {
 	background-image: url("../images/bullets.svg");
@@ -305,13 +301,21 @@ html, body, #map {
 }
 
 #frameSliderContainer {
-	margin-top: 5px;
-	margin-left: 10px;
-	margin-right: 10px;
+	margin: 5px 10px;
+	height: 16px;
+	padding: 3px 0;
+}
+#frameSliderContainer .frameSliderContainer2 {
+	position: relative;
+	bottom: 14px;
+}
+#frameSliderContainer .frameSliderContainer2 input::-moz-range-track, #frameSliderContainer .frameSliderContainer2 input::-webkit-slider-runnable-track {
+	background-color: transparent;
 }
 
 #frameSlider {
 	width: 100%;
+	height: 10px;
 }
 
 #eventTimeline {
@@ -319,7 +323,8 @@ html, body, #map {
 	height: 10px;
 	width: 100%;
 	position: relative;
-	bottom: 13px;
+	margin: 2px;
+	background-color: #6E6E6E;
 }
 
 .eventTimelineTick {
@@ -364,7 +369,7 @@ html, body, #map {
 	transform: rotate(270deg);
 }
 
-#playbackSpeedSlider::-webkit-slider-thumb {
+#playbackSpeedSlider::-webkit-slider-thumb, #playbackSpeedSlider::-moz-range-thumb {
 	background-color: #404040;
 }
 
@@ -621,7 +626,6 @@ input[type=range]::-webkit-slider-runnable-track {
 	width: 100%;
 }
 .modalBody th {
-	background-color: rgba(0,0,0);
 	background-color: rgba(0,0,0,0.7);
 	padding: 3px;
 	font-weight: 500;
