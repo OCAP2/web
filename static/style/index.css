@@ -309,7 +309,10 @@ html, body, #map {
 	position: relative;
 	bottom: 14px;
 }
-#frameSliderContainer .frameSliderContainer2 input::-moz-range-track, #frameSliderContainer .frameSliderContainer2 input::-webkit-slider-runnable-track {
+#frameSliderContainer .frameSliderContainer2 input::-moz-range-track {
+	background-color: transparent;
+}
+#frameSliderContainer .frameSliderContainer2 input::-webkit-slider-runnable-track {
 	background-color: transparent;
 }
 
@@ -369,7 +372,10 @@ html, body, #map {
 	transform: rotate(270deg);
 }
 
-#playbackSpeedSlider::-webkit-slider-thumb, #playbackSpeedSlider::-moz-range-thumb {
+#playbackSpeedSlider::-webkit-slider-thumb {
+	background-color: #404040;
+}
+#playbackSpeedSlider::-moz-range-thumb {
 	background-color: #404040;
 }
 
