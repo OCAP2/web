@@ -219,7 +219,7 @@ class Entity {
 					const icon = this._marker.getElement();
 					const popup = this._marker.getPopup();
 					if (icon) icon.style.display = "block";
-					if (popup) popup.getElement().style.display = "block";
+					if (popup) this._marker.openPopup();
 					this._restoreAnimation = false;
 				}
 			} else {
@@ -239,7 +239,7 @@ class Entity {
 				const icon = this._marker.getElement();
 				const popup = this._marker.getPopup();
 				if (icon) icon.style.display = "none";
-				if (popup) popup.getElement().style.display = "none";
+				if (popup) this._marker.closePopup();
 				this._restoreAnimation = true;
 			}
 		}
