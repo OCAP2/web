@@ -4,7 +4,10 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
 
 env:
   REGISTRY: ghcr.io
@@ -21,6 +24,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ghcr.io/ocap2/web
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
@@ -35,7 +53,8 @@ jobs:
           push: true
           build-args: |
              build_commit=${{ github.sha }}
-          tags: ${{ env.REGISTRY }}/ocap2/web:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   windows-build:
     runs-on: ubuntu-latest
