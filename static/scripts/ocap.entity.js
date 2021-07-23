@@ -15,7 +15,6 @@ class Entity {
 		this._sideColour = "#000000";
 		this._markerRotationOrigin = "50% 50%";
 		this._popupClassName = "";
-		this._shownOnMap = false;
 	}
 
 	// Correct index by taking into account startFrameNum.
@@ -78,21 +77,11 @@ class Entity {
 			className: this._popupClassName
 		});
 		popup.setContent(content);
-		popup.on("positionupdate", () => {
-			if (!this._shownOnMap) {
-				this._shownOnMap = true;
-				popup.getElement().classList.add("animation");
-			}
-		});
 		return popup;
 	}
 
 	createMarker(latLng) {
 		let marker = L.marker(latLng, { icon: this._realIcon, rotationOrigin: this._markerRotationOrigin }).addTo(map);
-		marker.on("remove", () => {
-			this._shownOnMap = false
-			marker.getPopup().getElement().classList.remove("animation");
-		});
 		this._marker = marker;
 	}
 

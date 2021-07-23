@@ -9467,8 +9467,9 @@
   		}
 
   		clearTimeout(this._removeTimeout);
-		this.update();
+		this.update(); // OCAP CHANGE!!!
 		this.getPane().appendChild(this._container);
+		// this.update();
 
   		if (map._fadeAnimated) {
   			setOpacity(this._container, 1);
@@ -9644,7 +9645,6 @@
   		// bottom position the popup in case the height of the popup changes (images loading etc)
   		this._container.style.bottom = bottom + 'px';
   		this._container.style.left = left + 'px';
-		this.fire('positionupdate'); // OCAP ADDITION!!!
   	},
 
   	_getAnchor: function () {
