@@ -34,7 +34,7 @@ jobs:
           context: .
           push: true
           build-args: |
-             build_commit=${GITHUB_SHA}
+             build_commit=${{ github.sha }}
           tags: ${{ env.REGISTRY }}/ocap2/web:latest
 
   windows-build:
