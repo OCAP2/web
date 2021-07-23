@@ -727,7 +727,7 @@ input[type=range]::-webkit-slider-runnable-track {
 	pointer-events: none;
 }
 
-#container:not(.zooming) .leaflet-marker-icon { transition: transform .1s linear; }
+#container:not(.zooming) .leaflet-marker-icon { transition: transform .15s linear; }
 #container.speed-9:not(.zooming) .leaflet-marker-icon { transition: transform .2s linear; }
 #container.speed-8:not(.zooming) .leaflet-marker-icon { transition: transform .3s linear; }
 #container.speed-7:not(.zooming) .leaflet-marker-icon { transition: transform .4s linear; }
@@ -737,7 +737,7 @@ input[type=range]::-webkit-slider-runnable-track {
 #container.speed-3:not(.zooming) .leaflet-marker-icon { transition: transform .8s linear; }
 #container.speed-2:not(.zooming) .leaflet-marker-icon { transition: transform .9s linear; }
 #container.speed-1:not(.zooming) .leaflet-marker-icon { transition: transform 1s linear; }
-#container:not(.zooming) .leaflet-popup.animation { transition: transform .1s linear !important; }
+#container:not(.zooming) .leaflet-popup.animation { transition: transform .15s linear !important; }
 #container.speed-9:not(.zooming) .leaflet-popup.animation { transition: transform .2s linear !important; }
 #container.speed-8:not(.zooming) .leaflet-popup.animation { transition: transform .3s linear !important; }
 #container.speed-7:not(.zooming) .leaflet-popup.animation { transition: transform .4s linear !important; }
