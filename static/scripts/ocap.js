@@ -211,11 +211,11 @@ function initMap () {
 		document.getElementById("container").classList.remove("zooming");
 		playbackPaused = playbackPausedBeforeZoom;
 	});
-	map.on("layeradd", (e) => {
-		// setTimeout(() => {
-		// 	if (e.layer._icon) e.layer._icon.classList.add("animation");
-		// 	if (e.layer._popup) e.layer._popup._container.classList.add("animation");
-		// }, 100);
+	map.on("popupopen", (e) => {
+		e.popup.getElement().classList.add("animation");
+	});
+	map.on("popupclose", (e) => {
+		e.popup.getElement().classList.remove("animation");
 	});
 
 	console.log("Got world: ");
