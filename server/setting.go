@@ -47,7 +47,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
-	viper.SetDefault("logger", true)
+	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 
 	// workaround for https://github.com/spf13/viper/issues/761
