@@ -8,17 +8,25 @@ body {
 	font-family: Roboto, Arial, sans-serif;
 }
 
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
-    background-color: rgba(0,0,0,0.2);
+	background-color: #6E6E6E;
+	height: 10px;
+	border: 5px solid #343434;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #6E6E6E;
+	background-color: #6E6E6E;
+}
+::-moz-range-track {
+	background-color: #6E6E6E;
+	height: 10px;
+}
+::-moz-range-thumb {
+	background-color: white;
+	border: 0;
+	width: 5px;
+	height: 20px;
+	border-radius: 0;
 }
 
 .a3-theme.select {
@@ -34,7 +42,7 @@ body {
 	background-color: #282828;
 	width: 24px;
 	height: 26px;
-	background-image: url("/images/expand_more.svg");
+	background-image: url("../images/expand_more.svg");
 }
 .a3-theme.select select {
 	background-color: #0a0a0a;
