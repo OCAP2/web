@@ -15,6 +15,7 @@ class Entity {
 		this._sideColour = "#000000";
 		this._markerRotationOrigin = "50% 50%";
 		this._popupClassName = "";
+		this._restoreAnimation = false;
 		this._positionsHasFrames = false;
 	}
 
@@ -83,10 +84,11 @@ class Entity {
 	}
 
 	createMarker(latLng) {
-		let marker = L.marker(latLng).addTo(map);
-		marker.setIcon(this._realIcon);
-		marker.setRotationOrigin(this._markerRotationOrigin);
-		this._marker = marker;
+		this._marker = L.marker(latLng, {
+			icon: this._realIcon,
+			rotationOrigin: this._markerRotationOrigin
+		});
+		this._marker.addTo(map);
 	}
 
 	// TODO: Optimise this. No need to remove marker (and recreate it later).
@@ -104,19 +106,21 @@ class Entity {
 	// NOOP
 	remove() {}
 
-	/*	getMarkerEditableGroup() {
-			let doc = this._marker.getElement().contentDocument;
-			return doc.getElementById("editable");
+	/*
+	getMarkerEditableGroup() {
+		let doc = this._marker.getElement().contentDocument;
+		return doc.getElementById("editable");
+	};
+
+	setMarkerColour(colour) {
+		let g = this.getMarkerEditableGroup();
+
+		// May be null if not loaded yet
+		if (g != null) {
+			g.style.fill = colour;
 		};
-
-		setMarkerColour(colour) {
-			let g = this.getMarkerEditableGroup();
-
-			// May be null if not loaded yet
-			if (g != null) {
-				g.style.fill = colour;
-			};
-		};*/
+	};
+	*/
 
 	setMarkerIcon(icon) {
 		if (this._marker) {
@@ -137,6 +141,7 @@ class Entity {
 	}
 
 	hideMarkerPopup(bool) {
+		if (!this._marker) return;
 		let popup = this._marker.getPopup();
 		if (popup == null) { return }
 
@@ -144,7 +149,7 @@ class Entity {
 		let display = "inherit";
 		if (bool || !ui.nicknameEnable) { display = "none" }
 
-		if (element.style.display != display) {
+		if (element.style.display !== display) {
 			element.style.display = display;
 		}
 	}
@@ -156,7 +161,7 @@ class Entity {
 
 	// Does entity now exist (for the first time) at relativeFrameIndex
 	_existFirstTime(relativeFrameIndex) {
-		return (relativeFrameIndex == 0);
+		return (relativeFrameIndex === 0);
 	}
 
 	// Does entity exist yet (not connected/hasn't spawned) at relativeFrameIndex
@@ -191,14 +196,64 @@ class Entity {
 		}
 
 		// Set direction
-		this._marker.setRotationAngle(position.direction);
-
-		//Hide popup
-		this.hideMarkerPopup(ui.hideMarkerPopups);
+		if (relativeFrameIndex > 0) {
+			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, position.direction);
+			this._marker.setRotationAngle(angle);
+		} else {
+			this._marker.setRotationAngle(position.direction);
+		}
 
 		// Set alive status
 		this.setAlive(position.alive);
 
+		//Hide popup
+		this.hideMarkerPopup(ui.hideMarkerPopups);
+	}
+
+	updateRender(f) {
+		const relativeFrameIndex = this.getRelativeFrameIndex(f);
+
+		if (this._restoreAnimation) {
+			if (this._marker) {
+				let distance = 0;
+				if (relativeFrameIndex >= 0 && relativeFrameIndex+1 < this._positions.length) {
+					const posA = this._positions[relativeFrameIndex].position;
+					const posB = this._positions[relativeFrameIndex+1].position;
+					const a = posA[0] - posB[0];
+					const b = posA[1] - posB[1];
+					distance = Math.sqrt(a*a + b*b);
+				}
+				if (distance < skipAnimationDistance) {
+					const icon = this._marker.getElement();
+					const popup = this._marker.getPopup();
+					if (icon) icon.style.display = "block";
+					if (popup) this._marker.openPopup();
+					this._restoreAnimation = false;
+				}
+			} else {
+				this._restoreAnimation = false;
+			}
+		} else if (this._marker) {
+			let distance = 0;
+			if (relativeFrameIndex > 0 && relativeFrameIndex < this._positions.length) {
+				const posA = this._positions[relativeFrameIndex].position;
+				const posB = this._positions[relativeFrameIndex-1].position;
+				const a = posA[0] - posB[0];
+				const b = posA[1] - posB[1];
+				distance = Math.sqrt(a*a + b*b);
+			}
+
+			if (distance >= skipAnimationDistance) { // teleport should not jump through the map
+				const icon = this._marker.getElement();
+				const popup = this._marker.getPopup();
+				if (icon) icon.style.display = "none";
+				if (popup) this._marker.closePopup();
+				this._restoreAnimation = true;
+			}
+		}
+
+		//Hide popup
+		this.hideMarkerPopup(ui.hideMarkerPopups);
 	}
 
 	// Manage entity at given frame

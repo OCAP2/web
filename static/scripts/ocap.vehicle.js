@@ -46,7 +46,7 @@ class Vehicle extends Entity {
 		this._tempIcon = iconType.dead;
 
 		this._positionsHasFrames = (positions.length > 0 && !!positions[0].frames);
-	};
+	}
 
 	createMarker(latLng) {
 		super.createMarker(latLng);
@@ -68,14 +68,14 @@ class Vehicle extends Entity {
 					ui.cursorTargetBox.textContent = this._name;
 					ui.showCursorTooltip(this._name);
 				});*/
-	};
+	}
 
 	_updateAtFrame(relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
 
 		const position = this.getPosAtFrame(relativeFrameIndex);
 		this.setCrew(position.crew);
-	};
+	}
 
 	setCrew(crew) {
 		let content = "";
@@ -111,14 +111,14 @@ class Vehicle extends Entity {
 		if (popupNode.innerHTML !== content) {
 			popupNode.innerHTML = content;
 		}
-	};
+	}
 
 	getCrew() {
 		return this._crew;
-	};
+	}
 
 	getCrewString() {
-		if (this._crew.length == 0) { return " " }
+		if (this._crew.length === 0) { return " " }
 
 		let str = "";
 		this._crew.forEach(function (unitId) {
@@ -132,7 +132,7 @@ class Vehicle extends Entity {
 			//};
 		});
 		return str;
-	};
+	}
 
 	// If vehicle has crew, return side colour of 1st crew member. Else return black.
 	getSideColour() {
@@ -142,5 +142,5 @@ class Vehicle extends Entity {
 		} else {
 			return "black";
 		}
-	};
+	}
 }

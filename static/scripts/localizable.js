@@ -169,6 +169,11 @@ let _localizable = {
 		"en": "Show/Hide right panel: R",
 		"de": "Rechtes Fenster Anzeigen/Verstecken: R"
 	},
+	"show-experimental": {
+		"ru": "Enable experimental mode: .",
+		"en": "Enable experimental mode: .",
+		"de": "Aktiviert experimentaller Modus: ."
+	},
 	"language": {
 		"ru": "Язык:",
 		"en": "Language:",

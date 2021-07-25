@@ -245,26 +245,34 @@ class Marker {
 		this._popup = "";
 		this._popupClassName = "leaflet-popup-unit";
 		this._systemMarkers = ["ObjectMarker", "moduleCoverMap", "safeStart"];
-	};
+	}
+
+	updateRender(f) {
+		if (this._shape === "RECTANGLE") {
+			const frameIndex = this._markerOnFrame(f);
+			if (frameIndex >= 0 && (this._side === ui.currentSide || this._side === "GLOBAL")) {
+				this._updateAtFrame(frameIndex);
+			}
+		}
+	}
 
 	manageFrame (f) {
-		let frameIndex = this._markerOnFrame(f);
-		if (frameIndex != null && (this._side == ui.currentSide || this._side == "GLOBAL")) {
+		const frameIndex = this._markerOnFrame(f);
+		if (frameIndex != null && (this._side === ui.currentSide || this._side === "GLOBAL")) {
 			this._updateAtFrame(frameIndex);
 		} else {
 			this.hide();
 		}
-		return;
-	};
+	}
 
 	_updateAtFrame (f) {
 		let frameData = this._positions[f];
 		let pos = frameData[1];
-		if (pos.length == 1) { pos = pos[0] }
+		if (pos.length === 1) { pos = pos[0] }
 		let dir = frameData[2];
 		let alpha = frameData[3];
 
-		if (this._shape == "RECTANGLE" && Array.isArray(pos[0])) {
+		if (this._shape === "RECTANGLE" && Array.isArray(pos[0])) {
 			console.warn("wrong RECTANGLE positions, converting to POLYLINE");
 			this._shape = "POLYLINE";
 		}
@@ -274,15 +282,15 @@ class Marker {
 		if (this._marker == null) {
 			// console.debug(`UPDATE AT FRAME: attempting to create marker ${this._name}`)
 
-			if (this._shape == "ICON") {
+			if (this._shape === "ICON") {
 				latLng = armaToLatLng(pos);
 				if (alpha === undefined || alpha === null) { alpha = 1 }
 				this._createMarker(latLng, dir, alpha);
-			} else if (this._shape == "ELLIPSE") {
+			} else if (this._shape === "ELLIPSE") {
 				latLng = armaToLatLng(pos);
 				if (alpha === undefined || alpha === null) { alpha = 0.2 }
 				this._createMarker(latLng, dir, alpha);
-			} else if (this._shape == "RECTANGLE") {
+			} else if (this._shape === "RECTANGLE") {
 				let startX = pos[0];
 				let startY = pos[1];
 				let sizeX = this._size[0];
@@ -305,7 +313,7 @@ class Marker {
 				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
 				this._createMarker(pointsRotate, dir, alpha);
-			} else if (this._shape == "POLYLINE") {
+			} else if (this._shape === "POLYLINE") {
 				if (Array.isArray(pos[0])) {
 					let simplePoints = L.LineUtil.simplify(pos);
 					points = simplePoints.map(coord => {
@@ -317,17 +325,16 @@ class Marker {
 				if (alpha === undefined || alpha === null) { alpha = 1 }
 				this._createMarker(points, dir, alpha);
 			}
-
 		} else {
 			// console.debug(`UPDATE AT FRAME: attempting to update marker ${this._name}`)
 
-			if (this._shape == "ICON") {
+			if (this._shape === "ICON") {
 				latLng = armaToLatLng(pos);
 				if (alpha === undefined || alpha === null) { alpha = 1 }
 
 				this._marker.setRotationAngle(dir);
 				this._marker.setLatLng(latLng);
-			} else if (this._shape == "ELLIPSE") {
+			} else if (this._shape === "ELLIPSE") {
 				latLng = armaToLatLng(pos);
 				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
@@ -340,7 +347,7 @@ class Marker {
 				// if (variance > 5) {
 				this._marker.setLatLng(latLng).redraw();
 				// };
-			} else if (this._shape == "RECTANGLE") {
+			} else if (this._shape === "RECTANGLE") {
 				latLng = armaToLatLng(pos);
 				let startX = pos[0];
 				let startY = pos[1];
@@ -370,16 +377,14 @@ class Marker {
 				let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
 				this._marker.setLatLngs(pointsRotate).redraw();
 				// };
-			} else if (this._shape == "POLYLINE") {
+			} else if (this._shape === "POLYLINE") {
 				if (alpha === undefined || alpha === null) { alpha = 1 }
 				// do nothing, polylines can't be moved
 			}
 
 			this.show(alpha);
 		}
-	};
-
-
+	}
 
 	_rotatePoints (center, points, yaw) {
 		const res = []
@@ -398,21 +403,14 @@ class Marker {
 			res.push(p4)
 		}
 		return res
-	};
-
-
-
-
-
-
-
+	}
 
 	hide () {
 		// if (this._isShow == true) {
 		this._isShow = false;
 		this.setMarkerOpacity(0);
 		// };
-	};
+	}
 
 	show (alpha) {
 		this._isShow = true;
@@ -425,9 +423,7 @@ class Marker {
 		} else if (this._shape == "POLYLINE") {
 			this.setMarkerOpacity(alpha);
 		}
-	};
-
-
+	}
 
 	_createMarker (latLng, dir, alpha) {
 		let marker;
@@ -439,8 +435,7 @@ class Marker {
 
 			let markerCustomText = "";
 			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
-			marker = L.marker(latLng, { interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
-			marker.setIcon(this._icon);
+			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
 			let popup = this._createPopup(markerCustomText);
 			marker.bindPopup(popup).openPopup();
 
@@ -483,8 +478,7 @@ class Marker {
 				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
 
-			marker = L.marker(latLng, { interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
-			marker.setIcon(this._icon);
+			marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
 			let popup = this._createPopup(popupText);
 			marker.bindPopup(popup).openPopup();
 
@@ -506,7 +500,6 @@ class Marker {
 			}
 			marker.addTo(map);
 		} else if (this._shape === "RECTANGLE") {
-
 			if (this._brushPattern) {
 				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
 				this._brushPattern.addTo(map);
@@ -524,7 +517,7 @@ class Marker {
 		this._marker = marker;
 		this.show(alpha);
 
-	};
+	}
 
 	_createPopup (content) {
 		let popup = L.popup({
@@ -535,7 +528,7 @@ class Marker {
 		});
 		popup.setContent(content);
 		return popup;
-	};
+	}
 
 	_markerOnFrame (f) {
 		if (this._startFrame <= f && this._endFrame >= f) {
@@ -558,7 +551,7 @@ class Marker {
 			return this._positions.length - 1;
 		}
 		return
-	};
+	}
 
 	setMarkerOpacity (opacity) {
 		if (this._marker != null) {

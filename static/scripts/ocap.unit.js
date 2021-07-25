@@ -52,15 +52,15 @@ class Unit extends Entity {
 		this._realIcon = this.iconType[sideClass];
 		this._tempIcon = this.iconType[sideClass];
 		this._markerRotationOrigin = "50% 60%";
-	};
+	}
 
 	updateName(position) {
 		let content = "";
 		let name = position.name;
-		if (position.isPlayer == 0) {
+		if (position.isPlayer === 0) {
 			name += ' [AI]';
 		}
-		if (this._name != name) {
+		if (this._name !== name) {
 			this._name = name;
 			if (this._role) {
 				this._element.textContent = `(${this._role}) ` + name + " (" + this.killCount.toString() + ")";
@@ -70,7 +70,7 @@ class Unit extends Entity {
 				this._marker.getPopup()._contentNode.textContent = name;
 			}
 		}
-	};
+	}
 
 	createMarker(latLng) {
 		super.createMarker(latLng);
@@ -83,14 +83,14 @@ class Unit extends Entity {
 			popup = this._createPopup(this._name.encodeHTMLEntities() + " <b>[AI]</b>");
 		}
 		this._marker.bindPopup(popup).openPopup();
-	};
+	}
 
 	_updateAtFrame(relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
 		this.setIsInVehicle(this._positions[relativeFrameIndex].isInVehicle);
 		this.addCountList(this);
 		this.updateName(this._positions[relativeFrameIndex]);
-	};
+	}
 
 	setIsInVehicle(isInVehicle) {
 		this._isInVehicle = isInVehicle;
@@ -100,9 +100,9 @@ class Unit extends Entity {
 		}/* else {
 			this.setMarkerOpacity(1);
 		}*/
-	};
+	}
 
-	get sideClass() { return this._sideClass };
+	get sideClass() { return this._sideClass }
 
 	// Check if unit fired on given frame
 	// If true, return position of projectile impact
@@ -113,16 +113,16 @@ class Unit extends Entity {
 			if (frameNum == f) { return projectilePos }
 		}
 		return;
-	};
+	}
 
 	remove() {
 		super.remove();
 		this._group.removeUnit(this);
-	};
+	}
 
 	getSide() {
 		return this._side;
-	};
+	}
 
 	makeElement(liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
@@ -141,11 +141,11 @@ class Unit extends Entity {
 		});
 		this.setElement(liUnit);
 		liTarget.appendChild(liUnit);
-	};
+	}
 
-	getSideColour() { return this._sideColour };
+	getSideColour() { return this._sideColour }
 
-	getSideClass() { return this._sideClass };
+	getSideClass() { return this._sideClass }
 
 	setAlive(alive) {
 		super.setAlive(alive);
@@ -163,7 +163,7 @@ class Unit extends Entity {
 			default:
 				break;
 		}
-	};
+	}
 
 	addCountList(unit) {
 		let side = unit._side;
@@ -184,5 +184,5 @@ class Unit extends Entity {
 			default:
 				break;
 		}
-	};
+	}
 }

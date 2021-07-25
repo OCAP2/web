@@ -245,16 +245,9 @@ class UI {
 		left_title.onclick = () => {this.toggleLeftPanel()};
 		right_title.onclick = () => {this.toggleRightPanel()};
 		mapDiv.addEventListener("keypress", (event) => {
-			//console.log(event.charCode);
-
-			switch (event.charCode) {
-				case 101: // e
-					this.toggleLeftPanel();
-					break;
-				case 114: // r
-					this.toggleRightPanel();
-					break;
-			}
+			if (event.charCode === 101) this.toggleLeftPanel();
+			else if (event.charCode === 114) this.toggleRightPanel();
+			else if (event.charCode === 46) this.showExperimental();
 		});
 
 
@@ -293,9 +286,14 @@ class UI {
 		this.playbackSpeedSlider.step = playbackMultiplierStep;
 		this.playbackSpeedSlider.value = playbackMultiplier;
 		this.playbackSpeedSlider.addEventListener("input", () => {
+			const container = document.getElementById("container");
+
 			let sliderVal = this.playbackSpeedSlider.value;
 			this.playbackSpeedVal.textContent = sliderVal + "x";
-			playbackMultiplier = sliderVal;
+
+			container.classList.remove(`speed-${playbackMultiplier}`);
+			playbackMultiplier = +sliderVal;
+			container.classList.add(`speed-${playbackMultiplier}`);
 		});
 
 		this.frameSliderWidthInPercent = (this.frameSlider.offsetWidth / this.frameSlider.parentElement.offsetWidth) * 100;
@@ -378,7 +376,7 @@ class UI {
 		missionCurDate.setTime(f*frameCaptureDelay);
 		this.updateCurrentTime(f);
 		this.setFrameSliderVal(f);
-		playbackFrame = f;
+		playbackFrame = +f;
 
 		for (const event of gameEvents.getEvents().reverse()) {
 			event.update(f);
@@ -641,6 +639,7 @@ class UI {
 			<span id="keyControl-playPause"></span><br/>
 			<span id="keyControl-leftPanel"></span><br/>
 			<span id="keyControl-rightPanel"></span><br/>
+			<span id="keyControl-experimental"></span><br/>
 			<span id="keyControl-lang"></span>
 			<select id="switchLang">
 				<option value="ru"${current_lang == "ru" ? 'selected/' : ''}>Русский</option>
@@ -650,6 +649,7 @@ class UI {
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
 		localizable(document.getElementById("keyControl-leftPanel"), "show-hide-left-panel");
 		localizable(document.getElementById("keyControl-rightPanel"), "show-hide-right-panel");
+		localizable(document.getElementById("keyControl-experimental"), "show-experimental");
 		localizable(document.getElementById("keyControl-lang"), "language");
 		document.getElementById("switchLang").onchange = function(){switchLocalizable(this.value)};
 		deleteLocalizable(this.modalBody);
@@ -830,6 +830,8 @@ class UI {
 
 	showExperimental() {
 		this.statsButton.classList.remove("hiddenExperimental");
+		const container = document.getElementById("container");
+		container.classList.add("marker-transition");
 	}
 }
 
