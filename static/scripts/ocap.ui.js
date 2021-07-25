@@ -247,7 +247,7 @@ class UI {
 		mapDiv.addEventListener("keypress", (event) => {
 			if (event.charCode === 101) this.toggleLeftPanel();
 			else if (event.charCode === 114) this.toggleRightPanel();
-			else if (event.charCode === 98) this.showExperimental();
+			else if (event.charCode === 46) this.showExperimental();
 		});
 
 
@@ -639,6 +639,7 @@ class UI {
 			<span id="keyControl-playPause"></span><br/>
 			<span id="keyControl-leftPanel"></span><br/>
 			<span id="keyControl-rightPanel"></span><br/>
+			<span id="keyControl-experimental"></span><br/>
 			<span id="keyControl-lang"></span>
 			<select id="switchLang">
 				<option value="ru"${current_lang == "ru" ? 'selected/' : ''}>Русский</option>
@@ -648,6 +649,7 @@ class UI {
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
 		localizable(document.getElementById("keyControl-leftPanel"), "show-hide-left-panel");
 		localizable(document.getElementById("keyControl-rightPanel"), "show-hide-right-panel");
+		localizable(document.getElementById("keyControl-experimental"), "show-experimental");
 		localizable(document.getElementById("keyControl-lang"), "language");
 		document.getElementById("switchLang").onchange = function(){switchLocalizable(this.value)};
 		deleteLocalizable(this.modalBody);
