@@ -107,33 +107,38 @@ function initOCAP () {
 	defineIcons();
 	ui = new UI();
 	ui.updateCustomize();
-	ui.setModalOpList();
-	/*
-		window.addEventListener("keypress", function (event) {
-			switch (event.charCode) {
-				case 32: // Spacebar
-					event.preventDefault(); // Prevent space from scrolling page on some browsers
-					break;
-			};
-		});
-	*/
-	let args = getArguments();
-	if (args.file) {
-		processOp("data/" + args.file);
-		document.addEventListener("mapInited", function (event) {
+	ui.setModalOpList()
+		.then(() => {
+		/*
+			window.addEventListener("keypress", function (event) {
+				switch (event.charCode) {
+					case 32: // Spacebar
+						event.preventDefault(); // Prevent space from scrolling page on some browsers
+						break;
+				};
+			});
+		*/
 			let args = getArguments();
-			if (args.x && args.y && args.zoom) {
-				let coords = [parseFloat(args.x), parseFloat(args.y)];
-				let zoom = parseFloat(args.zoom);
-				map.setView(coords, zoom);
-			} else {
-				map.setView([0, 0], mapMaxNativeZoom);
+			if (args.file) {
+				document.addEventListener("mapInited", function (event) {
+					let args = getArguments();
+					if (args.x && args.y && args.zoom) {
+						let coords = [parseFloat(args.x), parseFloat(args.y)];
+						let zoom = parseFloat(args.zoom);
+						map.setView(coords, zoom);
+					} else {
+						map.setView([0, 0], mapMaxNativeZoom);
+					}
+					if (args.frame) {
+						ui.setMissionCurTime(parseInt(args.frame));
+					}
+				}, false);
+				return processOp("data/" + args.file);
 			}
-			if (args.frame) {
-				ui.setMissionCurTime(parseInt(args.frame));
-			}
-		}, false);
-	}
+		})
+		.catch((error) => {
+			ui.showHint(error);
+		})
 }
 
 function setWorld () {
@@ -158,22 +163,18 @@ function getWorldByName (worldName) {
 		"minZoom": 0,
 	};
 
-	$.ajax({
-		url: "images/maps/" + worldName + "/map.json",
-		async: false,
-		success: function (data) {
+	return fetch(`images/maps/${worldName}/map.json`)
+		.then((res) => res.json())
+		.then((data) => {
 			map = data;
-		},
-		error: function () {
+			return Object.assign(defaultMap, map);
+		})
+		.catch(() => {
 			ui.showHint(`Error: Map "${worldName}" is not installed`);
-		}
-	});
-
-	return Object.assign(defaultMap, map);
+		});
 }
 
-function initMap () {
-	var world = getWorldByName(worldName);
+function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
@@ -202,8 +203,7 @@ function initMap () {
 			ui.hideMarkerPopups = false;
 		}
 	});
-	console.log("Got world: ");
-	console.log(world);
+	console.log("Got world: ", world);
 
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
@@ -291,8 +291,8 @@ function createInitialMarkers () {
 	entities.getAll().forEach(function (entity) {
 		// Create and set marker for unit
 		var pos = entity.getPosAtFrame(0);
-		if (pos != null) { // If unit did exist at start of game
-			entity.createMarker(armaToLatLng(pos));
+		if (pos) { // If unit did exist at start of game
+			entity.createMarker(armaToLatLng(pos.position));
 		}
 	});
 }
@@ -498,277 +498,287 @@ function processOp (filepath) {
 	console.log("Processing operation: (" + filepath + ")...");
 	var time = new Date();
 	fileName = filepath.substr(5, filepath.length);
-	$.getJSON(filepath, function (data) {
-		worldName = data.worldName.toLowerCase();
-		var world = getWorldByName(worldName);
-		var multiplier = world.multiplier;
-		missionName = data.missionName;
-		ui.setMissionName(missionName);
 
-		endFrame = data.endFrame;
-		frameCaptureDelay = data.captureDelay * 1000;
-		ui.setMissionEndTime(endFrame);
-		if (data.times) {
-			ui.detectTimes(data.times);
-		}
-		ui.checkAvailableTimes();
+	return fetch(filepath)
+		.then((res) => res.json())
+		.then((data) => {
+			worldName = data.worldName.toLowerCase();
+			return Promise.all([data, getWorldByName(worldName)]);
+		})
+		.then(([data, world]) => {
+			var multiplier = world.multiplier;
+			missionName = data.missionName;
+			ui.setMissionName(missionName);
 
-		var showCiv = false;
-		var showWest = false;
-		var showEast = false;
-		var showGuer = false;
-		var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
-
-		// Loop through entities
-		data.entities.forEach(function (entityJSON) {
-			//console.log(entityJSON);
-
-			let type = entityJSON.type;
-			let startFrameNum = entityJSON.startFrameNum;
-			let id = entityJSON.id;
-			let name = entityJSON.name;
-			let arrSideSelect = [];
-			// Convert positions into array of objects
-			let positions = [];
-			entityJSON.positions.forEach(function (entry, i) {
-				if (entry == []) {
-					positions.push(positions[i - 1]);
-				} else {
-					let pos = entry[0];
-					let dir = entry[1];
-					let alive = entry[2];
-
-					if (type == "unit") {
-						let name = entry[4];
-						if (name == "" && i != 0)
-							name = positions[i - 1].name;
-						if (name == "" && i == 0)
-							name = "unknown";
-						positions.push({ position: pos, direction: dir, alive: alive, isInVehicle: (entry[3] == 1), name: name, isPlayer: entry[5] });
-					} else {
-						let crew = entry[3];
-						positions.push({ position: pos, direction: dir, alive: alive, crew: crew });
-					}
-				}
-			});
-
-			if (type === "unit") {
-				//if (entityJSON.name == "Error: No unit") {return}; // Temporary fix for old captures that initialised dead units
-
-				// Add group to global groups object (if new)
-				let group = groups.findGroup(entityJSON.group, entityJSON.side);
-				if (group == null) {
-					group = new Group(entityJSON.group, entityJSON.side);
-					groups.addGroup(group);
-				}
-
-				// Create unit and add to entities list
-				const unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer === 1), positions, entityJSON.framesFired, entityJSON.role);
-				entities.add(unit);
-
-				// Show title side
-				if (arrSideSelect.indexOf(entityJSON.side) === -1) {
-					arrSideSelect.push(entityJSON.side);
-					switch (entityJSON.side) {
-						case "WEST":
-							showWest = true;
-							break;
-						case "EAST":
-							showEast = true;
-							break;
-						case "GUER":
-							showGuer = true;
-							break;
-						case "CIV":
-							showCiv = true;
-							break;
-					}
-				}
-			} else {
-				// Create vehicle and add to entities list
-				const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
-				entities.add(vehicle);
+			endFrame = data.endFrame;
+			frameCaptureDelay = data.captureDelay * 1000;
+			ui.setMissionEndTime(endFrame);
+			if (data.times) {
+				ui.detectTimes(data.times);
 			}
-		});
+			ui.checkAvailableTimes();
 
-		if (data.Markers != null) {
-			data.Markers.forEach(function (markerJSON) {
-				try {
-					var type = markerJSON[0];
-					var text = markerJSON[1];
-					var startFrame = markerJSON[2];
-					var endFrame = markerJSON[3];
-					var player;
-					if (markerJSON[4] == -1) {
-						player = -1;
+			var showCiv = false;
+			var showWest = false;
+			var showEast = false;
+			var showGuer = false;
+			var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
+
+			// Loop through entities
+			data.entities.forEach(function (entityJSON) {
+				//console.log(entityJSON);
+
+				let type = entityJSON.type;
+				let startFrameNum = entityJSON.startFrameNum;
+				let id = entityJSON.id;
+				let name = entityJSON.name;
+				let arrSideSelect = [];
+				// Convert positions into array of objects
+				let positions = [];
+				entityJSON.positions.forEach(function (entry, i) {
+					if (entry == []) {
+						positions.push(positions[i - 1]);
 					} else {
-						player = entities.getById(markerJSON[4]);
-					}
-					var color = markerJSON[5];
-					var side = arrSide[markerJSON[6] + 1];
-					var positions = markerJSON[7];
+						let pos = entry[0];
+						let dir = entry[1];
+						let alive = entry[2];
 
-					// backwards compatibility for marker expansion
-					let size = "";
-					let shape = "ICON";
-					let brush = "Solid";
-					if (markerJSON.length > 8) {
-						if (markerJSON[9] == "ICON") {
-							size = markerJSON[8]
+						if (type == "unit") {
+							let name = entry[4];
+							if (name == "" && i != 0)
+								name = positions[i - 1].name;
+							if (name == "" && i == 0)
+								name = "unknown";
+							positions.push({ position: pos, direction: dir, alive: alive, isInVehicle: (entry[3] == 1), name: name, isPlayer: entry[5] });
 						} else {
-							size = markerJSON[8];//.map(value => value * multiplier);
+							let crew = entry[3];
+							const vehicle = { position: pos, direction: dir, alive: alive, crew: crew };
+							if (entry.length >= 5) {
+								vehicle.frames = entry[4];
+							}
+							positions.push(vehicle);
 						}
-						shape = markerJSON[9];
 					}
-					if (markerJSON.length > 10) {
-						brush = markerJSON[10];
+				});
+
+				if (type === "unit") {
+					//if (entityJSON.name == "Error: No unit") {return}; // Temporary fix for old captures that initialised dead units
+
+					// Add group to global groups object (if new)
+					let group = groups.findGroup(entityJSON.group, entityJSON.side);
+					if (group == null) {
+						group = new Group(entityJSON.group, entityJSON.side);
+						groups.addGroup(group);
 					}
 
-					if (!(type.includes("zoneTrigger") || type.includes("Empty"))) {
-						var marker = new Marker(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush);
-						markers.push(marker);
+					// Create unit and add to entities list
+					const unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer === 1), positions, entityJSON.framesFired, entityJSON.role);
+					entities.add(unit);
+
+					// Show title side
+					if (arrSideSelect.indexOf(entityJSON.side) === -1) {
+						arrSideSelect.push(entityJSON.side);
+						switch (entityJSON.side) {
+							case "WEST":
+								showWest = true;
+								break;
+							case "EAST":
+								showEast = true;
+								break;
+							case "GUER":
+								showGuer = true;
+								break;
+							case "CIV":
+								showCiv = true;
+								break;
+						}
 					}
-				} catch (err) {
-					console.error(`Failed to process ${markerJSON[9]} with text "${markerJSON[1]}"\nError: ${err}`);
+				} else {
+					// Create vehicle and add to entities list
+					const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
+					entities.add(vehicle);
 				}
 			});
-		}
-		// Show title side
-		var countShowSide = 0;
-		if (showCiv) countShowSide++;
-		if (showEast) countShowSide++;
-		if (showGuer) countShowSide++;
-		if (showWest) countShowSide++;
-		function showTitleSide (elem, isShow) {
-			elem = document.getElementById(elem);
-			if (isShow) {
-				elem.style.width = "calc(" + 100 / countShowSide + "% - 2.5px)";
-				elem.style.display = "inline-block";
-			} else {
-				elem.style.display = "none";
-			}
-		}
 
-		showTitleSide("sideEast", showEast);
-		showTitleSide("sideWest", showWest);
-		showTitleSide("sideGuer", showGuer);
-		showTitleSide("sideCiv", showCiv);
-
-		if (showWest) {
-			ui.switchSide("WEST");
-		} else if (showEast) {
-			ui.switchSide("EAST");
-		} else if (showGuer) {
-			ui.switchSide("IND");
-		} else if (showCiv) {
-			ui.switchSide("CIV");
-		}
-
-		// Loop through events
-		data.events.forEach(function (eventJSON) {
-			var frameNum = eventJSON[0];
-			var type = eventJSON[1];
-
-			var gameEvent = null;
-			switch (true) {
-				case (type == "killed" || type == "hit"):
-					const causedByInfo = eventJSON[3];
-					const victim = entities.getById(eventJSON[2]);
-					const causedBy = entities.getById(causedByInfo[0]); // In older captures, this will return null
-					const distance = eventJSON[4];
-
-					//console.log(eventJSON[2]);
-					//if (victim == null) {return}; // Temp fix until vehicles are handled (victim is null if reference is a vehicle)
-
-					// Create event object
-					let weapon;
-					if (causedBy instanceof Unit) {
-						weapon = causedByInfo[1];
-					} else {
-						weapon = "N/A";
-					}
-
-					// TODO: Find out why victim/causedBy can sometimes be null
-					if (causedBy == null || victim == null) {
-						console.warn("unknown victim/causedBy", victim, causedBy);
-					}
-
-					// Incrememt kill/death count for killer/victim
-					if (type === "killed" && (causedBy != null)) {
-						if (causedBy !== victim && causedBy._side === victim._side) {
-							causedBy.teamKillCount++;
+			if (data.Markers != null) {
+				data.Markers.forEach(function (markerJSON) {
+					try {
+						var type = markerJSON[0];
+						var text = markerJSON[1];
+						var startFrame = markerJSON[2];
+						var endFrame = markerJSON[3];
+						var player;
+						if (markerJSON[4] == -1) {
+							player = -1;
+						} else {
+							player = entities.getById(markerJSON[4]);
 						}
-						if (causedBy !== victim) {
-							causedBy.killCount++;
-						}
-						victim.deathCount++;
-					}
-					gameEvent = new HitKilledEvent(frameNum, type, causedBy, victim, distance, weapon);
+						var color = markerJSON[5];
+						var side = arrSide[markerJSON[6] + 1];
+						var positions = markerJSON[7];
 
-					// Add tick to timeline
-					ui.addTickToTimeline(frameNum);
-					break;
-				case (type == "connected" || type == "disconnected"):
-					gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
-					break;
-				case (type === "capturedFlag"): // deprecated
-					gameEvent = new CapturedEvent(frameNum, type, "flag", eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3]);
-					break;
-				case (type === "captured"):
-					gameEvent = new CapturedEvent(
-						frameNum,
-						type,
-						eventJSON[2][0], // capture type
-						eventJSON[2][1], // unit name
-						eventJSON[2][2], // unit color
-						eventJSON[2][3], // objective color
-						eventJSON[2][4], // objective position
-					);
-					break;
-				case (type === "terminalHackStarted"):
-					gameEvent = new TerminalHackStartEvent(
-						frameNum,
-						type,
-						eventJSON[2][0], // unit name
-						eventJSON[2][1], // unit color
-						eventJSON[2][2], // terminal color
-						eventJSON[2][3], // terminal identifier
-						eventJSON[2][4], // terminal position
-						eventJSON[2][5], // countdown timer
-					);
-					break;
-				case (type === "terminalHackCanceled"):
-					gameEvent = new TerminalHackUpdateEvent(
-						frameNum,
-						type,
-						eventJSON[2][0], // unit name
-						eventJSON[2][1], // unit color
-						eventJSON[2][2], // terminal color
-						eventJSON[2][3], // terminal identifier
-						eventJSON[2][4], // terminal state
-					);
-					break;
-				case (type == "endMission"):
-					gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
-					break;
+						// backwards compatibility for marker expansion
+						let size = "";
+						let shape = "ICON";
+						let brush = "Solid";
+						if (markerJSON.length > 8) {
+							if (markerJSON[9] == "ICON") {
+								size = markerJSON[8]
+							} else {
+								size = markerJSON[8];//.map(value => value * multiplier);
+							}
+							shape = markerJSON[9];
+						}
+						if (markerJSON.length > 10) {
+							brush = markerJSON[10];
+						}
+
+						if (!(type.includes("zoneTrigger") || type.includes("Empty"))) {
+							var marker = new Marker(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush);
+							markers.push(marker);
+						}
+					} catch (err) {
+						console.error(`Failed to process ${markerJSON[9]} with text "${markerJSON[1]}"\nError: ${err}`);
+					}
+				});
 			}
-			// Add event to gameEvents list
-			if (gameEvent != null) {
-				gameEvents.addEvent(gameEvent);
+			// Show title side
+			var countShowSide = 0;
+			if (showCiv) countShowSide++;
+			if (showEast) countShowSide++;
+			if (showGuer) countShowSide++;
+			if (showWest) countShowSide++;
+			function showTitleSide (elem, isShow) {
+				elem = document.getElementById(elem);
+				if (isShow) {
+					elem.style.width = "calc(" + 100 / countShowSide + "% - 2.5px)";
+					elem.style.display = "inline-block";
+				} else {
+					elem.style.display = "none";
+				}
 			}
+
+			showTitleSide("sideEast", showEast);
+			showTitleSide("sideWest", showWest);
+			showTitleSide("sideGuer", showGuer);
+			showTitleSide("sideCiv", showCiv);
+
+			if (showWest) {
+				ui.switchSide("WEST");
+			} else if (showEast) {
+				ui.switchSide("EAST");
+			} else if (showGuer) {
+				ui.switchSide("IND");
+			} else if (showCiv) {
+				ui.switchSide("CIV");
+			}
+
+			// Loop through events
+			data.events.forEach(function (eventJSON) {
+				var frameNum = eventJSON[0];
+				var type = eventJSON[1];
+
+				var gameEvent = null;
+				switch (true) {
+					case (type == "killed" || type == "hit"):
+						const causedByInfo = eventJSON[3];
+						const victim = entities.getById(eventJSON[2]);
+						const causedBy = entities.getById(causedByInfo[0]); // In older captures, this will return null
+						const distance = eventJSON[4];
+
+						//console.log(eventJSON[2]);
+						//if (victim == null) {return}; // Temp fix until vehicles are handled (victim is null if reference is a vehicle)
+
+						// Create event object
+						let weapon;
+						if (causedBy instanceof Unit) {
+							weapon = causedByInfo[1];
+						} else {
+							weapon = "N/A";
+						}
+
+						// TODO: Find out why victim/causedBy can sometimes be null
+						if (causedBy == null || victim == null) {
+							console.warn("unknown victim/causedBy", victim, causedBy);
+						}
+
+						// Incrememt kill/death count for killer/victim
+						if (type === "killed" && (causedBy != null)) {
+							if (causedBy !== victim && causedBy._side === victim._side) {
+								causedBy.teamKillCount++;
+							}
+							if (causedBy !== victim) {
+								causedBy.killCount++;
+							}
+							victim.deathCount++;
+						}
+						gameEvent = new HitKilledEvent(frameNum, type, causedBy, victim, distance, weapon);
+
+						// Add tick to timeline
+						ui.addTickToTimeline(frameNum);
+						break;
+					case (type == "connected" || type == "disconnected"):
+						gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
+						break;
+					case (type === "capturedFlag"): // deprecated
+						gameEvent = new CapturedEvent(frameNum, type, "flag", eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3]);
+						break;
+					case (type === "captured"):
+						gameEvent = new CapturedEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // capture type
+							eventJSON[2][1], // unit name
+							eventJSON[2][2], // unit color
+							eventJSON[2][3], // objective color
+							eventJSON[2][4], // objective position
+						);
+						break;
+					case (type === "terminalHackStarted"):
+						gameEvent = new TerminalHackStartEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // unit name
+							eventJSON[2][1], // unit color
+							eventJSON[2][2], // terminal color
+							eventJSON[2][3], // terminal identifier
+							eventJSON[2][4], // terminal position
+							eventJSON[2][5], // countdown timer
+						);
+						break;
+					case (type === "terminalHackCanceled"):
+						gameEvent = new TerminalHackUpdateEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // unit name
+							eventJSON[2][1], // unit color
+							eventJSON[2][2], // terminal color
+							eventJSON[2][3], // terminal identifier
+							eventJSON[2][4], // terminal state
+						);
+						break;
+					case (type == "endMission"):
+						gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
+						break;
+				}
+				// Add event to gameEvents list
+				if (gameEvent != null) {
+					gameEvents.addEvent(gameEvent);
+				}
+			});
+
+			gameEvents.init();
+
+			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
+			initMap(world);
+			startPlaybackLoop();
+			toggleHitEvents(false);
+			// playPause();
+			ui.hideModal();
+		}).catch((error) => {
+			ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
+			console.error(error);
 		});
-
-		gameEvents.init();
-
-		console.log("Finished processing operation (" + (new Date() - time) + "ms).");
-		initMap();
-		startPlaybackLoop();
-		toggleHitEvents(false);
-		// playPause();
-		ui.hideModal();
-	}).fail(function (xhr, textStatus, error) {
-		ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
-	});
 }
 
 function playPause () {
@@ -914,9 +924,9 @@ function startPlaybackLoop () {
 
 			// Handle entityToFollow
 			if (entityToFollow != null) {
-				var pos = entityToFollow.getPosAtFrame(playbackFrame);
-				if (pos != null) {
-					map.setView(armaToLatLng(pos), map.getZoom());
+				const pos = entityToFollow.getPosAtFrame(playbackFrame);
+				if (pos) {
+					map.setView(armaToLatLng(pos.position), map.getZoom());
 				} else { // Unit has died or does not exist, unfollow
 					entityToFollow.unfollow();
 				}

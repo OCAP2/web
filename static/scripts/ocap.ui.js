@@ -495,75 +495,73 @@ class UI {
 		var name = filterGameInput.value;
 		var DateNewer = calendar1.value;
 		var DateOlder = calendar2.value;
-		$.ajax({
-			url: '/api/v1/operations',
-			type : "get",
-			async : false,
-			cache : false,
-			data: `tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`,
-			success: function(data){
-				OpList = data
-			}
-		});
 
-		// Set select
-		if (filterTagGameInput.innerHTML == "") {
-			var tags = [];
-			var option = document.createElement("option");
-			option.value = "";
-			option.text = "All";
-			filterTagGameInput.appendChild(option);
+		return fetch(`/api/v1/operations?tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`, {
+			cache: "no-cache"
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				OpList = data;
 
-			OpList.forEach(op => {
-				if (!tags.includes(op.tag)) {
-					tags.push(op.tag);
+				// Set select
+				if (filterTagGameInput.innerHTML == "") {
+					var tags = [];
 					var option = document.createElement("option");
-					option.value = op.tag;
-					option.text = op.tag;
-
+					option.value = "";
+					option.text = "All";
 					filterTagGameInput.appendChild(option);
+
+					OpList.forEach(op => {
+						if (!tags.includes(op.tag)) {
+							tags.push(op.tag);
+							var option = document.createElement("option");
+							option.value = op.tag;
+							option.text = op.tag;
+
+							filterTagGameInput.appendChild(option);
+						}
+					})
 				}
-			})
-		}
 
-		// Set body
-		var table = document.createElement("table");
-		var headerRow = document.createElement("tr");
+				// Set body
+				var table = document.createElement("table");
+				var headerRow = document.createElement("tr");
 
-		var columnNames = ["mission", "map", "data", "durability", "tag"];
-		columnNames.forEach(function(name) {
-			var th = document.createElement("th");
-			localizable(th, name);
-			th.className = "medium";
-			headerRow.appendChild(th);
-		});
-		table.appendChild(headerRow);
+				var columnNames = ["mission", "map", "data", "durability", "tag"];
+				columnNames.forEach(function(name) {
+					var th = document.createElement("th");
+					localizable(th, name);
+					th.className = "medium";
+					headerRow.appendChild(th);
+				});
+				table.appendChild(headerRow);
 
-		OpList.forEach((op) => {
-			var row = document.createElement("tr");
-			var cell = document.createElement("td");
+				OpList.forEach((op) => {
+					var row = document.createElement("tr");
+					var cell = document.createElement("td");
 
-			var vals = [
-				op.mission_name,
-				op.world_name,
-				dateToLittleEndianString(new Date(op.date)),
-				secondsToTimeString(op.mission_duration),
-				op.tag
-			];
-			vals.forEach(function(val) {
-				var cell = document.createElement("td");
-				cell.textContent = val;
-				row.appendChild(cell);
+					var vals = [
+						op.mission_name,
+						op.world_name,
+						dateToLittleEndianString(new Date(op.date)),
+						secondsToTimeString(op.mission_duration),
+						op.tag
+					];
+					vals.forEach(function(val) {
+						var cell = document.createElement("td");
+						cell.textContent = val;
+						row.appendChild(cell);
+					});
+
+					row.addEventListener("click", () => {
+						localizable(this.modalBody, "loading");
+						processOp("data/" + op.filename);
+					});
+					table.insertBefore(row, table.childNodes[1]);
+				});
+				this.modalBody.textContent = "";
+				this.modalBody.appendChild(table);
 			});
-
-			row.addEventListener("click", () => {
-				localizable(this.modalBody, "loading");
-				processOp("data/" + op.filename);
-			});
-			table.insertBefore(row, table.childNodes[1]);
-		});
-		this.modalBody.textContent = "";
-		this.modalBody.appendChild(table);
 	};
 
 	makeModalButton(text, func) {
@@ -804,32 +802,30 @@ class UI {
 	}
 
 	updateCustomize() {
-		$.ajax({
-			url: '/api/v1/customize',
-			type : "get",
-			cache : false
-		}).done((data) => {
-			const container = document.getElementById("container");
+		fetch("/api/v1/customize")
+			.then(response => response.json())
+			.then((data) => {
+				const container = document.getElementById("container");
 
-			if (data.websiteLogo) {
-				const logo = document.createElement("div");
-				logo.className = "customize logo"
-				logo.style.backgroundImage = `url("${data.websiteLogo}")`;
-				logo.style.backgroundSize = data.websiteLogoSize;
-				logo.style.width = data.websiteLogoSize;
-				logo.style.height = data.websiteLogoSize;
+				if (data.websiteLogo) {
+					const logo = document.createElement("div");
+					logo.className = "customize logo"
+					logo.style.backgroundImage = `url("${data.websiteLogo}")`;
+					logo.style.backgroundSize = data.websiteLogoSize;
+					logo.style.width = data.websiteLogoSize;
+					logo.style.height = data.websiteLogoSize;
 
-				if (data.websiteURL) {
-					const link = document.createElement("a");
-					link.target = "_blank";
-					link.href = data.websiteURL;
-					link.append(logo);
-					container.prepend(link);
-				} else {
-					container.prepend(logo);
+					if (data.websiteURL) {
+						const link = document.createElement("a");
+						link.target = "_blank";
+						link.href = data.websiteURL;
+						link.append(logo);
+						container.prepend(link);
+					} else {
+						container.prepend(logo);
+					}
 				}
-			}
-		});
+			});
 	}
 
 	showExperimental() {
