@@ -911,7 +911,7 @@ function startPlaybackLoop () {
 
 				// Handle entityToFollow
 				if (entityToFollow != null) {
-					const relativeFrameIndex = this.getRelativeFrameIndex(playbackFrame);
+					const relativeFrameIndex = entityToFollow.getRelativeFrameIndex(playbackFrame);
 					const pos = entityToFollow.getPosAtFrame(relativeFrameIndex);
 					if (pos) {
 						map.setView(armaToLatLng(pos.position), map.getZoom());
