@@ -109,6 +109,9 @@ function initOCAP () {
 	defineIcons();
 	ui = new UI();
 	ui.updateCustomize();
+
+	const args = getArguments();
+
 	ui.setModalOpList()
 		.then(() => {
 		/*
@@ -120,7 +123,6 @@ function initOCAP () {
 				};
 			});
 		*/
-			let args = getArguments();
 			if (args.file) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
@@ -269,7 +271,6 @@ function initMap (world) {
 	} else {
 		map.flyToBounds(map.getBounds());
 	}
-
 
 	document.dispatchEvent(new Event("mapInited"));
 	//test();
@@ -901,11 +902,10 @@ function startPlaybackLoop () {
 					}
 				}
 				for (const marker of markers) {
+					marker.manageFrame(playbackFrame);
 					if (ui.markersEnable) {
-						marker.manageFrame(playbackFrame);
 						marker.hideMarkerPopup(false);
 					} else {
-						marker.manageFrame(playbackFrame);
 						marker.hideMarkerPopup(true);
 					}
 				}
@@ -934,6 +934,9 @@ function startPlaybackLoop () {
 			requestAnimationFrame(() => {
 				for (const entity of entities.getAll()) {
 					entity.updateRender(playbackFrame);
+				}
+				for (const marker of markers) {
+					marker.updateRender(playbackFrame);
 				}
 			});
 		}
