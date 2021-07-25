@@ -912,9 +912,9 @@ function startPlaybackLoop () {
 
 				// Handle entityToFollow
 				if (entityToFollow != null) {
-					var pos = entityToFollow.getPosAtFrame(playbackFrame);
-					if (pos != null) {
-						map.setView(armaToLatLng(pos), map.getZoom());
+					const pos = entityToFollow.getPosAtFrame(playbackFrame);
+					if (pos) {
+						map.setView(armaToLatLng(pos.position), map.getZoom());
 					} else { // Unit has died or does not exist, unfollow
 						entityToFollow.unfollow();
 					}
