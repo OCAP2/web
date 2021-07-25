@@ -777,6 +777,7 @@ function processOp (filepath) {
 			ui.hideModal();
 		}).catch((error) => {
 			ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
+			console.error(error);
 		});
 }
 
