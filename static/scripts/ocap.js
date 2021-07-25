@@ -216,6 +216,11 @@ function initMap (world) {
 	map.on("popupclose", (e) => {
 		e.popup.getElement().classList.remove("animation");
 	});
+	map.on("dragstart", function () {
+		if (entityToFollow != null) {
+			entityToFollow.unfollow();
+		}
+	});
 
 	console.log("Got world: ", world);
 
@@ -251,12 +256,6 @@ function initMap (world) {
 			case 32: // Spacebar
 				playPause();
 				break;
-		}
-	});
-
-	map.on("dragstart", function () {
-		if (entityToFollow != null) {
-			entityToFollow.unfollow();
 		}
 	});
 
@@ -912,17 +911,18 @@ function startPlaybackLoop () {
 
 				// Handle entityToFollow
 				if (entityToFollow != null) {
-					const pos = entityToFollow.getPosAtFrame(playbackFrame);
+					const relativeFrameIndex = this.getRelativeFrameIndex(playbackFrame);
+					const pos = entityToFollow.getPosAtFrame(relativeFrameIndex);
 					if (pos) {
 						map.setView(armaToLatLng(pos.position), map.getZoom());
 					} else { // Unit has died or does not exist, unfollow
 						entityToFollow.unfollow();
 					}
 				}
-				if (!playbackPaused && !(playbackFrame == endFrame)) {
+				if (!playbackPaused && playbackFrame !== endFrame) {
 					playbackFrame++;
 				}
-				if (playbackFrame == endFrame) {
+				if (playbackFrame === endFrame) {
 					playbackPaused = true;
 					playPauseButton.style.backgroundPosition = "0 0";
 				}
