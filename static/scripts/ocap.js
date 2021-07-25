@@ -291,8 +291,8 @@ function createInitialMarkers () {
 	entities.getAll().forEach(function (entity) {
 		// Create and set marker for unit
 		var pos = entity.getPosAtFrame(0);
-		if (pos != null) { // If unit did exist at start of game
-			entity.createMarker(armaToLatLng(pos));
+		if (pos) { // If unit did exist at start of game
+			entity.createMarker(armaToLatLng(pos.position));
 		}
 	});
 }
@@ -547,7 +547,11 @@ function processOp (filepath) {
 						positions.push({ position: pos, direction: dir, alive: alive, isInVehicle: (entry[3] == 1), name: name, isPlayer: entry[5] });
 					} else {
 						let crew = entry[3];
-						positions.push({ position: pos, direction: dir, alive: alive, crew: crew });
+						const vehicle = { position: pos, direction: dir, alive: alive, crew: crew };
+						if (entry.length >= 5) {
+							vehicle.frames = entry[4];
+						}
+						positions.push(vehicle);
 					}
 				}
 			});
