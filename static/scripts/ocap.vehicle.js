@@ -44,6 +44,8 @@ class Vehicle extends Entity {
 		this.iconType = iconType;
 		this._realIcon = iconType.dead;
 		this._tempIcon = iconType.dead;
+
+		this._positionsHasFrames = (positions.length > 0 && !!positions[0].frames);
 	}
 
 	createMarker(latLng) {
@@ -70,7 +72,9 @@ class Vehicle extends Entity {
 
 	_updateAtFrame(relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
-		this.setCrew(this._positions[relativeFrameIndex].crew);
+
+		const position = this.getPosAtFrame(relativeFrameIndex);
+		this.setCrew(position.crew);
 	}
 
 	setCrew(crew) {
@@ -95,8 +99,6 @@ class Vehicle extends Entity {
 				// Change vehicle icon depending on driver's side
 				let driverId = crew[0];
 				let driver = entities.getById(driverId);
-				//console.log(this);
-				//console.log(driver);
 				let icon = this.iconType[driver.sideClass];
 				if (this._realIcon !== icon) {
 					this.setMarkerIcon(icon);

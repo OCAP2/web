@@ -276,11 +276,11 @@ class Marker {
 
 			if (this._shape == "ICON") {
 				latLng = armaToLatLng(pos);
-				if (null == alpha || alpha == 0) { alpha = 1 }
+				if (alpha === undefined || alpha === null) { alpha = 1 }
 				this._createMarker(latLng, dir, alpha);
 			} else if (this._shape == "ELLIPSE") {
 				latLng = armaToLatLng(pos);
-				if (null == alpha || alpha == 0) { alpha = 0.2 }
+				if (alpha === undefined || alpha === null) { alpha = 0.2 }
 				this._createMarker(latLng, dir, alpha);
 			} else if (this._shape == "RECTANGLE") {
 				let startX = pos[0];
@@ -302,7 +302,7 @@ class Marker {
 				// process rotation around center
 				let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
 
-				if (null == alpha || alpha == 0) { alpha = 0.3 }
+				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
 				this._createMarker(pointsRotate, dir, alpha);
 			} else if (this._shape == "POLYLINE") {
@@ -314,7 +314,7 @@ class Marker {
 				} else {
 					points = armaToLatLng([pos[0], pos[1]])
 				}
-				if (null == alpha || alpha == 0) { alpha = 1 }
+				if (alpha === undefined || alpha === null) { alpha = 1 }
 				this._createMarker(points, dir, alpha);
 			}
 
@@ -323,13 +323,13 @@ class Marker {
 
 			if (this._shape == "ICON") {
 				latLng = armaToLatLng(pos);
-				if (null === alpha || alpha == 0) { alpha = 1 }
+				if (alpha === undefined || alpha === null) { alpha = 1 }
 
 				this._marker.setRotationAngle(dir);
 				this._marker.setLatLng(latLng);
 			} else if (this._shape == "ELLIPSE") {
 				latLng = armaToLatLng(pos);
-				if (null === alpha || alpha == 0) { alpha = 0.3 }
+				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
 				// check if update is needed
 				let variance = 0;
@@ -346,7 +346,7 @@ class Marker {
 				let startY = pos[1];
 				let sizeX = this._size[0];
 				let sizeY = this._size[1];
-				if (null === alpha || alpha == 0) { alpha = 0.3 }
+				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
 				let pointsRaw = [
 					[startX - sizeX, startY + sizeY], // top left
@@ -371,7 +371,7 @@ class Marker {
 				this._marker.setLatLngs(pointsRotate).redraw();
 				// };
 			} else if (this._shape == "POLYLINE") {
-				if (null === alpha || alpha == 0) { alpha = 1 }
+				if (alpha === undefined || alpha === null) { alpha = 1 }
 				// do nothing, polylines can't be moved
 			}
 

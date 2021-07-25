@@ -21,7 +21,7 @@ html, body, #map {
 	position: absolute;
 	bottom: 65px;
 	right: 5px;
-	z-index: 999;
+	z-index: 1;
 	opacity: 0.8;
 }
 
@@ -370,6 +370,7 @@ html, body, #map {
 	float: right;
 	width: 80px;
 	transform: rotate(270deg);
+	z-index: 2;
 }
 
 #playbackSpeedSlider::-webkit-slider-thumb {
@@ -499,7 +500,7 @@ input[type=range]::-webkit-slider-runnable-track {
 	background: none;
 	margin: 10% auto auto;
 	/*	border: 1px solid black;*/
-	width: 800px;
+	width: 1200px;
     height: 65%;
 }
 .modalHeader {
@@ -600,7 +601,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 #filterGameInput {
 	height: 20px;
-	width: 315px;
+	width: 720px;
 }
 
 #filterSubmit {

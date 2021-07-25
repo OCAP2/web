@@ -16,6 +16,7 @@ class Entity {
 		this._markerRotationOrigin = "50% 50%";
 		this._popupClassName = "";
 		this._restoreAnimation = false;
+		this._positionsHasFrames = false;
 	}
 
 	// Correct index by taking into account startFrameNum.
@@ -26,22 +27,23 @@ class Entity {
 		return (f - this._startFrameNum);
 	}
 
-	getPosAtFrame(f) {
-		f = this.getRelativeFrameIndex(f);
-
-		const notExistYet = f < 0; // Unit doesn't exist yet
-		const notExistAnymore = f >= (this._positions.length); // Unit dead/doesn't exist anymore
-		if (notExistYet || notExistAnymore) {
-			return;
-		} else {
-			return this._positions[f].position;
+	getPosAtFrame(relativeFrameIndex) {
+		if (!this._notExistYet(relativeFrameIndex) && !this._notExistAnymore(relativeFrameIndex)) {
+			if (this._positionsHasFrames) {
+				return this._positions.find((position) => {
+					return relativeFrameIndex >= (position.frames[0] - this._startFrameNum) && relativeFrameIndex <= (position.frames[1] - this._startFrameNum);
+				});
+			} else {
+				return this._positions[relativeFrameIndex];
+			}
 		}
 	}
 
 	// Get LatLng at specific frame
 	getLatLngAtFrame(f) {
-		const pos = this.getPosAtFrame(f);
-		if (pos) { return armaToLatLng(pos) }
+		const relativeFrameIndex = this.getRelativeFrameIndex(f);
+		const pos = this.getPosAtFrame(relativeFrameIndex);
+		if (pos) { return armaToLatLng(pos.position) }
 		return;
 	}
 
@@ -169,6 +171,9 @@ class Entity {
 
 	// Does entity exist anymore (disconnected/garbage collected) at relativeFrameIndex
 	_notExistAnymore(relativeFrameIndex) {
+		if (this._positionsHasFrames) {
+			return relativeFrameIndex > (this._positions[this._positions.length - 1].frames[1] - this._startFrameNum);
+		}
 		return (relativeFrameIndex >= this._positions.length);
 	}
 
@@ -179,8 +184,11 @@ class Entity {
 
 	// Update entiy position, direction, and alive status at valid frame
 	_updateAtFrame(relativeFrameIndex) {
+		const position = this.getPosAtFrame(relativeFrameIndex);
+		if (!position) return;
+
 		// Set pos
-		let latLng = armaToLatLng(this._positions[relativeFrameIndex].position);
+		let latLng = armaToLatLng(position.position);
 		if (this._marker == null) { // First time unit has appeared on map
 			this.createMarker(latLng);
 		} else {
