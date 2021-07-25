@@ -245,16 +245,9 @@ class UI {
 		left_title.onclick = () => {this.toggleLeftPanel()};
 		right_title.onclick = () => {this.toggleRightPanel()};
 		mapDiv.addEventListener("keypress", (event) => {
-			//console.log(event.charCode);
-
-			switch (event.charCode) {
-				case 101: // e
-					this.toggleLeftPanel();
-					break;
-				case 114: // r
-					this.toggleRightPanel();
-					break;
-			}
+			if (event.charCode === 101) this.toggleLeftPanel();
+			else if (event.charCode === 114) this.toggleRightPanel();
+			else if (event.charCode === 98) this.showExperimental();
 		});
 
 

@@ -197,14 +197,14 @@ class Entity {
 
 		// Set direction
 		if (relativeFrameIndex > 0) {
-			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, this._positions[relativeFrameIndex].direction);
+			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, position.direction);
 			this._marker.setRotationAngle(angle);
 		} else {
-			this._marker.setRotationAngle(this._positions[relativeFrameIndex].direction);
+			this._marker.setRotationAngle(position.direction);
 		}
 
 		// Set alive status
-		this.setAlive(this._positions[relativeFrameIndex].alive);
+		this.setAlive(position.alive);
 
 		//Hide popup
 		this.hideMarkerPopup(ui.hideMarkerPopups);
