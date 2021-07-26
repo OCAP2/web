@@ -576,6 +576,9 @@ class UI {
 
 		const units = [];
 		for (const entity of entities.getAll()) {
+			const isPlayer = entity._positions.some((position) => position.isPlayer > 0);
+			if (!isPlayer) continue;
+
 			if (entity instanceof Unit) {
 				const unit = units.find((unit) => unit.name === entity._name);
 				if (unit) {

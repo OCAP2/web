@@ -41,7 +41,7 @@ class Entities {
 	getAllByName (name) {
 		let matching = [];
 		this._entities.forEach(function (entity) {
-			if (entity.getName().indexOf(name) != -1) {
+			if (entity.getName().indexOf(name) > -1) {
 				matching.push(entity);
 			}
 		});
@@ -58,7 +58,6 @@ var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
 var map = null;
 var mapDiv = null;
-var mapPanes = null;
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
 var playbackMultiplier = 10; // Playback speed. 1 = realtime.
 var maxPlaybackMultipler = 60; // Max speed user can set playback to
@@ -189,8 +188,6 @@ function initMap (world) {
 		closePopupOnClick: false,
 		preferCanvas: false
 	});
-
-	mapPanes = map.getPanes();
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
