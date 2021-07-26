@@ -127,11 +127,16 @@ class Unit extends Entity {
 	makeElement(liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
 		liUnit.className = "liUnit";
+		let text = "";
 		if (this._role) {
-			liUnit.textContent = `(${this._role}) ` + this._name + " (" + this.killCount.toString() + ")";
+			text = `(${this._role}) ${this._name}`;
 		} else {
-			liUnit.textContent = this._name + " (" + this.killCount.toString() + ")";
+			text = this._name;
 		}
+		if (!ui.disableKillCount) {
+			text += ` (${this.killCount})`;
+		}
+		liUnit.textContent = text;
 		liUnit.addEventListener("click", () => {
 			let marker = this.getMarker();
 			if (marker != null) {
