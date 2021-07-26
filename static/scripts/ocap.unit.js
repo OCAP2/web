@@ -62,14 +62,22 @@ class Unit extends Entity {
 		}
 		if (this._name !== name) {
 			this._name = name;
-			if (this._role) {
-				this._element.textContent = `(${this._role}) ` + name + " (" + this.killCount.toString() + ")";
-				this._marker.getPopup()._contentNode.textContent = name;
-			} else {
-				this._element.textContent = name + " (" + this.killCount.toString() + ")";
-				this._marker.getPopup()._contentNode.textContent = name;
-			}
+			this._marker.getPopup()._contentNode.textContent = name;
+			this.updateElementText();
 		}
+	}
+
+	updateElementText() {
+		let text = "";
+		if (this._role) {
+			text = `(${this._role}) ${this._name}`;
+		} else {
+			text = this._name;
+		}
+		if (!ui.disableKillCount) {
+			text += ` (${this.killCount})`;
+		}
+		this._element.textContent = text;
 	}
 
 	createMarker(latLng) {
@@ -127,11 +135,6 @@ class Unit extends Entity {
 	makeElement(liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
 		liUnit.className = "liUnit";
-		if (this._role) {
-			liUnit.textContent = `(${this._role}) ` + this._name + " (" + this.killCount.toString() + ")";
-		} else {
-			liUnit.textContent = this._name + " (" + this.killCount.toString() + ")";
-		}
 		liUnit.addEventListener("click", () => {
 			let marker = this.getMarker();
 			if (marker != null) {
@@ -140,6 +143,7 @@ class Unit extends Entity {
 			}
 		});
 		this.setElement(liUnit);
+		this.updateElementText();
 		liTarget.appendChild(liUnit);
 	}
 

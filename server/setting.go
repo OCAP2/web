@@ -21,9 +21,10 @@ type Setting struct {
 }
 
 type Customize struct {
-	WebsiteURL      string `json:"websiteURL" yaml:"websiteURL"`
-	WebsiteLogo     string `json:"websiteLogo" yaml:"websiteLogo"`
-	WebsiteLogoSize string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
+	WebsiteURL       string `json:"websiteURL" yaml:"websiteURL"`
+	WebsiteLogo      string `json:"websiteLogo" yaml:"websiteLogo"`
+	WebsiteLogoSize  string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
+	DisableKillCount bool   `json:"disableKillCount" yaml:"disableKillCount"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -51,7 +52,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize"}
+	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
