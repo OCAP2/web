@@ -4,6 +4,8 @@
 	"logger": true,
 	"customize": {
 		"websiteURL": "",
-		"websiteLogo": ""
+		"websiteLogo": "",
+		"websiteLogoSize": "",
+		"disableKillCount": false
 	}
 }

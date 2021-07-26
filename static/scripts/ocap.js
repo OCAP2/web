@@ -108,11 +108,10 @@ function initOCAP () {
 	mapDiv = document.getElementById("map");
 	defineIcons();
 	ui = new UI();
-	ui.updateCustomize();
 
 	const args = getArguments();
 
-	ui.setModalOpList()
+	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
 		.then(() => {
 		/*
 			window.addEventListener("keypress", function (event) {

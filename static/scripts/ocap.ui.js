@@ -60,6 +60,8 @@ class UI {
 		this.missionTimeMultiplier = null;
 		this.elapsedTime = null;
 
+		this.disableKillCount = false;
+
 		this._init();
 	};
 
@@ -602,20 +604,28 @@ class UI {
 		<table class="stats">
 			<tr>
 				<th class="name">Name</th>
+		`;
+		if (!ui.disableKillCount) {
+			content += `
 				<th class="kills">Kills</th>
 				<th class="tkills">TKills</th>
 				<th class="deaths">Deaths</th>
-			</tr>
-		`;
+			`;
+		}
+		content += `</tr>`;
 		for (const unit of units) {
 			content += `
 			<tr>
 				<td class="name">${unit.name.encodeHTMLEntities()}</td>
+			`;
+			if (!ui.disableKillCount) {
+				content += `
 				<td class="kills">${unit.killCount}</td>
 				<td class="tkills">${unit.teamKillCount}</td>
 				<td class="deaths">${unit.deathCount}</td>
-			</tr>
 			`;
+			}
+			content += `</tr>`;
 		}
 		content += `</table>`;
 
@@ -802,7 +812,7 @@ class UI {
 	}
 
 	updateCustomize() {
-		fetch("/api/v1/customize")
+		return fetch("/api/v1/customize")
 			.then(response => response.json())
 			.then((data) => {
 				const container = document.getElementById("container");
@@ -825,6 +835,8 @@ class UI {
 						container.prepend(logo);
 					}
 				}
+
+				this.disableKillCount = data.disableKillCount;
 			});
 	}
 

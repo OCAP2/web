@@ -121,8 +121,8 @@ class HitKilledEvent extends GameEvent {
 
 		// CausedBy
 		const causedBySpan = document.createElement("span");
-		if ((causedBy instanceof Unit) && (causedBy.getId() != null)) {
-			causedBySpan.className = this.causedBy.getSideClass()
+		if ((causedBy instanceof Unit) && (causedBy.getId() != null) && !ui.disableKillCount) {
+			causedBySpan.className = this.causedBy.getSideClass();
 			switch (this.type) {
 				case "killed":
 					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount*2)} kills)`;
