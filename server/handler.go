@@ -246,7 +246,7 @@ func (h *Handler) GetMapTitle(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	upath = filepath.Join(h.setting.Maps, filepath.Clean(upath))
+	upath = filepath.Join(h.setting.Maps, filepath.Clean("/"+upath))
 
 	return c.File(upath)
 }
@@ -256,7 +256,7 @@ func (h *Handler) GetStatic(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	upath = filepath.Join(h.setting.Static, filepath.Clean(upath))
+	upath = filepath.Join(h.setting.Static, filepath.Clean("/"+upath))
 
 	return c.File(upath)
 }
