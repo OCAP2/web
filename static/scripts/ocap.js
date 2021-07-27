@@ -176,7 +176,12 @@ function getWorldByName (worldName) {
 		});
 }
 
-function initMap (world) {
+let frameNo = 0;
+const ICON_MAPPING = {
+	marker: {x: 0, y: 0, width: 128, height: 128, mask: true}
+};
+
+function initMap (world, data) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
@@ -196,36 +201,180 @@ function initMap (world) {
 		preferCanvas: false
 	}); */
 
+	let units = [];
+	for (const entity of data.entities) {
+		if (entity.type !== "unit") continue;
+		if (entity.positions.length < 1) continue;
+		units.push(entity);
+	}
+	let others = [];
+	for (const entity of data.entities) {
+		if (entity.type === "unit") continue;
+		if (entity.positions.length < 1) continue;
+		others.push(entity);
+	}
+
+	const tileLayer = new deck.TileLayer({
+		id: 'terrain',
+		coordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+		data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
+		view: new deck.MapView({ id: 'base-map', controller: true }),
+
+		minZoom: 0,
+		maxZoom: 6,
+		tileSize: 256,
+
+		renderSubLayers: props => {
+			const {
+				bbox: { west, south, east, north }
+			} = props.tile;
+
+			return new deck.BitmapLayer(props, {
+				data: null,
+				image: props.data,
+				bounds: [west, south, east, north]
+			});
+		}
+	});
+
+	function render() {
+		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
+		const dataCar = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
+		const dataAPC = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
+		const dataTank = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
+		const dataPlane = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+		// const iconLayer = new deck.IconLayer({
+		// 	id: 'entity-layer',
+		// 	data,
+		// 	pickable: true,
+		// 	// iconAtlas and iconMapping are required
+		// 	// getIcon: return a string
+		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+		// 	iconMapping: ICON_MAPPING,
+		// 	getIcon: d => 'marker',
+		//
+		// 	sizeScale: 15,
+		// 	visible: true,
+		// 	getPosition: d => {
+		// 		const pos = d.positions[frameNo - d.startFrameNum][0];
+		// 		pos.push(Math.random()*20000);
+		// 		return pos.map(v => v/1000);
+		// 	},
+		// 	getAngle: d => d.positions[frameNo - d.startFrameNum][1],
+		// 	getSize: d => 5,
+		// 	getColor: d => [100, 140, 0],
+		// 	updateTrigger: {
+		// 		visible: frameNo,
+		// 		getPosition: frameNo,
+		// 	}
+		// });
+
+		const layerUnits = new deck.SimpleMeshLayer({
+			id: 'units-layer',
+			data: dataUnits,
+			mesh: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
+			sizeScale: 3000,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos.map(v => v/200);
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layersCar = new deck.SimpleMeshLayer({
+			id: 'cars-layer',
+			data: dataCar,
+			mesh: '/objects/car.obj',
+			sizeScale: 3000,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos.map(v => v/100);
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layerAPC = new deck.SimpleMeshLayer({
+			id: 'apc-layer',
+			data: dataAPC,
+			mesh: '/objects/apc.obj',
+			sizeScale: 3000,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos.map(v => v/100);
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layerTank = new deck.SimpleMeshLayer({
+			id: 'tank-layer',
+			data: dataTank,
+			mesh: '/objects/tank.obj',
+			sizeScale: 3000,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos.map(v => v/100);
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layerPlane = new deck.SimpleMeshLayer({
+			id: 'plane-layer',
+			data: dataPlane,
+			mesh: '/objects/plane.obj',
+			sizeScale: 30000,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos.map(v => v/100);
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		console.log('asd');
+
+		map.setProps({layers: [tileLayer, layerUnits, layersCar, layerAPC, layerTank, layerPlane]});
+	}
+
+	setInterval(() => {
+		frameNo += 1;
+		render();
+	}, 100);
+
 	map = new deck.DeckGL({
 		initialViewState: initialViewStateValue,
 		controller: true,
 		container: 'map',
 		layers: [
-			new deck.TileLayer({
-				id: 'terrain',
-				// coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-				data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-				view: new deck.MapView({ id: 'base-map', controller: true }),
-
-				minZoom: 0,
-				maxZoom: 6,
-				tileSize: 256,
-
-				renderSubLayers: props => {
-					const {
-						bbox: { west, south, east, north }
-					} = props.tile;
-
-					return new deck.BitmapLayer(props, {
-						data: null,
-						image: props.data,
-						bounds: [west, south, east, north]
-					});
-				}
-			})
+			tileLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
-	})
+	});
+
+	render();
 
 	// Hide marker popups once below a certain zoom level
 	// map.on("zoom", function () {
@@ -398,7 +547,7 @@ function goFullscreen () {
 // Converts Arma coordinates [x,y] to LatLng
 function armaToLatLng (coords) {
 	const pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
-	return map.unproject(pixelCoords, mapMaxNativeZoom);
+	return pixelCoords;
 }
 
 // Returns date object as little endian (day, month, year) string
@@ -542,7 +691,7 @@ function processOp (filepath) {
 			}
 			ui.checkAvailableTimes();
 			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
-			initMap(world);
+			initMap(world, data);
 			// startPlaybackLoop();
 			// toggleHitEvents(false);
 			// playPause();
@@ -810,3 +959,4 @@ function closestEquivalentAngle (from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
 }
+
