@@ -58,13 +58,7 @@ var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
 var map = null;
 var mapDiv = null;
-var initialViewStateValue = {
-	latitude: 2,
-	longitude: 2,
-	zoom: 1,
-	pitch: 0,
-	bearing: 0
-};
+var initialViewStateValue = null;
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
 var playbackMultiplier = 10; // Playback speed. 1 = realtime.
 var maxPlaybackMultipler = 60; // Max speed user can set playback to
@@ -139,6 +133,14 @@ function initOCAP () {
 							pitch: 0,
 							bearing: 0
 						}
+					} else {
+						initialViewStateValue = {
+							latitude: 2,
+							longitude: 2,
+							zoom: 4,
+							pitch: 0,
+							bearing: 0
+						}
 					}
 					if (args.frame) {
 						ui.setMissionCurTime(parseInt(args.frame));
@@ -199,13 +201,11 @@ function initMap (world) {
 	map = new deck.DeckGL({
 		initialViewState: initialViewStateValue,
 		controller: true,
-		container: 'map',
 		layers: [
-			new deck.TileLayer({
+			new BitmapLayer.TileLayer({
 				id: 'terrain',
 				// coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-				data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-				view: new deck.MapView({ id: 'base-map', controller: true }),
+				data: 'images/maps/' + 'hellanmaa' + '/{z}/{x}/{y}.png',
 
 				minZoom: 0,
 				maxZoom: 6,
@@ -216,7 +216,7 @@ function initMap (world) {
 						bbox: { west, south, east, north }
 					} = props.tile;
 
-					return new deck.BitmapLayer(props, {
+					return new BitmapLayer(props, {
 						data: null,
 						image: props.data,
 						bounds: [west, south, east, north]
@@ -546,7 +546,7 @@ function processOp (filepath) {
 			// startPlaybackLoop();
 			// toggleHitEvents(false);
 			// playPause();
-			ui.hideModal();
+			// ui.hideModal();
 		}).catch((error) => {
 			ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
 			console.error(error);

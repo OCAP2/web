@@ -58,13 +58,6 @@ var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
 var map = null;
 var mapDiv = null;
-var initialViewStateValue = {
-	latitude: 2,
-	longitude: 2,
-	zoom: 1,
-	pitch: 0,
-	bearing: 0
-};
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
 var playbackMultiplier = 10; // Playback speed. 1 = realtime.
 var maxPlaybackMultipler = 60; // Max speed user can set playback to
@@ -112,42 +105,42 @@ function getArguments () {
 
 function initOCAP () {
 	mapDiv = document.getElementById("map");
-	// defineIcons();
+	defineIcons();
 	ui = new UI();
 
 	const args = getArguments();
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
 		.then(() => {
-			/*
-				window.addEventListener("keypress", function (event) {
-					switch (event.charCode) {
-						case 32: // Spacebar
-							event.preventDefault(); // Prevent space from scrolling page on some browsers
-							break;
-					};
-				});
-			*/
+		/*
+			window.addEventListener("keypress", function (event) {
+				switch (event.charCode) {
+					case 32: // Spacebar
+						event.preventDefault(); // Prevent space from scrolling page on some browsers
+						break;
+				};
+			});
+		*/
 			if (args.file) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
 					if (args.x && args.y && args.zoom) {
-						initialViewStateValue = {
-							latitude: parseFloat(args.x),
-							longitude: parseFloat(args.y),
-							zoom: parseFloat(args.zoom),
-							pitch: 0,
-							bearing: 0
-						}
+						let coords = [parseFloat(args.x), parseFloat(args.y)];
+						let zoom = parseFloat(args.zoom);
+						map.setView(coords, zoom);
+					} else {
+						map.setView([0, 0], mapMaxNativeZoom);
 					}
 					if (args.frame) {
 						ui.setMissionCurTime(parseInt(args.frame));
 					}
 				}, false);
-
 				return processOp("data/" + args.file);
 			}
 		})
+		.catch((error) => {
+			ui.showHint(error);
+		});
 
 	if (args.experimental) ui.showExperimental();
 }
@@ -180,9 +173,8 @@ function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
-	mapMinZoom = world.minZoom
 	// Create map
-	/* map = L.map('map', {
+	map = L.map('map', {
 		//maxZoom: mapMaxZoom,
 		zoomControl: false,
 		zoomAnimation: true,
@@ -194,95 +186,63 @@ function initMap (world) {
 		zoomDelta: 1,
 		closePopupOnClick: false,
 		preferCanvas: false
-	}); */
-
-	map = new deck.DeckGL({
-		initialViewState: initialViewStateValue,
-		controller: true,
-		container: 'map',
-		layers: [
-			new deck.TileLayer({
-				id: 'terrain',
-				// coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-				data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-				view: new deck.MapView({ id: 'base-map', controller: true }),
-
-				minZoom: 0,
-				maxZoom: 6,
-				tileSize: 256,
-
-				renderSubLayers: props => {
-					const {
-						bbox: { west, south, east, north }
-					} = props.tile;
-
-					return new deck.BitmapLayer(props, {
-						data: null,
-						image: props.data,
-						bounds: [west, south, east, north]
-					});
-				}
-			})
-		]/* ,
-		view: new deck.MapView({ id: 'base-map', controller: true }) */
-	})
+	});
 
 	// Hide marker popups once below a certain zoom level
-	// map.on("zoom", function () {
-	// 	ui.hideMarkerPopups = map.getZoom() <= 4;
-	// });
+	map.on("zoom", function () {
+		ui.hideMarkerPopups = map.getZoom() <= 4;
+	});
 
-	// let playbackPausedBeforeZoom;
-	// map.on("zoomstart", () => {
-	// 	cancelAnimationFrame(requestedFrame);
-	// 	document.getElementById("container").classList.add("zooming");
-	// 	playbackPausedBeforeZoom = playbackPaused;
-	// 	if (!playbackPaused) {
-	// 		playbackPaused = true;
-	// 	}
-	// });
-	// map.on("zoomend", () => {
-	// 	document.getElementById("container").classList.remove("zooming");
-	// 	playbackPaused = playbackPausedBeforeZoom;
-	// });
-	// map.on("popupopen", (e) => {
-	// 	e.popup.getElement().classList.add("animation");
-	// });
-	// map.on("popupclose", (e) => {
-	// 	e.popup.getElement().classList.remove("animation");
-	// });
-	// map.on("dragstart", function () {
-	// 	if (entityToFollow != null) {
-	// 		entityToFollow.unfollow();
-	// 	}
-	// });
+	let playbackPausedBeforeZoom;
+	map.on("zoomstart", () => {
+		cancelAnimationFrame(requestedFrame);
+		document.getElementById("container").classList.add("zooming");
+		playbackPausedBeforeZoom = playbackPaused;
+		if (!playbackPaused) {
+			playbackPaused = true;
+		}
+	});
+	map.on("zoomend", () => {
+		document.getElementById("container").classList.remove("zooming");
+		playbackPaused = playbackPausedBeforeZoom;
+	});
+	map.on("popupopen", (e) => {
+		e.popup.getElement().classList.add("animation");
+	});
+	map.on("popupclose", (e) => {
+		e.popup.getElement().classList.remove("animation");
+	});
+	map.on("dragstart", function () {
+		if (entityToFollow != null) {
+			entityToFollow.unfollow();
+		}
+	});
 
 	console.log("Got world: ", world);
 
-	// imageSize = world.imageSize;
-	// multiplier = world.multiplier;
-	// let args = getArguments();
-	// if (!args.x || !args.y || !args.zoom) {
-	// 	map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
-	// }
+	imageSize = world.imageSize;
+	multiplier = world.multiplier;
+	let args = getArguments();
+	if (!args.x || !args.y || !args.zoom) {
+		map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
+	}
 
-	// var mapBounds = new L.LatLngBounds(
-	// 	map.unproject([0, imageSize], mapMaxNativeZoom),
-	// 	map.unproject([imageSize, 0], mapMaxNativeZoom)
-	// );
-	// map.fitBounds(mapBounds);
+	var mapBounds = new L.LatLngBounds(
+		map.unproject([0, imageSize], mapMaxNativeZoom),
+		map.unproject([imageSize, 0], mapMaxNativeZoom)
+	);
+	map.fitBounds(mapBounds);
 
 	// Setup tile layer
-	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	maxZoom: mapMaxZoom,
-	// 	minZoom: mapMinZoom,
-	// 	bounds: mapBounds,
-	// 	//attribution: 'MisterGoodson',
-	// 	noWrap: true,
-	// 	tms: false
-	// }).addTo(map);
-
+	L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+		maxNativeZoom: mapMaxNativeZoom,
+		maxZoom: mapMaxZoom,
+		minZoom: mapMinZoom,
+		bounds: mapBounds,
+		//attribution: 'MisterGoodson',
+		noWrap: true,
+		tms: false
+	}).addTo(map);
 
 	// Add keypress event listener
 	mapDiv.addEventListener("keypress", function (event) {
@@ -295,17 +255,17 @@ function initMap (world) {
 		}
 	});
 
-	// createInitialMarkers();
-	// let boundaryMarks = markers.filter(item => {
-	// 	return item._type === "moduleCoverMap"
-	// });
-	// if (boundaryMarks.length === 4) {
-	// 	let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
-	// 	let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
-	// 	map.flyToBounds(boundaryPolygon.getBounds());
-	// } else {
-	// 	map.flyToBounds(map.getBounds());
-	// }
+	createInitialMarkers();
+	let boundaryMarks = markers.filter(item => {
+		return item._type === "moduleCoverMap"
+	});
+	if (boundaryMarks.length === 4) {
+		let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
+		let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
+		map.flyToBounds(boundaryPolygon.getBounds());
+	} else {
+		map.flyToBounds(map.getBounds());
+	}
 
 	document.dispatchEvent(new Event("mapInited"));
 	//test();
@@ -450,7 +410,7 @@ function test () {
 			[startX - sizeX, startY - sizeY] // bottom left
 		];
 
-		const sqMarker = L.polygon(pointsRaw, { noClip: true, interactive: false });
+		const sqMarker = L.polygon(pointsRaw, {noClip: true, interactive: false});
 		L.Util.setOptions(sqMarker, shapeOptions);
 		// if (brushPattern) {
 		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
@@ -468,7 +428,7 @@ function test () {
 	// marker.setRadius(5);
 }
 
-function dateToTimeString (date, isUtc = false) {
+function dateToTimeString(date, isUtc = false) {
 	let hours = date.getHours();
 	let minutes = date.getMinutes();
 	let seconds = date.getSeconds();
@@ -541,10 +501,262 @@ function processOp (filepath) {
 				ui.detectTimes(data.times);
 			}
 			ui.checkAvailableTimes();
+
+			var showCiv = false;
+			var showWest = false;
+			var showEast = false;
+			var showGuer = false;
+			var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
+
+			// Loop through entities
+			data.entities.forEach(function (entityJSON) {
+				//console.log(entityJSON);
+
+				let type = entityJSON.type;
+				let startFrameNum = entityJSON.startFrameNum;
+				let id = entityJSON.id;
+				let name = entityJSON.name;
+				let arrSideSelect = [];
+				// Convert positions into array of objects
+				let positions = [];
+				entityJSON.positions.forEach(function (entry, i) {
+					if (entry == []) {
+						positions.push(positions[i - 1]);
+					} else {
+						let pos = entry[0];
+						let dir = entry[1];
+						let alive = entry[2];
+
+						if (type == "unit") {
+							let name = entry[4];
+							if (name == "" && i != 0)
+								name = positions[i - 1].name;
+							if (name == "" && i == 0)
+								name = "unknown";
+							positions.push({ position: pos, direction: dir, alive: alive, isInVehicle: (entry[3] == 1), name: name, isPlayer: entry[5] });
+						} else {
+							let crew = entry[3];
+							const vehicle = { position: pos, direction: dir, alive: alive, crew: crew };
+							if (entry.length >= 5) {
+								vehicle.frames = entry[4];
+							}
+							positions.push(vehicle);
+						}
+					}
+				});
+
+				if (type === "unit") {
+					//if (entityJSON.name == "Error: No unit") {return}; // Temporary fix for old captures that initialised dead units
+
+					// Add group to global groups object (if new)
+					let group = groups.findGroup(entityJSON.group, entityJSON.side);
+					if (group == null) {
+						group = new Group(entityJSON.group, entityJSON.side);
+						groups.addGroup(group);
+					}
+
+					// Create unit and add to entities list
+					const unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer === 1), positions, entityJSON.framesFired, entityJSON.role);
+					entities.add(unit);
+
+					// Show title side
+					if (arrSideSelect.indexOf(entityJSON.side) === -1) {
+						arrSideSelect.push(entityJSON.side);
+						switch (entityJSON.side) {
+							case "WEST":
+								showWest = true;
+								break;
+							case "EAST":
+								showEast = true;
+								break;
+							case "GUER":
+								showGuer = true;
+								break;
+							case "CIV":
+								showCiv = true;
+								break;
+						}
+					}
+				} else {
+					// Create vehicle and add to entities list
+					const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
+					entities.add(vehicle);
+				}
+			});
+
+			if (data.Markers != null) {
+				data.Markers.forEach(function (markerJSON) {
+					try {
+						var type = markerJSON[0];
+						var text = markerJSON[1];
+						var startFrame = markerJSON[2];
+						var endFrame = markerJSON[3];
+						var player;
+						if (markerJSON[4] == -1) {
+							player = -1;
+						} else {
+							player = entities.getById(markerJSON[4]);
+						}
+						var color = markerJSON[5];
+						var side = arrSide[markerJSON[6] + 1];
+						var positions = markerJSON[7];
+
+						// backwards compatibility for marker expansion
+						let size = "";
+						let shape = "ICON";
+						let brush = "Solid";
+						if (markerJSON.length > 8) {
+							if (markerJSON[9] == "ICON") {
+								size = markerJSON[8]
+							} else {
+								size = markerJSON[8];//.map(value => value * multiplier);
+							}
+							shape = markerJSON[9];
+						}
+						if (markerJSON.length > 10) {
+							brush = markerJSON[10];
+						}
+
+						if (!(type.includes("zoneTrigger") || type.includes("Empty"))) {
+							var marker = new Marker(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush);
+							markers.push(marker);
+						}
+					} catch (err) {
+						console.error(`Failed to process ${markerJSON[9]} with text "${markerJSON[1]}"\nError: ${err}`);
+					}
+				});
+			}
+			// Show title side
+			var countShowSide = 0;
+			if (showCiv) countShowSide++;
+			if (showEast) countShowSide++;
+			if (showGuer) countShowSide++;
+			if (showWest) countShowSide++;
+			function showTitleSide (elem, isShow) {
+				elem = document.getElementById(elem);
+				if (isShow) {
+					elem.style.width = "calc(" + 100 / countShowSide + "% - 2.5px)";
+					elem.style.display = "inline-block";
+				} else {
+					elem.style.display = "none";
+				}
+			}
+
+			showTitleSide("sideEast", showEast);
+			showTitleSide("sideWest", showWest);
+			showTitleSide("sideGuer", showGuer);
+			showTitleSide("sideCiv", showCiv);
+
+			if (showWest) {
+				ui.switchSide("WEST");
+			} else if (showEast) {
+				ui.switchSide("EAST");
+			} else if (showGuer) {
+				ui.switchSide("IND");
+			} else if (showCiv) {
+				ui.switchSide("CIV");
+			}
+
+			// Loop through events
+			data.events.forEach(function (eventJSON) {
+				var frameNum = eventJSON[0];
+				var type = eventJSON[1];
+
+				var gameEvent = null;
+				switch (true) {
+					case (type == "killed" || type == "hit"):
+						const causedByInfo = eventJSON[3];
+						const victim = entities.getById(eventJSON[2]);
+						const causedBy = entities.getById(causedByInfo[0]); // In older captures, this will return null
+						const distance = eventJSON[4];
+
+						//console.log(eventJSON[2]);
+						//if (victim == null) {return}; // Temp fix until vehicles are handled (victim is null if reference is a vehicle)
+
+						// Create event object
+						let weapon;
+						if (causedBy instanceof Unit) {
+							weapon = causedByInfo[1];
+						} else {
+							weapon = "N/A";
+						}
+
+						// TODO: Find out why victim/causedBy can sometimes be null
+						if (causedBy == null || victim == null) {
+							console.warn("unknown victim/causedBy", victim, causedBy);
+						}
+
+						// Incrememt kill/death count for killer/victim
+						if (type === "killed" && (causedBy != null)) {
+							if (causedBy !== victim && causedBy._side === victim._side) {
+								causedBy.teamKillCount++;
+							}
+							if (causedBy !== victim) {
+								causedBy.killCount++;
+							}
+							victim.deathCount++;
+						}
+						gameEvent = new HitKilledEvent(frameNum, type, causedBy, victim, distance, weapon);
+
+						// Add tick to timeline
+						ui.addTickToTimeline(frameNum);
+						break;
+					case (type == "connected" || type == "disconnected"):
+						gameEvent = new ConnectEvent(frameNum, type, eventJSON[2]);
+						break;
+					case (type === "capturedFlag"): // deprecated
+						gameEvent = new CapturedEvent(frameNum, type, "flag", eventJSON[2][0], eventJSON[2][1], eventJSON[2][2], eventJSON[2][3]);
+						break;
+					case (type === "captured"):
+						gameEvent = new CapturedEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // capture type
+							eventJSON[2][1], // unit name
+							eventJSON[2][2], // unit color
+							eventJSON[2][3], // objective color
+							eventJSON[2][4], // objective position
+						);
+						break;
+					case (type === "terminalHackStarted"):
+						gameEvent = new TerminalHackStartEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // unit name
+							eventJSON[2][1], // unit color
+							eventJSON[2][2], // terminal color
+							eventJSON[2][3], // terminal identifier
+							eventJSON[2][4], // terminal position
+							eventJSON[2][5], // countdown timer
+						);
+						break;
+					case (type === "terminalHackCanceled"):
+						gameEvent = new TerminalHackUpdateEvent(
+							frameNum,
+							type,
+							eventJSON[2][0], // unit name
+							eventJSON[2][1], // unit color
+							eventJSON[2][2], // terminal color
+							eventJSON[2][3], // terminal identifier
+							eventJSON[2][4], // terminal state
+						);
+						break;
+					case (type == "endMission"):
+						gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
+						break;
+				}
+				// Add event to gameEvents list
+				if (gameEvent != null) {
+					gameEvents.addEvent(gameEvent);
+				}
+			});
+
+			gameEvents.init();
+
 			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
 			initMap(world);
-			// startPlaybackLoop();
-			// toggleHitEvents(false);
+			startPlaybackLoop();
+			toggleHitEvents(false);
 			// playPause();
 			ui.hideModal();
 		}).catch((error) => {
@@ -732,7 +944,7 @@ function startPlaybackLoop () {
 	var playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
 }
 
-function colorElement (element, color) {
+function colorElement(element, color) {
 	if (!color) {
 		return;
 	}
@@ -750,7 +962,7 @@ function colorElement (element, color) {
 	}
 }
 
-function getMarkerColor (color, defaultColor = "ffffff") {
+function getMarkerColor(color, defaultColor = "ffffff") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -772,12 +984,12 @@ function getMarkerColor (color, defaultColor = "ffffff") {
 
 	return hexColor;
 }
-function colorMarkerIcon (element, icon, color) {
+function colorMarkerIcon(element, icon, color) {
 	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
 
 
-function getPulseMarkerColor (color, defaultColor = "000000") {
+function getPulseMarkerColor(color, defaultColor = "000000") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -806,7 +1018,7 @@ String.prototype.encodeHTMLEntities = function () {
 	});
 }
 
-function closestEquivalentAngle (from, to) {
+function closestEquivalentAngle(from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
 }

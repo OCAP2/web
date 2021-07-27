@@ -5,11 +5,16 @@
 		<title>OCAP</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-		<!-- <link rel="stylesheet" href="leaflet/leaflet.css" /> -->
+		<link rel="stylesheet" href="leaflet/leaflet.css" />
 		<link rel="stylesheet" href="style/common.css" />
 		<link rel="stylesheet" href="style/index.css" />
 		<link rel="icon" type="img/png" href="images/favicon.png" />
-		<script src="https://unpkg.com/deck.gl@^8.0.0/dist.min.js"></script>
+		<script src="leaflet/leaflet-src.js"></script>
+		<script src="leaflet/leaflet.rotatedMarker.js"></script>
+		<script src="leaflet/leaflet.svgIcon.js"></script>
+		<script src="leaflet/leaflet.pattern.js"></script>
+		<script src="leaflet/L.Icon.Pulse.js"></script>
+		<link rel="stylesheet" href="leaflet/L.Icon.Pulse.css" />
 		<script src="scripts/ocap.marker.js"></script>
 		<script src="scripts/ocap.entity.js"></script>
 		<script src="scripts/ocap.event.js"></script>
