@@ -84,6 +84,9 @@ var countWest = 0;
 var countGuer = 0;
 var countCiv = 0;
 
+var units = [];
+var others = [];
+
 // Mission details
 var worldName = "";
 var missionName = "";
@@ -212,196 +215,93 @@ function initMap (world) {
 		preferCanvas: false
 	}); */
 
+	units = [];
+	for (const entity of data.entities) {
+		if (entity.type !== "unit") continue;
+		if (entity.positions.length < 1) continue;
+		units.push(entity);
+	}
+	others = [];
+	for (const entity of data.entities) {
+		if (entity.type === "unit") continue;
+		if (entity.positions.length < 1) continue;
+		others.push(entity);
+	}
 
-	// let units = [];
-	// for (const entity of data.entities) {
-	// 	if (entity.type !== "unit") continue;
-	// 	if (entity.positions.length < 1) continue;
-	// 	units.push(entity);
-	// }
-	// let others = [];
-	// for (const entity of data.entities) {
-	// 	if (entity.type === "unit") continue;
-	// 	if (entity.positions.length < 1) continue;
-	// 	others.push(entity);
-	// }
-
-
-
-	function terrainColors (elementfill) {
-		var color = "000000";
-		switch (elementfill) {
-			case "url(#colorLand)":
-				color = "DFDFDF";
-			case "url(#colorSea)":
-				color = "C7E6FC";
-			case "url(#colorMainRoads)":
-				color = "000000";
-			case "url(#colorMainRoadsFill)":
-				color = "F0B033";
-			case "url(#colorRoads)":
-				color = "332100";
-			case "url(#colorRoadsFill)":
-				color = "FFE0A6";
-			case "url(#colorRailWay)":
-				color = "CC3300";
-			case "url(#colorForest)":
-				color = "CCE699";
-			case "url(#colorForestBorder)":
-				color = "66CC00"
-			case "url(#colorRocks)":
-				color = "D6C7B5";
-			case "url(#colorRocksBorder)":
-				color = "D6C7B5";
-			case "url(#colorTracks)":
-				color = "332100";
-			case "url(#colorTracksFill)":
-				color = "FFE0A6";
-			case "url(#colorTrails)":
-				color = "000000";
-			case "url(#colorTrailsFill)":
-				color = "000000";
-			case "url(#colorCountlines)":
-				color = "D1BA94";
-			case "url(#colorCountlinesMain)":
-				color = "A67345";
-			case "url(#colorCountlinesWater)":
-				color = "80C3FF";
-			case "url(#colorCountlinesWaterMain)":
-				color = "0087FF";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorSpot)":
-				color = "000000";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-			case "url(#colorGrid)":
-				color = "707053";
-		};
-		return hexToRgb(color);
-	};
+	const tileLayer = new deck.TileLayer({
+		id: 'terrain',
+		// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		bounds: [
+			0,
+			0,
+			world.worldSize,
+			world.worldSize
+		],
+		data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
+		view: new deck.MapView({ id: 'base-map', controller: true }),
 
 
-	const tileLayer = [
-		new deck.TileLayer({
-			id: 'terrain',
-			// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			// coordinateOrigin: [20, 20, 0],
-			// bounds: [
-			// 	[0, world.imageSize],
-			// 	[0, 0],
-			// 	[world.worldSize, 0],
-			// 	[world.worldSize, world.worldSize]
-			// ],
-			// bounds: [
-			// 	0,
-			// 	world.imageSize,
-			// 	world.imageSize,
-			// 	0
-			// ],
-			data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-			view: new deck.MapView({ id: 'base-map', controller: true }),
 
-			minZoom: -4,
-			maxZoom: 6,
-			tileSize: 256,
+			return new deck.BitmapLayer(props, {
+				data: null,
+				image: props.data,
+				bounds: [west, south, east, north],
+				// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			});
+		}
+	});
 
-			renderSubLayers: props => {
-				const {
-					bbox: { west, south, east, north }
-				} = props.tile;
+	const bitmapLayer = new deck.BitmapLayer({
+		id: 'bitmap-layer',
+		coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		bounds: [
+			0,
+			0,
+			world.worldSize,
+			world.worldSize
+		],
+		image: 'https://i.imgur.com/VRpwq4R.png'
+	});
 
-				return new deck.BitmapLayer(props, {
-					data: null,
-					image: props.data,
-					bounds: [west, south, east, north]
-				});
+
+	function render() {
+		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
+		const dataCar = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
+		const dataTruck = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck");
+		const dataAPC = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
+		const dataTank = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
+		const dataHeli = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
+		const dataPlane = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+		const iconLayer = new deck.IconLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'entity-layer',
+			data: dataCar,
+			pickable: true,
+			// iconAtlas and iconMapping are required
+			// getIcon: return a string
+			iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+			iconMapping: ICON_MAPPING,
+			getIcon: d => 'marker',
+
+			sizeScale: 15,
+			visible: true,
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1],
+			getSize: d => 5,
+			getColor: d => [100, 140, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
 			}
-		})
-	];
-
-	// dataLayers = [
-	// 	new deck.SimpleMeshLayer({
-	// 		id: 'units-layer',
-	// 		data: entities,
-	// 		// texture: 'texture.png',
-	// 		mesh: d => d.modelType,
-	// 		loaders: [OBJLoader],
-	// 		getPosition: d => d.getPosAtFrame()[0],
-	// 		getColor: d => d._sideColour,
-	// 		getOrientation: d => [0, d.getPosAtFrame()[1], 0]
-	// 	})/* ,
-	// 	new deck.GeoJsonLayer({
-	// 		id: 'terrain-layer',
-	// 		data: 'images/maps/esseker-terrain.geojson',
-	// 		pickable: true,
-	// 		stroked: true,
-	// 		filled: true,
-	// 		extruded: true,
-	// 		pointType: 'circle',
-	// 		lineWidthScale: 20,
-	// 		lineWidthMinPixels: 2,
-	// 		getFillColor: [160, 160, 180, 200],
-	// 		// getLineColor: d => colorToRGBArray(d.properties.color),
-	// 		getLineColor: [160, 160, 180, 200],
-	// 		getPointRadius: 100,
-	// 		getLineWidth: 1,
-	// 		getElevation: 30
-	// 	}) */
-	// ];
-
-
-
-
-	function render () {
-		// const dataUnits = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
-		// const dataCar = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
-		// const dataAPC = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
-		// const dataTank = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
-		// const dataPlane = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
-
-		const dataUnits = entities._entities.filter((d) => d.modelType = models.man);
-		const dataCar = entities._entities.filter((d) => d.modelType = models.car);
-		const dataAPC = entities._entities.filter((d) => d.modelType = models.apc);
-		const dataTank = entities._entities.filter((d) => d.modelType = models.tank);
-		const dataPlane = entities._entities.filter((d) => d.modelType = models.heli);
-		// const iconLayer = new deck.IconLayer({
-		// 	id: 'entity-layer',
-		// 	data,
-		// 	pickable: true,
-		// 	// iconAtlas and iconMapping are required
-		// 	// getIcon: return a string
-		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
-		// 	iconMapping: ICON_MAPPING,
-		// 	getIcon: d => 'marker',
-		//
-		// 	sizeScale: 15,
-		// 	visible: true,
-		// 	getPosition: d => {
-		// 		const pos = d.positions[frameNo - d.startFrameNum][0];
-		// 		pos.push(Math.random()*20000);
-		// 		return pos.map(v => v/1000);
-		// 	},
-		// 	getAngle: d => d.positions[frameNo - d.startFrameNum][1],
-		// 	getSize: d => 5,
-		// 	getColor: d => [100, 140, 0],
-		// 	updateTrigger: {
-		// 		visible: frameNo,
-		// 		getPosition: frameNo,
-		// 	}
-		// });
+		});
 
 		const layerUnits = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0,0,0],
 			id: 'units-layer',
 			data: dataUnits,
 			// mesh: d => {
@@ -409,115 +309,151 @@ function initMap (world) {
 			// 	return d.modelType;
 			// },
 			mesh: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
-			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
-			sizeScale: 20,
+			sizeScale: 10,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
-				var rawPos = d.getPosAtFrame(frameNo);
-				console.log(rawPos);
-				if (rawPos) {
-					var pos = rawPos.position;
-					if (pos) {
-						pos[1] = world.imageSize - pos[1];
-						if (pos.length == 2) {
-							pos.push(0);
-						}
-						return pos;
-					} else {
-						return [0, 0, 0];
-					}
-				} else {
-					return [0, 0, 0];
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => {
+				switch (d.side) {
+					case "WEST":
+						return [100, 100, 140];
+					case "EAST":
+						return [140, 100, 100];
+					case "GUER":
+						return [100, 140, 0];
 				}
 			},
-			// getColor: d => { hexToRGB((d.getSideColour()).substring(1)) },
-			getColor: [0, 1, 0],
-			getOrientation: d => {
-				var thisFrame = d.getPosAtFrame(frameNo);
-				if (thisFrame.direction) {
-					return [0, thisFrame.direction, 0];
-				} else {
-					return [0, 0, 0];
-				}
-			}
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
-		/*const layersCar = new deck.SimpleMeshLayer({
+		const layersCar = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'cars-layer',
 			data: dataCar,
 			mesh: '/objects/car.obj',
-			sizeScale: 3000,
+			sizeScale: 100,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v / 100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layersTruck = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'truck-layer',
+			data: dataTruck,
+			mesh: '/objects/truck.obj',
+			sizeScale: 3,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerAPC = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'apc-layer',
 			data: dataAPC,
 			mesh: '/objects/apc.obj',
-			sizeScale: 3000,
+			sizeScale: 70,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v / 100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1], 90],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerTank = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'tank-layer',
 			data: dataTank,
 			mesh: '/objects/tank.obj',
-			sizeScale: 3000,
+			sizeScale: 20,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v / 100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-180, 90],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layerHeli = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'heli-layer',
+			data: dataHeli,
+			mesh: '/objects/heli.obj',
+			sizeScale: 10,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerPlane = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'plane-layer',
 			data: dataPlane,
 			mesh: '/objects/plane.obj',
-			sizeScale: 30000,
+			sizeScale: 2,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v / 100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
-		}); */
-		console.log('asd');
+		});
 
-		// map.setProps({ layers: [tileLayer, layerUnits, layersCar, layerAPC, layerTank, layerPlane] });
-		map.setProps({ layers: [tileLayer, layerUnits] });
+		map.setProps({ layers: [tileLayer, bitmapLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
 	}
 
 	// setInterval(() => {
@@ -534,8 +470,10 @@ function initMap (world) {
 		initialViewState: initialViewStateValue,
 		controller: true,
 		container: 'map',
+		_animate: true,
 		layers: [
-			tileLayer
+			tileLayer,
+			bitmapLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
 	});
