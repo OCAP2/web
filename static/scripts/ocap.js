@@ -228,39 +228,167 @@ function initMap (world) {
 		others.push(entity);
 	}
 
-	const tileLayer = new deck.TileLayer({
-		id: 'terrain',
-		// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+	// const tileLayer = new deck.TileLayer({
+	// 	id: 'terrain',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+	// 	bounds: [
+	// 		0,
+	// 		0,
+	// 		world.worldSize,
+	// 		world.worldSize
+	// 	],
+	// 	data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
+	// 	view: new deck.OrbitView({ id: 'base-map', controller: true }),
+
+	// 	minZoom: 0,
+	// 	maxZoom: 6,
+	// 	tileSize: 256,
+
+	// 	renderSubLayers: props => {
+	// 		const {
+	// 			bbox: { west, south, east, north }
+	// 		} = props.tile;
+
+	// 		return new deck.BitmapLayer(props, {
+	// 			data: null,
+	// 			image: props.data,
+	// 			bounds: [west, south, east, north],
+	// 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+	// 		});
+	// 	}
+	// });
+
+	// const bitmapLayer = new deck.BitmapLayer({
+	// 	id: 'bitmap-layer',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+	// 	bounds: [
+	// 		0,
+	// 		0,
+	// 		world.worldSize,
+	// 		world.worldSize
+	// 	],
+	// 	image: 'https://i.imgur.com/VRpwq4R.png'
+	// });
+
+
+	const terrainLayer = new deck.TerrainLayer({
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT_OFFSETS,
+		coordinateOrigin: [26.90743, 29.18254, 0],
+		elevationDecoder: {
+			rScaler: 15,
+			gScaler: 0,
+			bScaler: 0,
+			offset: 0
+		},
+		minZoom: 0,
+		maxZoom: 7,
+		tileSize: 256,
+		// meshMaxError: 10,
+		// tesselator: 'delatin',
+		// elevationData: 'images/maps/' + worldName + '/heightmap/{z}/{x}/{y}.png',
+		elevationData: 'images/maps/' + worldName + '/terrain2.png',
+		// texture: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
 		bounds: [
 			0,
 			0,
 			world.worldSize,
 			world.worldSize
-		],
-		data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-		view: new deck.MapView({ id: 'base-map', controller: true }),
-
-
-
-			return new deck.BitmapLayer(props, {
-				data: null,
-				image: props.data,
-				bounds: [west, south, east, north],
-				// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			});
-		}
+		]
 	});
 
-	const bitmapLayer = new deck.BitmapLayer({
-		id: 'bitmap-layer',
-		coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-		bounds: [
-			0,
-			0,
-			world.worldSize,
-			world.worldSize
-		],
-		image: 'https://i.imgur.com/VRpwq4R.png'
+	const geoJsonTerrain = new deck.GeoJsonLayer({
+		id: 'geojson-terrain',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}-terrain.geojson`,
+		pickable: true,
+		stroked: true,
+		filled: true,
+		extruded: false,
+		pointType: 'circle',
+		lineWidthScale: 2,
+		lineWidthMinPixels: 1,
+		getFillColor: [160, 160, 50, 200],
+		getLineColor: [100, 100, 100, 200],
+		getPointRadius: 2,
+		getLineWidth: 1,
+		getElevation: 0
+	});
+
+	const geoJsonForests = new deck.GeoJsonLayer({
+		id: 'geojson-forests',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}-forests.geojson`,
+		pickable: true,
+		stroked: false,
+		filled: true,
+		extruded: false,
+		pointType: 'circle',
+		lineWidthScale: 1,
+		lineWidthMinPixels: 2,
+		getFillColor: [50, 200, 50, 200],
+		getLineColor: [100, 100, 100, 200],
+		getPointRadius: 2,
+		getLineWidth: 1,
+		getElevation: 1
+	});
+
+	const geoJsonObjects = new deck.GeoJsonLayer({
+		id: 'geojson-objects',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}-objects.geojson`,
+		pickable: true,
+		stroked: true,
+		filled: true,
+		extruded: true,
+		pointType: 'circle',
+		lineWidthScale: 1,
+		lineWidthMinPixels: 2,
+		getFillColor: [20, 20, 20, 255],
+		getLineColor: [0, 0, 0, 200],
+		getPointRadius: 2,
+		getLineWidth: 1,
+		getElevation: 10
+	});
+
+	const geoJsonRocks = new deck.GeoJsonLayer({
+		id: 'geojson-rocks',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}-rocks.geojson`,
+		pickable: true,
+		stroked: false,
+		filled: true,
+		extruded: true,
+		pointType: 'circle',
+		lineWidthScale: 1,
+		lineWidthMinPixels: 2,
+		getFillColor: [50, 50, 50, 200],
+		getLineColor: [0, 0, 0, 200],
+		getPointRadius: 2,
+		getLineWidth: 1,
+		getElevation: 5
+	});
+
+	const geoJsonRoads = new deck.GeoJsonLayer({
+		id: 'geojson-roads',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}-roads.geojson`,
+		pickable: true,
+		stroked: false,
+		filled: true,
+		extruded: false,
+		pointType: 'circle',
+		lineWidthScale: 1,
+		lineWidthMinPixels: 2,
+		getFillColor: [255, 20, 20, 200],
+		getLineColor: [0, 0, 0, 200],
+		getPointRadius: 10,
+		getLineWidth: 5,
+		getElevation: 1
 	});
 
 
@@ -273,7 +401,8 @@ function initMap (world) {
 		const dataHeli = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
 		const dataPlane = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
 		const iconLayer = new deck.IconLayer({
-			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT_OFFSETS,
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'entity-layer',
 			data: dataCar,
 			pickable: true,
@@ -301,7 +430,7 @@ function initMap (world) {
 
 		const layerUnits = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0,0,0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'units-layer',
 			data: dataUnits,
 			// mesh: d => {
@@ -334,7 +463,7 @@ function initMap (world) {
 		});
 		const layersCar = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'cars-layer',
 			data: dataCar,
 			mesh: '/objects/car.obj',
@@ -354,7 +483,7 @@ function initMap (world) {
 		});
 		const layersTruck = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'truck-layer',
 			data: dataTruck,
 			mesh: '/objects/truck.obj',
@@ -374,7 +503,7 @@ function initMap (world) {
 		});
 		const layerAPC = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'apc-layer',
 			data: dataAPC,
 			mesh: '/objects/apc.obj',
@@ -394,7 +523,7 @@ function initMap (world) {
 		});
 		const layerTank = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'tank-layer',
 			data: dataTank,
 			mesh: '/objects/tank.obj',
@@ -414,7 +543,7 @@ function initMap (world) {
 		});
 		const layerHeli = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'heli-layer',
 			data: dataHeli,
 			mesh: '/objects/heli.obj',
@@ -434,7 +563,7 @@ function initMap (world) {
 		});
 		const layerPlane = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'plane-layer',
 			data: dataPlane,
 			mesh: '/objects/plane.obj',
@@ -453,7 +582,8 @@ function initMap (world) {
 			// }
 		});
 
-		map.setProps({ layers: [tileLayer, bitmapLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
+		map.setProps({ layers: [terrainLayer, geoJsonTerrain, geoJsonForests, geoJsonObjects, geoJsonRoads, geoJsonRocks, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
+		// map.setProps({ layers: [tileLayer, bitmapLayer, terrainLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
 	}
 
 	// setInterval(() => {
@@ -472,8 +602,9 @@ function initMap (world) {
 		container: 'map',
 		_animate: true,
 		layers: [
-			tileLayer,
-			bitmapLayer
+			// tileLayer,
+			// bitmapLayer,
+			// terrainLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
 	});
