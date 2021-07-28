@@ -18,7 +18,7 @@ class Unit extends Entity {
 		this._sideClass = "";
 		this._sideColour = "#FFFFFF";
 		this._isInVehicle = false;
-		this.iconType = icons.man;
+		this.modelType = models.man;
 		this._popupClassName = "leaflet-popup-unit";
 
 		// Set colour and icon of unit depeneding on side
@@ -47,11 +47,11 @@ class Unit extends Entity {
 				break;
 		}
 
-		this._sideClass = sideClass;
-		this._sideColour = sideColour;
-		this._realIcon = this.iconType[sideClass];
-		this._tempIcon = this.iconType[sideClass];
-		this._markerRotationOrigin = "50% 60%";
+		// this._sideClass = sideClass;
+		// this._sideColour = sideColour;
+		// this._realIcon = this.iconType[sideClass];
+		// this._tempIcon = this.iconType[sideClass];
+		// this._markerRotationOrigin = "50% 60%";
 	}
 
 	updateName(position) {
@@ -80,25 +80,25 @@ class Unit extends Entity {
 		this._element.textContent = text;
 	}
 
-	createMarker(latLng) {
-		super.createMarker(latLng);
+	// createMarker(latLng) {
+	// 	super.createMarker(latLng);
 
-		// Only create a nametag label (popup) for players
-		let popup;
-		if (this.isPlayer) {
-			popup = this._createPopup(this._name.encodeHTMLEntities());
-		} else {
-			popup = this._createPopup(this._name.encodeHTMLEntities() + " <b>[AI]</b>");
-		}
-		this._marker.bindPopup(popup).openPopup();
-	}
+	// 	// Only create a nametag label (popup) for players
+	// 	let popup;
+	// 	if (this.isPlayer) {
+	// 		popup = this._createPopup(this._name.encodeHTMLEntities());
+	// 	} else {
+	// 		popup = this._createPopup(this._name.encodeHTMLEntities() + " <b>[AI]</b>");
+	// 	}
+	// 	this._marker.bindPopup(popup).openPopup();
+	// }
 
-	_updateAtFrame(relativeFrameIndex) {
-		super._updateAtFrame(relativeFrameIndex);
-		this.setIsInVehicle(this._positions[relativeFrameIndex].isInVehicle);
-		this.addCountList(this);
-		this.updateName(this._positions[relativeFrameIndex]);
-	}
+	// _updateAtFrame(relativeFrameIndex) {
+	// 	super._updateAtFrame(relativeFrameIndex);
+	// 	this.setIsInVehicle(this._positions[relativeFrameIndex].isInVehicle);
+	// 	this.addCountList(this);
+	// 	this.updateName(this._positions[relativeFrameIndex]);
+	// }
 
 	setIsInVehicle(isInVehicle) {
 		this._isInVehicle = isInVehicle;

@@ -49,7 +49,6 @@ class Entities {
 	};
 }
 
-
 var imageSize = null;
 var multiplier = null;
 var trim = 0; // Number of pixels that were trimmed when cropping image (used to correct unit placement)
@@ -65,6 +64,8 @@ var initialViewStateValue = {
 	pitch: 0,
 	bearing: 0
 };
+var backgroundLayers = [];
+var dataLayers = [];
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
 var playbackMultiplier = 10; // Playback speed. 1 = realtime.
 var maxPlaybackMultipler = 60; // Max speed user can set playback to
@@ -90,7 +91,7 @@ var endFrame = 0;
 var missionCurDate = new Date(0);
 
 // Icons
-var icons = null;
+var models = null;
 var followColour = "#FFA81A";
 var hitColour = "#FF0000";
 var deadColour = "#000000";
@@ -110,9 +111,18 @@ function getArguments () {
 	return args;
 }
 
+function hexToRGB (hex) {
+	var bigint = parseInt(hex, 16);
+	var r = (bigint >> 16) & 255;
+	var g = (bigint >> 8) & 255;
+	var b = bigint & 255;
+
+	return [r, g, b];
+};
+
 function initOCAP () {
 	mapDiv = document.getElementById("map");
-	// defineIcons();
+	defineModels();
 	ui = new UI();
 
 	const args = getArguments();
@@ -176,12 +186,13 @@ function getWorldByName (worldName) {
 		});
 }
 
+
 let frameNo = 0;
 const ICON_MAPPING = {
-	marker: {x: 0, y: 0, width: 128, height: 128, mask: true}
+	marker: { x: 0, y: 0, width: 128, height: 128, mask: true }
 };
 
-function initMap (world, data) {
+function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
@@ -201,48 +212,169 @@ function initMap (world, data) {
 		preferCanvas: false
 	}); */
 
-	let units = [];
-	for (const entity of data.entities) {
-		if (entity.type !== "unit") continue;
-		if (entity.positions.length < 1) continue;
-		units.push(entity);
-	}
-	let others = [];
-	for (const entity of data.entities) {
-		if (entity.type === "unit") continue;
-		if (entity.positions.length < 1) continue;
-		others.push(entity);
-	}
 
-	const tileLayer = new deck.TileLayer({
-		id: 'terrain',
-		coordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
-		data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
-		view: new deck.MapView({ id: 'base-map', controller: true }),
+	// let units = [];
+	// for (const entity of data.entities) {
+	// 	if (entity.type !== "unit") continue;
+	// 	if (entity.positions.length < 1) continue;
+	// 	units.push(entity);
+	// }
+	// let others = [];
+	// for (const entity of data.entities) {
+	// 	if (entity.type === "unit") continue;
+	// 	if (entity.positions.length < 1) continue;
+	// 	others.push(entity);
+	// }
 
-		minZoom: 0,
-		maxZoom: 6,
-		tileSize: 256,
 
-		renderSubLayers: props => {
-			const {
-				bbox: { west, south, east, north }
-			} = props.tile;
 
-			return new deck.BitmapLayer(props, {
-				data: null,
-				image: props.data,
-				bounds: [west, south, east, north]
-			});
-		}
-	});
+	function terrainColors (elementfill) {
+		var color = "000000";
+		switch (elementfill) {
+			case "url(#colorLand)":
+				color = "DFDFDF";
+			case "url(#colorSea)":
+				color = "C7E6FC";
+			case "url(#colorMainRoads)":
+				color = "000000";
+			case "url(#colorMainRoadsFill)":
+				color = "F0B033";
+			case "url(#colorRoads)":
+				color = "332100";
+			case "url(#colorRoadsFill)":
+				color = "FFE0A6";
+			case "url(#colorRailWay)":
+				color = "CC3300";
+			case "url(#colorForest)":
+				color = "CCE699";
+			case "url(#colorForestBorder)":
+				color = "66CC00"
+			case "url(#colorRocks)":
+				color = "D6C7B5";
+			case "url(#colorRocksBorder)":
+				color = "D6C7B5";
+			case "url(#colorTracks)":
+				color = "332100";
+			case "url(#colorTracksFill)":
+				color = "FFE0A6";
+			case "url(#colorTrails)":
+				color = "000000";
+			case "url(#colorTrailsFill)":
+				color = "000000";
+			case "url(#colorCountlines)":
+				color = "D1BA94";
+			case "url(#colorCountlinesMain)":
+				color = "A67345";
+			case "url(#colorCountlinesWater)":
+				color = "80C3FF";
+			case "url(#colorCountlinesWaterMain)":
+				color = "0087FF";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorSpot)":
+				color = "000000";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+			case "url(#colorGrid)":
+				color = "707053";
+		};
+		return hexToRgb(color);
+	};
 
-	function render() {
-		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
-		const dataCar = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
-		const dataAPC = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
-		const dataTank = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
-		const dataPlane = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+
+	const tileLayer = [
+		new deck.TileLayer({
+			id: 'terrain',
+			// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			// coordinateOrigin: [20, 20, 0],
+			// bounds: [
+			// 	[0, world.imageSize],
+			// 	[0, 0],
+			// 	[world.worldSize, 0],
+			// 	[world.worldSize, world.worldSize]
+			// ],
+			// bounds: [
+			// 	0,
+			// 	world.imageSize,
+			// 	world.imageSize,
+			// 	0
+			// ],
+			data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
+			view: new deck.MapView({ id: 'base-map', controller: true }),
+
+			minZoom: -4,
+			maxZoom: 6,
+			tileSize: 256,
+
+			renderSubLayers: props => {
+				const {
+					bbox: { west, south, east, north }
+				} = props.tile;
+
+				return new deck.BitmapLayer(props, {
+					data: null,
+					image: props.data,
+					bounds: [west, south, east, north]
+				});
+			}
+		})
+	];
+
+	// dataLayers = [
+	// 	new deck.SimpleMeshLayer({
+	// 		id: 'units-layer',
+	// 		data: entities,
+	// 		// texture: 'texture.png',
+	// 		mesh: d => d.modelType,
+	// 		loaders: [OBJLoader],
+	// 		getPosition: d => d.getPosAtFrame()[0],
+	// 		getColor: d => d._sideColour,
+	// 		getOrientation: d => [0, d.getPosAtFrame()[1], 0]
+	// 	})/* ,
+	// 	new deck.GeoJsonLayer({
+	// 		id: 'terrain-layer',
+	// 		data: 'images/maps/esseker-terrain.geojson',
+	// 		pickable: true,
+	// 		stroked: true,
+	// 		filled: true,
+	// 		extruded: true,
+	// 		pointType: 'circle',
+	// 		lineWidthScale: 20,
+	// 		lineWidthMinPixels: 2,
+	// 		getFillColor: [160, 160, 180, 200],
+	// 		// getLineColor: d => colorToRGBArray(d.properties.color),
+	// 		getLineColor: [160, 160, 180, 200],
+	// 		getPointRadius: 100,
+	// 		getLineWidth: 1,
+	// 		getElevation: 30
+	// 	}) */
+	// ];
+
+
+
+
+	function render () {
+		// const dataUnits = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
+		// const dataCar = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
+		// const dataAPC = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
+		// const dataTank = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
+		// const dataPlane = entities._entities.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+
+		const dataUnits = entities._entities.filter((d) => d.modelType = models.man);
+		const dataCar = entities._entities.filter((d) => d.modelType = models.car);
+		const dataAPC = entities._entities.filter((d) => d.modelType = models.apc);
+		const dataTank = entities._entities.filter((d) => d.modelType = models.tank);
+		const dataPlane = entities._entities.filter((d) => d.modelType = models.heli);
 		// const iconLayer = new deck.IconLayer({
 		// 	id: 'entity-layer',
 		// 	data,
@@ -272,21 +404,49 @@ function initMap (world, data) {
 		const layerUnits = new deck.SimpleMeshLayer({
 			id: 'units-layer',
 			data: dataUnits,
+			// mesh: d => {
+			// 	console.log(d.modelType);
+			// 	return d.modelType;
+			// },
 			mesh: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
-			sizeScale: 3000,
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			sizeScale: 20,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/200);
+				var rawPos = d.getPosAtFrame(frameNo);
+				console.log(rawPos);
+				if (rawPos) {
+					var pos = rawPos.position;
+					if (pos) {
+						pos[1] = world.imageSize - pos[1];
+						if (pos.length == 2) {
+							pos.push(0);
+						}
+						return pos;
+					} else {
+						return [0, 0, 0];
+					}
+				} else {
+					return [0, 0, 0];
+				}
 			},
-			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			// getColor: d => { hexToRGB((d.getSideColour()).substring(1)) },
+			getColor: [0, 1, 0],
+			getOrientation: d => {
+				var thisFrame = d.getPosAtFrame(frameNo);
+				if (thisFrame.direction) {
+					return [0, thisFrame.direction, 0];
+				} else {
+					return [0, 0, 0];
+				}
+			}
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
-		const layersCar = new deck.SimpleMeshLayer({
+		/*const layersCar = new deck.SimpleMeshLayer({
 			id: 'cars-layer',
 			data: dataCar,
 			mesh: '/objects/car.obj',
@@ -294,7 +454,7 @@ function initMap (world, data) {
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				return pos.map(v => v / 100);
 			},
 			getColor: d => [100, 140, 0],
 			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
@@ -311,7 +471,7 @@ function initMap (world, data) {
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				return pos.map(v => v / 100);
 			},
 			getColor: d => [100, 140, 0],
 			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
@@ -328,7 +488,7 @@ function initMap (world, data) {
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				return pos.map(v => v / 100);
 			},
 			getColor: d => [100, 140, 0],
 			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
@@ -345,7 +505,7 @@ function initMap (world, data) {
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				return pos.map(v => v / 100);
 			},
 			getColor: d => [100, 140, 0],
 			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
@@ -353,16 +513,22 @@ function initMap (world, data) {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
-		});
+		}); */
 		console.log('asd');
 
-		map.setProps({layers: [tileLayer, layerUnits, layersCar, layerAPC, layerTank, layerPlane]});
+		// map.setProps({ layers: [tileLayer, layerUnits, layersCar, layerAPC, layerTank, layerPlane] });
+		map.setProps({ layers: [tileLayer, layerUnits] });
 	}
 
-	setInterval(() => {
-		frameNo += 1;
-		render();
-	}, 100);
+	// setInterval(() => {
+	// 	frameNo += 1;
+	// 	render();
+	// }, 100);
+
+
+
+
+
 
 	map = new deck.DeckGL({
 		initialViewState: initialViewStateValue,
@@ -470,61 +636,65 @@ function createInitialMarkers () {
 	});
 }
 
-function defineIcons () {
-	icons = {
-		man: {},
-		ship: {},
-		parachute: {},
-		heli: {},
-		plane: {},
-		truck: {},
-		car: {},
-		apc: {},
-		tank: {},
-		staticMortar: {},
-		staticWeapon: {},
-		unknown: {}
+function defineModels () {
+	models = {
+		man: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
+		ship: 'objects/car.obj',
+		parachute: 'objects/car.obj',
+		heli: 'objects/heli.obj',
+		plane: 'objects/heli.obj',
+		truck: 'objects/car.obj',
+		car: 'objects/car.obj',
+		apc: 'objects/apc.obj',
+		tank: 'objects/tank.obj',
+		staticMortar: 'objects/apc.obj',
+		staticWeapon: 'objects/apc.obj',
+		unknown: 'objects/apc.obj'
 	};
-
-	let imgPathMan = "images/markers/man/";
-	// let imgPathManMG = "images/markers/man/MG/";
-	// let imgPathManGL = "images/markers/man/GL/";
-	// let imgPathManAT = "images/markers/man/AT/";
-	// let imgPathManSniper = "images/markers/man/Sniper/";
-	// let imgPathManAA = "images/markers/man/AA/";
-	let imgPathShip = "images/markers/ship/";
-	let imgPathParachute = "images/markers/parachute/";
-	let imgPathHeli = "images/markers/heli/";
-	let imgPathPlane = "images/markers/plane/";
-	let imgPathTruck = "images/markers/truck/";
-	let imgPathCar = "images/markers/car/";
-	let imgPathApc = "images/markers/apc/";
-	let imgPathTank = "images/markers/tank/";
-	let imgPathStaticMortar = "images/markers/static-mortar/";
-	let imgPathStaticWeapon = "images/markers/static-weapon/";
-	let imgPathUnknown = "images/markers/unknown/";
-
-
-	let imgs = ["blufor", "opfor", "ind", "civ", "unknown", "dead", "hit", "follow", "unconscious"];
-	imgs.forEach((img, i) => {
-		icons.man[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
-		// icons.manMG[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
-		// icons.manGL[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManGL}${img}.svg` });
-		// icons.manAT[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAT}${img}.svg` });
-		// icons.manSniper[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManSniper}${img}.svg` });
-		// icons.manAA[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAA}${img}.svg` });
-		icons.ship[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathShip}${img}.svg` });
-		icons.parachute[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathParachute}${img}.svg` });
-		icons.heli[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathHeli}${img}.svg` });
-		icons.plane[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathPlane}${img}.svg` });
-		icons.truck[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTruck}${img}.svg` });
-		icons.car[img] = L.icon({ className: "animation", iconSize: [24, 24], iconUrl: `${imgPathCar}${img}.svg` });
-		icons.apc[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathApc}${img}.svg` });
-		icons.tank[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTank}${img}.svg` });
-		icons.staticMortar[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticMortar}${img}.svg` });
-		icons.staticWeapon[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticWeapon}${img}.svg` });
-		icons.unknown[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathUnknown}${img}.svg` });
-	});
+	/* 
+		let imgPathMan = "static/models/apc.obj";
+		// let imgPathManMG = "images/markers/man/MG/";
+		// let imgPathManGL = "images/markers/man/GL/";
+		// let imgPathManAT = "images/markers/man/AT/";
+		// let imgPathManSniper = "images/markers/man/Sniper/";
+		// let imgPathManAA = "images/markers/man/AA/";
+		let imgPathShip = "static/models/apc.obj";
+		let imgPathParachute = "static/models/apc.obj";
+		let imgPathHeli = "static/models/FighterHelicopter.obj";
+		let imgPathPlane = "static/models/FighterHelicopter.obj";
+		let imgPathTruck = "static/models/apc.obj";
+		let imgPathCar = "static/models/apc.obj";
+		let imgPathApc = "static/models/apc.obj";
+		let imgPathTank = "static/models/m1_clean.obj";
+		let imgPathStaticMortar = "static/models/apc.obj";
+		let imgPathStaticWeapon = "static/models/apc.obj";
+		let imgPathUnknown = "static/models/apc.obj";
+	
+	
+		models = 
+	
+	
+		let models = ["blufor", "opfor", "ind", "civ", "unknown", "dead", "hit", "follow", "unconscious"];
+		models.forEach((img, i) => {
+			icons.man[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
+			// icons.manMG[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
+			// icons.manGL[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManGL}${img}.svg` });
+			// icons.manAT[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAT}${img}.svg` });
+			// icons.manSniper[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManSniper}${img}.svg` });
+			// icons.manAA[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManAA}${img}.svg` });
+			icons.ship[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathShip}${img}.svg` });
+			icons.parachute[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathParachute}${img}.svg` });
+			icons.heli[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathHeli}${img}.svg` });
+			icons.plane[img] = L.icon({ className: "animation", iconSize: [32, 32], iconUrl: `${imgPathPlane}${img}.svg` });
+			icons.truck[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTruck}${img}.svg` });
+			icons.car[img] = L.icon({ className: "animation", iconSize: [24, 24], iconUrl: `${imgPathCar}${img}.svg` });
+			icons.apc[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathApc}${img}.svg` });
+			icons.tank[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathTank}${img}.svg` });
+			icons.staticMortar[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticMortar}${img}.svg` });
+			icons.staticWeapon[img] = L.icon({ className: "animation", iconSize: [20, 20], iconUrl: `${imgPathStaticWeapon}${img}.svg` });
+			icons.unknown[img] = L.icon({ className: "animation", iconSize: [28, 28], iconUrl: `${imgPathUnknown}${img}.svg` });
+		});
+	 */
 }
 
 function goFullscreen () {
@@ -690,8 +860,92 @@ function processOp (filepath) {
 				ui.detectTimes(data.times);
 			}
 			ui.checkAvailableTimes();
+
+			var showCiv = false;
+			var showWest = false;
+			var showEast = false;
+			var showGuer = false;
+			var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
+
+
+			// Loop through entities
+			data.entities.forEach(function (entityJSON) {
+				//console.log(entityJSON);
+
+				let type = entityJSON.type;
+				let startFrameNum = entityJSON.startFrameNum;
+				let id = entityJSON.id;
+				let name = entityJSON.name;
+				let arrSideSelect = [];
+				// Convert positions into array of objects
+				let positions = [];
+				entityJSON.positions.forEach(function (entry, i) {
+					if (entry == []) {
+						positions.push(positions[i - 1]);
+					} else {
+						let pos = entry[0];
+						let dir = entry[1];
+						let alive = entry[2];
+
+						if (type == "unit") {
+							let name = entry[4];
+							if (name == "" && i != 0)
+								name = positions[i - 1].name;
+							if (name == "" && i == 0)
+								name = "unknown";
+							positions.push({ position: pos, direction: dir, alive: alive, isInVehicle: (entry[3] == 1), name: name, isPlayer: entry[5] });
+						} else {
+							let crew = entry[3];
+							const vehicle = { position: pos, direction: dir, alive: alive, crew: crew };
+							if (entry.length >= 5) {
+								vehicle.frames = entry[4];
+							}
+							positions.push(vehicle);
+						}
+					}
+				});
+
+				if (type === "unit") {
+					//if (entityJSON.name == "Error: No unit") {return}; // Temporary fix for old captures that initialised dead units
+
+					// Add group to global groups object (if new)
+					let group = groups.findGroup(entityJSON.group, entityJSON.side);
+					if (group == null) {
+						group = new Group(entityJSON.group, entityJSON.side);
+						groups.addGroup(group);
+					}
+
+					// Create unit and add to entities list
+					const unit = new Unit(startFrameNum, id, name, group, entityJSON.side, (entityJSON.isPlayer === 1), positions, entityJSON.framesFired, entityJSON.role);
+					entities.add(unit);
+
+					// Show title side
+					if (arrSideSelect.indexOf(entityJSON.side) === -1) {
+						arrSideSelect.push(entityJSON.side);
+						switch (entityJSON.side) {
+							case "WEST":
+								showWest = true;
+								break;
+							case "EAST":
+								showEast = true;
+								break;
+							case "GUER":
+								showGuer = true;
+								break;
+							case "CIV":
+								showCiv = true;
+								break;
+						}
+					}
+				} else {
+					// Create vehicle and add to entities list
+					const vehicle = new Vehicle(startFrameNum, id, entityJSON.class, name, positions);
+					entities.add(vehicle);
+				}
+			});
+
 			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
-			initMap(world, data);
+			initMap(world);
 			// startPlaybackLoop();
 			// toggleHitEvents(false);
 			// playPause();

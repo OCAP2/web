@@ -5,45 +5,45 @@ class Vehicle extends Entity {
 		this._type = type;
 		this._crew = []; // Crew in order: [driver,gunner,commander,turrets,cargo]
 
-		let iconType = null;
+		let modelType = null;
 		switch (type) {
 			case "sea":
-				iconType = icons.ship;
+				modelType = models.ship;
 				break;
 			case "parachute":
-				iconType = icons.parachute;
+				modelType = models.parachute;
 				break;
 			case "heli":
-				iconType = icons.heli;
+				modelType = models.heli;
 				break;
 			case "plane":
-				iconType = icons.plane;
+				modelType = models.plane;
 				break;
 			case "truck":
-				iconType = icons.truck;
+				modelType = models.truck;
 				break;
 			case "car":
-				iconType = icons.car;
+				modelType = models.car;
 				break;
 			case "apc":
-				iconType = icons.apc;
+				modelType = models.apc;
 				break;
 			case "tank":
-				iconType = icons.tank;
+				modelType = models.tank;
 				break;
 			case "static-mortar":
-				iconType = icons.unknown; // TODO
+				modelType = models.unknown; // TODO
 				break;
 			case "static-weapon":
-				iconType = icons.unknown; // TODO
+				modelType = models.unknown; // TODO
 				break;
 			default:
-				iconType = icons.unknown;
+				modelType = models.unknown;
 		}
 
-		this.iconType = iconType;
-		this._realIcon = iconType.dead;
-		this._tempIcon = iconType.dead;
+		this.modelType = modelType;
+		this._realModel = modelType;
+		this._tempModel = modelType;
 
 		this._positionsHasFrames = (positions.length > 0 && !!positions[0].frames);
 	}

@@ -5,11 +5,11 @@ class Entity {
 		this._name = name;
 		this._positions = positions; // pos, dir, alive
 		this._marker = null;
-		this.iconType = icons.unknown;
-		this._realIcon = icons.unknown.dead;
-		this._curIcon = icons.unknown.dead;
-		this._tempIcon = icons.unknown.dead;
-		this._lockMarkerIcon = false; // When true, prevent marker icon from being changed
+		this.modelType = models.unknown;
+		// this._realIcon = icons.unknown.dead;
+		// this._curIcon = icons.unknown.dead;
+		// this._tempIcon = icons.unknown.dead;
+		// this._lockMarkerIcon = false; // When true, prevent marker icon from being changed
 		this._element = null; // DOM element associated with this entity
 		this._alive = 0;
 		this._sideColour = "#000000";
@@ -72,36 +72,36 @@ class Entity {
 		return this._id;
 	}
 
-	_createPopup(content) {
-		let popup = L.popup({
-			autoPan: false,
-			autoClose: false,
-			closeButton: false,
-			className: this._popupClassName
-		});
-		popup.setContent(content);
-		return popup;
-	}
+	// _createPopup(content) {
+	// 	let popup = L.popup({
+	// 		autoPan: false,
+	// 		autoClose: false,
+	// 		closeButton: false,
+	// 		className: this._popupClassName
+	// 	});
+	// 	popup.setContent(content);
+	// 	return popup;
+	// }
 
-	createMarker(latLng) {
-		this._marker = L.marker(latLng, {
-			icon: this._realIcon,
-			rotationOrigin: this._markerRotationOrigin
-		});
-		this._marker.addTo(map);
-	}
+	// createMarker(latLng) {
+	// 	this._marker = L.marker(latLng, {
+	// 		icon: this._realIcon,
+	// 		rotationOrigin: this._markerRotationOrigin
+	// 	});
+	// 	this._marker.addTo(map);
+	// }
 
 	// TODO: Optimise this. No need to remove marker (and recreate it later).
 	// 		 Instead, hide marker and then unhide it later when needed again
 	// Remove marker if exists
-	removeMarker() {
-		let marker = this._marker;
-		if (marker != null) {
-			map.removeLayer(marker);
-			this._marker = null;
-			this.remove();
-		}
-	}
+	// removeMarker() {
+	// 	let marker = this._marker;
+	// 	if (marker != null) {
+	// 		map.removeLayer(marker);
+	// 		this._marker = null;
+	// 		this.remove();
+	// 	}
+	// }
 
 	// NOOP
 	remove() {}
@@ -183,78 +183,78 @@ class Entity {
 	}
 
 	// Update entiy position, direction, and alive status at valid frame
-	_updateAtFrame(relativeFrameIndex) {
-		const position = this.getPosAtFrame(relativeFrameIndex);
-		if (!position) return;
+	// _updateAtFrame(relativeFrameIndex) {
+	// 	const position = this.getPosAtFrame(relativeFrameIndex);
+	// 	if (!position) return;
 
-		// Set pos
-		let latLng = armaToLatLng(position.position);
-		if (this._marker == null) { // First time unit has appeared on map
-			this.createMarker(latLng);
-		} else {
-			this._marker.setLatLng(latLng);
-		}
+	// 	// Set pos
+	// 	let latLng = armaToLatLng(position.position);
+	// 	if (this._marker == null) { // First time unit has appeared on map
+	// 		this.createMarker(latLng);
+	// 	} else {
+	// 		this._marker.setLatLng(latLng);
+	// 	}
 
-		// Set direction
-		if (relativeFrameIndex > 0) {
-			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, position.direction);
-			this._marker.setRotationAngle(angle);
-		} else {
-			this._marker.setRotationAngle(position.direction);
-		}
+	// 	// Set direction
+	// 	if (relativeFrameIndex > 0) {
+	// 		const angle = closestEquivalentAngle(this._marker.options.rotationAngle, position.direction);
+	// 		this._marker.setRotationAngle(angle);
+	// 	} else {
+	// 		this._marker.setRotationAngle(position.direction);
+	// 	}
 
-		// Set alive status
-		this.setAlive(position.alive);
+	// 	// Set alive status
+	// 	this.setAlive(position.alive);
 
-		//Hide popup
-		this.hideMarkerPopup(ui.hideMarkerPopups);
-	}
+	// 	//Hide popup
+	// 	this.hideMarkerPopup(ui.hideMarkerPopups);
+	// }
 
-	updateRender(f) {
-		const relativeFrameIndex = this.getRelativeFrameIndex(f);
+	// updateRender(f) {
+	// 	const relativeFrameIndex = this.getRelativeFrameIndex(f);
 
-		if (this._restoreAnimation) {
-			if (this._marker) {
-				let distance = 0;
-				if (relativeFrameIndex >= 0 && relativeFrameIndex+1 < this._positions.length) {
-					const posA = this._positions[relativeFrameIndex].position;
-					const posB = this._positions[relativeFrameIndex+1].position;
-					const a = posA[0] - posB[0];
-					const b = posA[1] - posB[1];
-					distance = Math.sqrt(a*a + b*b);
-				}
-				if (distance < skipAnimationDistance) {
-					const icon = this._marker.getElement();
-					const popup = this._marker.getPopup();
-					if (icon) icon.style.display = "block";
-					if (popup) this._marker.openPopup();
-					this._restoreAnimation = false;
-				}
-			} else {
-				this._restoreAnimation = false;
-			}
-		} else if (this._marker) {
-			let distance = 0;
-			if (relativeFrameIndex > 0 && relativeFrameIndex < this._positions.length) {
-				const posA = this._positions[relativeFrameIndex].position;
-				const posB = this._positions[relativeFrameIndex-1].position;
-				const a = posA[0] - posB[0];
-				const b = posA[1] - posB[1];
-				distance = Math.sqrt(a*a + b*b);
-			}
+	// 	if (this._restoreAnimation) {
+	// 		if (this._marker) {
+	// 			let distance = 0;
+	// 			if (relativeFrameIndex >= 0 && relativeFrameIndex+1 < this._positions.length) {
+	// 				const posA = this._positions[relativeFrameIndex].position;
+	// 				const posB = this._positions[relativeFrameIndex+1].position;
+	// 				const a = posA[0] - posB[0];
+	// 				const b = posA[1] - posB[1];
+	// 				distance = Math.sqrt(a*a + b*b);
+	// 			}
+	// 			if (distance < skipAnimationDistance) {
+	// 				const icon = this._marker.getElement();
+	// 				const popup = this._marker.getPopup();
+	// 				if (icon) icon.style.display = "block";
+	// 				if (popup) this._marker.openPopup();
+	// 				this._restoreAnimation = false;
+	// 			}
+	// 		} else {
+	// 			this._restoreAnimation = false;
+	// 		}
+	// 	} else if (this._marker) {
+	// 		let distance = 0;
+	// 		if (relativeFrameIndex > 0 && relativeFrameIndex < this._positions.length) {
+	// 			const posA = this._positions[relativeFrameIndex].position;
+	// 			const posB = this._positions[relativeFrameIndex-1].position;
+	// 			const a = posA[0] - posB[0];
+	// 			const b = posA[1] - posB[1];
+	// 			distance = Math.sqrt(a*a + b*b);
+	// 		}
 
-			if (distance >= skipAnimationDistance) { // teleport should not jump through the map
-				const icon = this._marker.getElement();
-				const popup = this._marker.getPopup();
-				if (icon) icon.style.display = "none";
-				if (popup) this._marker.closePopup();
-				this._restoreAnimation = true;
-			}
-		}
+	// 		if (distance >= skipAnimationDistance) { // teleport should not jump through the map
+	// 			const icon = this._marker.getElement();
+	// 			const popup = this._marker.getPopup();
+	// 			if (icon) icon.style.display = "none";
+	// 			if (popup) this._marker.closePopup();
+	// 			this._restoreAnimation = true;
+	// 		}
+	// 	}
 
-		//Hide popup
-		this.hideMarkerPopup(ui.hideMarkerPopups);
-	}
+	// 	//Hide popup
+	// 	this.hideMarkerPopup(ui.hideMarkerPopups);
+	// }
 
 	// Manage entity at given frame
 	manageFrame(f) {
