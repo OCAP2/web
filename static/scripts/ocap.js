@@ -247,19 +247,17 @@ function initMap (world, data) {
 		}
 	});
 
-	// const bitmapLayer = new deck.BitmapLayer({
-	// 	id: 'bitmap-layer',
-	// 	coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-	// 	coordinateOrigin: [0, 0, 0],
-	// 	_imageCoordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
-	// 	bounds: [
-	// 		0,
-	// 		0,
-	// 		world.worldSize,
-	// 		world.worldSize
-	// 	],
-	// 	image: 'images/maps/chernarus_winter.png'
-	// });
+	const bitmapLayer = new deck.BitmapLayer({
+		id: 'bitmap-layer',
+		coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		bounds: [
+			0,
+			0,
+			world.worldSize,
+			world.worldSize
+		],
+		image: 'https://i.imgur.com/VRpwq4R.png'
+	});
 
 
 	function render() {
@@ -447,7 +445,7 @@ function initMap (world, data) {
 			// }
 		});
 
-		map.setProps({ layers: [tileLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
+		map.setProps({ layers: [tileLayer, bitmapLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
 	}
 
 	setInterval(() => {
@@ -461,7 +459,8 @@ function initMap (world, data) {
 		container: 'map',
 		_animate: true,
 		layers: [
-			tileLayer
+			tileLayer,
+			bitmapLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
 	});
