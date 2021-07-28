@@ -222,7 +222,7 @@ function initMap (world, data) {
 
 		minZoom: 0,
 		maxZoom: 6,
-		tileSize: 256,
+		tileSize: 512,
 
 		renderSubLayers: props => {
 			const {
@@ -239,124 +239,183 @@ function initMap (world, data) {
 
 	function render() {
 		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
-		const dataCar = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
-		const dataAPC = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
-		const dataTank = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
-		const dataPlane = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
-		// const iconLayer = new deck.IconLayer({
-		// 	id: 'entity-layer',
-		// 	data,
-		// 	pickable: true,
-		// 	// iconAtlas and iconMapping are required
-		// 	// getIcon: return a string
-		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
-		// 	iconMapping: ICON_MAPPING,
-		// 	getIcon: d => 'marker',
-		//
-		// 	sizeScale: 15,
-		// 	visible: true,
-		// 	getPosition: d => {
-		// 		const pos = d.positions[frameNo - d.startFrameNum][0];
-		// 		pos.push(Math.random()*20000);
-		// 		return pos.map(v => v/1000);
-		// 	},
-		// 	getAngle: d => d.positions[frameNo - d.startFrameNum][1],
-		// 	getSize: d => 5,
-		// 	getColor: d => [100, 140, 0],
-		// 	updateTrigger: {
-		// 		visible: frameNo,
-		// 		getPosition: frameNo,
-		// 	}
-		// });
+		const dataCar = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
+		const dataTruck = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck");
+		const dataAPC = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
+		const dataTank = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
+		const dataHeli = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
+		const dataPlane = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+		const iconLayer = new deck.IconLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'entity-layer',
+			data: dataCar,
+			pickable: true,
+			// iconAtlas and iconMapping are required
+			// getIcon: return a string
+			iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+			iconMapping: ICON_MAPPING,
+			getIcon: d => 'marker',
+
+			sizeScale: 15,
+			visible: true,
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1],
+			getSize: d => 5,
+			getColor: d => [100, 140, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		});
 
 		const layerUnits = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'units-layer',
 			data: dataUnits,
 			mesh: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
-			sizeScale: 3000,
+			sizeScale: 10,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/200);
+				pos.push(0);
+				return pos;
 			},
-			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getColor: d => {
+				switch (d.side) {
+					case "WEST":
+						return [100, 100, 140];
+					case "EAST":
+						return [140, 100, 100];
+					case "GUER":
+						return [100, 140, 0];
+				}
+			},
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layersCar = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'cars-layer',
 			data: dataCar,
 			mesh: '/objects/car.obj',
-			sizeScale: 3000,
+			sizeScale: 100,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layersTruck = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'truck-layer',
+			data: dataTruck,
+			mesh: '/objects/truck.obj',
+			sizeScale: 3,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerAPC = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'apc-layer',
 			data: dataAPC,
 			mesh: '/objects/apc.obj',
-			sizeScale: 3000,
+			sizeScale: 70,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1], 90],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerTank = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'tank-layer',
 			data: dataTank,
 			mesh: '/objects/tank.obj',
-			sizeScale: 3000,
+			sizeScale: 20,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-180, 90],
+			// updateTrigger: {
+			// 	visible: frameNo,
+			// 	getPosition: frameNo,
+			// }
+		});
+		const layerHeli = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'heli-layer',
+			data: dataHeli,
+			mesh: '/objects/heli.obj',
+			sizeScale: 10,
+			loaders: [loaders.OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 		const layerPlane = new deck.SimpleMeshLayer({
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'plane-layer',
 			data: dataPlane,
 			mesh: '/objects/plane.obj',
-			sizeScale: 30000,
+			sizeScale: 2,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos.map(v => v/100);
+				pos.push(0);
+				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, d.positions[frameNo - d.startFrameNum][1], 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
-		console.log('asd');
 
-		map.setProps({layers: [tileLayer, layerUnits, layersCar, layerAPC, layerTank, layerPlane]});
+		map.setProps({layers: [tileLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
 	}
 
 	setInterval(() => {
