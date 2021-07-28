@@ -83,6 +83,9 @@ var countWest = 0;
 var countGuer = 0;
 var countCiv = 0;
 
+var units = [];
+var others = [];
+
 // Mission details
 var worldName = "";
 var missionName = "";
@@ -201,13 +204,13 @@ function initMap (world, data) {
 		preferCanvas: false
 	}); */
 
-	let units = [];
+	units = [];
 	for (const entity of data.entities) {
 		if (entity.type !== "unit") continue;
 		if (entity.positions.length < 1) continue;
 		units.push(entity);
 	}
-	let others = [];
+	others = [];
 	for (const entity of data.entities) {
 		if (entity.type === "unit") continue;
 		if (entity.positions.length < 1) continue;
@@ -216,13 +219,21 @@ function initMap (world, data) {
 
 	const tileLayer = new deck.TileLayer({
 		id: 'terrain',
-		coordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+		coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		coordinateOrigin: [0, 0, 0],
+		_imageCoordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+		bounds: [
+			0,
+			0,
+			world.worldSize,
+			world.worldSize
+		],
 		data: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
 		view: new deck.MapView({ id: 'base-map', controller: true }),
 
 		minZoom: 0,
 		maxZoom: 6,
-		tileSize: 512,
+		tileSize: 256,
 
 		renderSubLayers: props => {
 			const {
@@ -232,10 +243,28 @@ function initMap (world, data) {
 			return new deck.BitmapLayer(props, {
 				data: null,
 				image: props.data,
-				bounds: [west, south, east, north]
+				bounds: [west, south, east, north],
+				coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+				coordinateOrigin: [0, 0, 0],
+				_imageCoordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN
 			});
 		}
 	});
+
+	const bitmapLayer = new deck.BitmapLayer({
+		id: 'bitmap-layer',
+		coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		coordinateOrigin: [0, 0, 0],
+		_imageCoordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+		bounds: [
+			0,
+			0,
+			world.worldSize,
+			world.worldSize
+		],
+		image: 'images/maps/chernarus_winter.png'
+	});
+
 
 	function render() {
 		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
@@ -274,10 +303,11 @@ function initMap (world, data) {
 
 		const layerUnits = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0,0,0],
 			id: 'units-layer',
 			data: dataUnits,
 			mesh: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/humanoid_quad.obj',
-			sizeScale: 10,
+			sizeScale: 0.1,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -302,10 +332,11 @@ function initMap (world, data) {
 		});
 		const layersCar = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'cars-layer',
 			data: dataCar,
 			mesh: '/objects/car.obj',
-			sizeScale: 100,
+			sizeScale: 2,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -321,10 +352,11 @@ function initMap (world, data) {
 		});
 		const layersTruck = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'truck-layer',
 			data: dataTruck,
 			mesh: '/objects/truck.obj',
-			sizeScale: 3,
+			sizeScale: 0.1,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -340,10 +372,11 @@ function initMap (world, data) {
 		});
 		const layerAPC = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'apc-layer',
 			data: dataAPC,
 			mesh: '/objects/apc.obj',
-			sizeScale: 70,
+			sizeScale: 2,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -359,10 +392,11 @@ function initMap (world, data) {
 		});
 		const layerTank = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'tank-layer',
 			data: dataTank,
 			mesh: '/objects/tank.obj',
-			sizeScale: 20,
+			sizeScale: 1,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -378,10 +412,11 @@ function initMap (world, data) {
 		});
 		const layerHeli = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'heli-layer',
 			data: dataHeli,
 			mesh: '/objects/heli.obj',
-			sizeScale: 10,
+			sizeScale: 0.1,
 			loaders: [loaders.OBJLoader],
 			getPosition: d => {
 				const pos = d.positions[frameNo - d.startFrameNum][0];
@@ -397,6 +432,7 @@ function initMap (world, data) {
 		});
 		const layerPlane = new deck.SimpleMeshLayer({
 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
 			id: 'plane-layer',
 			data: dataPlane,
 			mesh: '/objects/plane.obj',
@@ -415,18 +451,19 @@ function initMap (world, data) {
 			// }
 		});
 
-		map.setProps({layers: [tileLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
+		map.setProps({ layers: [tileLayer, bitmapLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
 	}
 
-	setInterval(() => {
-		frameNo += 1;
-		render();
-	}, 100);
+	// setInterval(() => {
+	// 	frameNo += 1;
+	// 	render();
+	// }, 100);
 
 	map = new deck.DeckGL({
 		initialViewState: initialViewStateValue,
 		controller: true,
 		container: 'map',
+		_animate: true,
 		layers: [
 			tileLayer
 		]/* ,
