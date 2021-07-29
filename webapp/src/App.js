@@ -1,8 +1,8 @@
 import './App.css';
 import DeckGL from '@deck.gl/react';
-import {useCallback, useMemo, useState} from "react";
-import {MapView, WebMercatorViewport} from "@deck.gl/core";
-import {PathLayer} from "@deck.gl/layers";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
+import {IconLayer, PathLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
 import BottomPanel from "./Panel/BottomPanel";
@@ -41,6 +41,10 @@ const minimapBackgroundStyle = {
 	boxShadow: '0 0 8px 2px rgba(0,0,0,0.15)'
 };
 
+const ICON_MAPPING = {
+	marker: {x: 0, y: 0, width: 128, height: 128, mask: true}
+};
+
 function layerFilter({layer, viewport}) {
 	const shouldDrawInMinimap =
 		layer.id.startsWith('coverage') || layer.id.startsWith('viewport-bounds');
@@ -50,6 +54,29 @@ function layerFilter({layer, viewport}) {
 
 function App() {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+	const [data, setData] = useState([]);
+	const [frameNo, setFrameNo] = useState(0);
+
+	useEffect(() => {
+		fetch("/data/2021_07_27__22_36_opt_latest.json")
+			.then(r => r.json())
+			.then((d) => {
+				setData(d.entities.filter((entity) => entity.positions.length > 0));
+				// const dataUnits = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
+				// const dataCar = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
+				// const dataTruck = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck");
+				// const dataAPC = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
+				// const dataTank = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
+				// const dataHeli = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
+				// const dataPlane = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+			})
+			.then(() => {
+				let i = 0;
+				setInterval(() => {
+					setFrameNo(++i);
+				}, 100);
+			});
+	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
 		setViewState(() => ({
@@ -86,6 +113,32 @@ function App() {
 			getColor: [255, 0, 0],
 			getWidth: 2,
 			widthUnits: 'pixels'
+		}),
+		new IconLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'entity-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length),
+			pickable: true,
+			// iconAtlas and iconMapping are required
+			// getIcon: return a string
+			iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+			iconMapping: ICON_MAPPING,
+			getIcon: d => 'marker',
+
+			sizeScale: 15,
+			visible: true,
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1]+180,
+			getSize: d => 5,
+			getColor: d => [100, 140, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
 		})
 	];
 
