@@ -1,0 +1,45 @@
+.panel.left {
+	left: 0;
+	width: 350px;
+	height: calc(100% - 40px - 60px);
+	background-color: #000000bf;
+	position: absolute;
+	top: 40px;
+	font-size: 14px;
+	display: flex;
+	justify-content: space-between;
+	flex-direction: column;
+}
+
+.panel.left > .title {
+	background-color: #00000080;
+	width: 100%;
+	height: 30px;
+	text-align: center;
+	font-size: 16px;
+	padding-top: 10px;
+}
+
+.panel.left > .sideSelector {
+	display: flex;
+	justify-content: space-between;
+	height: 50px;
+	background-color: #00000080;
+}
+.panel.left > .sideSelector > div {
+	flex: 1 0 10px;
+	text-align: center;
+	height: 50px;
+	cursor: pointer;
+	background-color: rgba(255, 183, 38, 0.1);
+	padding-top: 15px;
+	text-shadow: 1px 1px #000000;
+	font-weight: bold;
+}
+.panel.left > .sideSelector > div.selected {
+	background-color: rgba(255, 183, 38, 0.3);
+}
+.panel.left > .sideSelector > .west { color: #00a8ff; }
+.panel.left > .sideSelector > .east { color: #f00; }
+.panel.left > .sideSelector > .guer { color: #0c0; }
+.panel.left > .sideSelector > .civ { color: #C900FF; }

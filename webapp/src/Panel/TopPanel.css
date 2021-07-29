@@ -1,0 +1,44 @@
+.panel.top {
+	background-color: #000000bf;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 40px;
+	z-index: 1;
+	display: flex;
+	justify-content: space-between;
+}
+
+.panel.top > .missionName, .panel > .info {
+	display: inline-block;
+	padding-right: 15px;
+	font-size: 24px;
+	color: #A4A4A4;
+	margin: 6px;
+	font-weight: 500;
+}
+.panel.top > .buttons {
+	display: flex;
+	justify-content: flex-end;
+}
+.panel.top > .buttons > .button {
+	height: 25px;
+	width: 25px;
+	margin: 8px;
+	display: inline-block;
+	background-size: 25px 25px;
+	background-repeat: no-repeat;
+}
+.panel.top > .buttons > .return {
+	background-image: url(../icons/exit_to_app.svg);
+}
+.panel.top > .buttons > .share {
+	background-image: url(../icons/share.svg);
+}
+.panel.top > .buttons > .info {
+	background-image: url(../icons/info.svg);
+}
+.panel.top > .buttons > .stats {
+	background-image: url(../icons/analytics.svg);
+}

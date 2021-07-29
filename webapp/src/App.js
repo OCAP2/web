@@ -3,12 +3,14 @@ import DeckGL from '@deck.gl/react';
 import {useCallback, useMemo, useState} from "react";
 import {MapView, WebMercatorViewport} from "@deck.gl/core";
 import {PathLayer} from "@deck.gl/layers";
+import TopPanel from "./Panel/TopPanel";
+import LeftPanel from "./Panel/LeftPanel";
 
 const mainView = new MapView({id: 'main', controller: true});
 const minimapView = new MapView({
 	id: 'minimap',
-	x: 20,
-	y: 20,
+	x: 360,
+	y: 50,
 	width: '20%',
 	height: '20%',
 	clear: true
@@ -95,7 +97,10 @@ function App() {
 			onViewStateChange={onViewStateChange}
 			layerFilter={layerFilter}
 		>
-			<MapView id="main" />
+			<MapView id="main">
+				<TopPanel></TopPanel>
+				<LeftPanel></LeftPanel>
+			</MapView>
 			<MapView id="minimap">
 				<div style={minimapBackgroundStyle} />
 			</MapView>
