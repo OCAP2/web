@@ -58,10 +58,10 @@ var mapMaxZoom = null; // mapMaxNativeZoom + 3;
 var map = null;
 var mapDiv = null;
 var initialViewStateValue = {
-	latitude: 2,
-	longitude: 2,
-	zoom: 1,
-	pitch: 0,
+	latitude: 25,
+	longitude: 25,
+	zoom: 4,
+	pitch: 20,
 	bearing: 0
 };
 var backgroundLayers = [];
@@ -122,6 +122,60 @@ function hexToRGB (hex) {
 
 	return [r, g, b];
 };
+
+
+function terrainColors (elementfill) {
+	var color = "000000";
+	switch (elementfill) {
+		case "url(#colorTracks)":
+			color = "332100";
+		case "url(#colorRoads)":
+			color = "332100";
+		case "url(#colorMainRoads)":
+			color = "000000";
+		case "url(#colorTracksFill)":
+			color = "FFE0A6";
+		case "url(#colorRoadsFill)":
+			color = "FFE0A6";
+		case "url(#colorMainRoadsFill)":
+			color = "F0B033";
+		case "url(#colorRailWay)":
+			color = "CC3300";
+		case "url(#colorSea)":
+			color = "C7E6FC";
+		case "url(#colorLand)":
+			color = "DFDFDF";
+		case "url(#colorForest)":
+			color = "CCE699";
+		case "url(#colorRocks)":
+			color = "D6C7B5";
+		case "url(#colorForestBorder)":
+			color = "66CC00"
+		case "url(#colorRocksBorder)":
+			color = "D6C7B5";
+		case "url(#colorTrails)":
+			color = "000000";
+		case "url(#colorTrailsFill)":
+			color = "000000";
+		case "url(#colorCountlines)":
+			color = "D1BA94";
+		case "url(#colorCountlinesMain)":
+			color = "A67345";
+		case "url(#colorCountlinesWater)":
+			color = "80C3FF";
+		case "url(#colorCountlinesWaterMain)":
+			color = "0087FF";
+		case "url(#colorGrid)":
+			color = "707053";
+		case "url(#colorSpot)":
+			color = "000000";
+	};
+	return hexToRgb(color);
+};
+
+
+
+
 
 function initOCAP () {
 	mapDiv = document.getElementById("map");
@@ -195,7 +249,7 @@ const ICON_MAPPING = {
 	marker: { x: 0, y: 0, width: 128, height: 128, mask: true }
 };
 
-function initMap (world) {
+function initMap (world, data) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
@@ -258,7 +312,7 @@ function initMap (world) {
 	// 	}
 	// });
 
-	// const bitmapLayer = new deck.BitmapLayer({
+	// const terrainLayer = new deck.BitmapLayer({
 	// 	id: 'bitmap-layer',
 	// 	coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 	// 	bounds: [
@@ -271,49 +325,90 @@ function initMap (world) {
 	// });
 
 
-	const terrainLayer = new deck.TerrainLayer({
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT_OFFSETS,
-		coordinateOrigin: [26.90743, 29.18254, 0],
-		elevationDecoder: {
-			rScaler: 15,
-			gScaler: 0,
-			bScaler: 0,
-			offset: 0
-		},
+	// const terrainLayer = new deck.TerrainLayer({
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.CARTESIAN,
+	// 	coordinateOrigin: [26.90743, 29.18254, 0],
+	// 	elevationDecoder: {
+	// 		rScaler: 15,
+	// 		gScaler: 0,
+	// 		bScaler: 0,
+	// 		offset: 0
+	// 	},
+	// 	minZoom: 0,
+	// 	maxZoom: 6,
+	// 	tileSize: 256,
+	// 	zoomOffset: 0,
+	// 	meshMaxError: 30,
+	// 	// tesselator: 'delatin',
+	// 	elevationData: 'images/maps/' + worldName + '/heightmap/{z}/{x}/{y}.png',
+	// 	// elevationData: 'images/maps/' + worldName + '/terrain2.png'//,
+	// 	texture: 'images/maps/' + worldName + '/terraintiles/{z}/{x}/{y}.png'
+	// 	// bounds: [
+	// 	// 	26.90743,
+	// 	// 	29.18254,
+	// 	// 	27.09271,
+	// 	// 	29.34500
+	// 	// ]
+	// });
+
+	const terrainLayer = new deck.TileLayer({
+		// https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Tile_servers
+		data: 'images/maps/' + worldName + '/terraintiles/{z}/{x}/{y}.png',
+		// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+		// coordinateOrigin: [26.90743, 29.18254, 0],
+		// bounds: [
+		// 	0,
+		// 	0,
+		// 	world.worldSize,
+		// 	world.worldSize
+		// ],
 		minZoom: 0,
-		maxZoom: 7,
+		maxZoom: 6,
 		tileSize: 256,
-		// meshMaxError: 10,
-		// tesselator: 'delatin',
-		// elevationData: 'images/maps/' + worldName + '/heightmap/{z}/{x}/{y}.png',
-		elevationData: 'images/maps/' + worldName + '/terrain2.png',
-		// texture: 'images/maps/' + worldName + '/{z}/{x}/{y}.png',
+		zoomOffset: -8,
+		views: [
+			new deck.MapView({id: 'terrain-view', repeat: true })
+		],
 		bounds: [
-			0,
-			0,
-			world.worldSize,
-			world.worldSize
-		]
+			[60.91914988779904, 26.83365656940842],
+			[60.91914988779904, 27.16634343059158],
+			[61.08085011220096, 27.167192511259376],
+			[61.08085011220096, 26.832807488740624]
+		],
+
+		renderSubLayers: props => {
+			const {
+				bbox: { west, south, east, north }
+			} = props.tile;
+
+			return new deck.BitmapLayer(props, {
+				data: null,
+				image: props.data,
+				coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+				coordinateOrigin: [26.90743, 29.18254, 0],
+				bounds: [west, south, east, north]
+			});
+		}
 	});
 
-	const geoJsonTerrain = new deck.GeoJsonLayer({
-		id: 'geojson-terrain',
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
-		// coordinateOrigin: [-61, 27, 0],
-		data: `images/maps/${worldName}/${worldName}-terrain.geojson`,
-		pickable: true,
-		stroked: true,
-		filled: true,
-		extruded: false,
-		pointType: 'circle',
-		lineWidthScale: 2,
-		lineWidthMinPixels: 1,
-		getFillColor: [160, 160, 50, 200],
-		getLineColor: [100, 100, 100, 200],
-		getPointRadius: 2,
-		getLineWidth: 1,
-		getElevation: 0
-	});
+	// const geoJsonTerrain = new deck.GeoJsonLayer({
+	// 	id: 'geojson-terrain',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+	// 	// coordinateOrigin: [-61, 27, 0],
+	// 	data: `images/maps/${worldName}/${worldName}-terrain.geojson`,
+	// 	pickable: true,
+	// 	stroked: true,
+	// 	filled: true,
+	// 	extruded: false,
+	// 	pointType: 'circle',
+	// 	lineWidthScale: 2,
+	// 	lineWidthMinPixels: 1,
+	// 	getFillColor: [160, 160, 50, 200],
+	// 	getLineColor: [100, 100, 100, 200],
+	// 	getPointRadius: 2,
+	// 	getLineWidth: 1,
+	// 	getElevation: 0
+	// });
 
 	const geoJsonForests = new deck.GeoJsonLayer({
 		id: 'geojson-forests',
@@ -334,65 +429,65 @@ function initMap (world) {
 		getElevation: 1
 	});
 
-	const geoJsonObjects = new deck.GeoJsonLayer({
-		id: 'geojson-objects',
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
-		// coordinateOrigin: [-61, 27, 0],
-		data: `images/maps/${worldName}/${worldName}-objects.geojson`,
-		pickable: true,
-		stroked: true,
-		filled: true,
-		extruded: true,
-		pointType: 'circle',
-		lineWidthScale: 1,
-		lineWidthMinPixels: 2,
-		getFillColor: [20, 20, 20, 255],
-		getLineColor: [0, 0, 0, 200],
-		getPointRadius: 2,
-		getLineWidth: 1,
-		getElevation: 10
-	});
+	// const geoJsonObjects = new deck.GeoJsonLayer({
+	// 	id: 'geojson-objects',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+	// 	// coordinateOrigin: [-61, 27, 0],
+	// 	data: `images/maps/${worldName}/${worldName}-objects.geojson`,
+	// 	pickable: true,
+	// 	stroked: true,
+	// 	filled: true,
+	// 	extruded: true,
+	// 	pointType: 'circle',
+	// 	lineWidthScale: 1,
+	// 	lineWidthMinPixels: 2,
+	// 	getFillColor: [20, 20, 20, 255],
+	// 	getLineColor: [0, 0, 0, 200],
+	// 	getPointRadius: 2,
+	// 	getLineWidth: 1,
+	// 	getElevation: 10
+	// });
 
-	const geoJsonRocks = new deck.GeoJsonLayer({
-		id: 'geojson-rocks',
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
-		// coordinateOrigin: [-61, 27, 0],
-		data: `images/maps/${worldName}/${worldName}-rocks.geojson`,
-		pickable: true,
-		stroked: false,
-		filled: true,
-		extruded: true,
-		pointType: 'circle',
-		lineWidthScale: 1,
-		lineWidthMinPixels: 2,
-		getFillColor: [50, 50, 50, 200],
-		getLineColor: [0, 0, 0, 200],
-		getPointRadius: 2,
-		getLineWidth: 1,
-		getElevation: 5
-	});
+	// const geoJsonRocks = new deck.GeoJsonLayer({
+	// 	id: 'geojson-rocks',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+	// 	// coordinateOrigin: [-61, 27, 0],
+	// 	data: `images/maps/${worldName}/${worldName}-rocks.geojson`,
+	// 	pickable: true,
+	// 	stroked: false,
+	// 	filled: true,
+	// 	extruded: true,
+	// 	pointType: 'circle',
+	// 	lineWidthScale: 1,
+	// 	lineWidthMinPixels: 2,
+	// 	getFillColor: [50, 50, 50, 200],
+	// 	getLineColor: [0, 0, 0, 200],
+	// 	getPointRadius: 2,
+	// 	getLineWidth: 1,
+	// 	getElevation: 5
+	// });
 
-	const geoJsonRoads = new deck.GeoJsonLayer({
-		id: 'geojson-roads',
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
-		// coordinateOrigin: [-61, 27, 0],
-		data: `images/maps/${worldName}/${worldName}-roads.geojson`,
-		pickable: true,
-		stroked: false,
-		filled: true,
-		extruded: false,
-		pointType: 'circle',
-		lineWidthScale: 1,
-		lineWidthMinPixels: 2,
-		getFillColor: [255, 20, 20, 200],
-		getLineColor: [0, 0, 0, 200],
-		getPointRadius: 10,
-		getLineWidth: 5,
-		getElevation: 1
-	});
+	// const geoJsonRoads = new deck.GeoJsonLayer({
+	// 	id: 'geojson-roads',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+	// 	// coordinateOrigin: [-61, 27, 0],
+	// 	data: `images/maps/${worldName}/${worldName}-roads.geojson`,
+	// 	pickable: true,
+	// 	stroked: false,
+	// 	filled: true,
+	// 	extruded: false,
+	// 	pointType: 'circle',
+	// 	lineWidthScale: 1,
+	// 	lineWidthMinPixels: 2,
+	// 	getFillColor: [255, 20, 20, 200],
+	// 	getLineColor: [0, 0, 0, 200],
+	// 	getPointRadius: 10,
+	// 	getLineWidth: 5,
+	// 	getElevation: 1
+	// });
 
 
-	function render() {
+	function render () {
 		const dataUnits = units.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
 		const dataCar = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
 		const dataTruck = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck");
@@ -401,7 +496,7 @@ function initMap (world) {
 		const dataHeli = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
 		const dataPlane = others.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
 		const iconLayer = new deck.IconLayer({
-			coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT_OFFSETS,
+			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
 			coordinateOrigin: [26.90743, 29.18254, 0],
 			id: 'entity-layer',
 			data: dataCar,
@@ -419,7 +514,7 @@ function initMap (world) {
 				pos.push(0);
 				return pos;
 			},
-			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1],
+			getAngle: d => 360 - d.positions[frameNo - d.startFrameNum][1],
 			getSize: d => 5,
 			getColor: d => [100, 140, 0],
 			updateTrigger: {
@@ -455,7 +550,7 @@ function initMap (world) {
 						return [100, 140, 0];
 				}
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] - 90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -475,7 +570,7 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] + 90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -495,7 +590,7 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] + 90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -515,7 +610,7 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1], 90],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1], 90],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -535,7 +630,7 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-180, 90],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] - 180, 90],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -555,7 +650,7 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] - 90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
@@ -575,15 +670,16 @@ function initMap (world) {
 				return pos;
 			},
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
+			getOrientation: d => [0, 360 - d.positions[frameNo - d.startFrameNum][1] - 90, 0],
 			// updateTrigger: {
 			// 	visible: frameNo,
 			// 	getPosition: frameNo,
 			// }
 		});
 
-		map.setProps({ layers: [terrainLayer, geoJsonTerrain, geoJsonForests, geoJsonObjects, geoJsonRoads, geoJsonRocks, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
+		// map.setProps({ layers: [terrainLayer, geoJsonTerrain, geoJsonForests, geoJsonObjects, geoJsonRoads, geoJsonRocks, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
 		// map.setProps({ layers: [tileLayer, bitmapLayer, terrainLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
+		map.setProps({ layers: [terrainLayer, geoJsonForests, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
 	}
 
 	// setInterval(() => {
@@ -604,7 +700,7 @@ function initMap (world) {
 		layers: [
 			// tileLayer,
 			// bitmapLayer,
-			// terrainLayer
+			terrainLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
 	});
@@ -1014,7 +1110,7 @@ function processOp (filepath) {
 			});
 
 			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
-			initMap(world);
+			initMap(world, data);
 			// startPlaybackLoop();
 			// toggleHitEvents(false);
 			// playPause();
