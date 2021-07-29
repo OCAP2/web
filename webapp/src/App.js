@@ -5,6 +5,7 @@ import {MapView, WebMercatorViewport} from "@deck.gl/core";
 import {PathLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
+import BottomPanel from "./Panel/BottomPanel";
 
 const mainView = new MapView({id: 'main', controller: true});
 const minimapView = new MapView({
@@ -100,6 +101,7 @@ function App() {
 			<MapView id="main">
 				<TopPanel></TopPanel>
 				<LeftPanel></LeftPanel>
+				<BottomPanel></BottomPanel>
 			</MapView>
 			<MapView id="minimap">
 				<div style={minimapBackgroundStyle} />
