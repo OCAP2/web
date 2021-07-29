@@ -6,6 +6,8 @@ import {IconLayer, PathLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
 import BottomPanel from "./Panel/BottomPanel";
+import {SimpleMeshLayer} from "@deck.gl/mesh-layers";
+import {OBJLoader} from "@loaders.gl/obj";
 
 const mainView = new MapView({id: 'main', controller: true});
 const minimapView = new MapView({
@@ -135,6 +137,150 @@ function App() {
 			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1]+180,
 			getSize: d => 5,
 			getColor: d => [100, 140, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0,0,0],
+			id: 'units-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.type === "unit"),
+			mesh: 'objects/man.obj',
+			sizeScale: 10,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => {
+				switch (d.side) {
+					case "WEST":
+						return [100, 100, 140];
+					case "EAST":
+						return [140, 100, 100];
+					case "GUER":
+						return [100, 140, 0];
+				}
+			},
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'cars-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car"),
+			mesh: 'objects/car.obj',
+			sizeScale: 100,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'truck-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck"),
+			mesh: 'objects/truck.obj',
+			sizeScale: 3,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'apc-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc"),
+			mesh: 'objects/apc.obj',
+			sizeScale: 70,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				pos.push(0);
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1], 90],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'tank-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck"),
+			mesh: 'objects/tank.obj',
+			sizeScale: 20,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-180, 90],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'heli-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli"),
+			mesh: 'objects/heli.obj',
+			sizeScale: 10,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
+			updateTrigger: {
+				visible: frameNo,
+				getPosition: frameNo,
+			}
+		}),
+		new SimpleMeshLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			coordinateOrigin: [0, 0, 0],
+			id: 'plane-layer',
+			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane"),
+			mesh: 'objects/plane.obj',
+			sizeScale: 2,
+			loaders: [OBJLoader],
+			getPosition: d => {
+				const pos = d.positions[frameNo - d.startFrameNum][0];
+				return pos;
+			},
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
 			updateTrigger: {
 				visible: frameNo,
 				getPosition: frameNo,
