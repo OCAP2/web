@@ -32,9 +32,11 @@
 	height: 50px;
 	cursor: pointer;
 	background-color: rgba(255, 183, 38, 0.1);
-	padding-top: 15px;
 	text-shadow: 1px 1px #000000;
 	font-weight: bold;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 .panel.left > .sideSelector > div.selected {
 	background-color: rgba(255, 183, 38, 0.3);
