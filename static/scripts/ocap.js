@@ -351,44 +351,63 @@ function initMap (world, data) {
 	// 	// ]
 	// });
 
-	const terrainLayer = new deck.TileLayer({
-		// https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Tile_servers
-		data: 'images/maps/' + worldName + '/terraintiles/{z}/{x}/{y}.png',
-		// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-		// coordinateOrigin: [26.90743, 29.18254, 0],
-		// bounds: [
-		// 	0,
-		// 	0,
-		// 	world.worldSize,
-		// 	world.worldSize
-		// ],
-		minZoom: 0,
-		maxZoom: 6,
-		tileSize: 256,
-		zoomOffset: -8,
-		views: [
-			new deck.MapView({id: 'terrain-view', repeat: true })
-		],
-		bounds: [
-			[60.91914988779904, 26.83365656940842],
-			[60.91914988779904, 27.16634343059158],
-			[61.08085011220096, 27.167192511259376],
-			[61.08085011220096, 26.832807488740624]
-		],
+	// const terrainLayer = new deck.TileLayer({
+	// 	// https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Tile_servers
+	// 	data: 'images/maps/' + worldName + '/terraintiles/{z}/{x}/{y}.png',
+	// 	// coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+	// 	// coordinateOrigin: [26.90743, 29.18254, 0],
+	// 	// bounds: [
+	// 	// 	0,
+	// 	// 	0,
+	// 	// 	world.worldSize,
+	// 	// 	world.worldSize
+	// 	// ],
+	// 	minZoom: 0,
+	// 	maxZoom: 6,
+	// 	tileSize: 256,
+	// 	zoomOffset: -8,
+	// 	views: [
+	// 		new deck.MapView({id: 'terrain-view', repeat: true })
+	// 	],
+	// 	bounds: [
+	// 		[60.91914988779904, 26.83365656940842],
+	// 		[60.91914988779904, 27.16634343059158],
+	// 		[61.08085011220096, 27.167192511259376],
+	// 		[61.08085011220096, 26.832807488740624]
+	// 	],
 
-		renderSubLayers: props => {
-			const {
-				bbox: { west, south, east, north }
-			} = props.tile;
+	// 	renderSubLayers: props => {
+	// 		const {
+	// 			bbox: { west, south, east, north }
+	// 		} = props.tile;
 
-			return new deck.BitmapLayer(props, {
-				data: null,
-				image: props.data,
-				coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-				coordinateOrigin: [26.90743, 29.18254, 0],
-				bounds: [west, south, east, north]
-			});
-		}
+	// 		return new deck.BitmapLayer(props, {
+	// 			data: null,
+	// 			image: props.data,
+	// 			coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+	// 			coordinateOrigin: [26.90743, 29.18254, 0],
+	// 			bounds: [west, south, east, north]
+	// 		});
+	// 	}
+	// });
+
+	const geoJsonTerrain = new deck.GeoJsonLayer({
+		id: 'geojson-terrain',
+		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+		// coordinateOrigin: [-61, 27, 0],
+		data: `images/maps/${worldName}/${worldName}.json`,
+		pickable: true,
+		stroked: true,
+		filled: true,
+		extruded: false,
+		pointType: 'circle',
+		lineWidthScale: 2,
+		lineWidthMinPixels: 1,
+		getFillColor: [160, 160, 50, 200],
+		getLineColor: [100, 100, 100, 200],
+		getPointRadius: 2,
+		getLineWidth: 1,
+		getElevation: 0
 	});
 
 	// const geoJsonTerrain = new deck.GeoJsonLayer({
@@ -410,24 +429,24 @@ function initMap (world, data) {
 	// 	getElevation: 0
 	// });
 
-	const geoJsonForests = new deck.GeoJsonLayer({
-		id: 'geojson-forests',
-		coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
-		// coordinateOrigin: [-61, 27, 0],
-		data: `images/maps/${worldName}/${worldName}-forests.geojson`,
-		pickable: true,
-		stroked: false,
-		filled: true,
-		extruded: false,
-		pointType: 'circle',
-		lineWidthScale: 1,
-		lineWidthMinPixels: 2,
-		getFillColor: [50, 200, 50, 200],
-		getLineColor: [100, 100, 100, 200],
-		getPointRadius: 2,
-		getLineWidth: 1,
-		getElevation: 1
-	});
+	// const geoJsonForests = new deck.GeoJsonLayer({
+	// 	id: 'geojson-forests',
+	// 	coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT,
+	// 	// coordinateOrigin: [-61, 27, 0],
+	// 	data: `images/maps/${worldName}/${worldName}-forests.geojson`,
+	// 	pickable: true,
+	// 	stroked: false,
+	// 	filled: true,
+	// 	extruded: false,
+	// 	pointType: 'circle',
+	// 	lineWidthScale: 1,
+	// 	lineWidthMinPixels: 2,
+	// 	getFillColor: [50, 200, 50, 200],
+	// 	getLineColor: [100, 100, 100, 200],
+	// 	getPointRadius: 2,
+	// 	getLineWidth: 1,
+	// 	getElevation: 1
+	// });
 
 	// const geoJsonObjects = new deck.GeoJsonLayer({
 	// 	id: 'geojson-objects',
@@ -679,7 +698,7 @@ function initMap (world, data) {
 
 		// map.setProps({ layers: [terrainLayer, geoJsonTerrain, geoJsonForests, geoJsonObjects, geoJsonRoads, geoJsonRocks, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
 		// map.setProps({ layers: [tileLayer, bitmapLayer, terrainLayer, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane]});
-		map.setProps({ layers: [terrainLayer, geoJsonForests, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
+		map.setProps({ layers: [geoJsonTerrain, iconLayer, layerUnits, layersCar, layersTruck, layerAPC, layerTank, layerHeli, layerPlane] });
 	}
 
 	// setInterval(() => {
@@ -700,7 +719,7 @@ function initMap (world, data) {
 		layers: [
 			// tileLayer,
 			// bitmapLayer,
-			terrainLayer
+			// terrainLayer
 		]/* ,
 		view: new deck.MapView({ id: 'base-map', controller: true }) */
 	});
