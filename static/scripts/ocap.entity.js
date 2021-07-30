@@ -298,7 +298,6 @@ class Entity {
 				break;
 			case 1:
 				this._alive = alive;
-				//console.log(this._marker);
 				if ((!this._lockMarkerIcon) && (this._curIcon !== this._realIcon)) {
 					this.setMarkerIcon(this._realIcon);
 				}

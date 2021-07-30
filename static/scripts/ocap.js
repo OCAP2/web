@@ -838,15 +838,19 @@ function startPlaybackLoop () {
 						// Draw fire line (if enabled)
 						var projectilePos = entity.firedOnFrame(playbackFrame);
 						if (projectilePos != null && ui.firelinesEnabled) {
-							// console.log(entity);
-							// console.log(`Shooter pos: ${entity.getLatLng()}\nFired event: ${projectilePos} (is null: ${projectilePos == null})`);
-							var line = L.polyline([entity.getLatLng(), armaToLatLng(projectilePos)], {
-								color: entity.getSideColour(),
-								weight: 2,
-								opacity: 0.4
-							});
-							line.addTo(map);
-							firelines.push(line);
+							const entityPos = entity.getLatLng();
+							if (entityPos) {
+								// console.log(`Shooter pos: ${entity.getLatLng()}\nFired event: ${projectilePos} (is null: ${projectilePos == null})`);
+								const line = L.polyline([entity.getLatLng(), armaToLatLng(projectilePos)], {
+									color: entity.getSideColour(),
+									weight: 2,
+									opacity: 0.4
+								});
+								line.addTo(map);
+								firelines.push(line);
+							} else {
+								console.warn("entity position missing for fire line", entity, projectilePos);
+							}
 						}
 					}
 				}

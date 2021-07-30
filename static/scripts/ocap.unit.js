@@ -118,7 +118,7 @@ class Unit extends Entity {
 		for (let i = 0; i < (this._framesFired.length - 1); i++) {
 			let frameNum = this._framesFired[i][0];
 			let projectilePos = this._framesFired[i][1];
-			if (frameNum == f) { return projectilePos }
+			if (frameNum === f) { return projectilePos }
 		}
 		return;
 	}
