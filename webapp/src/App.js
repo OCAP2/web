@@ -117,9 +117,15 @@ function App() {
 				});
 
 
-				const newState = addLatLng([INITIAL_VIEW_STATE.minimap.latitude, INITIAL_VIEW_STATE.minimap.longitude], [18001 / 2, 18001 / 2]);
-				INITIAL_VIEW_STATE.minimap.latitude = newState[0]
-				INITIAL_VIEW_STATE.minimap.longitude = newState[1]
+				const [centerLat, centerLng] = addLatLng([INITIAL_VIEW_STATE.minimap.latitude, INITIAL_VIEW_STATE.minimap.longitude], [18001 / 2, 18001 / 2]);
+				INITIAL_VIEW_STATE.main.latitude = centerLat;
+				INITIAL_VIEW_STATE.main.longitude = centerLng;
+				INITIAL_VIEW_STATE.minimap.latitude = centerLat;
+				INITIAL_VIEW_STATE.minimap.longitude = centerLng;
+				setViewState(() => ({
+					main: INITIAL_VIEW_STATE.main,
+					minimap: INITIAL_VIEW_STATE.minimap,
+				}));
 
 				const entities = r.entities.map((entity) => {
 					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
