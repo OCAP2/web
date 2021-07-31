@@ -3,16 +3,9 @@ const { proxy } = require('../package.json');
 
 module.exports = function(app) {
 	app.use(
-		['/data'],
+		['/data','/images'],
 		createProxyMiddleware({
 			target: proxy,
-			changeOrigin: true,
-		})
-	);
-	app.use(
-		['/images'],
-		createProxyMiddleware({
-			target: 'http://localhost:5000',
 			changeOrigin: true,
 		})
 	);

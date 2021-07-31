@@ -6,8 +6,8 @@ import {BitmapLayer, GeoJsonLayer, IconLayer, PathLayer, TextLayer} from "@deck.
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
 import BottomPanel from "./Panel/BottomPanel";
-import {ScenegraphLayer, SimpleMeshLayer} from "@deck.gl/mesh-layers";
-import {OBJLoader} from "@loaders.gl/obj";
+import {ScenegraphLayer} from "@deck.gl/mesh-layers";
+import {TerrainLayer} from "@deck.gl/geo-layers";
 
 const mainView = new MapView({id: 'main', controller: true});
 const minimapView = new MapView({
@@ -47,6 +47,44 @@ const ICON_MAPPING = {
 	marker: {x: 0, y: 0, width: 128, height: 128, mask: true}
 };
 
+const terrainLayer = new TerrainLayer({
+	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+	// coordinateOrigin: [26.90743, 29.18254, 0],
+	elevationDecoder: {
+		rScaler: 5,
+		gScaler: 0,
+		bScaler: 0,
+		offset: 0
+	},
+	meshMaxError: 2.5,
+	elevationData: 'images/heightmap.png',
+	// bounds: [
+	// 	26.90743,
+	// 	29.18254,
+	// 	27.09271,
+	// 	29.34500
+	// ]
+	bounds: [0,0,18001,18001]
+});
+
+const geoLayer = new GeoJsonLayer({
+	id: 'geojson-terrain',
+	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+	data: `images/vt7.json`,
+	pickable: true,
+	stroked: true,
+	filled: true,
+	extruded: false,
+	pointType: 'circle',
+	lineWidthScale: 2,
+	lineWidthMinPixels: 1,
+	getFillColor: d => d.properties.fill || [255,0,0],
+	getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
+	getPointRadius: d => d.properties.radius || 2,
+	getLineWidth: d => d.properties["stroke-width"] || 1,
+	getElevation: 0
+});
+
 function layerFilter({layer, viewport}) {
 	const shouldDrawInMinimap =
 		layer.id.startsWith('coverage') || layer.id.startsWith('viewport-bounds');
@@ -75,14 +113,27 @@ function App() {
 			.then(r => {
 				const entities = r.entities.map((entity) => {
 					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
-					for (let i = 0; i < entity.positions.length; i++) {
-						const positionIndex = i + entity.startFrameNum;
-						positions[positionIndex] = entity.positions[i];
+					if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
+						for (const position of entity.positions) {
+							const startFrame = position[4][0];
+							const endFrame = position[4][1];
+
+							for (let i = startFrame; i <= endFrame; i++) {
+								positions[i] = position;
+							}
+						}
+					} else {
+						for (let i = 0; i < entity.positions.length; i++) {
+							const positionIndex = i + entity.startFrameNum;
+							positions[positionIndex] = entity.positions[i];
+						}
 					}
+
 					entity.positions = positions;
 
 					return entity;
 				});
+
 				setData(entities);
 				setDataUnits(entities.filter(d => d.type === "unit"));
 				setDataCars(entities.filter(d => d.class === "car"));
@@ -99,9 +150,8 @@ function App() {
 					setFrameNo(++i);
 				}, 100);
 			});
-	}, []);
 
-	useEffect(() => {
+
 		fetch("images/vt7_tree.json")
 			.then(r => r.json())
 			.then(r => {
@@ -112,7 +162,7 @@ function App() {
 					});
 				}
 				setTrees(objects);
-			})
+			});
 	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
@@ -151,6 +201,8 @@ function App() {
 			getWidth: 2,
 			widthUnits: 'pixels'
 		}),
+		// terrainLayer,
+		geoLayer,
 		// new BitmapLayer({
 		// 	id: 'bitmap-layer',
 		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
@@ -162,34 +214,17 @@ function App() {
 		// 	],
 		// 	image: '/images/vt7.png'
 		// }),
-		new GeoJsonLayer({
-			id: 'geojson-terrain',
+		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			data: `images/vt7.json`,
-			pickable: true,
-			stroked: true,
-			filled: true,
-			extruded: false,
-			pointType: 'circle',
-			lineWidthScale: 2,
-			lineWidthMinPixels: 1,
-			getFillColor: d => d.properties.fill || [255,0,0],
-			getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
-			getPointRadius: d => d.properties.radius || 2,
-			getLineWidth: d => d.properties["stroke-width"] || 1,
-			getElevation: 0
-		}),
-		new SimpleMeshLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
 			id: 'tree-layer',
 			data: trees,
-			mesh: 'objects/tree.obj',
+			scenegraph: 'objects/tree.glb',
 			sizeScale: 3,
-			loaders: [OBJLoader],
 			getPosition: d => d.position,
-			getColor: d => [100, 140, 0],
 			getOrientation: d => [0, 0, 90],
+			// sizeMinPixels: 10,
+			// sizeMaxPixels: 30,
+			_lighting: 'pbr',
 			parameters: {
 				depthTest: true
 			}
@@ -225,7 +260,7 @@ function App() {
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
 					case 0:
-						return [0, 0, 0, 255];
+						return [0, 0, 0, 50];
 					case 2:
 						return [255, 168, 26, 255];
 				}
@@ -319,13 +354,21 @@ function App() {
 			scenegraph: 'objects/car.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
 			updateTriggers: {
 				getPosition: frameNo,
+				getColor: frameNo,
 				getOrientation: frameNo,
 			},
 			transitions: {
@@ -343,7 +386,14 @@ function App() {
 			scenegraph: 'objects/truck.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
@@ -354,6 +404,7 @@ function App() {
 			},
 			transitions: {
 				getPosition: 100,
+				getColor: frameNo,
 				getOrientation: 100
 			},
 			parameters: {
@@ -387,13 +438,21 @@ function App() {
 			scenegraph: 'objects/apc.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
 			updateTriggers: {
 				getPosition: frameNo,
+				getColor: frameNo,
 				getOrientation: frameNo,
 			},
 			transitions: {
@@ -411,13 +470,21 @@ function App() {
 			scenegraph: 'objects/tank.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
 			updateTriggers: {
 				getPosition: frameNo,
+				getColor: frameNo,
 				getOrientation: frameNo,
 			},
 			transitions: {
@@ -435,13 +502,21 @@ function App() {
 			scenegraph: 'objects/heli.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
 			updateTriggers: {
 				getPosition: frameNo,
+				getColor: frameNo,
 				getOrientation: frameNo,
 			},
 			transitions: {
@@ -459,13 +534,21 @@ function App() {
 			scenegraph: 'objects/plane.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
-			getColor: d => [100, 140, 0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 50];
+					default:
+						return [100, 140, 0, 255];
+				}
+			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
 			updateTriggers: {
 				getPosition: frameNo,
+				getColor: frameNo,
 				getOrientation: frameNo,
 			},
 			transitions: {

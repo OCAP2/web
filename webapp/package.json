@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@deck.gl/core": "^8.5.0",
+    "@deck.gl/geo-layers": "^8.5.0",
     "@deck.gl/layers": "^8.5.0",
     "@deck.gl/mesh-layers": "^8.5.0",
     "@deck.gl/react": "^8.5.0",
@@ -42,5 +43,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://162.55.178.211:5000"
+  "proxy": "http://127.0.0.1:5000"
 }
