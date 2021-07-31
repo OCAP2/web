@@ -57,7 +57,7 @@ const terrainLayer = new TerrainLayer({
 		offset: 0
 	},
 	meshMaxError: 2.5,
-	elevationData: 'images/heightmap.png',
+	elevationData: 'images/maps/vt7/heightmap.png',
 	// bounds: [
 	// 	26.90743,
 	// 	29.18254,
@@ -70,7 +70,7 @@ const terrainLayer = new TerrainLayer({
 const geoLayer = new GeoJsonLayer({
 	id: 'geojson-terrain',
 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-	data: `images/vt7.json`,
+	data: `images/maps/vt7/geo.json`,
 	pickable: true,
 	stroked: true,
 	filled: true,
@@ -152,7 +152,7 @@ function App() {
 			});
 
 
-		fetch("images/vt7_tree.json")
+		fetch("images/maps/vt7/trees.json")
 			.then(r => r.json())
 			.then(r => {
 				const objects = [];

@@ -27,7 +27,7 @@ EXPOSE 5000/tcp
 
 COPY markers /usr/local/ocap/markers
 COPY ammo /usr/local/ocap/ammo
-COPY --from=builder-node /app/build/* /usr/local/ocap/static
+COPY --from=builder-node /app/build/ /usr/local/ocap/static
 COPY --from=builder-go /go/pkg/ocap/app /usr/local/ocap/app
 
 CMD ["/usr/local/ocap/app"]
