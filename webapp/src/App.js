@@ -49,7 +49,6 @@ const ICON_MAPPING = {
 
 const terrainLayer = new TerrainLayer({
 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-	// coordinateOrigin: [26.90743, 29.18254, 0],
 	elevationDecoder: {
 		rScaler: 5,
 		gScaler: 0,
@@ -58,32 +57,10 @@ const terrainLayer = new TerrainLayer({
 	},
 	meshMaxError: 2.5,
 	elevationData: 'images/maps/vt7/heightmap.png',
-	// bounds: [
-	// 	26.90743,
-	// 	29.18254,
-	// 	27.09271,
-	// 	29.34500
-	// ]
 	bounds: [0,0,18001,18001]
 });
 
-const geoLayer = new GeoJsonLayer({
-	id: 'geojson-terrain',
-	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-	data: `images/maps/vt7/geo.json`,
-	pickable: true,
-	stroked: true,
-	filled: true,
-	extruded: false,
-	pointType: 'circle',
-	lineWidthScale: 2,
-	lineWidthMinPixels: 1,
-	getFillColor: d => d.properties.fill || [255,0,0],
-	getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
-	getPointRadius: d => d.properties.radius || 2,
-	getLineWidth: d => d.properties["stroke-width"] || 1,
-	getElevation: 0
-});
+let geoLayer;
 
 function layerFilter({layer, viewport}) {
 	const shouldDrawInMinimap =
@@ -111,6 +88,24 @@ function App() {
 		fetch("/data/2021_07_27__22_36_opt_latest.json")
 			.then(r => r.json())
 			.then(r => {
+				geoLayer = new GeoJsonLayer({
+					id: 'geojson-terrain',
+					coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+					data: `images/maps/${r.worldName.toLowerCase()}/geo.json`,
+					pickable: true,
+					stroked: true,
+					filled: true,
+					extruded: false,
+					pointType: 'circle',
+					lineWidthScale: 2,
+					lineWidthMinPixels: 1,
+					getFillColor: d => d.properties.fill || [255,0,0],
+					getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
+					getPointRadius: d => d.properties.radius || 2,
+					getLineWidth: d => d.properties["stroke-width"] || 1,
+					getElevation: 0
+				});
+
 				const entities = r.entities.map((entity) => {
 					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
 					if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
