@@ -9,13 +9,16 @@ import BottomPanel from "./Panel/BottomPanel";
 import {ScenegraphLayer} from "@deck.gl/mesh-layers";
 import {TerrainLayer} from "@deck.gl/geo-layers";
 
-const mainView = new MapView({id: 'main', controller: true});
+const mainView = new MapView({
+	id: 'main',
+	controller: true
+});
 const minimapView = new MapView({
 	id: 'minimap',
 	x: 360,
 	y: 50,
-	width: '20%',
-	height: '20%',
+	width: 256,
+	height: 256,
 	clear: true
 });
 
@@ -24,13 +27,13 @@ const INITIAL_VIEW_STATE = {
 	main: {
 		longitude: 0,
 		latitude: 0,
-		zoom: 8,
-		minZoom: 8
+		zoom: 12,
+		minZoom: 12
 	},
 	minimap: {
 		longitude: 0,
 		latitude: 0,
-		zoom: 5
+		zoom: 10
 	}
 };
 
@@ -63,10 +66,17 @@ const terrainLayer = new TerrainLayer({
 let geoLayer;
 
 function layerFilter({layer, viewport}) {
-	const shouldDrawInMinimap =
-		layer.id.startsWith('coverage') || layer.id.startsWith('viewport-bounds');
-	if (viewport.id === 'minimap') return shouldDrawInMinimap;
+	const shouldDrawInMinimap = layer.id.startsWith('viewport-bounds');
+	if (viewport.id === 'minimap') return shouldDrawInMinimap || layer.id.startsWith('geojson-terrain');
 	return !shouldDrawInMinimap;
+}
+
+const r_earth = 6378000
+function addLatLng([lat, lng], [x, y]) {
+	let d = 180 / Math.PI
+	let nlat = lat + (x / r_earth) * d
+	let nlng = lng + (y / r_earth) * d / Math.cos(nlat * Math.PI / 180)
+	return [nlat, nlng]
 }
 
 function App() {
@@ -106,6 +116,11 @@ function App() {
 					getElevation: 0
 				});
 
+
+				const newState = addLatLng([INITIAL_VIEW_STATE.minimap.latitude, INITIAL_VIEW_STATE.minimap.longitude], [18001 / 2, 18001 / 2]);
+				INITIAL_VIEW_STATE.minimap.latitude = newState[0]
+				INITIAL_VIEW_STATE.minimap.longitude = newState[1]
+
 				const entities = r.entities.map((entity) => {
 					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
 					if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
@@ -138,6 +153,21 @@ function App() {
 				setDataTanks(entities.filter(d => d.class === "tank"));
 				setDataHelis(entities.filter(d => d.class === "heli"));
 				setDataPlanes(entities.filter(d => d.class === "plane"));
+
+				return r;
+			})
+			.then((r) => {
+				return fetch(`images/maps/${r.worldName.toLowerCase()}/trees.json`)
+					.then(r => r.json())
+					.then(r => {
+						const objects = [];
+						for (const feature of r.features) {
+							objects.push({
+								position: feature.geometry.coordinates,
+							});
+						}
+						setTrees(objects);
+					});
 			})
 			.then(() => {
 				let i = 0;
@@ -147,17 +177,7 @@ function App() {
 			});
 
 
-		fetch("images/maps/vt7/trees.json")
-			.then(r => r.json())
-			.then(r => {
-				const objects = [];
-				for (const feature of r.features) {
-					objects.push({
-						position: feature.geometry.coordinates,
-					});
-				}
-				setTrees(objects);
-			});
+
 	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
@@ -165,8 +185,8 @@ function App() {
 			main: newViewState,
 			minimap: {
 				...INITIAL_VIEW_STATE.minimap,
-				longitude: newViewState.longitude,
-				latitude: newViewState.latitude
+				// longitude: newViewState.longitude,
+				// latitude: newViewState.latitude
 			}
 		}));
 	}, []);
@@ -188,14 +208,6 @@ function App() {
 	);
 
 	const layers = [
-		new PathLayer({
-			id: 'viewport-bounds',
-			data: viewportBounds,
-			getPath: d => d,
-			getColor: [255, 0, 0],
-			getWidth: 2,
-			widthUnits: 'pixels'
-		}),
 		// terrainLayer,
 		geoLayer,
 		// new BitmapLayer({
@@ -553,6 +565,14 @@ function App() {
 			parameters: {
 				depthTest: true
 			},
+		}),
+		new PathLayer({
+			id: 'viewport-bounds',
+			data: viewportBounds,
+			getPath: d => d,
+			getColor: [255, 0, 0],
+			getWidth: 2,
+			widthUnits: 'pixels'
 		}),
 	];
 
