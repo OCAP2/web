@@ -2,11 +2,11 @@ import './App.css';
 import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
-import {IconLayer, PathLayer} from "@deck.gl/layers";
+import {BitmapLayer, GeoJsonLayer, IconLayer, PathLayer, TextLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
 import BottomPanel from "./Panel/BottomPanel";
-import {SimpleMeshLayer} from "@deck.gl/mesh-layers";
+import {ScenegraphLayer, SimpleMeshLayer} from "@deck.gl/mesh-layers";
 import {OBJLoader} from "@loaders.gl/obj";
 
 const mainView = new MapView({id: 'main', controller: true});
@@ -22,15 +22,15 @@ const minimapView = new MapView({
 // Viewport settings
 const INITIAL_VIEW_STATE = {
 	main: {
-		longitude: -100,
-		latitude: 40,
-		zoom: 3,
-		minZoom: 3
+		longitude: 0,
+		latitude: 0,
+		zoom: 8,
+		minZoom: 8
 	},
 	minimap: {
-		longitude: -100,
-		latitude: 40,
-		zoom: 1
+		longitude: 0,
+		latitude: 0,
+		zoom: 5
 	}
 };
 
@@ -56,21 +56,42 @@ function layerFilter({layer, viewport}) {
 
 function App() {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
-	const [data, setData] = useState([]);
 	const [frameNo, setFrameNo] = useState(0);
+
+	const [data, setData] = useState([]);
+	const [trees, setTrees] = useState([]);
+	const [dataUnits, setDataUnits] = useState([]);
+	const [dataCars, setDataCars] = useState([]);
+	const [dataBoats, setDataBoats] = useState([]);
+	const [dataTrucks, setDataTrucks] = useState([]);
+	const [dataAPCs, setDataAPCs] = useState([]);
+	const [dataTanks, setDataTanks] = useState([]);
+	const [dataHelis, setDataHelis] = useState([]);
+	const [dataPlanes, setDataPlanes] = useState([]);
 
 	useEffect(() => {
 		fetch("/data/2021_07_27__22_36_opt_latest.json")
 			.then(r => r.json())
-			.then((d) => {
-				setData(d.entities.filter((entity) => entity.positions.length > 0));
-				// const dataUnits = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length);
-				// const dataCar = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car");
-				// const dataTruck = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck");
-				// const dataAPC = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc");
-				// const dataTank = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "tank");
-				// const dataHeli = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli");
-				// const dataPlane = data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane");
+			.then(r => {
+				const entities = r.entities.map((entity) => {
+					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
+					for (let i = 0; i < entity.positions.length; i++) {
+						const positionIndex = i + entity.startFrameNum;
+						positions[positionIndex] = entity.positions[i];
+					}
+					entity.positions = positions;
+
+					return entity;
+				});
+				setData(entities);
+				setDataUnits(entities.filter(d => d.type === "unit"));
+				setDataCars(entities.filter(d => d.class === "car"));
+				setDataTrucks(entities.filter(d => d.class === "truck"));
+				setDataBoats(entities.filter(d => d.class === "boat"));
+				setDataAPCs(entities.filter(d => d.class === "apc"));
+				setDataTanks(entities.filter(d => d.class === "tank"));
+				setDataHelis(entities.filter(d => d.class === "heli"));
+				setDataPlanes(entities.filter(d => d.class === "plane"));
 			})
 			.then(() => {
 				let i = 0;
@@ -78,6 +99,20 @@ function App() {
 					setFrameNo(++i);
 				}, 100);
 			});
+	}, []);
+
+	useEffect(() => {
+		fetch("images/vt7_tree.json")
+			.then(r => r.json())
+			.then(r => {
+				const objects = [];
+				for (const feature of r.features) {
+					objects.push({
+						position: feature.geometry.coordinates,
+					});
+				}
+				setTrees(objects);
+			})
 	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
@@ -116,176 +151,331 @@ function App() {
 			getWidth: 2,
 			widthUnits: 'pixels'
 		}),
-		new IconLayer({
+		// new BitmapLayer({
+		// 	id: 'bitmap-layer',
+		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+		// 	bounds: [
+		// 		0,
+		// 		0,
+		// 		18001,
+		// 		18001
+		// 	],
+		// 	image: '/images/vt7.png'
+		// }),
+		new GeoJsonLayer({
+			id: 'geojson-terrain',
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'entity-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length),
+			data: `images/vt7.json`,
 			pickable: true,
-			// iconAtlas and iconMapping are required
-			// getIcon: return a string
-			iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
-			iconMapping: ICON_MAPPING,
-			getIcon: d => 'marker',
-
-			sizeScale: 15,
-			visible: true,
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				pos.push(0);
-				return pos;
-			},
-			getAngle: d => 360-d.positions[frameNo - d.startFrameNum][1]+180,
-			getSize: d => 5,
-			getColor: d => [100, 140, 0],
-			updateTrigger: {
-				visible: frameNo,
-				getPosition: frameNo,
-			}
-		}),
-		new SimpleMeshLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0,0,0],
-			id: 'units-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.type === "unit"),
-			mesh: 'objects/man.obj',
-			sizeScale: 10,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				pos.push(0);
-				return pos;
-			},
-			getColor: d => {
-				switch (d.side) {
-					case "WEST":
-						return [100, 100, 140];
-					case "EAST":
-						return [140, 100, 100];
-					case "GUER":
-						return [100, 140, 0];
-				}
-			},
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
-			updateTrigger: {
-				visible: frameNo,
-				getPosition: frameNo,
-			}
+			stroked: true,
+			filled: true,
+			extruded: false,
+			pointType: 'circle',
+			lineWidthScale: 2,
+			lineWidthMinPixels: 1,
+			getFillColor: d => d.properties.fill || [255,0,0],
+			getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
+			getPointRadius: d => d.properties.radius || 2,
+			getLineWidth: d => d.properties["stroke-width"] || 1,
+			getElevation: 0
 		}),
 		new SimpleMeshLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			coordinateOrigin: [0, 0, 0],
-			id: 'cars-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "car"),
-			mesh: 'objects/car.obj',
-			sizeScale: 100,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos;
-			},
-			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
-			updateTrigger: {
-				visible: frameNo,
-				getPosition: frameNo,
-			}
-		}),
-		new SimpleMeshLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
-			id: 'truck-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck"),
-			mesh: 'objects/truck.obj',
+			id: 'tree-layer',
+			data: trees,
+			mesh: 'objects/tree.obj',
 			sizeScale: 3,
 			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos;
-			},
+			getPosition: d => d.position,
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]+90, 0],
-			updateTrigger: {
-				visible: frameNo,
-				getPosition: frameNo,
+			getOrientation: d => [0, 0, 90],
+			parameters: {
+				depthTest: true
 			}
 		}),
-		new SimpleMeshLayer({
+		// new IconLayer({
+		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+		// 	id: 'entity-layer',
+		// 	data: data,
+		// 	pickable: true,
+		// 	// iconAtlas and iconMapping are required
+		// 	// getIcon: return a string
+		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+		// 	iconMapping: ICON_MAPPING,
+		// 	getIcon: d => 'marker',
+		// 	sizeScale: 15,
+		// 	visible: true,
+		// 	getPosition: d => d.positions[frameNo][0],
+		// 	getAngle: d => 360-d.positions[frameNo][1]+180,
+		// 	getSize: d => 5,
+		// 	getColor: d => [100, 140, 0],
+		// 	updateTriggers: {
+		// 		getPosition: frameNo,
+		// 		getAngle: frameNo,
+		// 	}
+		// }),
+		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
+			id: 'units-layer',
+			data: dataUnits,
+			scenegraph: 'objects/man.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => {
+				switch (d.positions[frameNo][2]) {
+					case 0:
+						return [0, 0, 0, 255];
+					case 2:
+						return [255, 168, 26, 255];
+				}
+
+				let color = [];
+				switch (d.side) {
+					case "WEST":
+						color = [100, 100, 140];
+						break;
+					case "EAST":
+						color = [140, 100, 100];
+						break;
+					case "GUER":
+						color = [100, 140, 0];
+						break;
+				}
+
+				if (d.positions[frameNo][3] === 1) { // in vehicle
+					color.push(0);
+				} else {
+					color.push(255);
+				}
+
+				return color;
+			},
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getPosition: frameNo,
+				getColor: frameNo,
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			}
+		}),
+		new TextLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'text-layer',
+			data: dataUnits,
+			pickable: true,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => {
+				let color = [0,0,0];
+				switch (d.side) {
+					case "WEST":
+						color = [100, 100, 140];
+						break;
+					case "EAST":
+						color = [140, 100, 100];
+						break;
+					case "GUER":
+						color = [100, 140, 0];
+						break;
+				}
+
+				if (d.positions[frameNo][3] === 1) { // in vehicle
+					color.push(0);
+				} else {
+					color.push(255);
+				}
+
+				return color;
+			},
+			getSize: 32,
+			getAngle: 0,
+			getText: d => d.name,
+			getTextAnchor: 'middle',
+			updateTriggers: {
+				getPosition: frameNo,
+				getColor: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+			},
+			sizeScale: 1,
+			parameters: {
+				depthTest: true
+			},
+		}),
+		new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'cars-layer',
+			data: dataCars,
+			scenegraph: 'objects/car.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getPosition: frameNo,
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
+		}),
+		new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'truck-layer',
+			data: dataTrucks,
+			scenegraph: 'objects/truck.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => [100, 140, 0],
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getPosition: frameNo,
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
+		}),
+		// new SimpleMeshLayer({
+		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+		// 	coordinateOrigin: [0, 0, 0],
+		// 	id: 'boat-layer',
+		// 	data: dataBoats,
+		// 	mesh: 'objects/car.obj',
+		// 	sizeScale: 3,
+		// 	loaders: [OBJLoader],
+		// 	getPosition: d => d.positions[frameNo][0],
+		// 	getColor: d => [100, 140, 0],
+		// 	getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+		// 	updateTriggers: {
+		// 		getPosition: frameNo,
+		// 		getOrientation: frameNo,
+		// 	},
+		// 	transitions: {
+		// 		getPosition: 100,
+		// 		getOrientation: 100
+		// 	},
+		// }),
+		new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'apc-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "apc"),
-			mesh: 'objects/apc.obj',
-			sizeScale: 70,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				pos.push(0);
-				return pos;
-			},
+			data: dataAPCs,
+			scenegraph: 'objects/apc.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1], 90],
-			updateTrigger: {
-				visible: frameNo,
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
 				getPosition: frameNo,
-			}
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
 		}),
-		new SimpleMeshLayer({
+		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
 			id: 'tank-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "truck"),
-			mesh: 'objects/tank.obj',
-			sizeScale: 20,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos;
-			},
+			data: dataTanks,
+			scenegraph: 'objects/tank.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-180, 90],
-			updateTrigger: {
-				visible: frameNo,
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
 				getPosition: frameNo,
-			}
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
 		}),
-		new SimpleMeshLayer({
+		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
 			id: 'heli-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "heli"),
-			mesh: 'objects/heli.obj',
-			sizeScale: 10,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos;
-			},
+			data: dataHelis,
+			scenegraph: 'objects/heli.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
-			updateTrigger: {
-				visible: frameNo,
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
 				getPosition: frameNo,
-			}
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
 		}),
-		new SimpleMeshLayer({
+		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			coordinateOrigin: [0, 0, 0],
 			id: 'plane-layer',
-			data: data.filter((d) => frameNo >= d.startFrameNum && frameNo - d.startFrameNum < d.positions.length && d.class === "plane"),
-			mesh: 'objects/plane.obj',
-			sizeScale: 2,
-			loaders: [OBJLoader],
-			getPosition: d => {
-				const pos = d.positions[frameNo - d.startFrameNum][0];
-				return pos;
-			},
+			data: dataPlanes,
+			scenegraph: 'objects/plane.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
 			getColor: d => [100, 140, 0],
-			getOrientation: d => [0, 360-d.positions[frameNo - d.startFrameNum][1]-90, 0],
-			updateTrigger: {
-				visible: frameNo,
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
 				getPosition: frameNo,
-			}
-		})
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
+		}),
 	];
 
 	return (

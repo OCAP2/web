@@ -9,4 +9,11 @@ module.exports = function(app) {
 			changeOrigin: true,
 		})
 	);
+	app.use(
+		['/images'],
+		createProxyMiddleware({
+			target: 'http://localhost:5000',
+			changeOrigin: true,
+		})
+	);
 };
