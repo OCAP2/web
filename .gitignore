@@ -11,3 +11,6 @@ static/images/maps
 
 # logs
 ocap.log
+
+# react
+*.swp
