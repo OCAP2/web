@@ -137,7 +137,7 @@ function App() {
 	}, [frameNo, endFrameNo])
 
 	useEffect(() => {
-		fetch("/data/2021_08_01__15_36_opt_latest.json")
+		fetch("/data/2021_08_01__19_21_opt_latest.json")
 			.then(r => r.json())
 			.then(r => {
 				setEndFrameNo(r.endFrame);
