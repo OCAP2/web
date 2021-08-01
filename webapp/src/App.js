@@ -120,6 +120,7 @@ function App() {
 	const [dataPlanes, setDataPlanes] = useState([]);
 	const [dataParachute, setDataParachute] = useState([]);
 	const [dataFirelines, setDataFirelines] = useState([]);
+	const [dataProjectiles, setDataProjectiles] = useState([]);
 
 	useEffect(() => {
 		if (endFrameNo === 0) return;
@@ -139,6 +140,8 @@ function App() {
 		fetch("/data/2021_08_01__15_36_opt_latest.json")
 			.then(r => r.json())
 			.then(r => {
+				setEndFrameNo(r.endFrame);
+
 				geoLayer = new GeoJsonLayer({
 					id: 'geojson-terrain',
 					coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
@@ -232,7 +235,15 @@ function App() {
 
 				setDataFirelines(fireLines);
 
-				setEndFrameNo(r.endFrame);
+				// projectiles
+				const projectiles = [];
+				for (const marker of r.Markers.filter((marker) => marker[0] === "mil_triangle")) {
+					projectiles.push({
+						frames: marker[7].map((v) => v[0]),
+						positions: marker[7].map((v) => v[1])
+					});
+				}
+				setDataProjectiles(projectiles);
 
 				return r;
 			})
@@ -687,7 +698,7 @@ function App() {
 		// }),
 		new TripsLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'trips-layer',
+			id: 'fireline-layer',
 			data: dataFirelines,
 			getPath: d => [
 				d.from,
@@ -701,9 +712,21 @@ function App() {
 			fadeTrail: true,
 			trailLength: 2,
 			currentTime: frameNo,
-			updateTriggers: {
-				getColor: frameNo,
-			},
+		}),
+		new TripsLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'projectile-layer',
+			data: dataProjectiles,
+			getPath: d => d.positions,
+			// deduct start timestamp from each data point to avoid overflow
+			getTimestamps: d => d.frames,
+			getColor: d => [255, 128, 0, 255],
+			opacity: 0.8,
+			widthMinPixels: 5,
+			fadeTrail: true,
+			billboard: true,
+			trailLength: 15,
+			currentTime: frameNo,
 		}),
 		new PathLayer({
 			id: 'viewport-bounds',
