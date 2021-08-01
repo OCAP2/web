@@ -153,7 +153,7 @@ function App() {
 
 				const fireLines = [];
 				const entities = r.entities.map((entity) => {
-					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
+					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],[0,0,0]]);
 					if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
 						for (const position of entity.positions) {
 							const startFrame = position[4][0];
@@ -167,6 +167,13 @@ function App() {
 								}
 							}
 
+							if (Array.isArray(position[1])) {
+								position[1][0] = -position[1][0];
+								position[1][1] = -position[1][1]+90;
+							} else {
+								position[1] = [0, -position[1]+90, 0];
+							}
+
 							for (let i = startFrame; i <= endFrame; i++) {
 								positions[i] = position;
 							}
@@ -175,6 +182,13 @@ function App() {
 						for (let i = 0; i < entity.positions.length; i++) {
 							const positionIndex = i + entity.startFrameNum;
 							positions[positionIndex] = entity.positions[i];
+
+							if (Array.isArray(entity.positions[i][1])) {
+								entity.positions[i][1][0] = -entity.positions[i][1][0];
+								entity.positions[i][1][1] = -entity.positions[i][1][1]+90;
+							} else {
+								entity.positions[i][1] = [0, -entity.positions[i][1]+90, 0];
+							}
 						}
 					}
 					entity.positions = positions;
@@ -326,7 +340,11 @@ function App() {
 
 				return color;
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -393,7 +411,11 @@ function App() {
 
 				return color;
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -423,7 +445,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -453,7 +479,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -483,7 +513,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -513,7 +547,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -543,7 +581,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -573,7 +615,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
@@ -603,7 +649,11 @@ function App() {
 				}
 				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
-			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			getOrientation: d => d.positions[frameNo][1],
+			getScale: d => {
+				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				return [0,0,0];
+			},
 			sizeMinPixels: 10,
 			sizeMaxPixels: 30,
 			_lighting: 'pbr',
