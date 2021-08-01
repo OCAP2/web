@@ -79,6 +79,12 @@ function addLatLng([lat, lng], [x, y]) {
 	return [nlat, nlng]
 }
 
+function distance2D([x1,y1], [x2,y2]) {
+	const a = x1 - x2;
+	const b = y1 - y2;
+	return Math.sqrt(a*a + b*b);
+}
+
 function App() {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
@@ -596,7 +602,7 @@ function App() {
 				d.to,
 			],
 			// deduct start timestamp from each data point to avoid overflow
-			getTimestamps: d => [d.frameNo,d.frameNo+3],
+			getTimestamps: d => [d.frameNo,d.frameNo+Math.ceil(distance2D(d.from, d.to)/300)],
 			getColor: d => [255, 0, 0, 255],
 			opacity: 0.8,
 			widthMinPixels: 2,
