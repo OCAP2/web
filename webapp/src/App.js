@@ -339,18 +339,13 @@ function App() {
 				}
 
 				let color = getSideColor(d.side);
-
-				if (d.positions[frameNo][3] === 1) { // in vehicle
-					color.push(0);
-				} else {
-					color.push(255);
-				}
+				color.push(255);
 
 				return color;
 			},
 			getOrientation: d => d.positions[frameNo][1],
 			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
+				if (d.positions[frameNo][0][0] !== 0 && d.positions[frameNo][3] === 0) return [1,1,1];
 				return [0,0,0];
 			},
 			sizeMinPixels: 10,
