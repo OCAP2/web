@@ -85,6 +85,24 @@ function distance2D([x1,y1], [x2,y2]) {
 	return Math.sqrt(a*a + b*b);
 }
 
+function getSideColor(side) {
+	let color = [255,255,255];
+
+	switch (side) {
+		case "WEST":
+			color = [100, 100, 140];
+			break;
+		case "EAST":
+			color = [140, 100, 100];
+			break;
+		case "GUER":
+			color = [100, 140, 0];
+			break;
+	}
+
+	return color;
+}
+
 function App() {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
@@ -99,6 +117,7 @@ function App() {
 	const [dataTanks, setDataTanks] = useState([]);
 	const [dataHelis, setDataHelis] = useState([]);
 	const [dataPlanes, setDataPlanes] = useState([]);
+	const [dataParachute, setDataParachute] = useState([]);
 	const [dataFirelines, setDataFirelines] = useState([]);
 
 	useEffect(() => {
@@ -140,6 +159,14 @@ function App() {
 							const startFrame = position[4][0];
 							const endFrame = position[4][1];
 
+							const crew = position[3];
+							if (crew.length > 0) {
+								const firstCrew = r.entities.find((e) => e.id === crew[0]);
+								if (firstCrew) {
+									position.push(firstCrew.side);
+								}
+							}
+
 							for (let i = startFrame; i <= endFrame; i++) {
 								positions[i] = position;
 							}
@@ -167,11 +194,12 @@ function App() {
 				setDataUnits(entities.filter(d => d.type === "unit"));
 				setDataCars(entities.filter(d => d.class === "car"));
 				setDataTrucks(entities.filter(d => d.class === "truck"));
-				setDataBoats(entities.filter(d => d.class === "boat"));
+				setDataBoats(entities.filter(d => d.class === "sea"));
 				setDataAPCs(entities.filter(d => d.class === "apc"));
 				setDataTanks(entities.filter(d => d.class === "tank"));
 				setDataHelis(entities.filter(d => d.class === "heli"));
 				setDataPlanes(entities.filter(d => d.class === "plane"));
+				setDataParachute(entities.filter(d => d.class === "parachute"));
 
 				setDataFirelines(fireLines);
 
@@ -288,18 +316,7 @@ function App() {
 						return [255, 168, 26, 255];
 				}
 
-				let color = [];
-				switch (d.side) {
-					case "WEST":
-						color = [100, 100, 140];
-						break;
-					case "EAST":
-						color = [140, 100, 100];
-						break;
-					case "GUER":
-						color = [100, 140, 0];
-						break;
-				}
+				let color = getSideColor(d.side);
 
 				if (d.positions[frameNo][3] === 1) { // in vehicle
 					color.push(0);
@@ -332,18 +349,7 @@ function App() {
 			data: dataUnits,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				let color = [0,0,0];
-				switch (d.side) {
-					case "WEST":
-						color = [100, 100, 140];
-						break;
-					case "EAST":
-						color = [140, 100, 100];
-						break;
-					case "GUER":
-						color = [100, 140, 0];
-						break;
-				}
+				let color = getSideColor(d.side);
 
 				if (d.positions[frameNo][3] === 1) { // in vehicle
 					color.push(0);
@@ -371,18 +377,51 @@ function App() {
 		}),
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'parachute-layer',
+			data: dataParachute,
+			scenegraph: 'objects/parachute.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => {
+				let color = getSideColor(d.positions[frameNo][5]);
+
+				if (d.positions[frameNo][3] === 1) { // in vehicle
+					color.push(0);
+				} else {
+					color.push(255);
+				}
+
+				return color;
+			},
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getPosition: frameNo,
+				getColor: frameNo,
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			}
+		}),
+		new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'cars-layer',
 			data: dataCars,
 			scenegraph: 'objects/car.gltf',
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -409,12 +448,10 @@ function App() {
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -433,26 +470,36 @@ function App() {
 				depthTest: true
 			},
 		}),
-		// new SimpleMeshLayer({
-		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-		// 	coordinateOrigin: [0, 0, 0],
-		// 	id: 'boat-layer',
-		// 	data: dataBoats,
-		// 	mesh: 'objects/car.obj',
-		// 	sizeScale: 3,
-		// 	loaders: [OBJLoader],
-		// 	getPosition: d => d.positions[frameNo][0],
-		// 	getColor: d => [100, 140, 0],
-		// 	getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
-		// 	updateTriggers: {
-		// 		getPosition: frameNo,
-		// 		getOrientation: frameNo,
-		// 	},
-		// 	transitions: {
-		// 		getPosition: 100,
-		// 		getOrientation: 100
-		// 	},
-		// }),
+		new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'boat-layer',
+			data: dataBoats,
+			scenegraph: 'objects/boat.gltf',
+			sizeScale: 15,
+			getPosition: d => d.positions[frameNo][0],
+			getColor: d => {
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
+				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
+			},
+			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getPosition: frameNo,
+				getColor: frameNo,
+				getOrientation: frameNo,
+			},
+			transitions: {
+				getPosition: 100,
+				getOrientation: 100
+			},
+			parameters: {
+				depthTest: true
+			},
+		}),
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'apc-layer',
@@ -461,12 +508,10 @@ function App() {
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -493,12 +538,10 @@ function App() {
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -525,12 +568,10 @@ function App() {
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -557,12 +598,10 @@ function App() {
 			sizeScale: 15,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
-				switch (d.positions[frameNo][2]) {
-					case 0:
-						return [0, 0, 0, 50];
-					default:
-						return [100, 140, 0, 255];
+				if (d.positions[frameNo][2] === 0) {
+					return [0, 0, 0, 50];
 				}
+				return [...getSideColor(d.positions[frameNo][5]), 255];
 			},
 			getOrientation: d => [0, 360-d.positions[frameNo][1]+90, 0],
 			sizeMinPixels: 10,
@@ -606,7 +645,6 @@ function App() {
 			getColor: d => [255, 0, 0, 255],
 			opacity: 0.8,
 			widthMinPixels: 2,
-			rounded: true,
 			fadeTrail: true,
 			trailLength: 2,
 			currentTime: frameNo,
