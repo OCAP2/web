@@ -250,12 +250,6 @@ function Replay({replay}) {
 		});
 
 		setData(entities);
-		setDataHexagon(positionWithActivity
-			.filter((pos) => pos.position[0] !== 0 && pos.position[1] !== 0)
-			.map((pos) => ({
-				position: addLatLng([0,0], [Math.round(pos.position[0]), Math.round(pos.position[1])])
-			}))
-		);
 		setDataUnits(entities.filter(d => d.type === "unit"));
 		setDataCars(entities.filter(d => d.class === "car"));
 		setDataTrucks(entities.filter(d => d.class === "truck"));
@@ -275,8 +269,20 @@ function Replay({replay}) {
 				frames: marker[7].map((v) => v[0]),
 				positions: marker[7].map((v) => v[1])
 			});
+			for (const position of marker[7]) {
+				positionWithActivity.push({
+					position: position[1],
+				});
+			}
 		}
 		setDataProjectiles(projectiles);
+
+		setDataHexagon(positionWithActivity
+			.filter((pos) => pos.position[0] !== 0 && pos.position[1] !== 0)
+			.map((pos) => ({
+				position: addLatLng([0,0], [Math.round(pos.position[0]), Math.round(pos.position[1])])
+			}))
+		);
 
 		fetch(`images/maps/${replay.worldName.toLowerCase()}/trees.json`)
 			.then(r => {
@@ -342,7 +348,6 @@ function Replay({replay}) {
 			radius: 10,
 			elevationScale: 4,
 			coverage: 1,
-			upperPercentile: 100,
 			opacity: 0.5,
 			getPosition: d => d.position
 		}),
