@@ -189,11 +189,7 @@ function App() {
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
 		setViewState(() => ({
 			main: newViewState,
-			minimap: {
-				...INITIAL_VIEW_STATE.minimap,
-				// longitude: newViewState.longitude,
-				// latitude: newViewState.latitude
-			}
+			minimap: INITIAL_VIEW_STATE.minimap,
 		}));
 	}, []);
 
