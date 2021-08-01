@@ -2,12 +2,12 @@ import './App.css';
 import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
-import {BitmapLayer, GeoJsonLayer, IconLayer, PathLayer, TextLayer} from "@deck.gl/layers";
+import {BitmapLayer, GeoJsonLayer, IconLayer, LineLayer, PathLayer, TextLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
 import BottomPanel from "./Panel/BottomPanel";
 import {ScenegraphLayer} from "@deck.gl/mesh-layers";
-import {TerrainLayer} from "@deck.gl/geo-layers";
+import {TerrainLayer, TripsLayer} from "@deck.gl/geo-layers";
 
 const mainView = new MapView({
 	id: 'main',
@@ -93,6 +93,7 @@ function App() {
 	const [dataTanks, setDataTanks] = useState([]);
 	const [dataHelis, setDataHelis] = useState([]);
 	const [dataPlanes, setDataPlanes] = useState([]);
+	const [dataFirelines, setDataFirelines] = useState([]);
 
 	useEffect(() => {
 		fetch("/data/2021_07_27__22_36_opt_latest.json")
@@ -115,7 +116,6 @@ function App() {
 					getElevation: 0
 				});
 
-
 				const [centerLat, centerLng] = addLatLng([INITIAL_VIEW_STATE.minimap.latitude, INITIAL_VIEW_STATE.minimap.longitude], [18001 / 2, 18001 / 2]);
 				INITIAL_VIEW_STATE.main.latitude = centerLat;
 				INITIAL_VIEW_STATE.main.longitude = centerLng;
@@ -126,6 +126,7 @@ function App() {
 					minimap: INITIAL_VIEW_STATE.minimap,
 				}));
 
+				const fireLines = [];
 				const entities = r.entities.map((entity) => {
 					const positions = Array.from(Array(r.endFrame).keys()).map(() => [[0,0,0],0]);
 					if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
@@ -143,8 +144,15 @@ function App() {
 							positions[positionIndex] = entity.positions[i];
 						}
 					}
-
 					entity.positions = positions;
+
+					for (const firedFrame of entity.framesFired) {
+						fireLines.push({
+							from: entity.positions[firedFrame[0]][0],
+							to: firedFrame[1],
+							frameNo: firedFrame[0],
+						});
+					}
 
 					return entity;
 				});
@@ -158,6 +166,8 @@ function App() {
 				setDataTanks(entities.filter(d => d.class === "tank"));
 				setDataHelis(entities.filter(d => d.class === "heli"));
 				setDataPlanes(entities.filter(d => d.class === "plane"));
+
+				setDataFirelines(fireLines);
 
 				return r;
 			})
@@ -563,6 +573,39 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+		}),
+		// new LineLayer({
+		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+		// 	id: 'fireline-layer',
+		// 	data: dataFirelines,
+		// 	getWidth: 3,
+		// 	getSourcePosition: d => d.from,
+		// 	getTargetPosition: d => d.to,
+		// 	getColor: d => [255, 0, 0, d.frameNo >= frameNo && d.frameNo <= frameNo + 3 ? 255 : 0],
+		// 	updateTriggers: {
+		// 		getColor: frameNo,
+		// 	},
+		// }),
+		new TripsLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: 'trips-layer',
+			data: dataFirelines,
+			getPath: d => [
+				d.from,
+				d.to,
+			],
+			// deduct start timestamp from each data point to avoid overflow
+			getTimestamps: d => [d.frameNo,d.frameNo+3],
+			getColor: d => [255, 0, 0, 255],
+			opacity: 0.8,
+			widthMinPixels: 2,
+			rounded: true,
+			fadeTrail: true,
+			trailLength: 2,
+			currentTime: frameNo,
+			updateTriggers: {
+				getColor: frameNo,
 			},
 		}),
 		new PathLayer({
