@@ -7,6 +7,7 @@ import LeftPanel from "../Panel/LeftPanel";
 import BottomPanel from "../Panel/BottomPanel";
 import {ScenegraphLayer} from "@deck.gl/mesh-layers";
 import {TerrainLayer, TripsLayer} from "@deck.gl/geo-layers";
+import {HexagonLayer} from "@deck.gl/aggregation-layers";
 
 const mainView = new MapView({
 	id: 'main',
@@ -70,7 +71,7 @@ function layerFilter({layer, viewport}) {
 	return !shouldDrawInMinimap;
 }
 
-const r_earth = 6378000
+const r_earth = 6378000;
 function addLatLng([lat, lng], [x, y]) {
 	let d = 180 / Math.PI
 	let nlat = lat + (x / r_earth) * d
@@ -102,11 +103,21 @@ function getSideColor(side) {
 	return color;
 }
 
+export const colorRange = [
+	[1, 152, 189],
+	[73, 227, 206],
+	[216, 254, 181],
+	[254, 237, 177],
+	[254, 173, 84],
+	[209, 55, 78]
+];
+
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
 
 	const [data, setData] = useState([]);
+	const [dataHexagon, setDataHexagon] = useState([]);
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
 	const [dataCars, setDataCars] = useState([]);
@@ -150,7 +161,10 @@ function Replay({replay}) {
 			getLineColor: d => d.properties.stroke || [0, 0, 0, 0],
 			getPointRadius: d => d.properties.radius || 2,
 			getLineWidth: d => d.properties["stroke-width"] || 1,
-			getElevation: 0
+			getElevation: 0,
+			parameters: {
+				depthTest: false
+			}
 		});
 
 		const [centerLat, centerLng] = addLatLng([INITIAL_VIEW_STATE.minimap.latitude, INITIAL_VIEW_STATE.minimap.longitude], [18001 / 2, 18001 / 2]);
@@ -167,6 +181,7 @@ function Replay({replay}) {
 			},
 		}));
 
+		const positionWithActivity = [];
 		const fireLines = [];
 		const entities = replay.entities.map((entity) => {
 			const positions = Array.from(Array(replay.endFrame).keys()).map(() => [[0,0,0],[0,0,0]]);
@@ -192,6 +207,11 @@ function Replay({replay}) {
 
 					for (let i = startFrame; i <= endFrame; i++) {
 						positions[i] = position;
+						if (position[2] !== 0) {
+							positionWithActivity.push({
+								position: position[0],
+							});
+						}
 					}
 				}
 			} else {
@@ -205,6 +225,9 @@ function Replay({replay}) {
 					} else {
 						entity.positions[i][1] = [0, -entity.positions[i][1]+90, 0];
 					}
+					positionWithActivity.push({
+						position: entity.positions[i][0],
+					});
 				}
 			}
 			entity.positions = positions;
@@ -215,12 +238,24 @@ function Replay({replay}) {
 					to: firedFrame[1],
 					frameNo: firedFrame[0],
 				});
+				positionWithActivity.push({
+					position: entity.positions[firedFrame[0]][0],
+				});
+				positionWithActivity.push({
+					position: firedFrame[1],
+				});
 			}
 
 			return entity;
-		}, [viewState]);
+		});
 
 		setData(entities);
+		setDataHexagon(positionWithActivity
+			.filter((pos) => pos.position[0] !== 0 && pos.position[1] !== 0)
+			.map((pos) => ({
+				position: addLatLng([0,0], [Math.round(pos.position[0]), Math.round(pos.position[1])])
+			}))
+		);
 		setDataUnits(entities.filter(d => d.type === "unit"));
 		setDataCars(entities.filter(d => d.class === "car"));
 		setDataTrucks(entities.filter(d => d.class === "truck"));
@@ -299,6 +334,18 @@ function Replay({replay}) {
 		// 	],
 		// 	image: '/images/vt7.png'
 		// }),
+		new HexagonLayer({
+			id: 'hexagon-layer',
+			data: dataHexagon,
+			colorRange,
+			extruded: true,
+			radius: 10,
+			elevationScale: 4,
+			coverage: 1,
+			upperPercentile: 100,
+			opacity: 0.5,
+			getPosition: d => d.position
+		}),
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'tree-layer',
@@ -745,7 +792,6 @@ function Replay({replay}) {
 			layers={layers}
 			views={[mainView, minimapView]}
 			viewState={viewState}
-			parameters={{depthTest: false}}
 			onViewStateChange={onViewStateChange}
 			layerFilter={layerFilter}
 		>
