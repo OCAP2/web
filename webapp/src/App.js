@@ -602,7 +602,7 @@ function App() {
 				d.to,
 			],
 			// deduct start timestamp from each data point to avoid overflow
-			getTimestamps: d => [d.frameNo,d.frameNo+Math.ceil(distance2D(d.from, d.to)/300)],
+			getTimestamps: d => [d.frameNo,d.frameNo+Math.ceil(distance2D(d.from, d.to)/600)],
 			getColor: d => [255, 0, 0, 255],
 			opacity: 0.8,
 			widthMinPixels: 2,
