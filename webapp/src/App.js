@@ -102,7 +102,6 @@ function App() {
 					id: 'geojson-terrain',
 					coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 					data: `images/maps/${r.worldName.toLowerCase()}/geo.json`,
-					pickable: true,
 					stroked: true,
 					filled: true,
 					extruded: false,
@@ -242,7 +241,6 @@ function App() {
 		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 		// 	id: 'entity-layer',
 		// 	data: data,
-		// 	pickable: true,
 		// 	// iconAtlas and iconMapping are required
 		// 	// getIcon: return a string
 		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
@@ -316,7 +314,6 @@ function App() {
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'text-layer',
 			data: dataUnits,
-			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				let color = [0,0,0];
