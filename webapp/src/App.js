@@ -1,7 +1,7 @@
 import './App.css';
 import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useState} from "react";
-import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
+import {COORDINATE_SYSTEM, FirstPersonView, LinearInterpolator, MapView, WebMercatorViewport} from "@deck.gl/core";
 import {BitmapLayer, GeoJsonLayer, IconLayer, PathLayer, TextLayer} from "@deck.gl/layers";
 import TopPanel from "./Panel/TopPanel";
 import LeftPanel from "./Panel/LeftPanel";
@@ -21,6 +21,15 @@ const minimapView = new MapView({
 	height: 256,
 	clear: true
 });
+const followerView = new FirstPersonView({
+	id: 'follower',
+	x: 360,
+	y: 300,
+	width: 256,
+	height: 256,
+	far: 10000,
+	clear: true
+});
 
 // Viewport settings
 const INITIAL_VIEW_STATE = {
@@ -34,8 +43,20 @@ const INITIAL_VIEW_STATE = {
 		longitude: 0,
 		latitude: 0,
 		zoom: 10
+	},
+	follower: {
+		longitude: 0,
+		latitude: 0,
+		position: [0, 0, 45],
+		bearing: 0,
+		pitch: 0,
+		maxPitch: 89,
+		minPitch: -89,
+		transitionDuration: 100,
+		transitionInterpolator: new LinearInterpolator()
 	}
 };
+
 
 const minimapBackgroundStyle = {
 	position: 'absolute',
@@ -94,6 +115,30 @@ function App() {
 	const [dataHelis, setDataHelis] = useState([]);
 	const [dataPlanes, setDataPlanes] = useState([]);
 
+	const [followerObject, setFollowerObject] = useState(null);
+	const [followerViewState, setFollowerViewState] = useState(null);
+
+	useEffect(() => {
+		if (!followerObject) return;
+
+		const [lat, lng] = addLatLng([0,0], followerObject.positions[frameNo][0]);
+
+		const followerViewState = {
+			...INITIAL_VIEW_STATE.follower,
+			longitude: lat,
+			latitude: lng,
+			position: [0, 0, followerObject.positions[frameNo][0][2]+50],
+			bearing: followerObject.positions[frameNo][1],
+		};
+		setFollowerViewState(followerViewState);
+
+		setViewState(() => ({
+			main: viewState.main,
+			minimap: viewState.minimap,
+			follower: followerViewState
+		}));
+	}, [frameNo]);
+
 	useEffect(() => {
 		fetch("/data/2021_07_27__22_36_opt_latest.json")
 			.then(r => r.json())
@@ -125,6 +170,7 @@ function App() {
 				setViewState(() => ({
 					main: INITIAL_VIEW_STATE.main,
 					minimap: INITIAL_VIEW_STATE.minimap,
+					follower: INITIAL_VIEW_STATE.follower
 				}));
 
 				const entities = r.entities.map((entity) => {
@@ -181,17 +227,15 @@ function App() {
 					setFrameNo(++i);
 				}, 100);
 			});
-
-
-
 	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
 		setViewState(() => ({
 			main: newViewState,
 			minimap: INITIAL_VIEW_STATE.minimap,
+			follower: followerViewState || INITIAL_VIEW_STATE.follower,
 		}));
-	}, []);
+	}, [followerViewState]);
 
 	const viewportBounds = useMemo(
 		() => {
@@ -362,6 +406,7 @@ function App() {
 			data: dataCars,
 			scenegraph: 'objects/car.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -386,6 +431,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		new ScenegraphLayer({
@@ -394,6 +442,7 @@ function App() {
 			data: dataTrucks,
 			scenegraph: 'objects/truck.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -418,6 +467,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		// new SimpleMeshLayer({
@@ -446,6 +498,7 @@ function App() {
 			data: dataAPCs,
 			scenegraph: 'objects/apc.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -470,6 +523,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		new ScenegraphLayer({
@@ -478,6 +534,7 @@ function App() {
 			data: dataTanks,
 			scenegraph: 'objects/tank.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -502,6 +559,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		new ScenegraphLayer({
@@ -510,6 +570,7 @@ function App() {
 			data: dataHelis,
 			scenegraph: 'objects/heli.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -534,6 +595,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		new ScenegraphLayer({
@@ -542,6 +606,7 @@ function App() {
 			data: dataPlanes,
 			scenegraph: 'objects/plane.gltf',
 			sizeScale: 15,
+			pickable: true,
 			getPosition: d => d.positions[frameNo][0],
 			getColor: d => {
 				switch (d.positions[frameNo][2]) {
@@ -566,6 +631,9 @@ function App() {
 			},
 			parameters: {
 				depthTest: true
+			},
+			onClick: d => {
+				setFollowerObject(d.object);
 			},
 		}),
 		new PathLayer({
@@ -581,7 +649,7 @@ function App() {
 	return (
 		<DeckGL
 			layers={layers}
-			views={[mainView, minimapView]}
+			views={[mainView, minimapView, followerView]}
 			viewState={viewState}
 			parameters={{depthTest: false}}
 			onViewStateChange={onViewStateChange}
