@@ -121,7 +121,17 @@ function App() {
 	const [dataFirelines, setDataFirelines] = useState([]);
 
 	useEffect(() => {
-		fetch("/data/2021_07_27__22_36_opt_latest.json")
+		if (data.length === 0) return;
+		const timer = setTimeout(() => {
+			setFrameNo(frameNo + 1);
+		}, 100);
+
+		// Clear timeout if the component is unmounted
+		return () => clearTimeout(timer);
+	}, [frameNo, data])
+
+	useEffect(() => {
+		fetch("/data/2021_08_01__15_36_opt_latest.json")
 			.then(r => r.json())
 			.then(r => {
 				geoLayer = new GeoJsonLayer({
@@ -231,16 +241,7 @@ function App() {
 						}
 						setTrees(objects);
 					});
-			})
-			.then(() => {
-				let i = 0;
-				setInterval(() => {
-					setFrameNo(++i);
-				}, 100);
 			});
-
-
-
 	}, []);
 
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
