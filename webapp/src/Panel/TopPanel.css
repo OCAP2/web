@@ -1,6 +1,5 @@
 .panel.top {
 	background-color: #000000bf;
-	position: absolute;
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -29,6 +28,7 @@
 	display: inline-block;
 	background-size: 25px 25px;
 	background-repeat: no-repeat;
+	cursor: pointer;
 }
 .panel.top > .buttons > .return {
 	background-image: url(../icons/exit_to_app.svg);
