@@ -106,6 +106,7 @@ function getSideColor(side) {
 function App() {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
+	const [endFrameNo, setEndFrameNo] = useState(0);
 
 	const [data, setData] = useState([]);
 	const [trees, setTrees] = useState([]);
@@ -121,14 +122,18 @@ function App() {
 	const [dataFirelines, setDataFirelines] = useState([]);
 
 	useEffect(() => {
-		if (data.length === 0) return;
+		if (endFrameNo === 0) return;
 		const timer = setTimeout(() => {
-			setFrameNo(frameNo + 1);
+			if (frameNo >= endFrameNo-1) {
+				setFrameNo(0);
+			} else {
+				setFrameNo(frameNo + 1);
+			}
 		}, 100);
 
 		// Clear timeout if the component is unmounted
 		return () => clearTimeout(timer);
-	}, [frameNo, data])
+	}, [frameNo, endFrameNo])
 
 	useEffect(() => {
 		fetch("/data/2021_08_01__15_36_opt_latest.json")
@@ -226,6 +231,8 @@ function App() {
 				setDataParachute(entities.filter(d => d.class === "parachute"));
 
 				setDataFirelines(fireLines);
+
+				setEndFrameNo(r.endFrame);
 
 				return r;
 			})
