@@ -39,6 +39,9 @@
 .panel.top > .buttons > .info {
 	background-image: url(../icons/info.svg);
 }
+.panel.top > .buttons > .play {
+	background-image: url(../icons/play_circle.svg);
+}
 .panel.top > .buttons > .stats {
 	background-image: url(../icons/analytics.svg);
 }

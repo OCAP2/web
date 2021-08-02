@@ -3,14 +3,18 @@ import TopPanel from "./Panel/TopPanel";
 import {useCallback, useState} from "react";
 import Replay from "./Replay/Replay";
 import Selection from "./Replay/Selection";
+import Analytics from "./Replay/Analytics/Analytics";
+import {normalizeReplay} from "./Replay/Converter";
 
 function App() {
 	const [replay, setReplay] = useState(null);
+	const [view, setView] = useState("play");
 
 	const onReplaySelect = useCallback((replay) => {
 		fetch(`/data/${replay.filename}`)
 			.then(r => r.json())
 			.then(r => {
+				normalizeReplay(r);
 				setReplay(r);
 			});
 	}, []);
@@ -20,12 +24,15 @@ function App() {
 
 	return (
 		<div className="app">
-			<TopPanel replay={replay} onExitReplay={onExitReplay}></TopPanel>
+			<TopPanel replay={replay} onExitReplay={onExitReplay} onViewChange={setView}></TopPanel>
 			{!replay && (
 				<Selection onSelect={onReplaySelect}></Selection>
 			)}
-			{replay && (
+			{replay && view === "play" && (
 				<Replay replay={replay}/>
+			)}
+			{replay && view === "analytics" && (
+				<Analytics replay={replay}/>
 			)}
 		</div>
 	);

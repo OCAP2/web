@@ -1,13 +1,12 @@
 import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
-import {BitmapLayer, GeoJsonLayer, IconLayer, LineLayer, PathLayer, TextLayer} from "@deck.gl/layers";
-import TopPanel from "../Panel/TopPanel";
+import { GeoJsonLayer, PathLayer, TextLayer} from "@deck.gl/layers";
 import LeftPanel from "../Panel/LeftPanel";
 import BottomPanel from "../Panel/BottomPanel";
 import {ScenegraphLayer} from "@deck.gl/mesh-layers";
 import {TerrainLayer, TripsLayer} from "@deck.gl/geo-layers";
-import {HexagonLayer} from "@deck.gl/aggregation-layers";
+import {addLatLng, distance2D, getSideColor} from "./Converter";
 
 const mainView = new MapView({
 	id: 'main',
@@ -46,10 +45,6 @@ const minimapBackgroundStyle = {
 	boxShadow: '0 0 8px 2px rgba(0,0,0,0.15)'
 };
 
-const ICON_MAPPING = {
-	marker: {x: 0, y: 0, width: 128, height: 128, mask: true}
-};
-
 const terrainLayer = new TerrainLayer({
 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 	elevationDecoder: {
@@ -71,53 +66,10 @@ function layerFilter({layer, viewport}) {
 	return !shouldDrawInMinimap;
 }
 
-const r_earth = 6378000;
-function addLatLng([lat, lng], [x, y]) {
-	let d = 180 / Math.PI
-	let nlat = lat + (x / r_earth) * d
-	let nlng = lng + (y / r_earth) * d / Math.cos(nlat * Math.PI / 180)
-	return [nlat, nlng]
-}
-
-function distance2D([x1,y1], [x2,y2]) {
-	const a = x1 - x2;
-	const b = y1 - y2;
-	return Math.sqrt(a*a + b*b);
-}
-
-function getSideColor(side) {
-	let color = [255,255,255];
-
-	switch (side) {
-		case "WEST":
-			color = [100, 100, 140];
-			break;
-		case "EAST":
-			color = [140, 100, 100];
-			break;
-		case "GUER":
-			color = [100, 140, 0];
-			break;
-	}
-
-	return color;
-}
-
-export const colorRange = [
-	[1, 152, 189],
-	[73, 227, 206],
-	[216, 254, 181],
-	[254, 237, 177],
-	[254, 173, 84],
-	[209, 55, 78]
-];
-
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
 
-	const [data, setData] = useState([]);
-	const [dataHexagon, setDataHexagon] = useState([]);
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
 	const [dataCars, setDataCars] = useState([]);
@@ -142,7 +94,7 @@ function Replay({replay}) {
 
 		// Clear timeout if the component is unmounted
 		return () => clearTimeout(timer);
-	}, [frameNo])
+	}, [frameNo, replay])
 
 	useEffect(() => {
 		if (!replay) return;
@@ -183,55 +135,7 @@ function Replay({replay}) {
 
 		const positionWithActivity = [];
 		const fireLines = [];
-		const entities = replay.entities.map((entity) => {
-			const positions = Array.from(Array(replay.endFrame).keys()).map(() => [[0,0,0],[0,0,0]]);
-			if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
-				for (const position of entity.positions) {
-					const startFrame = position[4][0];
-					const endFrame = position[4][1];
-
-					const crew = position[3];
-					if (crew.length > 0) {
-						const firstCrew = replay.entities.find((e) => e.id === crew[0]);
-						if (firstCrew) {
-							position.push(firstCrew.side);
-						}
-					}
-
-					if (Array.isArray(position[1])) {
-						position[1][0] = -position[1][0];
-						position[1][1] = -position[1][1]+90;
-					} else {
-						position[1] = [0, -position[1]+90, 0];
-					}
-
-					for (let i = startFrame; i <= endFrame; i++) {
-						positions[i] = position;
-						if (position[2] !== 0) {
-							positionWithActivity.push({
-								position: position[0],
-							});
-						}
-					}
-				}
-			} else {
-				for (let i = 0; i < entity.positions.length; i++) {
-					const positionIndex = i + entity.startFrameNum;
-					positions[positionIndex] = entity.positions[i];
-
-					if (Array.isArray(entity.positions[i][1])) {
-						entity.positions[i][1][0] = -entity.positions[i][1][0];
-						entity.positions[i][1][1] = -entity.positions[i][1][1]+90;
-					} else {
-						entity.positions[i][1] = [0, -entity.positions[i][1]+90, 0];
-					}
-					positionWithActivity.push({
-						position: entity.positions[i][0],
-					});
-				}
-			}
-			entity.positions = positions;
-
+		for (const entity of replay.entities) {
 			for (const firedFrame of entity.framesFired) {
 				fireLines.push({
 					from: entity.positions[firedFrame[0]][0],
@@ -245,20 +149,17 @@ function Replay({replay}) {
 					position: firedFrame[1],
 				});
 			}
+		}
 
-			return entity;
-		});
-
-		setData(entities);
-		setDataUnits(entities.filter(d => d.type === "unit"));
-		setDataCars(entities.filter(d => d.class === "car"));
-		setDataTrucks(entities.filter(d => d.class === "truck"));
-		setDataBoats(entities.filter(d => d.class === "sea"));
-		setDataAPCs(entities.filter(d => d.class === "apc"));
-		setDataTanks(entities.filter(d => d.class === "tank"));
-		setDataHelis(entities.filter(d => d.class === "heli"));
-		setDataPlanes(entities.filter(d => d.class === "plane"));
-		setDataParachute(entities.filter(d => d.class === "parachute"));
+		setDataUnits(replay.entities.filter(d => d.type === "unit"));
+		setDataCars(replay.entities.filter(d => d.class === "car"));
+		setDataTrucks(replay.entities.filter(d => d.class === "truck"));
+		setDataBoats(replay.entities.filter(d => d.class === "sea"));
+		setDataAPCs(replay.entities.filter(d => d.class === "apc"));
+		setDataTanks(replay.entities.filter(d => d.class === "tank"));
+		setDataHelis(replay.entities.filter(d => d.class === "heli"));
+		setDataPlanes(replay.entities.filter(d => d.class === "plane"));
+		setDataParachute(replay.entities.filter(d => d.class === "parachute"));
 
 		setDataFirelines(fireLines);
 
@@ -269,20 +170,8 @@ function Replay({replay}) {
 				frames: marker[7].map((v) => v[0]),
 				positions: marker[7].map((v) => v[1])
 			});
-			for (const position of marker[7]) {
-				positionWithActivity.push({
-					position: position[1],
-				});
-			}
 		}
 		setDataProjectiles(projectiles);
-
-		setDataHexagon(positionWithActivity
-			.filter((pos) => pos.position[0] !== 0 && pos.position[1] !== 0)
-			.map((pos) => ({
-				position: addLatLng([0,0], [Math.round(pos.position[0]), Math.round(pos.position[1])])
-			}))
-		);
 
 		fetch(`images/maps/${replay.worldName.toLowerCase()}/trees.json`)
 			.then(r => {
@@ -340,17 +229,6 @@ function Replay({replay}) {
 		// 	],
 		// 	image: '/images/vt7.png'
 		// }),
-		new HexagonLayer({
-			id: 'hexagon-layer',
-			data: dataHexagon,
-			colorRange,
-			extruded: true,
-			radius: 10,
-			elevationScale: 4,
-			coverage: 1,
-			opacity: 0.5,
-			getPosition: d => d.position
-		}),
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'tree-layer',
@@ -366,26 +244,6 @@ function Replay({replay}) {
 				depthTest: true
 			}
 		}),
-		// new IconLayer({
-		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-		// 	id: 'entity-layer',
-		// 	data: data,
-		// 	// iconAtlas and iconMapping are required
-		// 	// getIcon: return a string
-		// 	iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
-		// 	iconMapping: ICON_MAPPING,
-		// 	getIcon: d => 'marker',
-		// 	sizeScale: 15,
-		// 	visible: true,
-		// 	getPosition: d => d.positions[frameNo][0],
-		// 	getAngle: d => 360-d.positions[frameNo][1]+180,
-		// 	getSize: d => 5,
-		// 	getColor: d => [100, 140, 0],
-		// 	updateTriggers: {
-		// 		getPosition: frameNo,
-		// 		getAngle: frameNo,
-		// 	}
-		// }),
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'units-layer',
@@ -399,12 +257,11 @@ function Replay({replay}) {
 						return [0, 0, 0, 50];
 					case 2:
 						return [255, 168, 26, 255];
+					default:
+						let color = getSideColor(d.side);
+						color.push(255);
+						return color;
 				}
-
-				let color = getSideColor(d.side);
-				color.push(255);
-
-				return color;
 			},
 			getOrientation: d => d.positions[frameNo][1],
 			getScale: d => {
