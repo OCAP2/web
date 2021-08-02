@@ -14,7 +14,7 @@ function Selection({onSelect}) {
 		fetch("/api/v1/operations?" + new URLSearchParams(filter))
 			.then(r => r.json())
 			.then(r => setReplays(r));
-	}, []);
+	}, [filter]);
 
 	function renderTable() {
 		return replays.map((replay) => {
