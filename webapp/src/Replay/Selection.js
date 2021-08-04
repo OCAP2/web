@@ -1,4 +1,5 @@
 import './Selection.css';
+import '../arma.css';
 import {useEffect, useState} from "react";
 
 const INITIAL_FILTER = {
@@ -34,7 +35,19 @@ function Selection({onSelect}) {
 		<div className="selectionModal">
 			<div className="selectionDialog">
 				<div className="selectionHeader">Select mission</div>
-				<div className="selectionFilter">TODO</div>
+				<div className="selectionFilter">
+					<span className="a3-theme select filterTagGameInput">
+						<select id="filterTagGameInput">
+							<option value="">All</option>
+							<option value="TC">TC</option>
+							<option value="TvT">TvT</option>
+						</select>
+					</span>
+					<input type="text" id="filterGameInput" className="a3-theme input" placeholder="Mission name" data-lb="name_missions" data-lb-id="3"/>
+					<input type="date" id="calendar1" className="a3-theme input" value="2017-06-01"/>
+					<input type="date" id="calendar1" className="a3-theme input" value="2017-06-01"/>
+					<div id="filterSubmit"/>
+				</div>
 				<div className="selectionBody">
 					<table>
 						<thead>

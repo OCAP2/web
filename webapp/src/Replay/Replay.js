@@ -1,5 +1,5 @@
 import DeckGL from '@deck.gl/react';
-import {useCallback, useEffect, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
 import { GeoJsonLayer, PathLayer, TextLayer} from "@deck.gl/layers";
 import LeftPanel from "../Panel/LeftPanel";
@@ -69,6 +69,7 @@ function layerFilter({layer, viewport}) {
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
+	const [frameStart, setFrameStart] = useState(new Date());
 
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
@@ -83,7 +84,27 @@ function Replay({replay}) {
 	const [dataFirelines, setDataFirelines] = useState([]);
 	const [dataProjectiles, setDataProjectiles] = useState([]);
 
+	const requestRef = useRef();
+	const previousTimeRef = useRef();
+
+	const animate = time => {
+		const deltaTime = new Date() - previousTimeRef.current;
+		if (deltaTime < 100) {
+			console.log(deltaTime / 100);
+		}
+		// Pass on a function to the setter of the state
+		// to make sure we always have the latest state
+		// setCount(prevCount => (prevCount + deltaTime * 0.01) % 100);
+		requestRef.current = requestAnimationFrame(animate);
+	}
+
 	useEffect(() => {
+		requestRef.current = requestAnimationFrame(animate);
+		return () => cancelAnimationFrame(requestRef.current);
+	}, []);
+
+	useEffect(() => {
+		previousTimeRef.current = new Date();
 		const timer = setTimeout(() => {
 			if (frameNo >= replay.endFrame-1) {
 				setFrameNo(0);
@@ -94,7 +115,7 @@ function Replay({replay}) {
 
 		// Clear timeout if the component is unmounted
 		return () => clearTimeout(timer);
-	}, [frameNo, replay])
+	}, [frameNo, replay, frameStart])
 
 	useEffect(() => {
 		if (!replay) return;
