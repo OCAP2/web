@@ -1,7 +1,7 @@
 import './App.css';
 import TopPanel from "./Panel/TopPanel";
 import {useCallback, useState} from "react";
-import Replay from "./Replay/Replay";
+import Replay from "./Replay/Replay2";
 import Selection from "./Replay/Selection";
 import Analytics from "./Replay/Analytics/Analytics";
 import {normalizeReplay} from "./Replay/Converter";
