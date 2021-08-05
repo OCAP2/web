@@ -8,6 +8,7 @@ function TopPanel({replay, onExitReplay, onViewChange}) {
 			<div className="buttons">
 				{replay && (<div className="button return" onClick={() => onExitReplay()} />)}
 				{replay && (<div className="button play" onClick={() => onViewChange("play")}/>)}
+				{replay && (<div className="button play" onClick={() => onViewChange("play2")}/>)}
 				{replay && (<div className="button stats" onClick={() => onViewChange("analytics")}/>)}
 				{replay && (<div className="button share"/>)}
 				<div className="button info"/>

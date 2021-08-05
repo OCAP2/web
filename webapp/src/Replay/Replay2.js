@@ -17,7 +17,7 @@ import {
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 
-function Replay({replay}) {
+function Replay2({replay}) {
 	const canvas = useRef();
 
 	useEffect(() => {
@@ -29,7 +29,7 @@ function Replay({replay}) {
 			const fov = 45;
 			const aspect = 2;  // the canvas default
 			const near = 0.1;
-			const far = 2000;
+			const far = 20000;
 			const camera = new PerspectiveCamera(fov, aspect, near, far);
 			camera.position.set(0, 10, 20);
 
@@ -41,7 +41,7 @@ function Replay({replay}) {
 			scene.background = new Color('blue');
 
 			{
-				const planeSize = 1800.1;
+				const planeSize = 18001;
 
 				const loader = new TextureLoader();
 				const texture = loader.load('https://threejsfundamentals.org/threejs/resources/images/checker.png');
@@ -73,7 +73,15 @@ function Replay({replay}) {
 				const objLoader = new OBJLoader();
 				objLoader.load('objects/heli.obj', (root) => {
 					root.rotation.x = Math.PI * -.5;
-					scene.add(root);
+					let added = false;
+					setInterval(() => {
+						added = !added;
+						if (added) {
+							scene.add(root);
+						} else {
+							scene.remove(root);
+						}
+					}, 2000)
 				});
 			}
 
@@ -112,4 +120,4 @@ function Replay({replay}) {
 	);
 }
 
-export default Replay;
+export default Replay2;

@@ -1,10 +1,11 @@
 import './App.css';
 import TopPanel from "./Panel/TopPanel";
 import {useCallback, useState} from "react";
-import Replay from "./Replay/Replay2";
+import Replay from "./Replay/Replay";
 import Selection from "./Replay/Selection";
 import Analytics from "./Replay/Analytics/Analytics";
 import {normalizeReplay} from "./Replay/Converter";
+import Replay2 from "./Replay/Replay2";
 
 function App() {
 	const [replay, setReplay] = useState(null);
@@ -30,6 +31,9 @@ function App() {
 			)}
 			{replay && view === "play" && (
 				<Replay replay={replay}/>
+			)}
+			{replay && view === "play2" && (
+				<Replay2 replay={replay}/>
 			)}
 			{replay && view === "analytics" && (
 				<Analytics replay={replay}/>
