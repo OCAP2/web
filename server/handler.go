@@ -49,6 +49,10 @@ func NewHandler(
 		"/api/v1/operations",
 		hdlr.GetOperations,
 	)
+	e.GET(
+		"/api/v1/operations/tags",
+		hdlr.GetOperationTags,
+	)
 	e.POST(
 		"/api/v1/operations/add",
 		hdlr.StoreOperation,
@@ -134,6 +138,15 @@ func (h *Handler) GetOperations(c echo.Context) error {
 	}
 
 	return c.JSONPretty(http.StatusOK, ops, "\t")
+}
+
+func (h *Handler) GetOperationTags(c echo.Context) error {
+	tags, err := h.repoOperation.GetTags(c.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	return c.JSONPretty(http.StatusOK, tags, "\t")
 }
 
 func (h *Handler) GetCustomize(c echo.Context) error {

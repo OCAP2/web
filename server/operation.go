@@ -127,7 +127,7 @@ func (r *RepoOperation) migration() (err error) {
 	return nil
 }
 
-func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
+func (r *RepoOperation) GetTags(ctx context.Context) ([]string, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT DISTINCT tag FROM operations
 	`)
@@ -141,7 +141,11 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 		tags = []string{}
 	)
 	for rows.Next() {
-		rows.Scan(&t)
+		err = rows.Scan(&t)
+		if err != nil {
+			return nil, err
+		}
+
 		tags = append(tags, t)
 	}
 	if err := rows.Err(); err != nil {

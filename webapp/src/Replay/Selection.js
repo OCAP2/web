@@ -10,6 +10,7 @@ const INITIAL_FILTER = {
 
 function Selection({onSelect}) {
 	const [replays, setReplays] = useState([]);
+	const [tags, setTags] = useState([]);
 	const [filter, setFilter] = useState(INITIAL_FILTER);
 
 	useEffect(() => {
@@ -18,11 +19,25 @@ function Selection({onSelect}) {
 			.then(r => setReplays(r));
 	}, [filter]);
 
+	useEffect(() => {
+		fetch("/api/v1/operations/tags")
+			.then(r => r.json())
+			.then(r => setTags(r));
+	}, []);
+
 	function formatDuration(sec_num) {
 		const hours = Math.floor(sec_num / 3600);
 		const minutes = Math.floor((sec_num - (hours * 3600)) / 60);
 		const seconds = sec_num - (hours * 3600) - (minutes * 60);
 		return `${(hours < 10 ? "0" : "") + hours}h ${(minutes < 10 ? "0" : "") + minutes}m ${(seconds < 10 ? "0" : "") + seconds}s`;
+	}
+
+	function renderTags() {
+		return ["", ...tags].map((tag) => {
+			return (
+				<option value={tag}>{tag === "" ? "All" : tag}</option>
+			)
+		})
 	}
 
 	function renderTable() {
@@ -52,9 +67,7 @@ function Selection({onSelect}) {
 				<div className="selectionFilter">
 					<div className="a3-theme select tag">
 						<select onChange={(e) => changeFilter("tag", e.target.value)}>
-							<option value="">All</option>
-							<option value="TC">TC</option>
-							<option value="TvT">TvT</option>
+							{renderTags()}
 						</select>
 					</div>
 					<input type="text" className="a3-theme input missionName" placeholder="Mission name" onChange={(e) => changeFilter("name", e.target.value)}/>
@@ -73,7 +86,7 @@ function Selection({onSelect}) {
 							</tr>
 						</thead>
 						<tbody>
-						{renderTable()}
+							{renderTable()}
 						</tbody>
 					</table>
 				</div>
