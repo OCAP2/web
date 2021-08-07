@@ -1,6 +1,6 @@
-import "./Configuration.css";
+import "./configuration.css";
 import {useCallback, useState} from "react";
-import {INITIAL_CONFIG} from "./Analytics";
+import {INITIAL_CONFIG} from "./insights";
 
 function LeftPanel({onConfigChange}) {
 	const [config, setConfig] = useState(INITIAL_CONFIG);

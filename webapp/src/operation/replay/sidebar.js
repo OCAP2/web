@@ -1,7 +1,7 @@
-import "./LeftPanel.css";
+import "./sidebar.css";
 import {useState} from "react";
 
-function LeftPanel() {
+function Sidebar() {
 	const [activeSide, setActiveSide] = useState("west");
 
 	function switchSide(e, side) {
@@ -25,4 +25,4 @@ function LeftPanel() {
 	);
 }
 
-export default LeftPanel;
+export default Sidebar;

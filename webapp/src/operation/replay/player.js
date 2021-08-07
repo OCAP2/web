@@ -1,6 +1,6 @@
-import './BottomPanel.css';
+import './player.css';
 
-function BottomPanel() {
+function Player() {
 	return (
 		<div className="panel bottom">
 			<div className="timeline">
@@ -16,4 +16,4 @@ function BottomPanel() {
 	);
 }
 
-export default BottomPanel;
+export default Player;

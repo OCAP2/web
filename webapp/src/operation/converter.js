@@ -63,8 +63,7 @@ export function distance2D([x1,y1], [x2,y2]) {
 }
 
 export function getSideColor(side) {
-	let color = [255,255,255];
-
+	let color;
 	switch (side) {
 		case "WEST":
 			color = [100, 100, 140];
@@ -75,14 +74,15 @@ export function getSideColor(side) {
 		case "GUER":
 			color = [100, 140, 0];
 			break;
+		default:
+			color = [255,255,255];
 	}
 
 	return color;
 }
 
 export function getSideColorHighContrast(side) {
-	let color = [255,255,255];
-
+	let color;
 	switch (side) {
 		case "WEST":
 			color = [100, 100, 255];
@@ -93,6 +93,8 @@ export function getSideColorHighContrast(side) {
 		case "GUER":
 			color = [100, 140, 0];
 			break;
+		default:
+			color = [255,255,255];
 	}
 
 	return color;

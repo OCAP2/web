@@ -3,8 +3,8 @@ import {COORDINATE_SYSTEM, MapView} from "@deck.gl/core";
 import {HexagonLayer} from "@deck.gl/aggregation-layers";
 import {useCallback, useEffect, useState} from "react";
 import {GeoJsonLayer, PathLayer} from "@deck.gl/layers";
-import {addLatLng, getSideColorHighContrast} from "../Converter";
-import Configuration from "./Configuration";
+import {addLatLng, getSideColorHighContrast} from "../converter";
+import Configuration from "./configuration";
 import {TripsLayer} from "@deck.gl/geo-layers";
 
 const mainView = new MapView({
@@ -52,7 +52,7 @@ export const colorRange = [
 	[209, 55, 78]
 ];
 
-function Analytics({replay}) {
+function Insights({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [config, setConfig] = useState(INITIAL_CONFIG);
 	const [timer, setTimer] = useState(0);
@@ -259,4 +259,4 @@ function Analytics({replay}) {
 	);
 }
 
-export default Analytics;
+export default Insights;

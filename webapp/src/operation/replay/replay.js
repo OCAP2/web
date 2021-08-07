@@ -2,11 +2,11 @@ import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
 import { GeoJsonLayer, PathLayer, TextLayer} from "@deck.gl/layers";
-import LeftPanel from "../Panel/LeftPanel";
-import BottomPanel from "../Panel/BottomPanel";
+import Sidebar from "./sidebar";
+import Player from "./player";
 import {ScenegraphLayer} from "@deck.gl/mesh-layers";
 import {TerrainLayer, TripsLayer} from "@deck.gl/geo-layers";
-import {addLatLng, distance2D, getSideColor} from "./Converter";
+import {addLatLng, distance2D, getSideColor} from "../converter";
 
 const mainView = new MapView({
 	id: 'main',
@@ -679,8 +679,8 @@ function Replay({replay}) {
 			layerFilter={layerFilter}
 		>
 			<MapView id="main">
-				<LeftPanel></LeftPanel>
-				<BottomPanel></BottomPanel>
+				<Sidebar></Sidebar>
+				<Player></Player>
 			</MapView>
 			<MapView id="minimap">
 				<div style={minimapBackgroundStyle} />

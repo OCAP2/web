@@ -14,16 +14,16 @@
 	}
 
 	&:after {
-		content: "";
 		position: absolute;
 		right: 0;
 		pointer-events: none;
-		font-size: 16px;
 		background-color: #282828;
 		width: 24px;
 		height: 100%;
-		background-image: url(icons/expand_more.svg);
-		background-position: center;
+
+		font-family: "Material Icons";
+		content: "expand_more";
+		font-size: 24px;
 	}
 }
 

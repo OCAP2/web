@@ -1,4 +1,4 @@
-import './Selection.scss';
+import './selection.scss';
 import '../arma.scss';
 import {useEffect, useState} from "react";
 
