@@ -59,8 +59,8 @@ function Selection({onSelect}) {
 						</select>
 					</div>
 					<input type="text" className="a3-theme input missionName" placeholder="Mission name" onChange={(e) => changeFilter("name", e.target.value)}/>
-					<input type="date" className="a3-theme input" defaultValue={filter.newer}/>
-					<input type="date" className="a3-theme input" defaultValue={filter.older}/>
+					<input type="date" className="a3-theme input" defaultValue={filter.newer} onChange={(e) => changeFilter("newer", e.target.value)}/>
+					<input type="date" className="a3-theme input" defaultValue={filter.older} onChange={(e) => changeFilter("older", e.target.value)}/>
 				</div>
 				<div className="selectionBody">
 					<table>
