@@ -40,7 +40,6 @@ function Selection({onSelect}) {
 	}
 
 	function changeFilter(key, value) {
-		// console.log(e);
 		const newFilter = {...filter};
 		newFilter[key] = value;
 		setFilter(newFilter);
