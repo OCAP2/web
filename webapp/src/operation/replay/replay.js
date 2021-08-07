@@ -1,3 +1,4 @@
+import './replay.scss';
 import DeckGL from '@deck.gl/react';
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {COORDINATE_SYSTEM, MapView, WebMercatorViewport} from "@deck.gl/core";
@@ -66,10 +67,12 @@ function layerFilter({layer, viewport}) {
 	return !shouldDrawInMinimap;
 }
 
+let then = 0;
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
 	const [frameStart, setFrameStart] = useState(new Date());
+	const [fps, setFPS] = useState(0);
 
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
@@ -88,6 +91,14 @@ function Replay({replay}) {
 	const previousTimeRef = useRef();
 
 	const animate = time => {
+		{
+			time *= 0.001;                          // convert to seconds
+			const deltaTime = time - then;          // compute time since last frame
+			then = time;                            // remember time for next frame
+			const fps = 1 / deltaTime;             // compute frames per second
+			setFPS(fps.toFixed(1));  // update fps display
+		}
+
 		const deltaTime = new Date() - previousTimeRef.current;
 		if (deltaTime < 100) {
 			console.log(deltaTime);
@@ -672,20 +683,23 @@ function Replay({replay}) {
 
 	return (
 		<div className="body">
-			<DeckGL
-				layers={layers}
-				views={[mainView, minimapView]}
-				viewState={viewState}
-				onViewStateChange={onViewStateChange}
-				layerFilter={layerFilter}
-			>
-				<MapView id="main"/>
-				<MapView id="minimap">
-					<div style={minimapBackgroundStyle} />
-				</MapView>
-			</DeckGL>
+			<div>
+				<DeckGL
+					layers={layers}
+					views={[mainView, minimapView]}
+					viewState={viewState}
+					onViewStateChange={onViewStateChange}
+					layerFilter={layerFilter}
+				>
+					<MapView id="main"/>
+					<MapView id="minimap">
+						<div style={minimapBackgroundStyle} />
+					</MapView>
+				</DeckGL>
+			</div>
 			<Sidebar/>
 			<Player/>
+			<div className="fps">{fps}</div>
 		</div>
 	);
 }
