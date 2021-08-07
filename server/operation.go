@@ -181,7 +181,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 		FROM
 			operations
 		WHERE
-			filename LIKE "%s" || $1 || "%"
+			filename LIKE "%" || $1 || "%"
 			AND date BETWEEN $2 AND $3
 			AND ($4 = "" OR tag = $4);
 	`
