@@ -243,18 +243,20 @@ function Insights({replay}) {
 	}, []);
 
 	return (
-		<div>
-			<DeckGL
-				layers={layers}
-				views={[mainView]}
-				viewState={viewState}
-				onViewStateChange={onViewStateChange}
-			>
-				<MapView id="main"/>
-			</DeckGL>
+		<div className="body">
 			<Configuration
 				onConfigChange={setConfig}
 			/>
+			<div>
+				<DeckGL
+					layers={layers}
+					views={[mainView]}
+					viewState={viewState}
+					onViewStateChange={onViewStateChange}
+				>
+					<MapView id="main"/>
+				</DeckGL>
+			</div>
 		</div>
 	);
 }

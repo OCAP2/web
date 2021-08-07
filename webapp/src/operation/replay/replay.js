@@ -671,21 +671,22 @@ function Replay({replay}) {
 	];
 
 	return (
-		<DeckGL
-			layers={layers}
-			views={[mainView, minimapView]}
-			viewState={viewState}
-			onViewStateChange={onViewStateChange}
-			layerFilter={layerFilter}
-		>
-			<MapView id="main">
-				<Sidebar></Sidebar>
-				<Player></Player>
-			</MapView>
-			<MapView id="minimap">
-				<div style={minimapBackgroundStyle} />
-			</MapView>
-		</DeckGL>
+		<div className="body">
+			<DeckGL
+				layers={layers}
+				views={[mainView, minimapView]}
+				viewState={viewState}
+				onViewStateChange={onViewStateChange}
+				layerFilter={layerFilter}
+			>
+				<MapView id="main"/>
+				<MapView id="minimap">
+					<div style={minimapBackgroundStyle} />
+				</MapView>
+			</DeckGL>
+			<Sidebar/>
+			<Player/>
+		</div>
 	);
 }
 

@@ -4,4 +4,8 @@
 	width: 100%;
 	flex-direction: column;
 	position: fixed;
+
+	& > .body {
+		height: inherit;
+	}
 }

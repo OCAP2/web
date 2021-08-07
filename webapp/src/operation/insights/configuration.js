@@ -1,4 +1,4 @@
-import "./configuration.css";
+import "./configuration.scss";
 import {useCallback, useState} from "react";
 import {INITIAL_CONFIG} from "./insights";
 
@@ -19,7 +19,7 @@ function LeftPanel({onConfigChange}) {
 	}, [config, onConfigChange]);
 
 	return (
-		<div className="panel left">
+		<div className="insightsConfiguration">
 			<div className="title">Configuration</div>
 			<div className="config">
 				<div>
