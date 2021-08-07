@@ -3,7 +3,7 @@ import './header.scss';
 function Header({replay, onExitReplay, onViewChange}) {
 	return (
 		<div className="header">
-			<div className="missionName">opt_v40</div>
+			<div className="missionName">{replay?.missionName}{replay?.missionAuthor ? ` (${replay.missionAuthor})` : ""}</div>
 			<div className="info">OCAP2</div>
 			<div className="buttons">
 				{replay && (<div className="button material-icons" title="Return to selection" onClick={() => onExitReplay()}>exit_to_app</div>)}
