@@ -71,8 +71,8 @@ let then = 0;
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameNo, setFrameNo] = useState(0);
-	const [frameStart, setFrameStart] = useState(new Date());
-	const [fps, setFPS] = useState(0);
+	const [frameIndex, setFrameIndex] = useState(0);
+	const [fps, setFPS] = useState("0");
 
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
@@ -102,6 +102,7 @@ function Replay({replay}) {
 		const deltaTime = new Date() - previousTimeRef.current;
 		if (deltaTime < 100) {
 			console.log(deltaTime);
+			setFrameIndex(deltaTime);
 		}
 		// Pass on a function to the setter of the state
 		// to make sure we always have the latest state
@@ -126,7 +127,7 @@ function Replay({replay}) {
 
 		// Clear timeout if the component is unmounted
 		return () => clearTimeout(timer);
-	}, [frameNo, replay, frameStart])
+	}, [frameNo, replay]);
 
 	useEffect(() => {
 		if (!replay) return;
