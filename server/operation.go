@@ -80,12 +80,8 @@ func (r *RepoOperation) migration() (err error) {
 		_, err = r.db.Exec(`
 			UPDATE operations SET type = 'PvE' WHERE type = 'pve';
 			UPDATE operations SET type = 'TvT' WHERE type = 'tvt';
+			INSERT INTO version (db) VALUES (1);
 		`)
-		if err != nil {
-			return fmt.Errorf("merge db to v1 failed: %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (1)`)
 		if err != nil {
 			return fmt.Errorf("failed to increase version 1: %w", err)
 		}
@@ -94,14 +90,37 @@ func (r *RepoOperation) migration() (err error) {
 	if version < 2 {
 		_, err = r.db.Exec(`
 			ALTER TABLE operations RENAME COLUMN type TO tag;
+			INSERT INTO version (db) VALUES (2);
 		`)
 		if err != nil {
-			return fmt.Errorf("merge db to v2 failed: %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (2)`)
-		if err != nil {
 			return fmt.Errorf("failed to increase version 2: %w", err)
+		}
+	}
+
+	if version < 3 {
+		_, err = r.db.Exec(`
+			-- fix datatypes
+			CREATE TABLE operations_dg_tmp (
+				id INTEGER NOT NULL PRIMARY KEY autoincrement,
+				world_name TEXT,
+				mission_name TEXT,
+				mission_duration INTEGER,
+				filename TEXT NOT NULL,
+				date DATE NOT NULL,
+				tag TEXT DEFAULT '' NOT NULL
+			);
+			
+			INSERT INTO operations_dg_tmp(id, world_name, mission_name, mission_duration, filename, date, tag)
+			SELECT id, world_name, mission_name, mission_duration, filename, date, tag FROM operations;
+			
+			DROP TABLE operations;
+			
+			ALTER TABLE operations_dg_tmp rename to operations;
+
+			INSERT INTO version (db) VALUES (3);
+		`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 3: %w", err)
 		}
 	}
 
@@ -162,17 +181,16 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 		FROM
 			operations
 		WHERE
-			mission_name LIKE "%" || $2 || "%"
-			AND date <= $3
-			AND date >= $4
-			AND tag LIKE "%" || $1;
+			filename LIKE $1 || "%"
+			AND date BETWEEN $2 AND $3
+			AND ($4 = "" OR tag = $4);
 	`
 	rows, err := r.db.QueryContext(
 		ctx,
 		query,
 		filter.Name,
-		filter.Older,
 		filter.Newer,
+		filter.Older,
 		filter.Tag,
 	)
 	if err != nil {

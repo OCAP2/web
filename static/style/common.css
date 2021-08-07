@@ -43,7 +43,7 @@ body {
 	background-color: #282828;
 	width: 24px;
 	height: 26px;
-	background-image: url("../images/expand_more.svg");
+	background-image: url("../../webapp/src/icons/expand_more.svg");
 }
 .a3-theme.select select {
 	background-color: #0a0a0a;

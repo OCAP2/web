@@ -1,0 +1,40 @@
+.a3-theme.select {
+	border: 1px #808080 solid;
+	position: relative;
+
+	& > select {
+		background-color: #0a0a0a;
+		color: #fff;
+		appearance: none;
+		border: 0;
+		padding-left: 4px;
+		height: 100%;
+		width: 100%;
+		outline: none;
+	}
+
+	&:after {
+		content: "";
+		position: absolute;
+		right: 0;
+		pointer-events: none;
+		font-size: 16px;
+		background-color: #282828;
+		width: 24px;
+		height: 100%;
+		background-image: url(icons/expand_more.svg);
+		background-position: center;
+	}
+}
+
+.a3-theme.input {
+	background-color: #0a0a0acc;
+	color: #fff;
+	border: 1px #808080 solid;
+	padding: 2px;
+	outline: none;
+
+	&::-webkit-calendar-picker-indicator {
+		filter: invert(1);
+	}
+}

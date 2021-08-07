@@ -1,0 +1,69 @@
+.selectionModal {
+	background-color: #0006;
+	flex-grow: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+
+	.selectionDialog {
+		width: 1200px;
+		height: 700px;
+		border: 1px solid black;
+		display: flex;
+		flex-direction: column;
+
+		.selectionHeader {
+			box-sizing: border-box;
+			font-size: 16px;
+			background-color: #9b0000e6;
+			margin-bottom: 3px;
+			padding: 5px 10px;
+			font-weight: 500;
+		}
+		.selectionFilter {
+			box-sizing: border-box;
+			background-color: #0009;
+			height: 50px;
+			padding: 4px 8px;
+			margin-bottom: 3px;
+			overflow-y: auto;
+			overflow-x: auto;
+			display: flex;
+			justify-content: space-between;
+
+			& > * {
+				margin: 4px;
+			}
+			.tag {
+				min-width: 80px;
+			}
+			.missionName {
+				flex-grow: 1;
+			}
+		}
+		.selectionBody {
+			box-sizing: border-box;
+			background-color: #0009;
+			padding: 10px;
+			overflow-y: auto;
+			overflow-x: auto;
+			flex-grow: 1;
+
+			& > table {
+				width: 100%;
+				border-collapse: collapse;
+
+				th {
+					background-color: #000000b3;
+					padding: 3px;
+					font-weight: 500;
+				}
+				td {
+					padding: 3px;
+					cursor: pointer;
+				}
+
+			}
+		}
+	}
+}

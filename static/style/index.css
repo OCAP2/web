@@ -605,7 +605,7 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 #filterSubmit {
-	background-image: url("../images/find.svg");
+	background-image: url("../../webapp/src/icons/find.svg");
 	opacity: 0.95;
 	background-size: 25px 25px;
 	width: 25px;

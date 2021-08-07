@@ -1,8 +1,9 @@
-import './Selection.css';
-import '../arma.css';
+import './Selection.scss';
+import '../arma.scss';
 import {useEffect, useState} from "react";
 
 const INITIAL_FILTER = {
+	tag: "",
 	newer: "2017-06-01",
 	older: "2099-01-01"
 };
@@ -31,22 +32,28 @@ function Selection({onSelect}) {
 		})
 	}
 
+	function changeFilter(key, value) {
+		// console.log(e);
+		const newFilter = {...filter};
+		newFilter[key] = value;
+		setFilter(newFilter);
+	}
+
 	return (
 		<div className="selectionModal">
 			<div className="selectionDialog">
 				<div className="selectionHeader">Select mission</div>
 				<div className="selectionFilter">
-					<span className="a3-theme select filterTagGameInput">
-						<select id="filterTagGameInput">
+					<div className="a3-theme select tag">
+						<select onChange={(e) => changeFilter("tag", e.target.value)}>
 							<option value="">All</option>
 							<option value="TC">TC</option>
 							<option value="TvT">TvT</option>
 						</select>
-					</span>
-					<input type="text" id="filterGameInput" className="a3-theme input" placeholder="Mission name" data-lb="name_missions" data-lb-id="3"/>
-					<input type="date" id="calendar1" className="a3-theme input" value="2017-06-01"/>
-					<input type="date" id="calendar1" className="a3-theme input" value="2017-06-01"/>
-					<div id="filterSubmit"/>
+					</div>
+					<input type="text" className="a3-theme input missionName" placeholder="Mission name" onChange={(e) => changeFilter("name", e.target.value)}/>
+					<input type="date" className="a3-theme input" defaultValue={filter.newer}/>
+					<input type="date" className="a3-theme input" defaultValue={filter.older}/>
 				</div>
 				<div className="selectionBody">
 					<table>

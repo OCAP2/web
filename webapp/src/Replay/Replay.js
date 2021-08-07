@@ -90,7 +90,7 @@ function Replay({replay}) {
 	const animate = time => {
 		const deltaTime = new Date() - previousTimeRef.current;
 		if (deltaTime < 100) {
-			console.log(deltaTime / 100);
+			console.log(deltaTime);
 		}
 		// Pass on a function to the setter of the state
 		// to make sure we always have the latest state
