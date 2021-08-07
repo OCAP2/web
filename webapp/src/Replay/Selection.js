@@ -18,14 +18,21 @@ function Selection({onSelect}) {
 			.then(r => setReplays(r));
 	}, [filter]);
 
+	function formatDuration(sec_num) {
+		const hours = Math.floor(sec_num / 3600);
+		const minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+		const seconds = sec_num - (hours * 3600) - (minutes * 60);
+		return `${(hours < 10 ? "0" : "") + hours}h ${(minutes < 10 ? "0" : "") + minutes}m ${(seconds < 10 ? "0" : "") + seconds}s`;
+	}
+
 	function renderTable() {
 		return replays.map((replay) => {
 			return (
 				<tr key={replay.id} onClick={() => onSelect(replay)}>
-					<td>{replay.filename}</td>
+					<td>{replay.mission_name}</td>
 					<td>{replay.world_name}</td>
-					<td>{replay.date}</td>
-					<td>{replay.mission_duration}</td>
+					<td>{new Date(replay.date).toLocaleDateString()}</td>
+					<td>{formatDuration(replay.mission_duration)}</td>
 					<td>{replay.tag}</td>
 				</tr>
 			)

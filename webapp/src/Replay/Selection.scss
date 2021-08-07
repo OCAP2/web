@@ -8,7 +8,6 @@
 	.selectionDialog {
 		width: 1200px;
 		height: 700px;
-		border: 1px solid black;
 		display: flex;
 		flex-direction: column;
 
@@ -24,7 +23,7 @@
 			box-sizing: border-box;
 			background-color: #0009;
 			height: 50px;
-			padding: 4px 8px;
+			padding: 6px 8px;
 			margin-bottom: 3px;
 			overflow-y: auto;
 			overflow-x: auto;
