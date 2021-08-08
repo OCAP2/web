@@ -9,6 +9,11 @@ import {ScenegraphLayer} from "@deck.gl/mesh-layers";
 import {TerrainLayer, TripsLayer} from "@deck.gl/geo-layers";
 import {addLatLng, distance2D, getSideColor} from "../converter";
 
+export const RENDERING_METHOD = {
+	"TopDown": 1,
+	"Isometric": 2
+};
+
 const mainView = new MapView({
 	id: 'main',
 	controller: true
@@ -68,7 +73,7 @@ function layerFilter({layer, viewport}) {
 }
 
 let then = 0;
-function Replay({replay}) {
+function Replay({replay, renderingMethod = RENDERING_METHOD.TopDown}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 	const [frameIndex, setFrameIndex] = useState(0);
 	const [frameNo, setFrameNo] = useState(0);
@@ -150,6 +155,7 @@ function Replay({replay}) {
 				...INITIAL_VIEW_STATE.main,
 				latitude: centerLat,
 				longitude: centerLng,
+				maxPitch: renderingMethod === RENDERING_METHOD.TopDown ? 0 : 70,
 			},
 			minimap: {
 				...INITIAL_VIEW_STATE.minimap,
@@ -201,12 +207,26 @@ function Replay({replay}) {
 			})
 	}, [replay]);
 
+	useEffect(() => {
+		if (viewState === INITIAL_VIEW_STATE) return;
+
+		setViewState(() => ({
+			main: {
+				...viewState.main,
+				maxPitch: renderingMethod === RENDERING_METHOD.TopDown ? 0 : 70,
+				bearing: renderingMethod === RENDERING_METHOD.TopDown ? 0 : viewState.main.bearing,
+				pitch: renderingMethod === RENDERING_METHOD.TopDown ? 0 : viewState.main.pitch,
+			},
+			minimap: viewState.minimap,
+		}));
+	}, [renderingMethod]);
+
 	const onViewStateChange = useCallback(({viewState: newViewState}) => {
 		setViewState(() => ({
 			main: newViewState,
 			minimap: viewState.minimap,
 		}));
-	}, [viewState.minimap]);
+	}, [renderingMethod, viewState.minimap]);
 
 	const viewportBounds = useMemo(
 		() => {
@@ -221,7 +241,7 @@ function Replay({replay}) {
 
 			return [[topLeft, topRight, bottomRight, bottomLeft, topLeft]];
 		},
-		[viewState]
+		[renderingMethod, viewState]
 	);
 
 	const vehicleLayers = Object.keys(replay.entityObjects).filter((key) => replay.entityObjects[key].length > 0).map((key) => {
@@ -261,7 +281,7 @@ function Replay({replay}) {
 		// 	],
 		// 	image: '/images/vt7.png'
 		// }),
-		new ScenegraphLayer({
+		renderingMethod === RENDERING_METHOD.Isometric ? new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'tree-layer',
 			data: trees,
@@ -275,7 +295,7 @@ function Replay({replay}) {
 			parameters: {
 				depthTest: true
 			}
-		}),
+		}) : null,
 		new ScenegraphLayer({
 			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 			id: 'units-layer',

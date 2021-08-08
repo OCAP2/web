@@ -1,4 +1,4 @@
-import {APC, Boat, Car, Entity, Helicopter, Parachute, Plane, Tank, Truck} from './entity/entity';
+import {APC, Boat, Car, Helicopter, Parachute, Plane, Tank, Truck} from './entity/entity';
 
 export function normalizeReplay(replay) {
 	replay.entityObjects = {

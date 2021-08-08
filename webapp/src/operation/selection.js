@@ -35,7 +35,7 @@ function Selection({onSelect}) {
 	function renderTags() {
 		return ["", ...tags].map((tag) => {
 			return (
-				<option value={tag}>{tag === "" ? "All" : tag}</option>
+				<option key={tag} value={tag}>{tag === "" ? "All" : tag}</option>
 			)
 		})
 	}
