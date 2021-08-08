@@ -187,7 +187,9 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 		WHERE
 			mission_name LIKE "%" || $1 || "%"
 			AND date BETWEEN $2 AND $3
-			AND ($4 = "" OR tag = $4);
+			AND ($4 = "" OR tag = $4)
+		ORDER BY
+			date DESC;
 	`
 	rows, err := r.db.QueryContext(
 		ctx,
