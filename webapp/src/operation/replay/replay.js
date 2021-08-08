@@ -376,7 +376,7 @@ function Replay({replay}) {
 			widthMinPixels: 2,
 			fadeTrail: true,
 			trailLength: 2,
-			currentTime: frameNo,
+			currentTime: frame,
 			animationSpeed: 100,
 		}),
 		new TripsLayer({
@@ -392,7 +392,7 @@ function Replay({replay}) {
 			fadeTrail: true,
 			billboard: true,
 			trailLength: 15,
-			currentTime: frameNo,
+			currentTime: frame,
 			animationSpeed: 100,
 		}),
 		new PathLayer({
