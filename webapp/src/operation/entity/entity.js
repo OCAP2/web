@@ -42,7 +42,7 @@ export class Entity {
 		const frameDelta = frame - frameStart;
 
 		const start = this.positions[frameStart].position;
-		if (frameEnd >= this.positions.length) {
+		if (frameEnd >= this.frames.end) {
 			return [start.x, start.y, start.z];
 		}
 
@@ -61,7 +61,7 @@ export class Entity {
 		const frameDelta = frame - frameStart;
 
 		const start = this.positions[frameStart].orientation;
-		if (frameEnd >= this.positions.length) {
+		if (frameEnd >= this.frames.end) {
 			return [start.pitch, start.yaw, start.roll];
 		}
 
