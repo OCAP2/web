@@ -70,25 +70,18 @@ function layerFilter({layer, viewport}) {
 let then = 0;
 function Replay({replay}) {
 	const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
-	const [frameNo, setFrameNo] = useState(0);
 	const [frameIndex, setFrameIndex] = useState(0);
+	const [frameNo, setFrameNo] = useState(0);
 	const [fps, setFPS] = useState("0");
 
 	const [trees, setTrees] = useState([]);
 	const [dataUnits, setDataUnits] = useState([]);
-	const [dataCars, setDataCars] = useState([]);
-	const [dataBoats, setDataBoats] = useState([]);
-	const [dataTrucks, setDataTrucks] = useState([]);
-	const [dataAPCs, setDataAPCs] = useState([]);
-	const [dataTanks, setDataTanks] = useState([]);
-	const [dataHelis, setDataHelis] = useState([]);
-	const [dataPlanes, setDataPlanes] = useState([]);
-	const [dataParachute, setDataParachute] = useState([]);
 	const [dataFirelines, setDataFirelines] = useState([]);
 	const [dataProjectiles, setDataProjectiles] = useState([]);
 
 	const requestRef = useRef();
 	const previousTimeRef = useRef();
+	const frame = frameNo + frameIndex;
 
 	const animate = time => {
 		{
@@ -101,8 +94,7 @@ function Replay({replay}) {
 
 		const deltaTime = new Date() - previousTimeRef.current;
 		if (deltaTime < 100) {
-			console.log(deltaTime);
-			setFrameIndex(deltaTime);
+			setFrameIndex(deltaTime / 100);
 		}
 		// Pass on a function to the setter of the state
 		// to make sure we always have the latest state
@@ -166,7 +158,6 @@ function Replay({replay}) {
 			},
 		}));
 
-		const positionWithActivity = [];
 		const fireLines = [];
 		for (const entity of replay.entities) {
 			for (const firedFrame of entity.framesFired) {
@@ -175,25 +166,10 @@ function Replay({replay}) {
 					to: firedFrame[1],
 					frameNo: firedFrame[0],
 				});
-				positionWithActivity.push({
-					position: entity.positions[firedFrame[0]][0],
-				});
-				positionWithActivity.push({
-					position: firedFrame[1],
-				});
 			}
 		}
 
 		setDataUnits(replay.entities.filter(d => d.type === "unit"));
-		setDataCars(replay.entities.filter(d => d.class === "car"));
-		setDataTrucks(replay.entities.filter(d => d.class === "truck"));
-		setDataBoats(replay.entities.filter(d => d.class === "sea"));
-		setDataAPCs(replay.entities.filter(d => d.class === "apc"));
-		setDataTanks(replay.entities.filter(d => d.class === "tank"));
-		setDataHelis(replay.entities.filter(d => d.class === "heli"));
-		setDataPlanes(replay.entities.filter(d => d.class === "plane"));
-		setDataParachute(replay.entities.filter(d => d.class === "parachute"));
-
 		setDataFirelines(fireLines);
 
 		// projectiles
@@ -247,6 +223,29 @@ function Replay({replay}) {
 		},
 		[viewState]
 	);
+
+	const vehicleLayers = Object.keys(replay.entityObjects).filter((key) => replay.entityObjects[key].length > 0).map((key) => {
+		return new ScenegraphLayer({
+			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+			id: `vehicle-layer-${key}`,
+			data: replay.entityObjects[key],
+			scenegraph: `objects/${key}.gltf`,
+			sizeScale: 15,
+			getPosition: d => d.getPosition(frame),
+			getColor: d => d.getColor(frameNo),
+			getOrientation: d => d.getOrientation(frame),
+			getScale: d => d.isActive(frameNo) ? [1,1,1] : [0,0,0],
+			sizeMinPixels: 10,
+			sizeMaxPixels: 30,
+			_lighting: 'pbr',
+			updateTriggers: {
+				getColor: frameNo,
+				getOrientation: frame,
+				getPosition: frame,
+				getScale: frameNo,
+			},
+		});
+	})
 
 	const layers = [
 		// terrainLayer,
@@ -349,283 +348,7 @@ function Replay({replay}) {
 				depthTest: true
 			},
 		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'parachute-layer',
-			data: dataParachute,
-			scenegraph: 'objects/parachute.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				let color = getSideColor(d.positions[frameNo][5]);
-
-				if (d.positions[frameNo][3] === 1) { // in vehicle
-					color.push(0);
-				} else {
-					color.push(255);
-				}
-
-				return color;
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			}
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'cars-layer',
-			data: dataCars,
-			scenegraph: 'objects/car.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'truck-layer',
-			data: dataTrucks,
-			scenegraph: 'objects/truck.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getColor: frameNo,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'boat-layer',
-			data: dataBoats,
-			scenegraph: 'objects/boat.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'apc-layer',
-			data: dataAPCs,
-			scenegraph: 'objects/apc.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'tank-layer',
-			data: dataTanks,
-			scenegraph: 'objects/tank.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'heli-layer',
-			data: dataHelis,
-			scenegraph: 'objects/heli.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
-		new ScenegraphLayer({
-			coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-			id: 'plane-layer',
-			data: dataPlanes,
-			scenegraph: 'objects/plane.gltf',
-			sizeScale: 15,
-			getPosition: d => d.positions[frameNo][0],
-			getColor: d => {
-				if (d.positions[frameNo][2] === 0) {
-					return [0, 0, 0, 50];
-				}
-				return [...getSideColor(d.positions[frameNo][5]), 255];
-			},
-			getOrientation: d => d.positions[frameNo][1],
-			getScale: d => {
-				if (d.positions[frameNo][0][0] !== 0) return [1,1,1];
-				return [0,0,0];
-			},
-			sizeMinPixels: 10,
-			sizeMaxPixels: 30,
-			_lighting: 'pbr',
-			updateTriggers: {
-				getPosition: frameNo,
-				getColor: frameNo,
-				getOrientation: frameNo,
-			},
-			transitions: {
-				getPosition: 100,
-				getOrientation: 100
-			},
-			parameters: {
-				depthTest: true
-			},
-		}),
+		...vehicleLayers,
 		// new LineLayer({
 		// 	coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
 		// 	id: 'fireline-layer',
@@ -700,7 +423,7 @@ function Replay({replay}) {
 			</div>
 			<Sidebar/>
 			<Player/>
-			<div className="fps">{fps}</div>
+			<div className="fps">{fps} ({frame})</div>
 		</div>
 	);
 }

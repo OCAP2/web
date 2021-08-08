@@ -1,5 +1,21 @@
+import {APC, Boat, Car, Entity, Helicopter, Parachute, Plane, Tank, Truck} from './entity/entity';
+
 export function normalizeReplay(replay) {
+	replay.entityObjects = {
+		parachute: [],
+		car: [],
+		truck: [],
+		apc: [],
+		tank: [],
+		boat: [],
+		helicopter: [],
+		plane: [],
+	};
+
 	for (const entity of replay.entities) {
+		const firstFrame = entity.startFrameNum;
+		let lastFrame;
+
 		const positions = Array.from(Array(replay.endFrame).keys()).map(() => [[0,0,0],[0,0,0]]);
 		if (entity.type !== "unit" && entity.positions.some((d) => d.length >= 5)) {
 			for (const position of entity.positions) {
@@ -24,8 +40,11 @@ export function normalizeReplay(replay) {
 				for (let i = startFrame; i <= endFrame; i++) {
 					positions[i] = position;
 				}
+
+				lastFrame = endFrame;
 			}
 		} else {
+			lastFrame = entity.positions.length + entity.startFrameNum - 1;
 			for (let i = 0; i < entity.positions.length; i++) {
 				const positionIndex = i + entity.startFrameNum;
 				positions[positionIndex] = entity.positions[i];
@@ -39,6 +58,24 @@ export function normalizeReplay(replay) {
 			}
 		}
 		entity.positions = positions;
+
+		if (entity.type !== "unit") {
+			const entityConstructor = {
+				positions: entity.positions,
+				frames: {
+					start: firstFrame,
+					end: lastFrame,
+				},
+			};
+			if (entity.class === "parachute") replay.entityObjects.parachute.push(new Parachute(entityConstructor));
+			if (entity.class === "car") replay.entityObjects.car.push(new Car(entityConstructor));
+			if (entity.class === "truck") replay.entityObjects.truck.push(new Truck(entityConstructor));
+			if (entity.class === "apc") replay.entityObjects.apc.push(new APC(entityConstructor));
+			if (entity.class === "tank") replay.entityObjects.tank.push(new Tank(entityConstructor));
+			if (entity.class === "boat") replay.entityObjects.boat.push(new Boat(entityConstructor));
+			if (entity.class === "heli") replay.entityObjects.helicopter.push(new Helicopter(entityConstructor));
+			if (entity.class === "plane") replay.entityObjects.plane.push(new Plane(entityConstructor));
+		}
 	}
 }
 
