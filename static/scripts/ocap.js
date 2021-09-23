@@ -112,15 +112,15 @@ function initOCAP () {
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
 		.then(() => {
-		/*
-			window.addEventListener("keypress", function (event) {
-				switch (event.charCode) {
-					case 32: // Spacebar
-						event.preventDefault(); // Prevent space from scrolling page on some browsers
-						break;
-				};
-			});
-		*/
+			/*
+				window.addEventListener("keypress", function (event) {
+					switch (event.charCode) {
+						case 32: // Spacebar
+							event.preventDefault(); // Prevent space from scrolling page on some browsers
+							break;
+					};
+				});
+			*/
 			if (args.file) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
@@ -177,16 +177,21 @@ function initMap (world) {
 	map = L.map('map', {
 		//maxZoom: mapMaxZoom,
 		zoomControl: false,
-		zoomAnimation: true,
+		zoomAnimation: false,
+		markerZoomAnimation: false,
 		scrollWheelZoom: true,
 		fadeAnimation: true,
 		crs: L.CRS.Simple,
 		attributionControl: false,
-		zoomSnap: 0.1,
+		zoomSnap: 1,
 		zoomDelta: 1,
 		closePopupOnClick: false,
-		preferCanvas: false
+		preferCanvas: true
 	});
+
+	map.createPane("buildings");
+	map.createPane("roads");
+	map.createPane("forest");
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
@@ -231,18 +236,362 @@ function initMap (world) {
 		map.unproject([0, imageSize], mapMaxNativeZoom),
 		map.unproject([imageSize, 0], mapMaxNativeZoom)
 	);
+	// var mapBounds = [[0, 0], [world.worldSize, world.worldSize]];
 	map.fitBounds(mapBounds);
 
 	// Setup tile layer
-	L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-		maxNativeZoom: mapMaxNativeZoom,
-		maxZoom: mapMaxZoom,
-		minZoom: mapMinZoom,
-		bounds: mapBounds,
-		//attribution: 'MisterGoodson',
-		noWrap: true,
-		tms: false
-	}).addTo(map);
+	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+	// 	maxNativeZoom: mapMaxNativeZoom,
+	// 	maxZoom: mapMaxZoom,
+	// 	minZoom: mapMinZoom,
+	// 	bounds: mapBounds,
+	// 	//attribution: 'MisterGoodson',
+	// 	noWrap: true,
+	// 	tms: false
+	// }).addTo(map);
+
+	// var bushes = fetch(`images/maps/${worldName}/geojson/bush.geojson`)
+	// 	.then((res) => res.json())
+	// 	.then((data) => {
+	// 		return data
+	// 	})
+	// console.log(bushes);
+	// bushIcon = L.icon({
+	// 	iconUrl: `images/maps/${world.worldName}/bush.png`,
+	// 	iconSize: [5, 5]
+	// });
+	// L.geoJSON(bushes, {
+	// 	pointToLayer: function (geoJsonPoint, latlng) {
+	// 		return L.circle(latlng, {
+	// 			radius: 5 * 0.015 * window.multiplier,
+	// 			color: "#00ff00",
+	// 			opacity: 0.4
+	// 		});
+	// 	},
+	// 	coordsToLatLng: function (coords) {
+	// 		return armaToLatLng(coords);
+	// 	}
+	// }).addTo(map);
+
+
+	function getGeoJson (path) {
+		return fetch(path)
+			.then((res) => res.json())
+			.then((data) => {
+				return data;
+			});
+	}
+	function RGBToHex (rgbArr) {
+		r = rgbArr[0].toString(16);
+		g = rgbArr[1].toString(16);
+		b = rgbArr[2].toString(16);
+
+		if (r.length == 1)
+			r = "0" + r;
+		if (g.length == 1)
+			g = "0" + g;
+		if (b.length == 1)
+			b = "0" + b;
+
+		return "#" + r + g + b;
+	}
+	// var rock = getGeoJson(`images/maps/${worldName}/geojson/rock.geojson`);
+	// rock.then(geoJson => {
+	// 	// console.log(geoJson);
+	// 	L.geoJSON(geoJson, {
+	// 		pointToLayer: function (geoJsonPoint, latlng) {
+	// 			return L.circle(latlng, {
+	// 				radius: 3 * 0.015 * window.multiplier,
+	// 				color: "#444444",
+	// 				opacity: 0.4
+	// 			});
+	// 		},
+	// 		coordsToLatLng: function (coords) {
+	// 			return armaToLatLng(coords);
+	// 		}
+	// 	}).addTo(map)
+	// })
+
+
+
+	// tree
+	// getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
+	// 	.then(geoJson => {
+	// 		console.log("Loaded trees");
+	// 		console.log(geoJson);
+	// 		return L.geoJSON(geoJson, {
+	// 			pointToLayer: function (geoJsonPoint, latlng) {
+	// 				return L.corridor(latlng, {
+	// 					radius: 5 * 0.015 * window.multiplier,
+	// 					color: "#009900",
+	// 					opacity: 0.8,
+	// 					fill: false,
+	// 					interactive: false
+	// 				})
+	// 	return L.marker(latlng, {
+	// 		icon: L.icon({
+	// 			iconUrl: `images/maps/${worldName}/tree.png`,
+	// 			iconSize: [5, 5]
+	// 		}),
+	// 		opacity: 1,
+	// 		interactive: false
+	// 	})
+	// 		// return L.circle(latlng, {
+	// 		// 	radius: 5 * 0.015 * window.multiplier,
+	// 		// 	color: "#009900",
+	// 		// 	opacity: 0.8,
+	// 		// 	fill: false,
+	// 		// 	interactive: false
+	// 		// });
+	// 		},
+	// 		coordsToLatLng: function (coords) {
+	// 			return armaToLatLng(coords);
+	// 		}
+	// 	}).addTo(map)
+	// })
+
+	// forest
+	getGeoJson(`images/maps/${worldName}/geojson/forest.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson[0]);
+			var t = geoJson.map(feature => {
+				feature.geometry.coordinates[0].pop()
+				return feature;
+			})
+			// console.log(t[0]);
+			return t
+		})
+		.then(geoJson => {
+			console.log("Loaded forest");
+			console.log(geoJson);
+			return L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#00FF00",
+						interactive: false,
+						fill: true,
+						opacity: 0.5,
+						fillOpacity: 0.5,
+						noClip: true,
+						// renderer: L.canvas()
+						// weight: geoJsonFeature.properties.width * window.multiplier,
+					};
+				},
+				// onEachFeature: function (feature, layer) {
+				// 	return houseLayer.addLayer(layer);
+				// },
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("forest")
+			}).addTo(map)
+		})
+		.then(result => {
+			console.log(result);
+		})
+
+	// road
+	getGeoJson(`images/maps/${worldName}/geojson/road.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#FFD966",
+						interactive: false,
+						weight: geoJsonFeature.properties.width * window.multiplier,
+						noClip: true,
+						// renderer: L.canvas()
+					}
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("roads")
+			}).addTo(map)
+		})
+
+	// road bridge
+	getGeoJson(`images/maps/${worldName}/geojson/road-bridge.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#AA0000",
+						interactive: false,
+						weight: geoJsonFeature.properties.width * window.multiplier,
+						noClip: true,
+						// renderer: L.canvas()
+					}
+				},
+				onEachFeature: function (feature, layer) {
+
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("roads")
+			}).addTo(map)
+		})
+
+	// main road
+	getGeoJson(`images/maps/${worldName}/geojson/main_road.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#FFFFFF",
+						interactive: false,
+						weight: geoJsonFeature.properties.width * window.multiplier,
+						noClip: true,
+						// renderer: L.canvas()
+					}
+				},
+				onEachFeature: function (feature, layer) {
+
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("roads")
+			}).addTo(map)
+		})
+
+	// main road bridge
+	getGeoJson(`images/maps/${worldName}/geojson/main_road-bridge.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#AA0000",
+						interactive: false,
+						weight: geoJsonFeature.properties.width * window.multiplier,
+						noClip: true,
+						// renderer: L.canvas()
+					}
+				},
+				onEachFeature: function (feature, layer) {
+
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("roads")
+			}).addTo(map)
+		})
+
+
+	// track
+	getGeoJson(`images/maps/${worldName}/geojson/track.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: "#FF8099",
+						interactive: false,
+						weight: geoJsonFeature.properties.width * window.multiplier,
+						noClip: true,
+						opacity: 1,
+						// renderer: L.canvas()
+					}
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("roads")
+			}).addTo(map)
+		})
+
+	// houses
+	getGeoJson(`images/maps/${worldName}/geojson/house.geojson`)
+		.then(geoJson => {
+			console.log(geoJson[0]);
+			var t = geoJson.map(feature => {
+				feature.geometry.coordinates[0].pop()
+				return feature;
+			})
+			console.log(t[0]);
+			return t
+		})
+		.then(geoJson => {
+			console.log("Loaded houses");
+			console.log(geoJson);
+			return L.geoJSON(geoJson, {
+				style: function (geoJsonFeature) {
+					return {
+						color: RGBToHex(geoJsonFeature.properties.color),
+						interactive: false,
+						fill: true,
+						opacity: 1,
+						fillOpacity: 1,
+						noClip: true,
+						// renderer: L.canvas()
+						// weight: geoJsonFeature.properties.width * window.multiplier,
+					};
+				},
+				// onEachFeature: function (feature, layer) {
+				// 	return houseLayer.addLayer(layer);
+				// },
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: map.getPane("buildings")
+			}).addTo(map);
+		})
+	// .then(result => {
+	// 	console.log(result);
+	// })
+
+	// nameCity
+	getGeoJson(`images/maps/${worldName}/geojson/nameCity.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pointToLayer: function (geoJsonPoint, latlng) {
+					return L.marker(latlng, {
+						opacity: 0,
+						interactive: false,
+						renderer: L.canvas()
+					}).bindTooltip(geoJsonPoint.properties.name, {
+						permanent: true,
+						opacity: 0.8,
+						direction: "top"
+					}).openTooltip();
+				}
+			}).addTo(map);
+		})
+
+	// nameVillage
+	getGeoJson(`images/maps/${worldName}/geojson/nameVillage.geojson`)
+		.then(geoJson => {
+			// console.log(geoJson);
+			L.geoJSON(geoJson, {
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pointToLayer: function (geoJsonPoint, latlng) {
+					return L.marker(latlng, {
+						opacity: 0,
+						interactive: false,
+						renderer: L.canvas()
+					}).bindTooltip(geoJsonPoint.properties.name, {
+						permanent: true,
+						opacity: 0.4,
+						direction: "top"
+					}).openTooltip();
+				}
+			})
+				.bindPopup(function (layer) {
+					return layer.feature.properties.name;
+				}).addTo(map);
+		})
 
 	// Add keypress event listener
 	mapDiv.addEventListener("keypress", function (event) {
@@ -262,9 +611,9 @@ function initMap (world) {
 	if (boundaryMarks.length === 4) {
 		let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
 		let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
-		map.flyToBounds(boundaryPolygon.getBounds());
+		// map.flyToBounds(boundaryPolygon.getBounds());
 	} else {
-		map.flyToBounds(map.getBounds());
+		// map.flyToBounds(map.getBounds());
 	}
 
 	document.dispatchEvent(new Event("mapInited"));
@@ -359,6 +708,7 @@ function goFullscreen () {
 function armaToLatLng (coords) {
 	const pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 	return map.unproject(pixelCoords, mapMaxNativeZoom);
+	// return (coords);
 }
 
 // Returns date object as little endian (day, month, year) string
@@ -410,7 +760,7 @@ function test () {
 			[startX - sizeX, startY - sizeY] // bottom left
 		];
 
-		const sqMarker = L.polygon(pointsRaw, {noClip: true, interactive: false});
+		const sqMarker = L.polygon(pointsRaw, { noClip: true, interactive: false });
 		L.Util.setOptions(sqMarker, shapeOptions);
 		// if (brushPattern) {
 		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
@@ -428,7 +778,7 @@ function test () {
 	// marker.setRadius(5);
 }
 
-function dateToTimeString(date, isUtc = false) {
+function dateToTimeString (date, isUtc = false) {
 	let hours = date.getHours();
 	let minutes = date.getMinutes();
 	let seconds = date.getSeconds();
@@ -948,7 +1298,7 @@ function startPlaybackLoop () {
 	var playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
 }
 
-function colorElement(element, color) {
+function colorElement (element, color) {
 	if (!color) {
 		return;
 	}
@@ -966,7 +1316,7 @@ function colorElement(element, color) {
 	}
 }
 
-function getMarkerColor(color, defaultColor = "ffffff") {
+function getMarkerColor (color, defaultColor = "ffffff") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -988,12 +1338,12 @@ function getMarkerColor(color, defaultColor = "ffffff") {
 
 	return hexColor;
 }
-function colorMarkerIcon(element, icon, color) {
+function colorMarkerIcon (element, icon, color) {
 	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
 
 
-function getPulseMarkerColor(color, defaultColor = "000000") {
+function getPulseMarkerColor (color, defaultColor = "000000") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -1022,7 +1372,7 @@ String.prototype.encodeHTMLEntities = function () {
 	});
 }
 
-function closestEquivalentAngle(from, to) {
+function closestEquivalentAngle (from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
 }
