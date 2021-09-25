@@ -192,6 +192,7 @@ function initMap (world) {
 	map.createPane("buildings");
 	map.createPane("roads");
 	map.createPane("forest");
+	map.createPane("rock");
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
@@ -240,38 +241,15 @@ function initMap (world) {
 	map.fitBounds(mapBounds);
 
 	// Setup tile layer
-	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	maxZoom: mapMaxZoom,
-	// 	minZoom: mapMinZoom,
-	// 	bounds: mapBounds,
-	// 	//attribution: 'MisterGoodson',
-	// 	noWrap: true,
-	// 	tms: false
-	// }).addTo(map);
-
-	// var bushes = fetch(`images/maps/${worldName}/geojson/bush.geojson`)
-	// 	.then((res) => res.json())
-	// 	.then((data) => {
-	// 		return data
-	// 	})
-	// console.log(bushes);
-	// bushIcon = L.icon({
-	// 	iconUrl: `images/maps/${world.worldName}/bush.png`,
-	// 	iconSize: [5, 5]
-	// });
-	// L.geoJSON(bushes, {
-	// 	pointToLayer: function (geoJsonPoint, latlng) {
-	// 		return L.circle(latlng, {
-	// 			radius: 5 * 0.015 * window.multiplier,
-	// 			color: "#00ff00",
-	// 			opacity: 0.4
-	// 		});
-	// 	},
-	// 	coordsToLatLng: function (coords) {
-	// 		return armaToLatLng(coords);
-	// 	}
-	// }).addTo(map);
+	L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+		maxNativeZoom: mapMaxNativeZoom,
+		maxZoom: mapMaxZoom,
+		minZoom: mapMinZoom,
+		bounds: mapBounds,
+		//attribution: 'MisterGoodson',
+		noWrap: true,
+		tms: false
+	}).addTo(map);
 
 
 	function getGeoJson (path) {
@@ -308,47 +286,86 @@ function initMap (world) {
 	// 		},
 	// 		coordsToLatLng: function (coords) {
 	// 			return armaToLatLng(coords);
-	// 		}
+	// 		},
+	// 		pane: map.getPane("rock")
 	// 	}).addTo(map)
 	// })
 
 
 
 	// tree
-	// getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
+	getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
+		.then(geoJson => {
+			console.log("Loaded trees");
+			console.log(geoJson);
+			return L.geoJSON(geoJson, {
+				pointToLayer: function (geoJsonPoint, latlng) {
+					// return L.corridor(latlng, {
+					// 	radius: 5 * 0.015 * window.multiplier,
+					// 	color: "#009900",
+					// 	opacity: 0.8,
+					// 	fill: false,
+					// 	interactive: false
+					// })
+				// return L.marker(latlng, {
+				// 	icon: L.icon({
+				// 		iconUrl: `images/maps/${worldName}/tree.png`,
+				// 		iconSize: [5, 5]
+				// 	}),
+				// 	opacity: 1,
+				// 	interactive: false
+				// })
+				return L.circle(latlng, {
+					radius: 5 * 0.015 * window.multiplier,
+					color: "#009900",
+					opacity: 0.4,
+					fill: false,
+					interactive: false
+				});
+			},
+			coordsToLatLng: function (coords) {
+				return armaToLatLng(coords);
+			},
+			pane: map.getPane("forest")
+		}).addTo(map)
+		})
+	
+	// bush
+	// getGeoJson(`images/maps/${worldName}/geojson/bush.geojson`)
 	// 	.then(geoJson => {
 	// 		console.log("Loaded trees");
 	// 		console.log(geoJson);
 	// 		return L.geoJSON(geoJson, {
 	// 			pointToLayer: function (geoJsonPoint, latlng) {
-	// 				return L.corridor(latlng, {
-	// 					radius: 5 * 0.015 * window.multiplier,
+	// 				// return L.corridor(latlng, {
+	// 				// 	radius: 5 * 0.015 * window.multiplier,
+	// 				// 	color: "#009900",
+	// 				// 	opacity: 0.8,
+	// 				// 	fill: false,
+	// 				// 	interactive: false
+	// 				// })
+	// 				// return L.marker(latlng, {
+	// 				// 	icon: L.icon({
+	// 				// 		iconUrl: `images/maps/${worldName}/tree.png`,
+	// 				// 		iconSize: [5, 5]
+	// 				// 	}),
+	// 				// 	opacity: 1,
+	// 				// 	interactive: false
+	// 				// })
+	// 				return L.circle(latlng, {
+	// 					radius: 2 * 0.015 * window.multiplier,
 	// 					color: "#009900",
-	// 					opacity: 0.8,
+	// 					opacity: 0.2,
 	// 					fill: false,
 	// 					interactive: false
-	// 				})
-	// 	return L.marker(latlng, {
-	// 		icon: L.icon({
-	// 			iconUrl: `images/maps/${worldName}/tree.png`,
-	// 			iconSize: [5, 5]
-	// 		}),
-	// 		opacity: 1,
-	// 		interactive: false
+	// 				});
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("forest")
+	// 		}).addTo(map)
 	// 	})
-	// 		// return L.circle(latlng, {
-	// 		// 	radius: 5 * 0.015 * window.multiplier,
-	// 		// 	color: "#009900",
-	// 		// 	opacity: 0.8,
-	// 		// 	fill: false,
-	// 		// 	interactive: false
-	// 		// });
-	// 		},
-	// 		coordsToLatLng: function (coords) {
-	// 			return armaToLatLng(coords);
-	// 		}
-	// 	}).addTo(map)
-	// })
 
 	// forest
 	getGeoJson(`images/maps/${worldName}/geojson/forest.geojson`)
@@ -371,7 +388,7 @@ function initMap (world) {
 						interactive: false,
 						fill: true,
 						opacity: 0.5,
-						fillOpacity: 0.5,
+						fillOpacity: 0.2,
 						noClip: true,
 						// renderer: L.canvas()
 						// weight: geoJsonFeature.properties.width * window.multiplier,
