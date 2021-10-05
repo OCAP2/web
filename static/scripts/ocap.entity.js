@@ -60,9 +60,9 @@ class Entity {
 		this._element = el;
 	}
 
-	getElement() {
-		return this._element;
-	}
+	// getElement() {
+	// 	return this._element;
+	// }
 
 	getName() {
 		return this._name;
@@ -77,7 +77,7 @@ class Entity {
 			autoPan: false,
 			autoClose: false,
 			closeButton: false,
-			className: this._popupClassName
+			className: this._popupClassName,
 		});
 		popup.setContent(content);
 		return popup;
@@ -88,7 +88,7 @@ class Entity {
 			icon: this._realIcon,
 			rotationOrigin: this._markerRotationOrigin
 		});
-		this._marker.addTo(map);
+		this._marker.addTo(entitiesLayerGroup);
 	}
 
 	// TODO: Optimise this. No need to remove marker (and recreate it later).
@@ -97,7 +97,7 @@ class Entity {
 	removeMarker() {
 		let marker = this._marker;
 		if (marker != null) {
-			map.removeLayer(marker);
+			entitiesLayerGroup.removeLayer(marker);
 			this._marker = null;
 			this.remove();
 		}
@@ -136,7 +136,10 @@ class Entity {
 
 		let popup = this._marker.getPopup();
 		if (popup != null) {
-			popup.getElement().style.opacity = opacity;
+			let element = popup.getElement()
+			if (element) {
+				element.style.opacity = opacity;
+			}
 		}
 	}
 
@@ -146,6 +149,7 @@ class Entity {
 		if (popup == null) { return }
 
 		let element = popup.getElement();
+		if (element == null) { return }
 		let display = "inherit";
 		if (bool || !ui.nicknameEnable) { display = "none" }
 

@@ -81,12 +81,12 @@ let _localizable = {
 	},
 	"nickname": {
 		"ru": "Никнеймы игроков и название техники ",
-		"en": "Player nicknames and vehicle names",
+		"en": "Player, vehicle, and projectile tags",
 		"de": "Spieler- und Fahrzeugnamen"
 	},
 	"markers": {
 		"ru": "Маркеры",
-		"en": "Markers",
+		"en": "Marker names",
 		"de": "Markierungen"
 	},
 	"event_fire": {

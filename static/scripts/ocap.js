@@ -56,6 +56,13 @@ var trim = 0; // Number of pixels that were trimmed when cropping image (used to
 var mapMinZoom = null;
 var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
+var topoLayer = null;
+var satLayer = null;
+var layerControl = null;
+var entitiesLayerGroup = L.layerGroup([]);
+var markersLayerGroup = L.layerGroup([]);
+var systemMarkersLayerGroup = L.layerGroup([]);
+var projectileMarkersLayerGroup = L.layerGroup([]);
 var map = null;
 var mapDiv = null;
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
@@ -112,15 +119,15 @@ function initOCAP () {
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
 		.then(() => {
-		/*
-			window.addEventListener("keypress", function (event) {
-				switch (event.charCode) {
-					case 32: // Spacebar
-						event.preventDefault(); // Prevent space from scrolling page on some browsers
-						break;
-				};
-			});
-		*/
+			/*
+				window.addEventListener("keypress", function (event) {
+					switch (event.charCode) {
+						case 32: // Spacebar
+							event.preventDefault(); // Prevent space from scrolling page on some browsers
+							break;
+					};
+				});
+			*/
 			if (args.file) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
@@ -156,6 +163,7 @@ function getWorldByName (worldName) {
 		"multiplier": 1,
 		"maxZoom": 6,
 		"minZoom": 0,
+		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
 	return fetch(`images/maps/${worldName}/map.json`)
@@ -175,13 +183,13 @@ function initMap (world) {
 	mapMaxZoom = mapMaxNativeZoom + 3
 	// Create map
 	map = L.map('map', {
-		//maxZoom: mapMaxZoom,
+		maxZoom: mapMaxZoom,
 		zoomControl: false,
 		zoomAnimation: true,
 		scrollWheelZoom: true,
 		fadeAnimation: true,
 		crs: L.CRS.Simple,
-		attributionControl: false,
+		attributionControl: true,
 		zoomSnap: 0.1,
 		zoomDelta: 1,
 		closePopupOnClick: false,
@@ -190,7 +198,7 @@ function initMap (world) {
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
-		ui.hideMarkerPopups = map.getZoom() <= 4;
+		ui.hideMarkerPopups = map.getZoom() <= 5;
 	});
 
 	let playbackPausedBeforeZoom;
@@ -220,8 +228,11 @@ function initMap (world) {
 
 	console.log("Got world: ", world);
 
+
+	// TOPOGRAPHIC
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
+
 	let args = getArguments();
 	if (!args.x || !args.y || !args.zoom) {
 		map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
@@ -233,16 +244,179 @@ function initMap (world) {
 	);
 	map.fitBounds(mapBounds);
 
+
 	// Setup tile layer
-	L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-		maxNativeZoom: mapMaxNativeZoom,
-		maxZoom: mapMaxZoom,
-		minZoom: mapMinZoom,
-		bounds: mapBounds,
-		//attribution: 'MisterGoodson',
-		noWrap: true,
-		tms: false
+	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+	// 	maxNativeZoom: mapMaxNativeZoom,
+	// 	maxZoom: mapMaxZoom,
+	// 	minZoom: mapMinZoom,
+	// 	bounds: mapBounds,
+	// 	//attribution: 'MisterGoodson',
+	// 	noWrap: true,
+	// 	tms: false
+	// }).addTo(map);
+
+	layerControl = L.control.layers({}, {
+		// overlay layers
+		"Units and Vehicles": entitiesLayerGroup,
+		"Selected Side Markers": markersLayerGroup,
+		"Editor/Briefing Markers": systemMarkersLayerGroup,
+		"Projectile Markers": projectileMarkersLayerGroup
+	}, {
+		position: 'topright',
+		collapsed: false
 	}).addTo(map);
+
+	entitiesLayerGroup.addTo(map);
+	markersLayerGroup.addTo(map);
+	systemMarkersLayerGroup.addTo(map);
+	projectileMarkersLayerGroup.addTo(map);
+
+	topoLayer = fetch('images/maps/' + worldName + '/2/0/0.png')
+		.then(res => {
+			if (res.status == 200) {
+				var layer = L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+					maxNativeZoom: world.maxZoom,
+					// maxZoom: mapMaxZoom,
+					minNativeZoom: world.minZoom,
+					bounds: mapBounds,
+					attribution: "Map Data &copy; " + world.attribution,
+					noWrap: true,
+					tms: false,
+					keepBuffer: 4,
+				});
+				layerControl.addBaseLayer(
+					layer,
+					"Topographic"
+				);
+				layer.addTo(map);
+			} else {
+				console.warn("Topographic map for " + worldName + " not found.")
+				return null
+			}
+		})
+		.catch(err => console.warn("Topographic map for " + worldName + " not found."))
+
+	satLayer = fetch('images/maps/' + worldName + '/sat/2/0/0.png')
+		.then(res => {
+			if (res.status == 200) {
+				var layer = L.tileLayer('images/maps/' + worldName + '/sat/{z}/{x}/{y}.png', {
+					maxNativeZoom: world.maxZoom,
+					// maxZoom: mapMaxZoom,
+					minNativeZoom: world.minZoom,
+					bounds: mapBounds,
+					attribution: "Map Data &copy; " + world.attribution,
+					noWrap: true,
+					tms: false,
+					keepBuffer: 4,
+					opacity: 0.7
+				});
+				layerControl.addBaseLayer(
+					layer,
+					"Satellite"
+				);
+			} else {
+				console.warn("Satellite map for " + worldName + " not found.")
+				return null
+			}
+		})
+		.catch(err => console.warn("Satellite map for " + worldName + " not found."))
+
+
+	map.on("baselayerchange", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		// multiplier = event.name
+	});
+	map.on("overlayadd", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		switch (event.name) {
+			case "Units and Vehicles": {
+				if (ui.hideMarkerPopups == false) {
+					entitiesLayerGroup.eachLayer(layer => {
+						layer.openPopup();
+					});
+				}
+				break;
+			};
+			case "Selected Side Markers": {
+				markersLayerGroup.eachLayer(layer => {
+					layer.remove()
+				})
+				markers.forEach(marker => {
+					if (marker._player instanceof Unit) {
+						marker._marker = null;
+					}
+				})
+				// for (const marker of markers) {
+				// 	marker.manageFrame(playbackFrame);
+				// }
+				break;
+			};
+			case "Editor/Briefing Markers": {
+				if (ui.markersEnable == true) {
+					systemMarkersLayerGroup.eachLayer(layer => {
+						layer.openPopup();
+					})
+				}
+				break;
+			};
+			case "Projectile Markers": {
+				projectileMarkersLayerGroup.getLayers().forEach(layer => {
+					layer.remove()
+				})
+				markers.forEach(marker => {
+					if (marker.isMagIcon()) {
+						marker._marker = null;
+					}
+				})
+				break;
+			};
+
+			default: {
+				break;
+			};
+		};
+	});
+	map.on("overlayremove", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		switch (event.name) {
+			case "Units and Vehicles": {
+				// ui.hideMarkerPopups = false;
+				// entitiesLayerGroup.eachLayer(layer => {
+				// 	layer.openPopup();
+				// });
+				break;
+			};
+			case "Selected Side Markers": {
+				markersLayerGroup.eachLayer(layer => {
+					// layer.remove()
+				})
+				break;
+			};
+			case "Editor/Briefing Markers": {
+				// systemMarkersLayerGroup.eachLayer(layer => {
+				// 	layer.openPopup();
+				// })
+				break;
+			};
+			case "Projectile Markers": {
+				projectileMarkersLayerGroup.getLayers().forEach(layer => {
+					layer.remove()
+				})
+
+				break;
+			};
+
+			default: {
+				break;
+			};
+		};
+	});
+
+
 
 	// Add keypress event listener
 	mapDiv.addEventListener("keypress", function (event) {
@@ -410,7 +584,7 @@ function test () {
 			[startX - sizeX, startY - sizeY] // bottom left
 		];
 
-		const sqMarker = L.polygon(pointsRaw, {noClip: true, interactive: false});
+		const sqMarker = L.polygon(pointsRaw, { noClip: true, interactive: false });
 		L.Util.setOptions(sqMarker, shapeOptions);
 		// if (brushPattern) {
 		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
@@ -428,7 +602,7 @@ function test () {
 	// marker.setRadius(5);
 }
 
-function dateToTimeString(date, isUtc = false) {
+function dateToTimeString (date, isUtc = false) {
 	let hours = date.getHours();
 	let minutes = date.getMinutes();
 	let seconds = date.getSeconds();
@@ -902,10 +1076,19 @@ function startPlaybackLoop () {
 				}
 				for (const marker of markers) {
 					marker.manageFrame(playbackFrame);
-					if (ui.markersEnable) {
-						marker.hideMarkerPopup(false);
-					} else {
-						marker.hideMarkerPopup(true);
+					if (!marker.isMagIcon()) {
+						if (ui.markersEnable) {
+							marker.hideMarkerPopup(false);
+						} else {
+							marker.hideMarkerPopup(true);
+						}
+					}
+					if (marker.isMagIcon()) {
+						if (ui.nicknameEnable) {
+							marker.hideMarkerPopup(false);
+						} else {
+							marker.hideMarkerPopup(true);
+						}
 					}
 				}
 
@@ -948,7 +1131,7 @@ function startPlaybackLoop () {
 	var playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
 }
 
-function colorElement(element, color) {
+function colorElement (element, color) {
 	if (!color) {
 		return;
 	}
@@ -966,7 +1149,7 @@ function colorElement(element, color) {
 	}
 }
 
-function getMarkerColor(color, defaultColor = "ffffff") {
+function getMarkerColor (color, defaultColor = "ffffff") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -988,12 +1171,12 @@ function getMarkerColor(color, defaultColor = "ffffff") {
 
 	return hexColor;
 }
-function colorMarkerIcon(element, icon, color) {
+function colorMarkerIcon (element, icon, color) {
 	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
 
 
-function getPulseMarkerColor(color, defaultColor = "000000") {
+function getPulseMarkerColor (color, defaultColor = "000000") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -1022,7 +1205,7 @@ String.prototype.encodeHTMLEntities = function () {
 	});
 }
 
-function closestEquivalentAngle(from, to) {
+function closestEquivalentAngle (from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
 }

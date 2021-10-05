@@ -721,18 +721,29 @@ input[type=range]::-webkit-slider-runnable-track {
 /* Override leaflet styles */
 /* */
 
+.leaflet-top {
+	top: 55%;
+}
 .leaflet-right {
-	right: 18%;
-	bottom: 4%;
+	right: 1%;
+}
+.leaflet-bottom {
+	bottom: 65px;
+}
+.leaflet-control-attribution {
+	right: 0px;
+	bottom: 0px;
 }
 
-.leaflet-tile {
-	/*border: solid black 1px;*/
-}
+/* .leaflet-tile { */
+	/* border: solid black 1px; */
+/* } */
 
 .leaflet-tile-container {
-	image-rendering: pixelated; /* 'pixelated' preserves sharpness of tiles */
+	/* 'pixelated' preserves sharpness of tiles */
+	image-rendering: pixelated; 
 }
+
 
 .leaflet-popup {
 	pointer-events: none;
@@ -776,6 +787,7 @@ input[type=range]::-webkit-slider-runnable-track {
 	margin: 0;
 	font-weight: bold;
 	font-size: 12px;
+	/* width: 100%; */
 }
 
 .leaflet-div-icon {
