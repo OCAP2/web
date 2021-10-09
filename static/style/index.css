@@ -19,8 +19,8 @@ html, body, #map {
 
 .customize.logo {
 	position: absolute;
-	bottom: 65px;
-	right: 5px;
+	bottom: 85px;
+	right: 1%;
 	z-index: 1;
 	opacity: 0.8;
 }
@@ -727,6 +727,10 @@ input[type=range]::-webkit-slider-runnable-track {
 .leaflet-right {
 	right: 1%;
 }
+.leaflet-left {
+	left: 360px;
+	top: 50px;
+}
 .leaflet-bottom {
 	bottom: 65px;
 }
@@ -735,14 +739,17 @@ input[type=range]::-webkit-slider-runnable-track {
 	bottom: 0px;
 }
 
+.basemaps {
+	bottom: 223px;
+}
 /* .leaflet-tile { */
 	/* border: solid black 1px; */
 /* } */
 
-.leaflet-tile-container {
+/* .leaflet-tile-container { */
 	/* 'pixelated' preserves sharpness of tiles */
-	image-rendering: pixelated; 
-}
+	/* image-rendering: pixelated;  */
+/* } */
 
 
 .leaflet-popup {

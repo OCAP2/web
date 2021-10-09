@@ -61,6 +61,7 @@ class UI {
 		this.elapsedTime = null;
 
 		this.disableKillCount = false;
+		this.useCloudTiles = true;
 
 		this._init();
 	};
@@ -840,6 +841,7 @@ class UI {
 				}
 
 				this.disableKillCount = data.disableKillCount;
+				// this.useCloudTiles = data.useCloudTiles;
 			});
 	}
 

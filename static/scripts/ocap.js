@@ -58,7 +58,11 @@ var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
 var topoLayer = null;
 var satLayer = null;
-var layerControl = null;
+var terrainLayer = null;
+var terrainDarkLayer = null;
+var contourLayer = null;
+var baseLayerControl = null;
+var overlayLayerControl = null;
 var entitiesLayerGroup = L.layerGroup([]);
 var markersLayerGroup = L.layerGroup([]);
 var systemMarkersLayerGroup = L.layerGroup([]);
@@ -163,12 +167,23 @@ function getWorldByName (worldName) {
 		"multiplier": 1,
 		"maxZoom": 6,
 		"minZoom": 0,
+		"hasTopo": true,
+		"hasSatellite": false,
+		"hasTerrain": false,
+		"hasTerrainDark": false,
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
-	return fetch(`images/maps/${worldName}/map.json`)
+	let mapJsonUrl;
+	if (ui.useCloudTiles) {
+		mapJsonUrl = `http://ocap2maps.site.nfoservers.com/maps/${worldName}/map.json`;
+	} else {
+		mapJsonUrl = 'images/maps/' + worldName + '/map.json';
+	}
+	return fetch(mapJsonUrl)
 		.then((res) => res.json())
 		.then((data) => {
+			console.log(data);
 			map = data;
 			return Object.assign(defaultMap, map);
 		})
@@ -181,16 +196,19 @@ function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
+
+
 	// Create map
 	map = L.map('map', {
 		maxZoom: mapMaxZoom,
+		zoominfoControl: true,
 		zoomControl: false,
-		zoomAnimation: true,
 		scrollWheelZoom: true,
+		zoomAnimation: true,
 		fadeAnimation: true,
 		crs: L.CRS.Simple,
 		attributionControl: true,
-		zoomSnap: 0.1,
+		zoomSnap: 1,
 		zoomDelta: 1,
 		closePopupOnClick: false,
 		preferCanvas: false
@@ -198,7 +216,7 @@ function initMap (world) {
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
-		ui.hideMarkerPopups = map.getZoom() <= 5;
+		ui.hideMarkerPopups = map.getZoom() <= 4;
 	});
 
 	let playbackPausedBeforeZoom;
@@ -229,7 +247,6 @@ function initMap (world) {
 	console.log("Got world: ", world);
 
 
-	// TOPOGRAPHIC
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
 
@@ -256,7 +273,7 @@ function initMap (world) {
 	// 	tms: false
 	// }).addTo(map);
 
-	layerControl = L.control.layers({}, {
+	overlayLayerControl = L.control.layers({}, {
 		// overlay layers
 		"Units and Vehicles": entitiesLayerGroup,
 		"Selected Side Markers": markersLayerGroup,
@@ -267,60 +284,250 @@ function initMap (world) {
 		collapsed: false
 	}).addTo(map);
 
+	var baseLayers = [];
+
 	entitiesLayerGroup.addTo(map);
 	markersLayerGroup.addTo(map);
 	systemMarkersLayerGroup.addTo(map);
 	projectileMarkersLayerGroup.addTo(map);
 
-	topoLayer = fetch('images/maps/' + worldName + '/2/0/0.png')
-		.then(res => {
-			if (res.status == 200) {
-				var layer = L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-					maxNativeZoom: world.maxZoom,
-					// maxZoom: mapMaxZoom,
-					minNativeZoom: world.minZoom,
-					bounds: mapBounds,
-					attribution: "Map Data &copy; " + world.attribution,
-					noWrap: true,
-					tms: false,
-					keepBuffer: 4,
-				});
-				layerControl.addBaseLayer(
-					layer,
-					"Topographic"
-				);
-				layer.addTo(map);
-			} else {
-				console.warn("Topographic map for " + worldName + " not found.")
-				return null
-			}
-		})
-		.catch(err => console.warn("Topographic map for " + worldName + " not found."))
 
-	satLayer = fetch('images/maps/' + worldName + '/sat/2/0/0.png')
-		.then(res => {
+	// set up messagebox
+	// const contourLoadingMessage = L.control.messagebox({
+	// 	position: 'topleft',
+	// 	timeout: 1200000,
+	// }).addTo(map);
+
+	// map.on("contourDrawing", function (data) {
+	// 	if (data.status) {
+	// 		contourLoadingMessage.options.timeout = 1200000;
+	// 		contourLoadingMessage.show('Calculating contours...');
+	// 	} else {
+	// 		contourLoadingMessage.options.timeout = 2000;
+	// 		contourLoadingMessage.show('Calculating contours...done');
+	// 	}
+	// });
+
+
+	// worldName = world.worldName;
+
+
+	let topoLayerUrl = "";
+	let satLayerUrl = "";
+	let terrainLayerUrl = "";
+	let terrainDarkLayerUrl = "";
+	let contourLayerUrl = "";
+
+	// console.log(ui.useCloudTiles)
+
+	switch (ui.useCloudTiles) {
+		case true: {
+			topoLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/{z}/{x}/{y}.png');
+			satLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/sat/{z}/{x}/{y}.png');
+			terrainLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/terrain/{z}/{x}/{y}.png');
+			terrainDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/terrain-dark/{z}/{x}/{y}.png');
+			contourLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/contours.geojson');
+			break;
+		}
+		case false: {
+			topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
+			satLayerUrl = ('images/maps/' + worldName + '/sat/{z}/{x}/{y}.png');
+			terrainLayerUrl = ('images/maps/' + worldName +  '/terrain/{z}/{x}/{y}.png');
+			terrainDarkLayerUrl = ('images/maps/' + worldName + '/terrain-dark/{z}/{x}/{y}.png');
+			contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
+			break;
+		}
+	}
+
+	// console.log(topoLayerUrl);
+
+	// topoLayer = fetch('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/2/0/0.png')
+	// 	.then(res => {
+	// 		console.log(res);
+	// 		if (res.status == 200) {
+	if (world.hasTopo) {
+		// var layer = L.tileLayer(topoLayerUrl, {
+		topoLayer = L.tileLayer(topoLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Topographic",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			opacity: 0.7,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		// layerControl.addBaseLayer(
+		// 	topoLayer,
+		// 	"Topographic"
+		// );
+		// topoLayer.addTo(map);
+		baseLayers.push(topoLayer);
+	}
+	// 		return layer;
+	// 	} else {
+	// 		console.warn("Topographic map for " + worldName + " not found.")
+	// 		return null
+	// 	}
+	// })
+	// .catch(err => console.warn("Topographic map for " + worldName + " not found."))
+
+	// satLayer = fetch('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/sat/2/0/0.png')
+	// 	.then(res => {
+	// 		if (res.status == 200) {
+	if (world.hasSatellite) {
+		// var layer = L.tileLayer(satLayerUrl, {
+		satLayer = L.tileLayer(satLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Satellite",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			opacity: 0.8,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		// layerControl.addBaseLayer(
+		// 	satLayer,
+		// 	"Satellite"
+		// );
+		baseLayers.push(satLayer);
+	}
+	// 		return layer;
+	// 	} else {
+	// 		console.warn("Satellite map for " + worldName + " not found.")
+	// 		return null
+	// 	}
+	// })
+	// .catch(err => console.warn("Satellite map for " + worldName + " not found."))
+
+
+	// terrainLayer = fetch('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/terrain/2/0/0.png')
+	// 	.then(res => {
+	// 		if (res.status == 200) {
+	if (world.hasTerrain) {
+		// var layer = L.tileLayer(terrainLayerUrl, {
+		
+		terrainLayer = L.tileLayer(terrainLayerUrl, {
+		// terrainLayer = L.tileLayer('images/maps/' + worldName + '/terrain/{z}/{x}/{y}.png', {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			attribution: "Map Data &copy; " + world.attribution,
+			label: "Terrain",
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			opacity: 1,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		// layerControl.addBaseLayer(
+		// 	terrainLayer,
+		// 	"Terrain"
+		// );
+		baseLayers.push(terrainLayer);
+	}
+	// 		return layer;
+	// 	} else {
+	// 		console.warn("Terrain map for " + worldName + " not found.")
+	// 		return null
+	// 	}
+	// })
+	// .catch(err => console.warn("Terrain map for " + worldName + " not found."))
+
+
+	if (world.hasTerrainDark) {
+		// var layer = L.tileLayer(terrainDarkLayerUrl, {
+
+		terrainDarkLayer = L.tileLayer(terrainDarkLayerUrl, {
+			// terrainLayer = L.tileLayer('images/maps/' + worldName + '/terrain-dark/{z}/{x}/{y}.png', {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Terrain (Dark)",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			opacity: 1,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		// layerControl.addBaseLayer(
+		// 	terrainLayer,
+		// 	"Terrain (Dark)"
+		// );
+		baseLayers.push(terrainDarkLayer);
+	}
+
+
+
+	baseLayerControl = map.addControl(L.control.basemaps({
+		basemaps: baseLayers,
+		tileX: 0,  // tile X coordinate
+		tileY: 0,  // tile Y coordinate
+		tileZ: 0   // tile zoom level
+	}));
+
+
+	// gdal_contour -a ELEV -i 20 dem.asc contours.geojson
+	contourLayer = fetch(contourLayerUrl)
+		.then((res) => {
 			if (res.status == 200) {
-				var layer = L.tileLayer('images/maps/' + worldName + '/sat/{z}/{x}/{y}.png', {
-					maxNativeZoom: world.maxZoom,
-					// maxZoom: mapMaxZoom,
-					minNativeZoom: world.minZoom,
-					bounds: mapBounds,
-					attribution: "Map Data &copy; " + world.attribution,
-					noWrap: true,
-					tms: false,
-					keepBuffer: 4,
-					opacity: 0.7
-				});
-				layerControl.addBaseLayer(
-					layer,
-					"Satellite"
-				);
+				return res.json();
 			} else {
-				console.warn("Satellite map for " + worldName + " not found.")
-				return null
+				throw "Contour layer geoJson for " + worldName + " not found."
 			}
 		})
-		.catch(err => console.warn("Satellite map for " + worldName + " not found."))
+		.then(geoJson => {
+			console.log("Loaded contour lines");
+			console.debug(geoJson);
+
+			let contourPane = map.createPane("contourPane");
+
+			var layer = L.geoJSON(geoJson, {
+				filter: function (geoJsonFeature) {
+					if (geoJsonFeature.properties.ELEV > 0) {
+						return true;
+					} else {
+						return false;
+					}
+				},
+				style: function (geoJsonFeature) {
+					var props = geoJsonFeature.properties;
+					var color;
+					if (props.index == 1) { color = "#FF7777" } else { color = "#444444" };
+					return {
+						color: color,
+						interactive: false,
+						fill: false,
+						opacity: 0.3,
+						// fillOpacity: 0.2,
+						noClip: true,
+						// renderer: L.canvas()
+						// weight: geoJsonFeature.properties.width * window.multiplier,
+					};
+				},
+				coordsToLatLng: function (coords) {
+					return armaToLatLng(coords);
+				},
+				pane: contourPane
+			});
+			overlayLayerControl.addOverlay(
+				layer,
+				"Contours"
+			);
+
+			return layer;
+		})
+		.catch(err => console.warn("Contour layer geoJson for " + worldName + " not found."))
 
 
 	map.on("baselayerchange", (event) => {
@@ -661,6 +868,7 @@ function processOp (filepath) {
 		.then((res) => res.json())
 		.then((data) => {
 			worldName = data.worldName.toLowerCase();
+			// worldName = data.worldName;
 			return Promise.all([data, getWorldByName(worldName)]);
 		})
 		.then(([data, world]) => {
