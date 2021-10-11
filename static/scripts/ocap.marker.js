@@ -464,8 +464,10 @@ class Marker {
 			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" })
 			marker.addTo(systemMarkersLayerGroup);
 
-			let popup = this._createPopup(markerCustomText);
-			marker.bindPopup(popup).openPopup();
+			if (markerCustomText != "") {
+				let popup = this._createPopup(markerCustomText);
+				marker.bindPopup(popup).openPopup();
+			};
 
 			// Set direction
 			marker.setRotationAngle(dir);

@@ -778,10 +778,13 @@ input[type=range]::-webkit-slider-runnable-track {
 #container.marker-transition.speed-1:not(.zooming) .leaflet-popup.animation { transition: transform 1s linear !important; }
 
 .leaflet-popup-content-wrapper {
-	background: none;
-	box-shadow: none;
-	padding: 0;
-	margin: 0;
+	background: white;
+	background-blend-mode: screen;
+	box-shadow: inset;
+	opacity: 0.65;
+	padding-right: 2px;
+	/* margin: 2px; */
+	/* margin-right: 4px; */
 	margin-top: 10px;
 }
 
