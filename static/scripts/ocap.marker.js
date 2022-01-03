@@ -38,17 +38,23 @@ class Marker {
 		// "ELLIPSE"
 		// "POLYLINE"
 
-		if (this._type.search("magIcons") > -1) {
-			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}.png` });
-		} else if (!this._shape || !this._size) {
-			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${color}.png` });
-		} else if (this._shape == "ICON") {
-			this._size = this._size.map(value => {
-				return (value * 35);
-			});
-			this._icon = L.icon({ iconSize: this._size, iconUrl: `images/markers/${type}/${color}.png` });
-		} else {
+		try {
+			if (this._type.search("magIcons") > -1) {
+				this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}.png` });
+			} else if (!this._shape || !this._size) {
+				this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${color}.png` });
+			} else if (this._shape == "ICON") {
+				this._size = this._size.map(value => {
+					return (value * 35);
+				});
+				this._icon = L.icon({ iconSize: this._size, iconUrl: `images/markers/${type}/${color}.png` });
+			} else {
+				this._icon = null;
+			}
+		} catch {
 			this._icon = null;
+			console.warning("Marker not found for");
+			console.debug(this._type);
 		}
 
 		// "Solid" (default)
@@ -461,16 +467,19 @@ class Marker {
 			let markerCustomText = "";
 			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
 
-			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" })
-			marker.addTo(systemMarkersLayerGroup);
+			if (_this.icon) {
+				marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" })
+				marker.addTo(systemMarkersLayerGroup);
 
-			if (markerCustomText != "") {
-				let popup = this._createPopup(markerCustomText);
-				marker.bindPopup(popup).openPopup();
-			};
+				if (markerCustomText != "") {
+					let popup = this._createPopup(markerCustomText);
+					marker.bindPopup(popup).openPopup();
+				};
 
-			// Set direction
-			marker.setRotationAngle(dir);
+
+				// Set direction
+				marker.setRotationAngle(dir);
+			}
 
 		} else if (this._player instanceof Unit && this._shape === "ICON") {
 			let interactiveVal = false;
@@ -507,28 +516,29 @@ class Marker {
 				interactiveVal = true;
 				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
+			if (_this.icon) {
+				marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" })
+				if (
+					// projectiles
+					(
+						this._type.search("magIcons") > -1 ||
+						this._type === "Minefield" ||
+						this._type === "mil_triangle"
+					) &&
+					this._side === "GLOBAL"
+				) {
+					marker.addTo(projectileMarkersLayerGroup);
+				} else if (this._player instanceof Unit) {
+					marker.addTo(markersLayerGroup);
+				} else {
+					marker.addTo(systemMarkersLayerGroup);
+				}
+				let popup = this._createPopup(popupText);
+				marker.bindPopup(popup).openPopup();
 
-			marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" })
-			if (
-				// projectiles
-				(
-					this._type.search("magIcons") > -1 ||
-					this._type === "Minefield" ||
-					this._type === "mil_triangle"
-				) &&
-				this._side === "GLOBAL"
-			) {
-				marker.addTo(projectileMarkersLayerGroup);
-			} else if (this._player instanceof Unit) {
-				marker.addTo(markersLayerGroup);
-			} else {
-				marker.addTo(systemMarkersLayerGroup);
+				// Set direction
+				marker.setRotationAngle(dir);
 			}
-			let popup = this._createPopup(popupText);
-			marker.bindPopup(popup).openPopup();
-
-			// Set direction
-			marker.setRotationAngle(dir);
 		}
 
 		if (this._shape === "ELLIPSE") {
@@ -556,6 +566,7 @@ class Marker {
 			}
 
 			marker.addTo(systemMarkersLayerGroup);
+
 		} else if (this._shape === "POLYLINE") {
 			marker = L.polyline(latLng, { color: this._color, opacity: 1, noClip: true, lineCap: 'butt', lineJoin: 'round', interactive: false })
 

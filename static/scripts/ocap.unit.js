@@ -45,6 +45,9 @@ class Unit extends Entity {
 				sideClass = "unknown";
 				sideColour = "#b29900";
 				break;
+			case "LOGIC":
+				sideClass = "unknown";
+				sideColour = "#b29900";
 		}
 
 		this._sideClass = sideClass;
@@ -54,7 +57,7 @@ class Unit extends Entity {
 		this._markerRotationOrigin = "50% 60%";
 	}
 
-	updateName(position) {
+	updateName (position) {
 		let content = "";
 		let name = position.name;
 		if (position.isPlayer === 0) {
@@ -67,7 +70,7 @@ class Unit extends Entity {
 		}
 	}
 
-	updateElementText() {
+	updateElementText () {
 		let text = "";
 		if (this._role) {
 			text = `(${this._role}) ${this._name}`;
@@ -80,7 +83,7 @@ class Unit extends Entity {
 		this._element.textContent = text;
 	}
 
-	createMarker(latLng) {
+	createMarker (latLng) {
 		super.createMarker(latLng);
 
 		// Only create a nametag label (popup) for players
@@ -93,14 +96,14 @@ class Unit extends Entity {
 		this._marker.bindPopup(popup).openPopup();
 	}
 
-	_updateAtFrame(relativeFrameIndex) {
+	_updateAtFrame (relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
 		this.setIsInVehicle(this._positions[relativeFrameIndex].isInVehicle);
 		this.addCountList(this);
 		this.updateName(this._positions[relativeFrameIndex]);
 	}
 
-	setIsInVehicle(isInVehicle) {
+	setIsInVehicle (isInVehicle) {
 		this._isInVehicle = isInVehicle;
 
 		if (isInVehicle) {
@@ -110,11 +113,11 @@ class Unit extends Entity {
 		}*/
 	}
 
-	get sideClass() { return this._sideClass }
+	get sideClass () { return this._sideClass }
 
 	// Check if unit fired on given frame
 	// If true, return position of projectile impact
-	firedOnFrame(f) {
+	firedOnFrame (f) {
 		for (let i = 0; i < (this._framesFired.length - 1); i++) {
 			let frameNum = this._framesFired[i][0];
 			let projectilePos = this._framesFired[i][1];
@@ -123,16 +126,16 @@ class Unit extends Entity {
 		return;
 	}
 
-	remove() {
+	remove () {
 		super.remove();
 		this._group.removeUnit(this);
 	}
 
-	getSide() {
+	getSide () {
 		return this._side;
 	}
 
-	makeElement(liTarget) { // Make and add element to UI target list
+	makeElement (liTarget) { // Make and add element to UI target list
 		let liUnit = document.createElement("li");
 		liUnit.className = "liUnit";
 		liUnit.addEventListener("click", () => {
@@ -147,11 +150,11 @@ class Unit extends Entity {
 		liTarget.appendChild(liUnit);
 	}
 
-	getSideColour() { return this._sideColour }
+	getSideColour () { return this._sideColour }
 
-	getSideClass() { return this._sideClass }
+	getSideClass () { return this._sideClass }
 
-	setAlive(alive) {
+	setAlive (alive) {
 		super.setAlive(alive);
 		this._group.addUnit(this);
 		switch (alive) {
@@ -159,7 +162,7 @@ class Unit extends Entity {
 				this._element.style.opacity = 0.4;
 				break;
 			case 1:
-            	this._element.style.opacity = 1;
+				this._element.style.opacity = 1;
 				break;
 			case 2:
 				this._element.style.opacity = 0.8;
@@ -169,21 +172,21 @@ class Unit extends Entity {
 		}
 	}
 
-	addCountList(unit) {
+	addCountList (unit) {
 		let side = unit._side;
-		if (unit._alive != 1) {return}
+		if (unit._alive != 1) { return }
 		switch (side) {
 			case "WEST":
-				countWest ++;
+				countWest++;
 				break;
 			case "EAST":
-				countEast ++;
+				countEast++;
 				break;
 			case "GUER":
-				countGuer ++;
+				countGuer++;
 				break;
 			case "CIV":
-				countCiv ++;
+				countCiv++;
 				break;
 			default:
 				break;

@@ -168,6 +168,10 @@ function getWorldByName (worldName) {
 		"multiplier": 1,
 		"maxZoom": 6,
 		"minZoom": 0,
+		"maxZoomSatellite": 6,
+		"maxZoomGameMap": 6,
+		"maxZoomTerrain": 6,
+		"maxZoomTerrainDark": 6,
 		"hasTopo": true,
 		"hasSatellite": false,
 		"hasGameMap": false,
@@ -238,7 +242,10 @@ function initMap (world) {
 
 	// Create map
 	map = L.map('map', {
+		maxNativeZoom: mapMaxNativeZoom,
 		maxZoom: mapMaxZoom,
+		minNativeZoom: 0,
+		minZoom: 0,
 		zoominfoControl: true,
 		zoomControl: false,
 		scrollWheelZoom: true,
@@ -409,7 +416,7 @@ function initMap (world) {
 
 	if (world.hasGameMap) {
 		gameMapLayer = L.tileLayer(gameMapLayerUrl, {
-			maxNativeZoom: world.maxZoom,
+			maxNativeZoom: world.maxZoomGameMap,
 			// maxZoom: mapMaxZoom,
 			minNativeZoom: world.minZoom,
 			bounds: mapBounds,
@@ -426,7 +433,7 @@ function initMap (world) {
 
 	if (world.hasSatellite) {
 		satLayer = L.tileLayer(satLayerUrl, {
-			maxNativeZoom: world.maxZoom,
+			maxNativeZoom: world.maxZoomSatellite,
 			// maxZoom: mapMaxZoom,
 			minNativeZoom: world.minZoom,
 			bounds: mapBounds,
@@ -443,7 +450,7 @@ function initMap (world) {
 
 	if (world.hasTerrain) {
 		terrainLayer = L.tileLayer(terrainLayerUrl, {
-			maxNativeZoom: world.maxZoom,
+			maxNativeZoom: world.maxZoomTerrain,
 			// maxZoom: mapMaxZoom,
 			minNativeZoom: world.minZoom,
 			bounds: mapBounds,
@@ -461,7 +468,7 @@ function initMap (world) {
 
 	if (world.hasTerrainDark) {
 		terrainDarkLayer = L.tileLayer(terrainDarkLayerUrl, {
-			maxNativeZoom: world.maxZoom,
+			maxNativeZoom: world.maxZoomTerrainDark,
 			// maxZoom: mapMaxZoom,
 			minNativeZoom: world.minZoom,
 			bounds: mapBounds,
