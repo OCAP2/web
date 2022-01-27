@@ -49,7 +49,7 @@ docker run --name ocap-web -d \
   -v ocap-records:/var/lib/ocap/data \
   -v ocap-maps:/var/lib/ocap/maps \
   -v ocap-database:/var/lib/ocap/db \
-  docker pull ghcr.io/ocapv2/web:latest
+  docker pull ghcr.io/ocap2/web:latest
 ```
 
 ## Build from source
