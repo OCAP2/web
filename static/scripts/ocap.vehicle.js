@@ -72,9 +72,9 @@ class Vehicle extends Entity {
 
 	_updateAtFrame(relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
-		if (!position) return;
 
 		const position = this.getPosAtFrame(relativeFrameIndex);
+		if (!position) return;
 		this.setCrew(position.crew);
 	}
 
