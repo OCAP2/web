@@ -3,18 +3,18 @@ class GameEvents {
 		this._events = [];
 	}
 
-	addEvent(event) {
+	addEvent (event) {
 		this._events.push(event);
 	}
 
-	init() {
+	init () {
 		for (const event of this._events) {
 			event.init();
 		}
 	}
 
 	// Return an array of events that occured on the given frame
-	getEventsAtFrame(f) {
+	getEventsAtFrame (f) {
 		var events = [];
 		this._events.forEach((event) => {
 			if (event.frameNum == f) {
@@ -25,9 +25,9 @@ class GameEvents {
 		return events;
 	}
 
-	getEvents() { return this._events }
+	getEvents () { return this._events }
 
-	getActiveEvents() {
+	getActiveEvents () {
 		return this._events.filter((event) => event.frameNum <= playbackFrame);
 	}
 }
@@ -44,30 +44,30 @@ class GameEvent {
 		this.objectID = objectID;
 	}
 
-	getElement() { return this._element };
+	getElement () { return this._element };
 
 	// initialize event once all events are known
-	init() {}
+	init () { }
 
 	// forces an update for the next frame
-	forceUpdate() {
+	forceUpdate () {
 		this._forceUpdate = true;
 	}
 	// check if update() call is needed
-	needsUpdate(f, onlyVisible = true) {
+	needsUpdate (f, onlyVisible = true) {
 		return ((!onlyVisible || f >= this.frameNum) && this.lastFrameNumUpdate !== f) || this._forceUpdate;
 	}
 	// update element
-	update(f) {
+	update (f) {
 		this.lastFrameNumUpdate = f;
 		this._forceUpdate = false;
 	}
 
 	// update time related to frameNum
-	updateTime() {}
+	updateTime () { }
 
 	// get previous event for the same objectID based given constructor
-	getPreviousObjectEvent(type) {
+	getPreviousObjectEvent (type) {
 		const events = gameEvents.getEvents();
 		const thisIndex = events.indexOf(this);
 		if (thisIndex === -1) return null;
@@ -82,7 +82,7 @@ class GameEvent {
 	}
 
 	// move the camera on position
-	focusOnPosition(position) {
+	focusOnPosition (position) {
 		entityToFollow = null;
 		map.setView(armaToLatLng(position), map.getZoom(), { animate: true });
 	}
@@ -125,10 +125,10 @@ class HitKilledEvent extends GameEvent {
 			causedBySpan.className = this.causedBy.getSideClass();
 			switch (this.type) {
 				case "killed":
-					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount*2)} kills)`;
+					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount * 2)} kills)`;
 					break;
 				case "hit":
-					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount*2)} kills)`;
+					causedBySpan.textContent = `${this.causedBy.getName()} (${causedBy.killCount - (causedBy.teamKillCount * 2)} kills)`;
 					break;
 			}
 		} else {
@@ -178,7 +178,7 @@ class HitKilledEvent extends GameEvent {
 		this._element = li;
 	};
 
-	updateTime() {
+	updateTime () {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum) + " - " + this.distance + "m - " + this.weapon;
 	}
 }
@@ -203,7 +203,7 @@ class ConnectEvent extends GameEvent {
 		this._element = li;
 	};
 
-	updateTime() {
+	updateTime () {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 }
@@ -263,13 +263,13 @@ class CapturedEvent extends GameEvent {
 		}
 	};
 
-	update(f) {
+	update (f) {
 		if (!this.needsUpdate(f, false)) return;
 
 		const markerVisible = this.markerIsVisible(f);
 		if (!this._marker && markerVisible) {
 			const color = "#" + getPulseMarkerColor(this.unitColor);
-			this._marker = L.marker.pulse(armaToLatLng(this.objectPosition), {iconSize: [50,50], color: color, fillColor: 'transparent', iterationCount: 1}).addTo(map);
+			this._marker = L.marker.pulse(armaToLatLng(this.objectPosition), { iconSize: [50, 50], color: color, fillColor: 'transparent', iterationCount: 1 }).addTo(map);
 		} else if (this._marker && !markerVisible) {
 			this._marker.remove();
 			this._marker = null;
@@ -278,13 +278,13 @@ class CapturedEvent extends GameEvent {
 		super.update(f);
 	}
 
-	markerIsVisible(f) {
+	markerIsVisible (f) {
 		if (!this.objectPosition) return false;
 		return f >= this.frameNum;
 
 	}
 
-	updateTime() {
+	updateTime () {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 }
@@ -341,12 +341,12 @@ class TerminalHackStartEvent extends GameEvent {
 		}
 	};
 
-	update(f) {
+	update (f) {
 		if (!this.needsUpdate(f, false)) return;
 
 		const markerVisible = this.markerIsVisible(f);
 		if (!this._marker && markerVisible) {
-			this._marker = L.marker.pulse(armaToLatLng(this.terminalPosition), {iconSize: [50,50], color: 'red', fillColor: 'transparent'}).addTo(map);
+			this._marker = L.marker.pulse(armaToLatLng(this.terminalPosition), { iconSize: [50, 50], color: 'red', fillColor: 'transparent' }).addTo(map);
 		} else if (this._marker && !markerVisible) {
 			this._marker.remove();
 			this._marker = null;
@@ -370,7 +370,7 @@ class TerminalHackStartEvent extends GameEvent {
 		super.update(f);
 	}
 
-	markerIsVisible(f) {
+	markerIsVisible (f) {
 		if (!this.terminalPosition) return false;
 		if (f < this.frameNum) return false;
 		if (this._state !== "running") return false;
@@ -379,12 +379,12 @@ class TerminalHackStartEvent extends GameEvent {
 		return secondsLeft > 0;
 	}
 
-	updateTime() {
+	updateTime () {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 
-	getState() { return this._state; }
-	setState(state) {
+	getState () { return this._state; }
+	setState (state) {
 		this._state = state;
 		this.forceUpdate();
 	}
@@ -430,7 +430,7 @@ class TerminalHackUpdateEvent extends GameEvent {
 		this._element = li;
 	}
 
-	init() {
+	init () {
 		this._parent = this.getPreviousObjectEvent(TerminalHackStartEvent);
 		if (this._parent && this._parent.terminalPosition) {
 			this._element.classList.add("action");
@@ -440,7 +440,7 @@ class TerminalHackUpdateEvent extends GameEvent {
 		}
 	}
 
-	update(f) {
+	update (f) {
 		if (!this.needsUpdate(f, false)) return;
 
 		if (f >= this.frameNum && !this._triggered) {
@@ -459,10 +459,28 @@ class TerminalHackUpdateEvent extends GameEvent {
 		super.update(f);
 	}
 
-	updateTime() {
+	updateTime () {
 		this.detailsDiv.textContent = ui.getTimeString(this.frameNum);
 	}
 }
+
+// [20, "generalEvent", "Mission has started!"]
+class generalEvent extends GameEvent {
+	constructor(frameNum, type, msg) {
+		super(frameNum, type);
+		this.msg = msg;
+		this._element = null;
+
+		// Create list element for this event (for later use)
+		var span = document.createElement("span");
+		span.className = "medium";
+		span.textContent = this.msg;
+
+		var li = document.createElement("li");
+		li.appendChild(span);
+		this._element = li;
+	};
+};
 
 // [4639, "endMission", ["EAST", "Offar Factory зазахвачена. Победа Сил РФ."]]
 class endMissionEvent extends GameEvent {

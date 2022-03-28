@@ -467,7 +467,7 @@ class Marker {
 			let markerCustomText = "";
 			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
 
-			if (_this.icon) {
+			if (this.icon) {
 				marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" })
 				marker.addTo(systemMarkersLayerGroup);
 
@@ -516,7 +516,7 @@ class Marker {
 				interactiveVal = true;
 				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
-			if (_this.icon) {
+			if (this.icon) {
 				marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" })
 				if (
 					// projectiles
