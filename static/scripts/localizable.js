@@ -186,12 +186,12 @@ let _localizable = {
 	},
 	"time_mission": {
 		"ru": "Время миссии",
-		"en": "Mission Time Elapsed",
+		"en": "In-Game World Time",
 		"de": "Verstrichene Missionszeit"
 	},
 	"time_system": {
 		"ru": "Системное время",
-		"en": "System time",
+		"en": "Server Time UTC",
 		"de": "Systemzeit"
 	},
 	"not_available": {

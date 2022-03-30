@@ -471,13 +471,11 @@ class generalEvent extends GameEvent {
 		this.msg = msg;
 		this._element = null;
 
-		// Create list element for this event (for later use)
 		var span = document.createElement("span");
 		span.className = "medium";
-		span.textContent = this.msg;
-
+		span.textContent = msg;
 		var li = document.createElement("li");
-		li.appendChild(span);
+		li.appendChild(span)
 		this._element = li;
 	};
 };

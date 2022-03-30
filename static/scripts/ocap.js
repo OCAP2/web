@@ -1210,29 +1210,6 @@ function geoJsonToLatLng (coords) {
 	return coords
 }
 
-		let pointsRaw = [
-			[startX - sizeX, startY + sizeY], // top left
-			[startX + sizeX, startY + sizeY], // top right
-			[startX + sizeX, startY - sizeY], // bottom right
-			[startX - sizeX, startY - sizeY] // bottom left
-		];
-
-		const sqMarker = L.polygon(pointsRaw, { noClip: true, interactive: false });
-		L.Util.setOptions(sqMarker, shapeOptions);
-		// if (brushPattern) {
-		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
-		// };
-		sqMarker.addTo(map);
-
-		// var marker = L.circleMarker(e.latlng).addTo(map);
-		// marker.setRadius(5);
-	});
-
-	// var marker = L.circleMarker(armaToLatLng([2438.21, 820])).addTo(map);
-	// marker.setRadius(5);
-
-	// var marker = L.circleMarker(armaToLatLng([2496.58, 5709.34])).addTo(map);
-	// marker.setRadius(5);
 // Returns date object as little endian (day, month, year) string
 function dateToLittleEndianString (date) {
 	return (date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear());
