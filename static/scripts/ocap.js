@@ -168,15 +168,10 @@ function getWorldByName (worldName) {
 		"multiplier": 1,
 		"maxZoom": 6,
 		"minZoom": 0,
-		"maxZoomSatellite": 6,
-		"maxZoomGameMap": 6,
-		"maxZoomTerrain": 6,
-		"maxZoomTerrainDark": 6,
 		"hasTopo": true,
-		"hasSatellite": false,
-		"hasGameMap": false,
-		"hasTerrain": false,
-		"hasTerrainDark": false,
+		"hasTopoRelief": false,
+		"hasTopoDark": false,
+		"hasColorRelief": false,
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
@@ -368,10 +363,9 @@ function initMap (world) {
 
 
 	let topoLayerUrl = "";
-	let satLayerUrl = "";
-	let gameMapLayerUrl = "";
-	let terrainLayerUrl = "";
-	let terrainDarkLayerUrl = "";
+	let topoDarkLayerUrl = "";
+	let topoReliefLayerUrl = "";
+	let colorReliefLayerUrl = "";
 	let contourLayerUrl = "";
 
 	// console.log(ui.useCloudTiles)
@@ -379,19 +373,17 @@ function initMap (world) {
 	switch (ui.useCloudTiles) {
 		case true: {
 			topoLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/{z}/{x}/{y}.png');
-			satLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/sat/{z}/{x}/{y}.png');
-			gameMapLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/game-map/{z}/{x}/{y}.png');
-			terrainLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/terrain/{z}/{x}/{y}.png');
-			terrainDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/terrain-dark/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
 			contourLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/contours.geojson');
 			break;
 		}
 		case false: {
 			topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
-			satLayerUrl = ('images/maps/' + worldName + '/sat/{z}/{x}/{y}.png');
-			gameMapLayerUrl = ('images/maps/' + worldName + '/game-map/{z}/{x}/{y}.png');
-			terrainLayerUrl = ('images/maps/' + worldName + '/terrain/{z}/{x}/{y}.png');
-			terrainDarkLayerUrl = ('images/maps/' + worldName + '/terrain-dark/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
 			contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
 			break;
 		}
@@ -414,65 +406,13 @@ function initMap (world) {
 		baseLayers.push(topoLayer);
 	}
 
-	if (world.hasGameMap) {
-		gameMapLayer = L.tileLayer(gameMapLayerUrl, {
-			maxNativeZoom: world.maxZoomGameMap,
+	if (world.hasTopoDark) {
+		topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
+			maxNativeZoom: world.maxZoom,
 			// maxZoom: mapMaxZoom,
 			minNativeZoom: world.minZoom,
 			bounds: mapBounds,
-			label: "Game Map",
-			attribution: "Map Data &copy; " + world.attribution + " | Data gathered using <a href='https://github.com/gruppe-adler/grad_mtg'>GRAD_MTG<a/>",
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.9,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
-		});
-		baseLayers.push(gameMapLayer);
-	}
-
-	if (world.hasSatellite) {
-		satLayer = L.tileLayer(satLayerUrl, {
-			maxNativeZoom: world.maxZoomSatellite,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Satellite",
-			attribution: "Map Data &copy; " + world.attribution + " | Data gathered using <a href='https://github.com/gruppe-adler/grad_meh'>GRAD_MEH<a/>",
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.8,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
-		});
-		baseLayers.push(satLayer);
-	}
-
-	if (world.hasTerrain) {
-		terrainLayer = L.tileLayer(terrainLayerUrl, {
-			maxNativeZoom: world.maxZoomTerrain,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			attribution: "Map Data &copy; " + world.attribution + " | Data gathered using <a href='https://github.com/gruppe-adler/grad_meh'>GRAD_MEH<a/>",
-			label: "Terrain",
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 1,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
-		});
-		baseLayers.push(terrainLayer);
-	}
-
-
-	if (world.hasTerrainDark) {
-		terrainDarkLayer = L.tileLayer(terrainDarkLayerUrl, {
-			maxNativeZoom: world.maxZoomTerrainDark,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Terrain (Dark)",
+			label: "Topographic Dark",
 			attribution: "Map Data &copy; " + world.attribution,
 			noWrap: true,
 			tms: false,
@@ -480,7 +420,41 @@ function initMap (world) {
 			// opacity: 0.8,
 			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
 		});
-		baseLayers.push(terrainDarkLayer);
+		baseLayers.push(topoDarkLayer);
+	}
+
+	if (world.hasTopoRelief) {
+		topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Topographic Relief",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 0.9,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		baseLayers.push(topoReliefLayer);
+	}
+
+	if (world.hasColorRelief) {
+		colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			attribution: "Map Data &copy; " + world.attribution,
+			label: "Colored Relief",
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 1,
+			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+		});
+		baseLayers.push(colorReliefLayer);
 	}
 
 
