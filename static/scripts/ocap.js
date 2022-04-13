@@ -177,20 +177,33 @@ function getWorldByName (worldName) {
 
 	let mapJsonUrl;
 	if (ui.useCloudTiles) {
-		mapJsonUrl = `http://ocap2maps.site.nfoservers.com/maps/${worldName}/map.json`;
+		mapJsonUrl = `http://ocap2maps.site.nfoservers.com/maps/${worldName.toLowerCase()}/map.json`;
 	} else {
 		mapJsonUrl = 'images/maps/' + worldName + '/map.json';
 	}
-	return fetch(mapJsonUrl)
-		.then((res) => res.json())
-		.then((data) => {
-			// console.log(data);
-			map = data;
-			return Object.assign(defaultMap, map);
-		})
-		.catch(() => {
-			ui.showHint(`Error: Map "${worldName}" is not installed`);
-		});
+
+	// $.getJSON(mapJsonUrl, function (data) {
+	// 	console.log(data);
+	// 	console.log(data.responseJSON);
+	// });
+	map = $.ajax({
+		type: "GET",
+		url: mapJsonUrl,
+		async: false
+	}).responseJSON;
+	return Object.assign(defaultMap, map);
+
+
+	// return fetch(mapJsonUrl)
+	// 	.then((res) => res.json())
+	// 	.then((data) => {
+	// 		// console.log(data);
+	// 		map = data;
+	// 		return Object.assign(defaultMap, map);
+	// 	})
+	// 	.catch(() => {
+	// 		ui.showHint(`Error: Map "${worldName}" is not installed`);
+	// 	});
 }
 
 function initMap (world) {
@@ -372,11 +385,11 @@ function initMap (world) {
 
 	switch (ui.useCloudTiles) {
 		case true: {
-			topoLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
-			contourLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName + '/contours.geojson');
+			topoLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+			contourLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/contours.geojson');
 			break;
 		}
 		case false: {
@@ -881,56 +894,63 @@ function initMap (world) {
 
 
 	// gdal_contour -a ELEV -i 20 dem.asc contours.geojson
-	contourLayer = fetch(contourLayerUrl)
-		.then((res) => {
-			if (res.status == 200) {
-				return res.json();
-			} else {
-				throw "Contour layer geoJson for " + worldName + " not found."
-			}
+	// only try if a relief map is rendered -- only case in which a contouer is likely present
+	let contourLayer;
+	if (world.hasTopoRelief) {
+		$.ajax({
+			type: "GET",
+			url: contourLayerUrl
 		})
-		.then(geoJson => {
-			console.log("Loaded contour lines");
-			console.debug(geoJson);
+			.then((res) => {
+				if (res.status == 200) {
+					return res.responseJSON();
+				} else {
+					throw "Contour layer geoJson for " + worldName + " not found."
+				}
+			})
+			.then(geoJson => {
+				console.log("Loaded contour lines");
+				console.debug(geoJson);
 
-			let contourPane = map.createPane("contourPane");
+				let contourPane = map.createPane("contourPane");
 
-			var layer = L.geoJSON(geoJson, {
-				filter: function (geoJsonFeature) {
-					if (geoJsonFeature.properties.ELEV > 0) {
-						return true;
-					} else {
-						return false;
-					}
-				},
-				style: function (geoJsonFeature) {
-					var props = geoJsonFeature.properties;
-					var color;
-					if (props.index == 1) { color = "#FF7777" } else { color = "#444444" };
-					return {
-						color: color,
-						interactive: false,
-						fill: false,
-						opacity: 0.5,
-						// fillOpacity: 0.2,
-						noClip: true,
-						// renderer: L.canvas()
-						// weight: geoJsonFeature.properties.width * window.multiplier,
-					};
-				},
-				coordsToLatLng: function (coords) {
-					return armaToLatLng(coords);
-				},
-				pane: contourPane
-			});
-			overlayLayerControl.addOverlay(
-				layer,
-				"20m Contours"
-			);
+				var layer = L.geoJSON(geoJson, {
+					filter: function (geoJsonFeature) {
+						if (geoJsonFeature.properties.ELEV > 0) {
+							return true;
+						} else {
+							return false;
+						}
+					},
+					style: function (geoJsonFeature) {
+						var props = geoJsonFeature.properties;
+						var color;
+						if (props.index == 1) { color = "#FF7777" } else { color = "#444444" };
+						return {
+							color: color,
+							interactive: false,
+							fill: false,
+							opacity: 0.5,
+							// fillOpacity: 0.2,
+							noClip: true,
+							// renderer: L.canvas()
+							// weight: geoJsonFeature.properties.width * window.multiplier,
+						};
+					},
+					coordsToLatLng: function (coords) {
+						return armaToLatLng(coords);
+					},
+					pane: contourPane
+				});
+				overlayLayerControl.addOverlay(
+					layer,
+					"20m Contours"
+				);
 
-			return layer;
-		})
-		.catch(err => console.warn("Contour layer geoJson for " + worldName + " not found."))
+				contourLayer = layer;
+			})
+			.catch(err => console.warn("Contour layer geoJson for " + worldName + " not found."))
+	};
 
 
 
