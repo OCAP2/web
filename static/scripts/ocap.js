@@ -100,7 +100,7 @@ var followColour = "#FFA81A";
 var hitColour = "#FF0000";
 var deadColour = "#000000";
 
-const skipAnimationDistance = 100;
+const skipAnimationDistance = 222; // 800 kph at 1 sec frame delay, cruise for most planes - objects changing a larger distance than this would represent will be temporarily hidden between frames because it's assumed they're teleporting
 let requestedFrame;
 
 function getArguments () {
@@ -177,7 +177,7 @@ function getWorldByName (worldName) {
 
 	let mapJsonUrl;
 	if (ui.useCloudTiles) {
-		mapJsonUrl = `http://ocap2maps.site.nfoservers.com/maps/${worldName.toLowerCase()}/map.json`;
+		mapJsonUrl = `https://maps.ocap2.com/${worldName}/map.json`;
 	} else {
 		mapJsonUrl = 'images/maps/' + worldName + '/map.json';
 	}
@@ -385,11 +385,11 @@ function initMap (world) {
 
 	switch (ui.useCloudTiles) {
 		case true: {
-			topoLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
-			contourLayerUrl = ('http://ocap2maps.site.nfoservers.com/maps/' + worldName.toLowerCase() + '/contours.geojson');
+			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+			contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
 			break;
 		}
 		case false: {
