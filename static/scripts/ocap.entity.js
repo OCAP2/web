@@ -151,7 +151,12 @@ class Entity {
 		let element = popup.getElement();
 		if (element == null) { return }
 		let display = "inherit";
-		if (bool || !ui.nicknameEnable) { display = "none" }
+		// if (!this.isPlayer) {
+		// 	popup.closePopup();
+		// 	display = "none"
+		// } else {
+			if (bool || !ui.nicknameEnable || !this.isPlayer) { display = "none" };
+		// };
 
 		if (element.style.display !== display) {
 			element.style.display = display;
