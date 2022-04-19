@@ -66,21 +66,23 @@ class Marker {
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
 
-			var brushPattern;
-			if (["Cross", "Grid", "DiagGrid"].includes(brush)) {
-				// var patternShape = new L.PatternPath({ d: 'M10 0 L7 20 L25 20 Z', fill: true });
-				// brushPattern = new L.Pattern({
-				// 	patternUnits: "objectBoundingBox",
-				// 	patternContentUnits: "objectBoundingBox",
-				// 	color: this._color,
-				// 	opacity: 1
-				// });
-				// brushPattern.addShape(patternShape);
-				brushPattern = new L.StripePattern({ renderer: L.svg() });
-			} else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
-				brushPattern = new L.StripePattern({ renderer: L.svg() });
-			}
-			this._brushPattern = brushPattern;
+			// ! leaflet.pattern is broken, need another solution
+			// let brushPattern;
+			// if (["Cross", "Grid", "DiagGrid"].includes(brush)) {
+			// 	// brushPattern.addTo(systemMarkersLayerGroup);
+			// 	// brushPattern = new L.StripePattern({
+			// 	// 	color: this._color,
+			// 	// 	opacity: 0.8,
+			// 	// 	angle: 45,
+			// 	// 	weight: 1,
+			// 	// 	spaceWeight: 3,
+			// 	// 	spaceOpacity: 0.0
+			// 	// });
+			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
+			// } else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
+			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
+			// }
+			// this._brushPattern = brushPattern;
 			this._brushPatternOptions = null;
 			switch (brush) {
 				case "solid":
@@ -113,7 +115,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "vertical":
@@ -128,7 +130,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "grid":
@@ -144,7 +146,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "fdiagonal":
@@ -160,7 +162,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "bdiagonal":
@@ -176,7 +178,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "diaggrid":
@@ -186,13 +188,14 @@ class Marker {
 						opacity: 0.8,
 						angle: 45,
 						weight: 1,
-						spaceWeight: 1
+						spaceWeight: 3,
+						spaceOpacity: 0.0
 					};
 					this._shapeOptions = {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1,
+						fillOpacity: 0.2,
 					};
 					break;
 				case "cross":
@@ -208,7 +211,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "border":
@@ -534,15 +537,16 @@ class Marker {
 		if (this._shape === "ELLIPSE") {
 			let rad = this._size[0] * 0.015 * window.multiplier;
 
-			if (this._brushPattern) {
-				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
-				this._brushPattern.addTo(map);
-				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
-				L.Util.setOptions(marker, this._shapeOptions);
-			} else {
+			// ! leaflet.pattern is broken, need another solution
+			// if (this._brushPattern) {
+				// L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
+				// this._brushPattern.addTo(map);
+				// marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
+				// L.Util.setOptions(marker, this._shapeOptions);
+			// } else {
 				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false/* , renderer: L.canvas() */ });
 				L.Util.setOptions(marker, this._shapeOptions);
-			}
+			// }
 			marker.addTo(systemMarkersLayerGroup);
 		} else if (this._shape === "RECTANGLE") {
 			if (this._brushPattern) {
