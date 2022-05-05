@@ -379,7 +379,7 @@ function initMap (world) {
 	let colorReliefLayerUrl = "";
 	let contourLayerUrl = "";
 
-	console.log('useCloudTiles', Boolean(useCloudTiles));
+	console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
 	switch (world._useCloudTiles) {
 		case true: {
 			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
