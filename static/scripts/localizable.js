@@ -192,7 +192,7 @@ let _localizable = {
 	"time_system": {
 		"ru": "Системное время",
 		"en": "Server Time UTC",
-		"de": "Systemzeit"
+		"de": "Systemzeit (UTC)"
 	},
 	"not_available": {
 		"ru": " недоступен",
