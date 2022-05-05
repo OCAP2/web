@@ -157,9 +157,9 @@ function initOCAP () {
 	if (args.experimental) ui.showExperimental();
 }
 
-function getWorldByName (worldName) {
+async function getWorldByName (worldName) {
 	console.log("Getting world " + worldName);
-	let map = {};
+
 	let defaultMap = {
 		"name": "NOT FOUND",
 		"worldname": "NOT FOUND",
@@ -175,35 +175,33 @@ function getWorldByName (worldName) {
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
-	let mapJsonUrl;
-	if (ui.useCloudTiles) {
-		mapJsonUrl = `https://maps.ocap2.com/${worldName}/map.json`;
-	} else {
-		mapJsonUrl = 'images/maps/' + worldName + '/map.json';
+	// Check for, and return local map data if available
+	const localMapRes = await fetch('images/maps/' + worldName + '/map.json');
+	if (localMapRes.status === 200) {
+		try {
+			return Object.assign(defaultMap, await localMapRes.json());
+		} catch (error) {
+			//ui.showHint(`Error: parsing local map.json`);
+			console.error('Error parsing local map.json', error.message || error);
+		}
 	}
 
-	// $.getJSON(mapJsonUrl, function (data) {
-	// 	console.log(data);
-	// 	console.log(data.responseJSON);
-	// });
-	map = $.ajax({
-		type: "GET",
-		url: mapJsonUrl,
-		async: false
-	}).responseJSON;
-	return Object.assign(defaultMap, map);
-
-
-	// return fetch(mapJsonUrl)
-	// 	.then((res) => res.json())
-	// 	.then((data) => {
-	// 		// console.log(data);
-	// 		map = data;
-	// 		return Object.assign(defaultMap, map);
-	// 	})
-	// 	.catch(() => {
-	// 		ui.showHint(`Error: Map "${worldName}" is not installed`);
-	// 	});
+	// Fallback to cloud CDN if enabled
+	if (ui.useCloudTiles) {
+		const cloudMapRes = await fetch(`https://maps.ocap2.com/${worldName}/map.json`);
+		if (cloudMapRes.status === 200) {
+			try {
+				return Object.assign(defaultMap, await cloudMapRes.json(), {_useCloudTiles:true});
+			} catch (error) {
+				//ui.showHint(`Error: parsing cloud map.json`);
+				console.error('Error parsing cloud map.json', error.message || error);
+			}
+		} else {
+			return Promise.reject(`Map "${worldName}" is not installed on cloud`);
+		}
+	} else {
+		return Promise.reject(`Map "${worldName}" is not installed`);
+	}
 }
 
 function initMap (world) {
@@ -381,9 +379,8 @@ function initMap (world) {
 	let colorReliefLayerUrl = "";
 	let contourLayerUrl = "";
 
-	// console.log(ui.useCloudTiles)
-
-	switch (ui.useCloudTiles) {
+	console.log('useCloudTiles', Boolean(useCloudTiles));
+	switch (world._useCloudTiles) {
 		case true: {
 			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
 			topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
@@ -1264,14 +1261,16 @@ function processOp (filepath) {
 	const time = new Date();
 	fileName = filepath.substr(5, filepath.length);
 
+	let data;
 	return fetch(filepath)
 		.then((res) => res.json())
-		.then((data) => {
+		.then((json) => {
+			data = json;
 			worldName = data.worldName.toLowerCase();
-			// worldName = data.worldName;
-			return Promise.all([data, getWorldByName(worldName)]);
+			return worldName;
 		})
-		.then(([data, world]) => {
+		.then((wn) => getWorldByName(wn))
+		.then((world) => {
 			var multiplier = world.multiplier;
 			missionName = data.missionName;
 			ui.setMissionName(missionName);
