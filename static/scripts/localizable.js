@@ -82,7 +82,7 @@ let _localizable = {
 	"nickname": {
 		"ru": "Никнеймы игроков и название техники ",
 		"en": "Player, vehicle, and projectile tags",
-		"de": "Spieler- und Fahrzeugnamen"
+		"de": "Spieler-, Fahrzeug und Projektilnamen"
 	},
 	"markers": {
 		"ru": "Маркеры",
