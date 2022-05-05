@@ -193,11 +193,11 @@ async function getWorldByName (worldName) {
 			try {
 				return Object.assign(defaultMap, await cloudMapRes.json(), {_useCloudTiles:true});
 			} catch (error) {
-				//ui.showHint(`Error: parsing cloud map.json`);
 				console.error('Error parsing cloud map.json', error.message || error);
+				return Promise.reject(`Cloud map "${worldName}" data parsing failed.`);
 			}
 		} else {
-			return Promise.reject(`Map "${worldName}" is not installed on cloud`);
+			return Promise.reject(`Map "${worldName}" is not available on cloud (${cloudMapRes.status})`);
 		}
 	} else {
 		return Promise.reject(`Map "${worldName}" is not installed`);
