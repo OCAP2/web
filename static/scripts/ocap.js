@@ -380,23 +380,18 @@ function initMap (world) {
 	let contourLayerUrl = "";
 
 	console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
-	switch (world._useCloudTiles) {
-		case true: {
-			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
-			contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
-			break;
-		}
-		case false: {
-			topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
-			contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
-			break;
-		}
+	if (Boolean(world._useCloudTiles)) {
+		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+		topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+		topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+		colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+		contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
+	} else {
+		topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
+		topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+		topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+		colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
+		contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
 	}
 
 	if (world.hasTopo) {
