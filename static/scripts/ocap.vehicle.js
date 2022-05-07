@@ -82,7 +82,7 @@ class Vehicle extends Entity {
 		let content = "";
 		if (ui.nicknameEnable) {
 			this._crew = crew;
-			//this._marker.getPopup().setContent(`Test`); // Very slow (no need to recalc layout), use ._content instead
+			// this._marker.getPopup().setContent(`Test`); // Very slow (no need to recalc layout), use ._content instead
 
 			let crewLength = crew.length;
 			content = `${this._name.encodeHTMLEntities()} <i>(0)</i>`;
@@ -107,11 +107,16 @@ class Vehicle extends Entity {
 				}
 			}
 		}
-		let popupNode = this._marker.getPopup()._contentNode;
+		let popup = this._marker.getPopup();
+		if (popup) {
+			// let popupContent = popup._content;
 
-		if (popupNode.innerHTML !== content) {
-			popupNode.innerHTML = content;
+			// if (popupContent !== content) {
+			// 	popupContent = content;
+			// }
+			popup.setContent(content);
 		}
+		
 	}
 
 	getCrew() {
@@ -127,9 +132,9 @@ class Vehicle extends Entity {
 			let unit = entities.getById(unitId);
 
 			// Only include player names
-			if (unit.isPlayer) {
+			// if (unit.isPlayer) {
 				str += (unit.getName().encodeHTMLEntities() + "<br/>");
-			}
+			// }
 			//};
 		});
 		return str;

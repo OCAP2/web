@@ -81,12 +81,12 @@ let _localizable = {
 	},
 	"nickname": {
 		"ru": "Никнеймы игроков и название техники ",
-		"en": "Player nicknames and vehicle names",
-		"de": "Spieler- und Fahrzeugnamen"
+		"en": "Player, vehicle, and projectile tags",
+		"de": "Spieler-, Fahrzeug und Projektilnamen"
 	},
 	"markers": {
 		"ru": "Маркеры",
-		"en": "Markers",
+		"en": "Marker names",
 		"de": "Markierungen"
 	},
 	"event_fire": {
@@ -186,13 +186,13 @@ let _localizable = {
 	},
 	"time_mission": {
 		"ru": "Время миссии",
-		"en": "Mission Time Elapsed",
+		"en": "In-Game World Time",
 		"de": "Verstrichene Missionszeit"
 	},
 	"time_system": {
 		"ru": "Системное время",
-		"en": "System time",
-		"de": "Systemzeit"
+		"en": "Server Time UTC",
+		"de": "Systemzeit (UTC)"
 	},
 	"not_available": {
 		"ru": " недоступен",
