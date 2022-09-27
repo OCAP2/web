@@ -191,7 +191,7 @@ async function getWorldByName (worldName) {
 		const cloudMapRes = await fetch(`https://maps.ocap2.com/${worldName}/map.json`);
 		if (cloudMapRes.status === 200) {
 			try {
-				return Object.assign(defaultMap, await cloudMapRes.json(), {_useCloudTiles:true});
+				return Object.assign(defaultMap, await cloudMapRes.json(), { _useCloudTiles: true });
 			} catch (error) {
 				console.error('Error parsing cloud map.json', error.message || error);
 				return Promise.reject(`Cloud map "${worldName}" data parsing failed.`);
@@ -1464,11 +1464,12 @@ function processOp (filepath) {
 
 						// Incrememt kill/death count for killer/victim
 						if (type === "killed" && (causedBy != null)) {
-							if (causedBy !== victim && causedBy._side === victim._side) {
-								causedBy.teamKillCount++;
-							}
 							if (causedBy !== victim) {
-								causedBy.killCount++;
+								if (causedBy._side === victim._side) {
+									causedBy.teamKillCount++;
+								} else {
+									causedBy.killCount++;
+								}
 							}
 							victim.deathCount++;
 						}
