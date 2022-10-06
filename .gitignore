@@ -11,3 +11,7 @@ static/images/maps
 
 # logs
 ocap.log
+
+data/
+
+maps/
