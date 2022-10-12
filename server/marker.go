@@ -16,9 +16,10 @@ import (
 )
 
 type RepoMarker struct {
-	root    string
-	markers map[string]string
-	mu      sync.RWMutex
+	root          string
+	markers       map[string]string
+	defaultMarker string
+	mu            sync.RWMutex
 }
 
 func NewRepoMarker(root string) (*RepoMarker, error) {
@@ -31,6 +32,10 @@ func NewRepoMarker(root string) (*RepoMarker, error) {
 		return nil, err
 	}
 
+	if defaultMarker, ok := r.markers["unknown"]; ok {
+		r.defaultMarker = defaultMarker
+	}
+
 	return r, nil
 }
 
@@ -40,7 +45,7 @@ func (r *RepoMarker) Get(ctx context.Context, name, scolor string) (io.Reader, s
 	upath, ok := r.markers[name]
 	r.mu.RUnlock()
 	if !ok {
-		return nil, "", ErrNotFound
+		upath = r.defaultMarker
 	}
 
 	color, err := r.scanColor(scolor)
