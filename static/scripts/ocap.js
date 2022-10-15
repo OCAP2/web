@@ -406,7 +406,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.7,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoLayer);
 	}
@@ -423,7 +423,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.8,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoDarkLayer);
 	}
@@ -440,7 +440,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.9,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoReliefLayer);
 	}
@@ -457,7 +457,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 1,
-			errorTileUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Missing_Mathematical_Tile.jpg/730px-Missing_Mathematical_Tile.jpg'
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(colorReliefLayer);
 	}
