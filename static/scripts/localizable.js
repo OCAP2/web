@@ -2,212 +2,254 @@ let _localizable = {
 	"players": {
 		"ru": "Игроки",
 		"en": "Players",
-		"de": "Spieler"
+		"de": "Spieler",
+		"cs": "Hráči"
 	},
 	"events": {
 		"ru": "События",
 		"en": "Events",
-		"de": "Events"
+		"de": "Events",
+		"cs": "Události"
 	},
 	"info": {
 		"ru": "Информация",
 		"en": "Information",
-		"de": "Information"
+		"de": "Information",
+		"cs": "Informace"
 	},
 	"by_killer": {
 		"ru": " был убит ",
 		"en": " killed by ",
-		"de": " getötet durch "
+		"de": " getötet durch ",
+		"cs": "zabit od"
 	},
 	"connected": {
 		"ru": "подключился",
 		"en": "connected",
-		"de": "verbunden"
+		"de": "verbunden",
+		"cs": "se připojil"
 	},
 	"disconnected": {
 		"ru": "отключился",
 		"en": "disconnected",
-		"de": "getrennt"
+		"de": "getrennt",
+		"cs": "se odpojil"
 	},
 	"captured_something": {
 		"ru": "captured something",
 		"en": "captured something",
-		"de": "hat irgendwas gekapert"
+		"de": "hat irgendwas gekapert",
+		"cs": "něco zabral"
 	},
 	"captured_flag": {
 		"ru": "захватил флаг",
 		"en": "captured the flag",
-		"de": "hat die Flagge gekapert"
+		"de": "hat die Flagge gekapert",
+		"cs": "zabral vlajku"
 	},
 	"by_injured": {
 		"ru": " был ранен ",
 		"en": " injured by ",
-		"de": " verwundet durch "
+		"de": " verwundet durch ",
+		"cs": "zraněn od"
 	},
 	"shared": {
 		"ru": "Поделиться",
 		"en": "Shared",
-		"de": "Geteilt"
+		"de": "Geteilt",
+		"cs": "Sdíleno"
 	},
 	"copy_link": {
 		"ru": "Скопируйте ссылку",
 		"en": "Copy link",
-		"de": "Link kopieren"
+		"de": "Link kopieren",
+		"cs": "Kopírovat odkaz"
 	},
 	"close": {
 		"ru": "Закрыть",
 		"en": "Close",
-		"de": "Schließen"
+		"de": "Schließen",
+		"cs": "Zavřít"
 	},
 	"filter": {
 		"ru": "Фильтр",
 		"en": "Filter",
-		"de": "Filter"
+		"de": "Filter",
+		"cs": "Filtr"
 	},
 	"shown": {
 		"ru": " показаны",
 		"en": " shown",
-		"de": " sichtbar"
+		"de": " sichtbar",
+		"cs": "zobrazen"
 	},
 	"hidden": {
 		"ru": " скрыты",
 		"en": " hidden",
-		"de": " unsichtbar"
+		"de": " unsichtbar",
+		"cs": "schován"
 	},
 	"line_fire": {
 		"ru": "Линии выстрелов",
 		"en": "Shot lines",
-		"de": "Projektilbahnen"
+		"de": "Projektilbahnen",
+		"cs": "Čáry výstřelů"
 	},
 	"nickname": {
 		"ru": "Никнеймы игроков и название техники ",
 		"en": "Player nicknames and vehicle names",
-		"de": "Spieler- und Fahrzeugnamen"
+		"de": "Spieler- und Fahrzeugnamen",
+		"cs": "Hráčské přezdívky a názvy vozidel"
 	},
 	"markers": {
 		"ru": "Маркеры",
 		"en": "Markers",
-		"de": "Markierungen"
+		"de": "Markierungen",
+		"cs": "Značení"
 	},
 	"event_fire": {
 		"ru": "Эвенты попадания",
 		"en": "Hit events",
-		"de": "Treffer"
+		"de": "Treffer",
+		"cs": "Události zásahů"
 	},
 	"event_dis-connected": {
 		"ru": "Подключения/отключения",
 		"en": "Connects / Disconnects",
-		"de": "Verbunden / Getrennt"
+		"de": "Verbunden / Getrennt",
+		"cs": "Připojení / Odpojení"
 	},
 	"name_missions": {
 		"ru": "Название миссии",
 		"en": "Mission name",
-		"de": "Name der Mission"
+		"de": "Name der Mission",
+		"cs": "Název mise"
 	},
 	"something": {
 		"ru": "кто-то",
 		"en": "something",
-		"de": "etwas"
+		"de": "etwas",
+		"cs": "něco"
 	},
 	"select_mission": {
 		"ru": "Выбор миссии",
 		"en": "Select mission",
-		"de": "Wähle Mission"
+		"de": "Wähle Mission",
+		"cs": "Vybrat misi"
 	},
 	"mission": {
 		"ru": "Миссия",
 		"en": "Mission",
-		"de": "Mission"
+		"de": "Mission",
+		"cs": "Mise"
 	},
 	"map": {
 		"ru": "Карта",
 		"en": "Map",
-		"de": "Karte"
+		"de": "Karte",
+		"cs": "Mapa"
 	},
 	"data": {
 		"ru": "Дата",
 		"en": "Date",
-		"de": "Datum"
+		"de": "Datum",
+		"cs": "Datum"
 	},
 	"durability": {
 		"ru": "Длительность",
 		"en": "Duration",
-		"de": "Dauer"
+		"de": "Dauer",
+		"cs": "Trvání"
 	},
 	"tag": {
 		"ru": "Тег",
 		"en": "Tag",
-		"de": "Tag"
+		"de": "Tag",
+		"cs": "Tag"
 	},
 	"list_compilation": {
 		"ru": "Составления списка...",
 		"en": "List compilation...",
-		"de": "Auflisting der Erstellungen..."
+		"de": "Auflisting der Erstellungen...",
+		"cs": "Seznam kompilací..."
 	},
 	"loading": {
 		"ru": "Загрузка...",
 		"en": "Loading...",
-		"de": "Lädt..."
+		"de": "Lädt...",
+		"cs": "Načítání..."
 	},
 	"win": {
 		"ru": "Победа",
 		"en": "Win",
-		"de": "Gewonnen"
+		"de": "Gewonnen",
+		"cs": "Vítězství"
 	},
 	"play-pause": {
 		"ru": "Воспроизвести/пауза: пробел",
 		"en": "Play/pause: space",
-		"de": "Start/Pause: Leertaste"
+		"de": "Start/Pause: Leertaste",
+		"cs": "Spustit/pozastavit: mezerník"
 	},
 	"show-hide-left-panel": {
 		"ru": "Показать/скрыть левую панель: E",
 		"en": "Show/Hide left panel: E",
-		"de": "Linkes Fenster Anzeigen/Verstecken: E"
+		"de": "Linkes Fenster Anzeigen/Verstecken: E",
+		"cs": "Zobrazit/Schovat levý panel: R"
 	},
 	"show-hide-right-panel": {
 		"ru": "Показать/скрыть правую панель: R",
 		"en": "Show/Hide right panel: R",
-		"de": "Rechtes Fenster Anzeigen/Verstecken: R"
+		"de": "Rechtes Fenster Anzeigen/Verstecken: R",
+		"cs": "Zobrazit/Schovat pravý panel: R"
 	},
 	"show-experimental": {
 		"ru": "Enable experimental mode: .",
 		"en": "Enable experimental mode: .",
-		"de": "Aktiviert experimentaller Modus: ."
+		"de": "Aktiviert experimentaller Modus: .",
+		"cs": "Povolit experimentální režim: ."
 	},
 	"language": {
 		"ru": "Язык:",
 		"en": "Language:",
-		"de": "Sprache:"
+		"de": "Sprache:",
+		"cs": "Jazyk"
 	},
 	"time_elapsed": {
 		"ru": "Время записи",
 		"en": "Recording Time Elapsed",
-		"de": "Verstrichene Aufnahmezeit"
+		"de": "Verstrichene Aufnahmezeit",
+		"cs": "Uběhlý čas nahrávky"
 	},
 	"time_mission": {
 		"ru": "Время миссии",
 		"en": "Mission Time Elapsed",
-		"de": "Verstrichene Missionszeit"
+		"de": "Verstrichene Missionszeit",
+		"cs": "Uběhlý čas mise"
 	},
 	"time_system": {
 		"ru": "Системное время",
 		"en": "System time",
-		"de": "Systemzeit"
+		"de": "Systemzeit",
+		"cs": "Systémový čas"
 	},
 	"not_available": {
 		"ru": " недоступен",
 		"en": " not available",
-		"de": " nicht Verfügbar"
+		"de": " nicht Verfügbar",
+		"cs": "není k dispozici"
 	},
 	"is_hacking_terminal": {
 		"ru": " is hacking terminal",
 		"en": " is hacking terminal",
-		"de": " hackt das Terminal"
+		"de": " hackt das Terminal",
+		"cs": "hackuje terminál"
 	},
 	"interrupted_hack": {
 		"ru": " has interrupted the hack",
 		"en": " has interrupted the hack",
-		"de": " hat den Hack unterbrochen"
+		"de": " hat den Hack unterbrochen",
+		"cs": "přerušil hackování"
 	}
 };
 let localizableElement = [];
