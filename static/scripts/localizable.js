@@ -57,7 +57,7 @@ let _localizable = {
 		"ru": "Поделиться",
 		"en": "Shared",
 		"de": "Geteilt",
-		"cs": "Sdíleno"
+		"cs": "Sdílet"
 	},
 	"copy_link": {
 		"ru": "Скопируйте ссылку",
