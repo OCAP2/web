@@ -21,7 +21,7 @@ let _localizable = {
 		"ru": " был убит ",
 		"en": " killed by ",
 		"de": " getötet durch ",
-		"cs": "zabit od"
+		"cs": " zabit od"
 	},
 	"connected": {
 		"ru": "подключился",
@@ -51,7 +51,7 @@ let _localizable = {
 		"ru": " был ранен ",
 		"en": " injured by ",
 		"de": " verwundet durch ",
-		"cs": "zraněn od"
+		"cs": " zraněn od"
 	},
 	"shared": {
 		"ru": "Поделиться",
@@ -81,13 +81,13 @@ let _localizable = {
 		"ru": " показаны",
 		"en": " shown",
 		"de": " sichtbar",
-		"cs": "zobrazen"
+		"cs": " zobrazeno"
 	},
 	"hidden": {
 		"ru": " скрыты",
 		"en": " hidden",
 		"de": " unsichtbar",
-		"cs": "schován"
+		"cs": " schováno"
 	},
 	"line_fire": {
 		"ru": "Линии выстрелов",
@@ -159,7 +159,7 @@ let _localizable = {
 		"ru": "Длительность",
 		"en": "Duration",
 		"de": "Dauer",
-		"cs": "Trvání"
+		"cs": "Doba trvání"
 	},
 	"tag": {
 		"ru": "Тег",
@@ -219,37 +219,37 @@ let _localizable = {
 		"ru": "Время записи",
 		"en": "Recording Time Elapsed",
 		"de": "Verstrichene Aufnahmezeit",
-		"cs": "Uběhlý čas nahrávky"
+		"cs": "Čas nahrávky"
 	},
 	"time_mission": {
 		"ru": "Время миссии",
 		"en": "Mission Time Elapsed",
 		"de": "Verstrichene Missionszeit",
-		"cs": "Uběhlý čas mise"
+		"cs": "Čas mise"
 	},
 	"time_system": {
 		"ru": "Системное время",
 		"en": "System time",
 		"de": "Systemzeit",
-		"cs": "Systémový čas"
+		"cs": "Čas systému"
 	},
 	"not_available": {
 		"ru": " недоступен",
 		"en": " not available",
 		"de": " nicht Verfügbar",
-		"cs": "není k dispozici"
+		"cs": " není k dispozici"
 	},
 	"is_hacking_terminal": {
 		"ru": " is hacking terminal",
 		"en": " is hacking terminal",
 		"de": " hackt das Terminal",
-		"cs": "hackuje terminál"
+		"cs": " hackuje terminál"
 	},
 	"interrupted_hack": {
 		"ru": " has interrupted the hack",
 		"en": " has interrupted the hack",
 		"de": " hat den Hack unterbrochen",
-		"cs": "přerušil hackování"
+		"cs": " přerušil hackování"
 	}
 };
 let localizableElement = [];
