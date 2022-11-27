@@ -21,7 +21,7 @@ let _localizable = {
 		"ru": " был убит ",
 		"en": " killed by ",
 		"de": " getötet durch ",
-		"cs": " zabit od"
+		"cs": " zabit od "
 	},
 	"connected": {
 		"ru": "подключился",
@@ -51,7 +51,7 @@ let _localizable = {
 		"ru": " был ранен ",
 		"en": " injured by ",
 		"de": " verwundet durch ",
-		"cs": " zraněn od"
+		"cs": " zraněn od "
 	},
 	"shared": {
 		"ru": "Поделиться",
@@ -213,7 +213,7 @@ let _localizable = {
 		"ru": "Язык:",
 		"en": "Language:",
 		"de": "Sprache:",
-		"cs": "Jazyk"
+		"cs": "Jazyk:"
 	},
 	"time_elapsed": {
 		"ru": "Время записи",
