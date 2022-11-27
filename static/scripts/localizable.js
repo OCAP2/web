@@ -195,7 +195,7 @@ let _localizable = {
 		"ru": "Показать/скрыть левую панель: E",
 		"en": "Show/Hide left panel: E",
 		"de": "Linkes Fenster Anzeigen/Verstecken: E",
-		"cs": "Zobrazit/Schovat levý panel: R"
+		"cs": "Zobrazit/Schovat levý panel: E"
 	},
 	"show-hide-right-panel": {
 		"ru": "Показать/скрыть правую панель: R",
