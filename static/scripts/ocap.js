@@ -56,6 +56,8 @@ var trim = 0; // Number of pixels that were trimmed when cropping image (used to
 var mapMinZoom = null;
 var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
+var worldObject = null
+var worldSizeY = null;
 var topoLayer = null;
 var satLayer = null;
 var terrainLayer = null;
@@ -179,7 +181,8 @@ async function getWorldByName (worldName) {
 	const localMapRes = await fetch('images/maps/' + worldName + '/map.json');
 	if (localMapRes.status === 200) {
 		try {
-			return Object.assign(defaultMap, await localMapRes.json());
+			worldObject = Object.assign(defaultMap, await localMapRes.json());
+			return worldObject
 		} catch (error) {
 			//ui.showHint(`Error: parsing local map.json`);
 			console.error('Error parsing local map.json', error.message || error);
@@ -205,12 +208,9 @@ async function getWorldByName (worldName) {
 }
 
 function initMap (world) {
-	// Bad
-	mapMaxNativeZoom = world.maxZoom
-	mapMaxZoom = mapMaxNativeZoom + 3
 
 	imageSize = world.imageSize;
-	multiplier = world.multiplier;
+	multiplier = 1;
 
 	var factorx = multiplier;
 	var factory = multiplier;
@@ -248,16 +248,17 @@ function initMap (world) {
 
 	// Create map
 	map = L.map('map', {
-		maxNativeZoom: mapMaxNativeZoom,
-		maxZoom: mapMaxZoom,
-		minNativeZoom: 0,
-		minZoom: 0,
+		maxNativeZoom: 20,
+		maxZoom: 20,
+		minNativeZoom: 12,
+		minZoom: 12,
+		zoom: 12,
 		zoominfoControl: true,
 		zoomControl: false,
 		scrollWheelZoom: true,
 		zoomAnimation: true,
 		fadeAnimation: true,
-		crs: L.CRS.OCAP,
+		crs: L.CRS.EPSG3857,
 		attributionControl: true,
 		zoomSnap: 1,
 		zoomDelta: 1,
@@ -265,38 +266,15 @@ function initMap (world) {
 		preferCanvas: true
 	});
 
+	L.control.scale({
+		position: 'bottomleft',
+	}).addTo(map);
+
 
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
 		ui.hideMarkerPopups = map.getZoom() <= 4;
-		// if (map.getZoom() <= 5 && geoJsonHouses != null) {
-		// 	geoJsonHouses.setStyle(function (geoJsonFeature) {
-		// 		return {
-		// 			color: "#4D4D4D",
-		// 			interactive: false,
-		// 			fill: true,
-		// 			opacity: 0,
-		// 			fillOpacity: 0,
-		// 			noClip: true,
-		// 			// renderer: L.canvas()
-		// 			// weight: geoJsonFeature.properties.width * window.multiplier,
-		// 		};
-		// 	});
-		// } else if (geoJsonHouses != null) {
-		// 	geoJsonHouses.setStyle(function (geoJsonFeature) {
-		// 		return {
-		// 			color: "#4D4D4D",
-		// 			interactive: false,
-		// 			fill: true,
-		// 			opacity: 1,
-		// 			fillOpacity: 1,
-		// 			noClip: true,
-		// 			// renderer: L.canvas()
-		// 			// weight: geoJsonFeature.properties.width * window.multiplier,
-		// 		};
-		// 	});
-		// }
 	});
 
 	let playbackPausedBeforeZoom;
@@ -331,26 +309,6 @@ function initMap (world) {
 		map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
 	}
 
-
-	var mapBounds = new L.LatLngBounds(
-		map.unproject([0, imageSize], mapMaxNativeZoom),
-		map.unproject([imageSize, 0], mapMaxNativeZoom)
-	);
-	map.fitBounds(mapBounds);
-
-
-
-	// Setup tile layer
-	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	maxZoom: mapMaxZoom,
-	// 	minZoom: mapMinZoom,
-	// 	bounds: mapBounds,
-	// 	//attribution: 'MisterGoodson',
-	// 	noWrap: true,
-	// 	tms: false
-	// }).addTo(map);
-
 	overlayLayerControl = L.control.layers({}, {
 		// overlay layers
 		"Units and Vehicles": entitiesLayerGroup,
@@ -358,11 +316,11 @@ function initMap (world) {
 		"Editor/Briefing Markers": systemMarkersLayerGroup,
 		"Projectile Markers": projectileMarkersLayerGroup
 	}, {
-		position: 'topright',
+		position: 'bottomright',
 		collapsed: false
 	}).addTo(map);
 
-	var baseLayers = [];
+	// var baseLayers = [];
 
 	entitiesLayerGroup.addTo(map);
 	markersLayerGroup.addTo(map);
@@ -373,103 +331,139 @@ function initMap (world) {
 	// worldName = world.worldName;
 
 
+	worldObject.gl = L.maplibreGL({
+		style: 'http://localhost:8080/styles/altis-raster/style.json',
+		minZoom: 0,
+		maxZoom: 24,
+		renderWorldCopies: false
+	}).addTo(map);
+
+
+	fetch(worldObject.gl.options.style)
+		.then(res => res.json())
+		.then(data => {
+			worldSizeY = proj4(proj4.defs('EPSG:3857'), proj4.defs('EPSG:4326'), [0, data.worldsize])[1];
+			var imageLatLngBotLeft = [-worldSizeY, 0];
+			var imageLatLngTopRight = [0, worldSizeY];
+			var mapBounds = [
+				imageLatLngBotLeft,
+				imageLatLngTopRight
+			]
+			map.fitBounds(mapBounds);
+		})
+
+	// worldObject.gl = L.maplibreGL({
+	// 	style: 'http://localhost:8080/styles/altis-topo/style.json',
+	// 	minZoom: 0,
+	// 	maxZoom: 24,
+	// 	renderWorldCopies: false
+	// }).addTo(map);
+
+
+
+	// L.control.layers(baselayers, {
+	// 	collapsed: true,
+	// 	autoZIndex: true
+	// }).addTo(map);
+
+
 	let topoLayerUrl = "";
 	let topoDarkLayerUrl = "";
 	let topoReliefLayerUrl = "";
 	let colorReliefLayerUrl = "";
 	let contourLayerUrl = "";
 
-	console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
-	if (Boolean(world._useCloudTiles)) {
-		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
-		topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
-		topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
-		colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
-		contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
-	} else {
-		topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
-		topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
-		topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
-		colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
-		contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
-	}
+	// console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
+	// if (Boolean(world._useCloudTiles)) {
+	// 	topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+	// 	topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+	// 	topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+	// 	colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+	// 	contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
+	// } else {
+	// 	topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
+	// 	topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+	// 	topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+	// 	colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
+	// 	contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
+	// }
 
-	if (world.hasTopo) {
-		topoLayer = L.tileLayer(topoLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.7,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoLayer);
-	}
+	// if (world.hasTopo) {
+	// 	topoLayer = L.tileLayer(topoLayerUrl, {
+	// 		maxNativeZoom: world.maxZoom,
+	// 		// maxZoom: mapMaxZoom,
+	// 		minNativeZoom: world.minZoom,
+	// 		bounds: mapBounds,
+	// 		label: "Topographic",
+	// 		attribution: "Map Data &copy; " + world.attribution,
+	// 		noWrap: true,
+	// 		tms: false,
+	// 		keepBuffer: 4,
+	// 		// opacity: 0.7,
+	// 		errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+	// 	});
+	// 	baseLayers.push(topoLayer);
+	// }
 
-	if (world.hasTopoDark) {
-		topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic Dark",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.8,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoDarkLayer);
-	}
+	// if (world.hasTopoDark) {
+	// 	topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
+	// 		maxNativeZoom: world.maxZoom,
+	// 		// maxZoom: mapMaxZoom,
+	// 		minNativeZoom: world.minZoom,
+	// 		bounds: mapBounds,
+	// 		label: "Topographic Dark",
+	// 		attribution: "Map Data &copy; " + world.attribution,
+	// 		noWrap: true,
+	// 		tms: false,
+	// 		keepBuffer: 4,
+	// 		// opacity: 0.8,
+	// 		errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+	// 	});
+	// 	baseLayers.push(topoDarkLayer);
+	// }
 
-	if (world.hasTopoRelief) {
-		topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic Relief",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.9,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoReliefLayer);
-	}
+	// if (world.hasTopoRelief) {
+	// 	topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
+	// 		maxNativeZoom: world.maxZoom,
+	// 		// maxZoom: mapMaxZoom,
+	// 		minNativeZoom: world.minZoom,
+	// 		bounds: mapBounds,
+	// 		label: "Topographic Relief",
+	// 		attribution: "Map Data &copy; " + world.attribution,
+	// 		noWrap: true,
+	// 		tms: false,
+	// 		keepBuffer: 4,
+	// 		// opacity: 0.9,
+	// 		errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+	// 	});
+	// 	baseLayers.push(topoReliefLayer);
+	// }
 
-	if (world.hasColorRelief) {
-		colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			attribution: "Map Data &copy; " + world.attribution,
-			label: "Colored Relief",
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 1,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(colorReliefLayer);
-	}
+	// if (world.hasColorRelief) {
+	// 	colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
+	// 		maxNativeZoom: world.maxZoom,
+	// 		// maxZoom: mapMaxZoom,
+	// 		minNativeZoom: world.minZoom,
+	// 		bounds: mapBounds,
+	// 		attribution: "Map Data &copy; " + world.attribution,
+	// 		label: "Colored Relief",
+	// 		noWrap: true,
+	// 		tms: false,
+	// 		keepBuffer: 4,
+	// 		// opacity: 1,
+	// 		errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+	// 	});
+	// 	baseLayers.push(colorReliefLayer);
+	// }
 
 
 
-	baseLayerControl = map.addControl(L.control.basemaps({
-		basemaps: baseLayers,
-		tileX: 2,  // tile X coordinate
-		tileY: 6,  // tile Y coordinate
-		tileZ: 4   // tile zoom level
-	}));
+	// baseLayerControl = map.addControl(L.control.basemaps({
+	// 	basemaps: baseLayers,
+	// 	tileX: 2,  // tile X coordinate
+	// 	tileY: 6,  // tile Y coordinate
+	// 	tileZ: 4   // tile zoom level
+	// }));
 
 
 	map.createPane("buildings");
@@ -516,372 +510,6 @@ function initMap (world) {
 			console.debug(map.project(e.latlng, mapMaxNativeZoom));
 		})
 	}
-
-
-
-	// tree
-	// getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
-	// 	.then(geoJson => {
-	// 		console.log(geoJson.features[0].geometry.coordinates);
-
-	// var t = {
-	// 	"type": "FeatureCollection",
-	// 	"features": []
-	// }
-	// t.features = geoJson.features.map(feature => {
-	// 	// feature.geometry.coordinates.pop()
-	// 	var coords = feature.geometry.coordinates;
-	// 	// coords = geoJsonToLatLng(coords);
-	// 	// coords = armaToLatLng(coords);
-	// 	// coords = [coords.lng, -1 * coords.lat];
-
-	// 	var origin = map.getPixelOrigin();
-	// 	coords[0] = (coords[0] + origin.x) * 0.015;
-	// 	coords[1] = (coords[1] + origin.y) * 0.015;
-
-	// 	// console.debug(coords);
-
-
-
-
-	// 	// L.circleMarker(coords, {
-	// 	// 	radius: 1,
-	// 	// 	color: "#00FF00"
-	// 	// }).addTo(map);
-	// 	feature.geometry.coordinates = coords;
-	// 	// console.debug(feature.geometry.coordinates);
-	// 	return feature;
-	// })
-	// // var r = t.map(feature => {
-	// // 	feature.geometry.coordinates = armaToLatLng(feature.geometry.coordinates)
-	// // 	return feature;
-	// // })
-	// console.log(t.features[0].geometry.coordinates);
-	// return t
-
-	// 	return geoJson
-	// })
-	// .then(geoJson => {
-	// console.log(geoJson);
-	// L.geoJSON(geoJson, {
-	// 	pointToLayer: function (geoJsonPoint, latlng) {
-	// 		// return L.corridor(latlng, {
-	// 		// 	radius: 5 * 0.015 * window.multiplier,
-	// 		// 	color: "#009900",
-	// 		// 	opacity: 0.8,
-	// 		// 	fill: false,
-	// 		// 	interactive: false
-	// 		// })
-	// 		// return L.marker(latlng, {
-	// 		// 	icon: L.icon({
-	// 		// 		iconUrl: `images/maps/${worldName}/tree.png`,
-	// 		// 		iconSize: [5, 5]
-	// 		// 	}),
-	// 		// 	opacity: 1,
-	// 		// 	interactive: false
-	// 		// })
-	// 		return L.circleMarker(latlng, {
-	// 			radius: 5 * 0.015 * window.multiplier,
-	// 			color: "#009900",
-	// 			opacity: 0.4,
-	// 			fill: false,
-	// 			interactive: false
-	// 		});
-	// 	},
-	// 	coordsToLatLng: function (coords) {
-	// 		return armaToLatLng(coords);
-	// 	},
-	// 	pane: map.getPane("forest")
-	// }).addTo(map)
-
-	// L.vectorGrid.slicer(geoJson, {
-	// 	rendererFactory: L.canvas.tile,
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	// maxZoom: mapMaxZoom,
-	// 	// minNativeZoom: 6,
-	// 	minZoom: 0,
-	// 	// minZoom: 6,
-	// 	// bounds: mapBounds,
-	// 	attribution: "11Map Data &copy; " + world.attribution,
-	// 	noWrap: true,
-	// 	tms: false,
-	// 	keepBuffer: 4,
-	// 	updateWhenIdle: true,
-	// 	updateWhenZooming: false,
-	// 	// coordsToLatLng: function (coords) {
-	// 	// 	return armaToLatLng(coords);
-	// 	// },
-	// 	vectorTileLayerStyles: {
-	// 		// 	function (properties, zoom, geometryDimension)
-	// 		sliced: function (properties, zoom, geometryDimension) {
-	// 			// 	// return L.circle(properties.geometry.coordinates), {
-	// 			return {
-	// 				radius: 5 * 0.015 * window.multiplier,
-	// 				// radius: 5 * window.multiplier,
-	// 				color: "#009900",
-	// 				opacity: 0.4,
-	// 				fill: false,
-	// 				interactive: false
-	// 			}
-	// 		}
-	// 	}
-	// }).addTo(map);
-
-	// console.log("Loaded trees");
-
-	// })
-
-	// forest
-	// getGeoJson(`images/maps/${worldName}/geojson/forest.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson[0]);
-	// 		var t = geoJson.map(feature => {
-	// 			feature.geometry.coordinates[0].pop()
-	// 			return feature;
-	// 		})
-	// 		// console.log(t[0]);
-	// 		return t
-	// 	})
-	// 	.then(geoJson => {
-	// 		console.log("Loaded forest");
-	// 		console.log(geoJson);
-	// 		return L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#00FF00",
-	// 					interactive: false,
-	// 					fill: true,
-	// 					opacity: 0.5,
-	// 					fillOpacity: 0.2,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
-	// 				};
-	// 			},
-	// 			// onEachFeature: function (feature, layer) {
-	// 			// 	return houseLayer.addLayer(layer);
-	// 			// },
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("forest")
-	// 		}).addTo(map)
-	// 	})
-	// 	.then(result => {
-	// 		console.log(result);
-	// 	})
-
-
-
-	// road
-	// getGeoJson(`images/maps/${worldName}/geojson/road.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FFD966",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// road bridge
-	// getGeoJson(`images/maps/${worldName}/geojson/road-bridge.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#AA0000",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// main road
-	// getGeoJson(`images/maps/${worldName}/geojson/main_road.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FFFFFF",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// main road bridge
-	// getGeoJson(`images/maps/${worldName}/geojson/main_road-bridge.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#AA0000",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-
-	// track
-	// getGeoJson(`images/maps/${worldName}/geojson/track.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FF8099",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					opacity: 1,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// houses
-	// getGeoJson(`images/maps/${worldName}/geojson/house.geojson`)
-	// 	// .then(geoJson => {
-	// 	// console.log(geoJson[0]);
-	// 	// var t = geoJson.features.map(feature => {
-	// 	// 	feature.geometry.coordinates[0].pop()
-	// 	// 	return feature;
-	// 	// })
-	// 	// console.log(t[0]);
-	// 	// return t
-
-	// 	// })
-	// 	.then(geoJson => {
-	// 		console.log("Loaded houses");
-	// 		// console.log(geoJson);
-	// 		geoJsonHouses = L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					// color: RGBToHex(geoJsonFeature.properties.color),
-	// 					color: "#4D4D4D",
-	// 					interactive: false,
-	// 					fill: true,
-	// 					opacity: 0,
-	// 					fillOpacity: 0,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
-	// 				};
-	// 			},
-	// 			// onEachFeature: function (feature, layer) {
-	// 			// 	return houseLayer.addLayer(layer);
-	// 			// },
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("buildings")
-	// 		}).addTo(map);
-	// 		// L.glify.shapes({
-	// 		// 	map,
-	// 		// 	data: geoJson,
-	// 		// 	color: "#009900"
-	// 		// });
-	// 	})
-	// .then(result => {
-	// 	console.log(result);
-	// })
-
-	// nameCity
-	// getGeoJson(`images/maps/${worldName}/geojson/nameCity.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pointToLayer: function (geoJsonPoint, latlng) {
-	// 				return L.marker(latlng, {
-	// 					opacity: 0,
-	// 					interactive: false,
-	// 					renderer: L.canvas()
-	// 				}).bindTooltip(geoJsonPoint.properties.name, {
-	// 					permanent: true,
-	// 					opacity: 0.8,
-	// 					direction: "top"
-	// 				}).openTooltip();
-	// 			}
-	// 		}).addTo(map);
-	// 	})
-
-	// nameVillage
-	// getGeoJson(`images/maps/${worldName}/geojson/nameVillage.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pointToLayer: function (geoJsonPoint, latlng) {
-	// 				return L.marker(latlng, {
-	// 					opacity: 0,
-	// 					interactive: false,
-	// 					renderer: L.canvas()
-	// 				}).bindTooltip(geoJsonPoint.properties.name, {
-	// 					permanent: true,
-	// 					opacity: 0.4,
-	// 					direction: "top"
-	// 				}).openTooltip();
-	// 			}
-	// 		})
-	// 			.bindPopup(function (layer) {
-	// 				return layer.feature.properties.name;
-	// 			}).addTo(map);
-	// 	})
 
 
 
@@ -1161,8 +789,12 @@ function goFullscreen () {
 // Converts Arma coordinates [x,y] to LatLng
 function armaToLatLng (coords) {
 	var pixelCoords;
-	pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
-	return map.unproject(pixelCoords, mapMaxNativeZoom);
+	// pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
+	// return map.unproject(pixelCoords, mapMaxNativeZoom);
+
+
+	projected = proj4(proj4.defs('EPSG:3857'), proj4.defs('EPSG:4326'), [coords[0], coords[1]]);
+	return L.latLng(projected[1] - worldSizeY, projected[0])
 }
 
 function geoJsonToLatLng (coords) {
@@ -1266,7 +898,6 @@ function processOp (filepath) {
 		})
 		.then((wn) => getWorldByName(wn))
 		.then((world) => {
-			var multiplier = world.multiplier;
 			missionName = data.missionName;
 			ui.setMissionName(missionName);
 
@@ -1537,7 +1168,10 @@ function processOp (filepath) {
 			initMap(world);
 			startPlaybackLoop();
 			toggleHitEvents(false);
-			// playPause();
+			playPause();
+			setTimeout(() => {
+				playPause();
+			}, 1000);
 			ui.hideModal();
 		}).catch((error) => {
 			ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
