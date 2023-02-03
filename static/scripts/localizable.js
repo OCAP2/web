@@ -208,6 +208,17 @@ let _localizable = {
 		"ru": " has interrupted the hack",
 		"en": " has interrupted the hack",
 		"de": " hat den Hack unterbrochen"
+	},
+	"version-extension": {
+		"ru": "Pасширения bерсия : ",
+		"en": "Extension version: ",
+		"de": "Erweiterungs Version: "
+	
+	},
+	"version-addon": {
+		"ru": "Aддона bерсия: ",
+		"en": "Addon version: ",
+		"de": "Addon Version: "
 	}
 };
 let localizableElement = [];
@@ -232,6 +243,8 @@ function switchLocalizable(lang) {
 		if (item.length != 0)
 			localizable(item[0], item[1], item[2], item[3]);
 	});
+	document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
+	document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
 }
 function deleteLocalizable(elem) {
 	var id = elem.dataset.lbId;
