@@ -66,21 +66,23 @@ class Marker {
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
 
-			var brushPattern;
-			if (["Cross", "Grid", "DiagGrid"].includes(brush)) {
-				// var patternShape = new L.PatternPath({ d: 'M10 0 L7 20 L25 20 Z', fill: true });
-				// brushPattern = new L.Pattern({
-				// 	patternUnits: "objectBoundingBox",
-				// 	patternContentUnits: "objectBoundingBox",
-				// 	color: this._color,
-				// 	opacity: 1
-				// });
-				// brushPattern.addShape(patternShape);
-				brushPattern = new L.StripePattern({ renderer: L.svg() });
-			} else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
-				brushPattern = new L.StripePattern({ renderer: L.svg() });
-			}
-			this._brushPattern = brushPattern;
+			// ! leaflet.pattern is broken, need another solution
+			// let brushPattern;
+			// if (["Cross", "Grid", "DiagGrid"].includes(brush)) {
+			// 	// brushPattern.addTo(systemMarkersLayerGroup);
+			// 	// brushPattern = new L.StripePattern({
+			// 	// 	color: this._color,
+			// 	// 	opacity: 0.8,
+			// 	// 	angle: 45,
+			// 	// 	weight: 1,
+			// 	// 	spaceWeight: 3,
+			// 	// 	spaceOpacity: 0.0
+			// 	// });
+			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
+			// } else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
+			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
+			// }
+			// this._brushPattern = brushPattern;
 			this._brushPatternOptions = null;
 			switch (brush) {
 				case "solid":
@@ -113,7 +115,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "vertical":
@@ -128,7 +130,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "grid":
@@ -144,7 +146,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "fdiagonal":
@@ -160,7 +162,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "bdiagonal":
@@ -176,7 +178,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "diaggrid":
@@ -186,13 +188,14 @@ class Marker {
 						opacity: 0.8,
 						angle: 45,
 						weight: 1,
-						spaceWeight: 1
+						spaceWeight: 3,
+						spaceOpacity: 0.0
 					};
 					this._shapeOptions = {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1,
+						fillOpacity: 0.2,
 					};
 					break;
 				case "cross":
@@ -208,7 +211,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 1
+						fillOpacity: 0.2
 					};
 					break;
 				case "border":
@@ -247,7 +250,7 @@ class Marker {
 		this._systemMarkers = ["ObjectMarker", "moduleCoverMap", "safeStart"];
 	}
 
-	updateRender(f) {
+	updateRender (f) {
 		if (this._shape === "RECTANGLE") {
 			const frameIndex = this._markerOnFrame(f);
 			if (frameIndex >= 0 && (this._side === ui.currentSide || this._side === "GLOBAL")) {
@@ -256,12 +259,21 @@ class Marker {
 		}
 	}
 
+	removeMarker () {
+		let marker = this._marker;
+		if (marker != null) {
+			marker.remove();
+			this._marker = null;
+		}
+	}
+
 	manageFrame (f) {
 		const frameIndex = this._markerOnFrame(f);
 		if (frameIndex != null && (this._side === ui.currentSide || this._side === "GLOBAL")) {
 			this._updateAtFrame(frameIndex);
 		} else {
-			this.hide();
+			// this.hide();
+			this.removeMarker();
 		}
 	}
 
@@ -273,7 +285,7 @@ class Marker {
 		let alpha = frameData[3];
 
 		if (this._shape === "RECTANGLE" && Array.isArray(pos[0])) {
-			console.warn("wrong RECTANGLE positions, converting to POLYLINE");
+			console.debug("wrong RECTANGLE positions, converting to POLYLINE");
 			this._shape = "POLYLINE";
 		}
 
@@ -368,14 +380,18 @@ class Marker {
 
 				// check if update is needed
 				let variance = 0;
-				let curMarkerCenter = this._marker.getCenter();
-				variance = variance + Math.abs((Math.abs(curMarkerCenter.lat) - Math.abs(latLng.lat)));
-				variance = variance + Math.abs((Math.abs(curMarkerCenter.lng) - Math.abs(latLng.lng)));
+				try {
+					curMarkerCenter = this._marker.getCenter(); variance = variance + Math.abs((Math.abs(curMarkerCenter.lat) - Math.abs(latLng.lat)));
+					variance = variance + Math.abs((Math.abs(curMarkerCenter.lng) - Math.abs(latLng.lng)));
 
-				// if (variance > 5) {
-				// process rotation around center
-				let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
-				this._marker.setLatLngs(pointsRotate).redraw();
+					// if (variance > 5) {
+					// process rotation around center
+					let pointsRotate = this._rotatePoints(armaToLatLng(pos), points, dir);
+					this._marker.setLatLngs(pointsRotate).redraw();
+				} catch {
+					// If the layer is hidden, this will error because _marker.getCenter() will fail, but that's fine, we don't need to update it if it's hidden
+				};
+
 				// };
 			} else if (this._shape === "POLYLINE") {
 				if (alpha === undefined || alpha === null) { alpha = 1 }
@@ -405,10 +421,23 @@ class Marker {
 		return res
 	}
 
+	isMagIcon () {
+		if (
+			// projectiles
+			(
+				this._type.search("magIcons") > -1 ||
+				this._type === "Minefield" ||
+				this._type === "mil_triangle"
+			) &&
+			this._side === "GLOBAL"
+		) { return true } else { return false };
+	}
+
 	hide () {
 		// if (this._isShow == true) {
 		this._isShow = false;
 		this.setMarkerOpacity(0);
+		this.hideMarkerPopup(true);
 		// };
 	}
 
@@ -429,20 +458,24 @@ class Marker {
 		let marker;
 		let popupText = "";
 
-
 		if ((this._player === -1 || this._player === false) && this._shape === "ICON") {
 			// objNull passed, no owner. system marker with basic popup
 
 			let markerCustomText = "";
 			if (this._text) { markerCustomText = this._text.encodeHTMLEntities(); }
-			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" }).addTo(map);
-			let popup = this._createPopup(markerCustomText);
-			marker.bindPopup(popup).openPopup();
+
+			marker = L.marker(latLng, { icon: this._icon, interactive: false, rotationOrigin: "50% 50%" })
+			marker.addTo(systemMarkersLayerGroup);
+
+			if (markerCustomText != "") {
+				let popup = this._createPopup(markerCustomText);
+				marker.bindPopup(popup).openPopup();
+			};
 
 			// Set direction
 			marker.setRotationAngle(dir);
 
-		} else if (this._shape === "ICON") {
+		} else if (this._player instanceof Unit && this._shape === "ICON") {
 			let interactiveVal = false;
 
 			let markerCustomText = "";
@@ -478,7 +511,22 @@ class Marker {
 				popupText = `${this._side} ${this._player.getName().encodeHTMLEntities()} ${markerCustomText}`;
 			}
 
-			marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" }).addTo(map);
+			marker = L.marker(latLng, { icon: this._icon, interactive: interactiveVal, rotationOrigin: "50% 50%" })
+			if (
+				// projectiles
+				(
+					this._type.search("magIcons") > -1 ||
+					this._type === "Minefield" ||
+					this._type === "mil_triangle"
+				) &&
+				this._side === "GLOBAL"
+			) {
+				marker.addTo(projectileMarkersLayerGroup);
+			} else if (this._player instanceof Unit) {
+				marker.addTo(markersLayerGroup);
+			} else {
+				marker.addTo(systemMarkersLayerGroup);
+			}
 			let popup = this._createPopup(popupText);
 			marker.bindPopup(popup).openPopup();
 
@@ -489,16 +537,17 @@ class Marker {
 		if (this._shape === "ELLIPSE") {
 			let rad = this._size[0] * 0.015 * window.multiplier;
 
-			if (this._brushPattern) {
-				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
-				this._brushPattern.addTo(map);
-				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
-				L.Util.setOptions(marker, this._shapeOptions);
-			} else {
+			// ! leaflet.pattern is broken, need another solution
+			// if (this._brushPattern) {
+				// L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
+				// this._brushPattern.addTo(map);
+				// marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
+				// L.Util.setOptions(marker, this._shapeOptions);
+			// } else {
 				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false/* , renderer: L.canvas() */ });
 				L.Util.setOptions(marker, this._shapeOptions);
-			}
-			marker.addTo(map);
+			// }
+			marker.addTo(systemMarkersLayerGroup);
 		} else if (this._shape === "RECTANGLE") {
 			if (this._brushPattern) {
 				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
@@ -509,9 +558,16 @@ class Marker {
 				marker = L.polygon(latLng, { noClip: false, interactive: false/* , renderer: L.canvas() */ });
 				L.Util.setOptions(marker, this._shapeOptions);
 			}
-			marker.addTo(map);
+
+			marker.addTo(systemMarkersLayerGroup);
 		} else if (this._shape === "POLYLINE") {
-			marker = L.polyline(latLng, { color: this._color, opacity: 1, noClip: true, lineCap: 'butt', lineJoin: 'round', interactive: false }).addTo(map);
+			marker = L.polyline(latLng, { color: this._color, opacity: 1, noClip: true, lineCap: 'butt', lineJoin: 'round', interactive: false })
+
+			if (this._player === -1 || this._player === false) {
+				marker.addTo(systemMarkersLayerGroup)
+			} else {
+				marker.addTo(markersLayerGroup);
+			}
 		}
 
 		this._marker = marker;
@@ -579,10 +635,10 @@ class Marker {
 			}
 			if (this._shape == "ICON") {
 				this._marker.setOpacity(opacity);
-				let popup = this._marker.getPopup();
-				if (popup != null) {
-					popup.getElement().style.opacity = opacity;
-				}
+				// let popup = this._marker.getPopup();
+				// if (popup != null) {
+				// 	if (opacity > 0) { popup.openPopup() } else { this.hideMarkerPopup(true) };
+				// }
 			} else if (this._shape == "ELLIPSE") {
 				this._marker.setStyle({ opacity: strokeOpacity, fillOpacity: fillOpacity });
 			} else if (this._shape == "RECTANGLE") {
@@ -594,17 +650,19 @@ class Marker {
 	}
 
 	hideMarkerPopup (bool) {
-		if (this._marker != null) {
-			let popup = this._marker.getPopup();
-			if (popup == null) { return }
+		if (!this._marker) return;
+		let popup = this._marker.getPopup();
+		if (popup == null) { return }
 
-			let element = popup.getElement();
+		let element = popup.getElement();
+		if (element) {
 			let display = "inherit";
 			if (bool) { display = "none" }
 
-			if (element.style.display != display) {
+			if (element.style.display !== display) {
 				element.style.display = display;
 			}
 		}
+		return true;
 	}
 }

@@ -120,6 +120,23 @@ class Group {
 		//liGroup.addEventListener("click", function() {console.log(group.getUnits())});
 		this.setElement(liGroup);
 		targetList.appendChild(liGroup);
+
+		var elements = [].slice.call(targetList.childNodes)
+		while (targetList.childNodes.length > 0) {
+			targetList.childNodes.forEach(a => {
+				targetList.removeChild(a)
+			})
+		};
+
+		var sortedElements = elements.sort((a, b) => {
+			if (a.innerText < b.innerText) return -1;
+			if (a.innerText > b.innerText) return 1;
+			return 0;
+		});
+
+		sortedElements.forEach(a => {
+			targetList.appendChild(a)
+		});
 	};
 
 	isEmpty() {

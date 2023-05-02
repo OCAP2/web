@@ -61,6 +61,7 @@ class UI {
 		this.elapsedTime = null;
 
 		this.disableKillCount = false;
+		this.useCloudTiles = true;
 
 		this._init();
 	};
@@ -586,7 +587,9 @@ class UI {
 				if (unit) {
 					unit.killCount += entity.killCount;
 					unit.teamKillCount += entity.teamKillCount;
-					unit.deathCount += entity.deathCount;
+					if (entity.deathCount > 0) {
+						unit.deathCount += entity.deathCount - 1;
+					}
 				} else {
 					units.push({
 						name: entity._name,
@@ -840,6 +843,7 @@ class UI {
 				}
 
 				this.disableKillCount = data.disableKillCount;
+				// this.useCloudTiles = data.useCloudTiles;
 			});
 	}
 

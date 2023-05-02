@@ -56,6 +56,18 @@ var trim = 0; // Number of pixels that were trimmed when cropping image (used to
 var mapMinZoom = null;
 var mapMaxNativeZoom = null;
 var mapMaxZoom = null; // mapMaxNativeZoom + 3;
+var topoLayer = null;
+var satLayer = null;
+var terrainLayer = null;
+var terrainDarkLayer = null;
+var contourLayer = null;
+var baseLayerControl = null;
+var overlayLayerControl = null;
+var geoJsonHouses = null;
+var entitiesLayerGroup = L.layerGroup([]);
+var markersLayerGroup = L.layerGroup([]);
+var systemMarkersLayerGroup = L.layerGroup([]);
+var projectileMarkersLayerGroup = L.layerGroup([]);
 var map = null;
 var mapDiv = null;
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
@@ -88,7 +100,7 @@ var followColour = "#FFA81A";
 var hitColour = "#FF0000";
 var deadColour = "#000000";
 
-const skipAnimationDistance = 100;
+const skipAnimationDistance = 222; // 800 kph at 1 sec frame delay, cruise for most planes - objects changing a larger distance than this would represent will be temporarily hidden between frames because it's assumed they're teleporting
 let requestedFrame;
 
 function getArguments () {
@@ -112,15 +124,15 @@ function initOCAP () {
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
 		.then(() => {
-		/*
-			window.addEventListener("keypress", function (event) {
-				switch (event.charCode) {
-					case 32: // Spacebar
-						event.preventDefault(); // Prevent space from scrolling page on some browsers
-						break;
-				};
-			});
-		*/
+			/*
+				window.addEventListener("keypress", function (event) {
+					switch (event.charCode) {
+						case 32: // Spacebar
+							event.preventDefault(); // Prevent space from scrolling page on some browsers
+							break;
+					};
+				});
+			*/
 			if (args.file) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
@@ -145,9 +157,9 @@ function initOCAP () {
 	if (args.experimental) ui.showExperimental();
 }
 
-function getWorldByName (worldName) {
+async function getWorldByName (worldName) {
 	console.log("Getting world " + worldName);
-	let map = {};
+
 	let defaultMap = {
 		"name": "NOT FOUND",
 		"worldname": "NOT FOUND",
@@ -156,41 +168,135 @@ function getWorldByName (worldName) {
 		"multiplier": 1,
 		"maxZoom": 6,
 		"minZoom": 0,
+		"hasTopo": true,
+		"hasTopoRelief": false,
+		"hasTopoDark": false,
+		"hasColorRelief": false,
+		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
-	return fetch(`images/maps/${worldName}/map.json`)
-		.then((res) => res.json())
-		.then((data) => {
-			map = data;
-			return Object.assign(defaultMap, map);
-		})
-		.catch(() => {
-			ui.showHint(`Error: Map "${worldName}" is not installed`);
-		});
+	// Check for, and return local map data if available
+	const localMapRes = await fetch('images/maps/' + worldName + '/map.json');
+	if (localMapRes.status === 200) {
+		try {
+			return Object.assign(defaultMap, await localMapRes.json());
+		} catch (error) {
+			//ui.showHint(`Error: parsing local map.json`);
+			console.error('Error parsing local map.json', error.message || error);
+		}
+	}
+
+	// Fallback to cloud CDN if enabled
+	if (ui.useCloudTiles) {
+		const cloudMapRes = await fetch(`https://maps.ocap2.com/${worldName}/map.json`);
+		if (cloudMapRes.status === 200) {
+			try {
+				return Object.assign(defaultMap, await cloudMapRes.json(), { _useCloudTiles: true });
+			} catch (error) {
+				console.error('Error parsing cloud map.json', error.message || error);
+				return Promise.reject(`Cloud map "${worldName}" data parsing failed.`);
+			}
+		} else {
+			return Promise.reject(`Map "${worldName}" is not available on cloud (${cloudMapRes.status})`);
+		}
+	} else {
+		return Promise.reject(`Map "${worldName}" is not installed`);
+	}
 }
 
 function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
 	mapMaxZoom = mapMaxNativeZoom + 3
+
+	imageSize = world.imageSize;
+	multiplier = world.multiplier;
+
+	var factorx = multiplier;
+	var factory = multiplier;
+	// var factorx = 1;
+	// var factory = 1;
+
+	L.CRS.OCAP = L.extend({}, L.CRS.Simple, {
+		projection: L.Projection.LonLat,
+		transformation: new L.Transformation(factorx, 0, -factory, 0),
+		// Changing the transformation is the key part, everything else is the same.
+		// By specifying a factor, you specify what distance in meters one pixel occupies (as it still is CRS.Simple in all other regards).
+		// In this case, I have a tile layer with 256px pieces, so Leaflet thinks it's only 256 meters wide.
+		// I know the map is supposed to be 2048x2048 meters, so I specify a factor of 0.125 to multiply in both directions.
+		// In the actual project, I compute all that from the gdal2tiles tilemapresources.xml, 
+		// which gives the necessary information about tilesizes, total bounds and units-per-pixel at different levels.
+
+
+		// Scale, zoom and distance are entirely unchanged from CRS.Simple
+		scale: function (zoom) {
+			return Math.pow(2, zoom);
+		},
+
+		zoom: function (scale) {
+			return Math.log(scale) / Math.LN2;
+		},
+
+		distance: function (latlng1, latlng2) {
+			var dx = latlng2.lng - latlng1.lng,
+				dy = latlng2.lat - latlng1.lat;
+
+			return Math.sqrt(dx * dx + dy * dy);
+		},
+		infinite: true
+	});
+
 	// Create map
 	map = L.map('map', {
-		//maxZoom: mapMaxZoom,
+		maxNativeZoom: mapMaxNativeZoom,
+		maxZoom: mapMaxZoom,
+		minNativeZoom: 0,
+		minZoom: 0,
+		zoominfoControl: true,
 		zoomControl: false,
-		zoomAnimation: true,
 		scrollWheelZoom: true,
+		zoomAnimation: true,
 		fadeAnimation: true,
-		crs: L.CRS.Simple,
-		attributionControl: false,
-		zoomSnap: 0.1,
+		crs: L.CRS.OCAP,
+		attributionControl: true,
+		zoomSnap: 1,
 		zoomDelta: 1,
 		closePopupOnClick: false,
-		preferCanvas: false
+		preferCanvas: true
 	});
+
+
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
 		ui.hideMarkerPopups = map.getZoom() <= 4;
+		// if (map.getZoom() <= 5 && geoJsonHouses != null) {
+		// 	geoJsonHouses.setStyle(function (geoJsonFeature) {
+		// 		return {
+		// 			color: "#4D4D4D",
+		// 			interactive: false,
+		// 			fill: true,
+		// 			opacity: 0,
+		// 			fillOpacity: 0,
+		// 			noClip: true,
+		// 			// renderer: L.canvas()
+		// 			// weight: geoJsonFeature.properties.width * window.multiplier,
+		// 		};
+		// 	});
+		// } else if (geoJsonHouses != null) {
+		// 	geoJsonHouses.setStyle(function (geoJsonFeature) {
+		// 		return {
+		// 			color: "#4D4D4D",
+		// 			interactive: false,
+		// 			fill: true,
+		// 			opacity: 1,
+		// 			fillOpacity: 1,
+		// 			noClip: true,
+		// 			// renderer: L.canvas()
+		// 			// weight: geoJsonFeature.properties.width * window.multiplier,
+		// 		};
+		// 	});
+		// }
 	});
 
 	let playbackPausedBeforeZoom;
@@ -217,15 +323,14 @@ function initMap (world) {
 			entityToFollow.unfollow();
 		}
 	});
-
 	console.log("Got world: ", world);
 
-	imageSize = world.imageSize;
-	multiplier = world.multiplier;
+
 	let args = getArguments();
 	if (!args.x || !args.y || !args.zoom) {
 		map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
 	}
+
 
 	var mapBounds = new L.LatLngBounds(
 		map.unproject([0, imageSize], mapMaxNativeZoom),
@@ -233,16 +338,714 @@ function initMap (world) {
 	);
 	map.fitBounds(mapBounds);
 
+
+
 	// Setup tile layer
-	L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-		maxNativeZoom: mapMaxNativeZoom,
-		maxZoom: mapMaxZoom,
-		minZoom: mapMinZoom,
-		bounds: mapBounds,
-		//attribution: 'MisterGoodson',
-		noWrap: true,
-		tms: false
+	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
+	// 	maxNativeZoom: mapMaxNativeZoom,
+	// 	maxZoom: mapMaxZoom,
+	// 	minZoom: mapMinZoom,
+	// 	bounds: mapBounds,
+	// 	//attribution: 'MisterGoodson',
+	// 	noWrap: true,
+	// 	tms: false
+	// }).addTo(map);
+
+	overlayLayerControl = L.control.layers({}, {
+		// overlay layers
+		"Units and Vehicles": entitiesLayerGroup,
+		"Selected Side Markers": markersLayerGroup,
+		"Editor/Briefing Markers": systemMarkersLayerGroup,
+		"Projectile Markers": projectileMarkersLayerGroup
+	}, {
+		position: 'topright',
+		collapsed: false
 	}).addTo(map);
+
+	var baseLayers = [];
+
+	entitiesLayerGroup.addTo(map);
+	markersLayerGroup.addTo(map);
+	systemMarkersLayerGroup.addTo(map);
+	projectileMarkersLayerGroup.addTo(map);
+
+
+	// worldName = world.worldName;
+
+
+	let topoLayerUrl = "";
+	let topoDarkLayerUrl = "";
+	let topoReliefLayerUrl = "";
+	let colorReliefLayerUrl = "";
+	let contourLayerUrl = "";
+
+	console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
+	if (Boolean(world._useCloudTiles)) {
+		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+		topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+		topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+		colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+		contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
+	} else {
+		topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
+		topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+		topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+		colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
+		contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
+	}
+
+	if (world.hasTopo) {
+		topoLayer = L.tileLayer(topoLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Topographic",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 0.7,
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+		});
+		baseLayers.push(topoLayer);
+	}
+
+	if (world.hasTopoDark) {
+		topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Topographic Dark",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 0.8,
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+		});
+		baseLayers.push(topoDarkLayer);
+	}
+
+	if (world.hasTopoRelief) {
+		topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			label: "Topographic Relief",
+			attribution: "Map Data &copy; " + world.attribution,
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 0.9,
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+		});
+		baseLayers.push(topoReliefLayer);
+	}
+
+	if (world.hasColorRelief) {
+		colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
+			maxNativeZoom: world.maxZoom,
+			// maxZoom: mapMaxZoom,
+			minNativeZoom: world.minZoom,
+			bounds: mapBounds,
+			attribution: "Map Data &copy; " + world.attribution,
+			label: "Colored Relief",
+			noWrap: true,
+			tms: false,
+			keepBuffer: 4,
+			// opacity: 1,
+			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+		});
+		baseLayers.push(colorReliefLayer);
+	}
+
+
+
+	baseLayerControl = map.addControl(L.control.basemaps({
+		basemaps: baseLayers,
+		tileX: 2,  // tile X coordinate
+		tileY: 6,  // tile Y coordinate
+		tileZ: 4   // tile zoom level
+	}));
+
+
+	map.createPane("buildings");
+	map.createPane("roads");
+	map.createPane("forest");
+	map.createPane("rock");
+
+
+	function getGeoJson (path) {
+		return fetch(path)
+			.then((res) => res.json())
+			.then((data) => {
+				return data;
+			});
+	}
+	function RGBToHex (rgbArr) {
+		r = rgbArr[0].toString(16);
+		g = rgbArr[1].toString(16);
+		b = rgbArr[2].toString(16);
+
+		if (r.length == 1)
+			r = "0" + r;
+		if (g.length == 1)
+			g = "0" + g;
+		if (b.length == 1)
+			b = "0" + b;
+
+		return "#" + r + g + b;
+	}
+	var myRenderer = L.canvas({ padding: 0.5 });
+
+
+
+
+	function test () {
+		// Add marker to map on click
+		map.on("click", function (e) {
+			// latLng, layerPoint, containerPoint, originalEvent
+			console.debug("latLng");
+			console.debug(e.latlng);
+			console.debug("LayerPoint");
+			console.debug(e.layerPoint);
+			console.debug("Projected");
+			console.debug(map.project(e.latlng, mapMaxNativeZoom));
+		})
+	}
+
+
+
+	// tree
+	// getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
+	// 	.then(geoJson => {
+	// 		console.log(geoJson.features[0].geometry.coordinates);
+
+	// var t = {
+	// 	"type": "FeatureCollection",
+	// 	"features": []
+	// }
+	// t.features = geoJson.features.map(feature => {
+	// 	// feature.geometry.coordinates.pop()
+	// 	var coords = feature.geometry.coordinates;
+	// 	// coords = geoJsonToLatLng(coords);
+	// 	// coords = armaToLatLng(coords);
+	// 	// coords = [coords.lng, -1 * coords.lat];
+
+	// 	var origin = map.getPixelOrigin();
+	// 	coords[0] = (coords[0] + origin.x) * 0.015;
+	// 	coords[1] = (coords[1] + origin.y) * 0.015;
+
+	// 	// console.debug(coords);
+
+
+
+
+	// 	// L.circleMarker(coords, {
+	// 	// 	radius: 1,
+	// 	// 	color: "#00FF00"
+	// 	// }).addTo(map);
+	// 	feature.geometry.coordinates = coords;
+	// 	// console.debug(feature.geometry.coordinates);
+	// 	return feature;
+	// })
+	// // var r = t.map(feature => {
+	// // 	feature.geometry.coordinates = armaToLatLng(feature.geometry.coordinates)
+	// // 	return feature;
+	// // })
+	// console.log(t.features[0].geometry.coordinates);
+	// return t
+
+	// 	return geoJson
+	// })
+	// .then(geoJson => {
+	// console.log(geoJson);
+	// L.geoJSON(geoJson, {
+	// 	pointToLayer: function (geoJsonPoint, latlng) {
+	// 		// return L.corridor(latlng, {
+	// 		// 	radius: 5 * 0.015 * window.multiplier,
+	// 		// 	color: "#009900",
+	// 		// 	opacity: 0.8,
+	// 		// 	fill: false,
+	// 		// 	interactive: false
+	// 		// })
+	// 		// return L.marker(latlng, {
+	// 		// 	icon: L.icon({
+	// 		// 		iconUrl: `images/maps/${worldName}/tree.png`,
+	// 		// 		iconSize: [5, 5]
+	// 		// 	}),
+	// 		// 	opacity: 1,
+	// 		// 	interactive: false
+	// 		// })
+	// 		return L.circleMarker(latlng, {
+	// 			radius: 5 * 0.015 * window.multiplier,
+	// 			color: "#009900",
+	// 			opacity: 0.4,
+	// 			fill: false,
+	// 			interactive: false
+	// 		});
+	// 	},
+	// 	coordsToLatLng: function (coords) {
+	// 		return armaToLatLng(coords);
+	// 	},
+	// 	pane: map.getPane("forest")
+	// }).addTo(map)
+
+	// L.vectorGrid.slicer(geoJson, {
+	// 	rendererFactory: L.canvas.tile,
+	// 	maxNativeZoom: mapMaxNativeZoom,
+	// 	// maxZoom: mapMaxZoom,
+	// 	// minNativeZoom: 6,
+	// 	minZoom: 0,
+	// 	// minZoom: 6,
+	// 	// bounds: mapBounds,
+	// 	attribution: "11Map Data &copy; " + world.attribution,
+	// 	noWrap: true,
+	// 	tms: false,
+	// 	keepBuffer: 4,
+	// 	updateWhenIdle: true,
+	// 	updateWhenZooming: false,
+	// 	// coordsToLatLng: function (coords) {
+	// 	// 	return armaToLatLng(coords);
+	// 	// },
+	// 	vectorTileLayerStyles: {
+	// 		// 	function (properties, zoom, geometryDimension)
+	// 		sliced: function (properties, zoom, geometryDimension) {
+	// 			// 	// return L.circle(properties.geometry.coordinates), {
+	// 			return {
+	// 				radius: 5 * 0.015 * window.multiplier,
+	// 				// radius: 5 * window.multiplier,
+	// 				color: "#009900",
+	// 				opacity: 0.4,
+	// 				fill: false,
+	// 				interactive: false
+	// 			}
+	// 		}
+	// 	}
+	// }).addTo(map);
+
+	// console.log("Loaded trees");
+
+	// })
+
+	// forest
+	// getGeoJson(`images/maps/${worldName}/geojson/forest.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson[0]);
+	// 		var t = geoJson.map(feature => {
+	// 			feature.geometry.coordinates[0].pop()
+	// 			return feature;
+	// 		})
+	// 		// console.log(t[0]);
+	// 		return t
+	// 	})
+	// 	.then(geoJson => {
+	// 		console.log("Loaded forest");
+	// 		console.log(geoJson);
+	// 		return L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#00FF00",
+	// 					interactive: false,
+	// 					fill: true,
+	// 					opacity: 0.5,
+	// 					fillOpacity: 0.2,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
+	// 				};
+	// 			},
+	// 			// onEachFeature: function (feature, layer) {
+	// 			// 	return houseLayer.addLayer(layer);
+	// 			// },
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("forest")
+	// 		}).addTo(map)
+	// 	})
+	// 	.then(result => {
+	// 		console.log(result);
+	// 	})
+
+
+
+	// road
+	// getGeoJson(`images/maps/${worldName}/geojson/road.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#FFD966",
+	// 					interactive: false,
+	// 					weight: geoJsonFeature.properties.width * window.multiplier,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 				}
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("roads")
+	// 		}).addTo(map)
+	// 	})
+
+	// road bridge
+	// getGeoJson(`images/maps/${worldName}/geojson/road-bridge.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#AA0000",
+	// 					interactive: false,
+	// 					weight: geoJsonFeature.properties.width * window.multiplier,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 				}
+	// 			},
+	// 			onEachFeature: function (feature, layer) {
+
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("roads")
+	// 		}).addTo(map)
+	// 	})
+
+	// main road
+	// getGeoJson(`images/maps/${worldName}/geojson/main_road.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#FFFFFF",
+	// 					interactive: false,
+	// 					weight: geoJsonFeature.properties.width * window.multiplier,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 				}
+	// 			},
+	// 			onEachFeature: function (feature, layer) {
+
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("roads")
+	// 		}).addTo(map)
+	// 	})
+
+	// main road bridge
+	// getGeoJson(`images/maps/${worldName}/geojson/main_road-bridge.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#AA0000",
+	// 					interactive: false,
+	// 					weight: geoJsonFeature.properties.width * window.multiplier,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 				}
+	// 			},
+	// 			onEachFeature: function (feature, layer) {
+
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("roads")
+	// 		}).addTo(map)
+	// 	})
+
+
+	// track
+	// getGeoJson(`images/maps/${worldName}/geojson/track.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					color: "#FF8099",
+	// 					interactive: false,
+	// 					weight: geoJsonFeature.properties.width * window.multiplier,
+	// 					noClip: true,
+	// 					opacity: 1,
+	// 					// renderer: L.canvas()
+	// 				}
+	// 			},
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("roads")
+	// 		}).addTo(map)
+	// 	})
+
+	// houses
+	// getGeoJson(`images/maps/${worldName}/geojson/house.geojson`)
+	// 	// .then(geoJson => {
+	// 	// console.log(geoJson[0]);
+	// 	// var t = geoJson.features.map(feature => {
+	// 	// 	feature.geometry.coordinates[0].pop()
+	// 	// 	return feature;
+	// 	// })
+	// 	// console.log(t[0]);
+	// 	// return t
+
+	// 	// })
+	// 	.then(geoJson => {
+	// 		console.log("Loaded houses");
+	// 		// console.log(geoJson);
+	// 		geoJsonHouses = L.geoJSON(geoJson, {
+	// 			style: function (geoJsonFeature) {
+	// 				return {
+	// 					// color: RGBToHex(geoJsonFeature.properties.color),
+	// 					color: "#4D4D4D",
+	// 					interactive: false,
+	// 					fill: true,
+	// 					opacity: 0,
+	// 					fillOpacity: 0,
+	// 					noClip: true,
+	// 					// renderer: L.canvas()
+	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
+	// 				};
+	// 			},
+	// 			// onEachFeature: function (feature, layer) {
+	// 			// 	return houseLayer.addLayer(layer);
+	// 			// },
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pane: map.getPane("buildings")
+	// 		}).addTo(map);
+	// 		// L.glify.shapes({
+	// 		// 	map,
+	// 		// 	data: geoJson,
+	// 		// 	color: "#009900"
+	// 		// });
+	// 	})
+	// .then(result => {
+	// 	console.log(result);
+	// })
+
+	// nameCity
+	// getGeoJson(`images/maps/${worldName}/geojson/nameCity.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pointToLayer: function (geoJsonPoint, latlng) {
+	// 				return L.marker(latlng, {
+	// 					opacity: 0,
+	// 					interactive: false,
+	// 					renderer: L.canvas()
+	// 				}).bindTooltip(geoJsonPoint.properties.name, {
+	// 					permanent: true,
+	// 					opacity: 0.8,
+	// 					direction: "top"
+	// 				}).openTooltip();
+	// 			}
+	// 		}).addTo(map);
+	// 	})
+
+	// nameVillage
+	// getGeoJson(`images/maps/${worldName}/geojson/nameVillage.geojson`)
+	// 	.then(geoJson => {
+	// 		// console.log(geoJson);
+	// 		L.geoJSON(geoJson, {
+	// 			coordsToLatLng: function (coords) {
+	// 				return armaToLatLng(coords);
+	// 			},
+	// 			pointToLayer: function (geoJsonPoint, latlng) {
+	// 				return L.marker(latlng, {
+	// 					opacity: 0,
+	// 					interactive: false,
+	// 					renderer: L.canvas()
+	// 				}).bindTooltip(geoJsonPoint.properties.name, {
+	// 					permanent: true,
+	// 					opacity: 0.4,
+	// 					direction: "top"
+	// 				}).openTooltip();
+	// 			}
+	// 		})
+	// 			.bindPopup(function (layer) {
+	// 				return layer.feature.properties.name;
+	// 			}).addTo(map);
+	// 	})
+
+
+
+	// gdal_contour -a ELEV -i 20 dem.asc contours.geojson
+	// only try if a relief map is rendered -- only case in which a contouer is likely present
+	let contourLayer;
+	if (world.hasTopoRelief) {
+		$.ajax({
+			type: "GET",
+			url: contourLayerUrl
+		})
+			.then((res) => {
+				if (res.status == 200) {
+					return res.responseJSON();
+				} else {
+					throw "Contour layer geoJson for " + worldName + " not found."
+				}
+			})
+			.then(geoJson => {
+				console.log("Loaded contour lines");
+				console.debug(geoJson);
+
+				let contourPane = map.createPane("contourPane");
+
+				var layer = L.geoJSON(geoJson, {
+					filter: function (geoJsonFeature) {
+						if (geoJsonFeature.properties.ELEV > 0) {
+							return true;
+						} else {
+							return false;
+						}
+					},
+					style: function (geoJsonFeature) {
+						var props = geoJsonFeature.properties;
+						var color;
+						if (props.index == 1) { color = "#FF7777" } else { color = "#444444" };
+						return {
+							color: color,
+							interactive: false,
+							fill: false,
+							opacity: 0.5,
+							// fillOpacity: 0.2,
+							noClip: true,
+							// renderer: L.canvas()
+							// weight: geoJsonFeature.properties.width * window.multiplier,
+						};
+					},
+					coordsToLatLng: function (coords) {
+						return armaToLatLng(coords);
+					},
+					pane: contourPane
+				});
+				overlayLayerControl.addOverlay(
+					layer,
+					"20m Contours"
+				);
+
+				contourLayer = layer;
+			})
+			.catch(err => console.warn("Contour layer geoJson for " + worldName + " not found."))
+	};
+
+
+
+
+
+
+
+
+
+	map.on("baselayerchange", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		// multiplier = event.name
+	});
+	map.on("overlayadd", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		switch (event.name) {
+			case "Units and Vehicles": {
+				if (ui.hideMarkerPopups == false) {
+					entitiesLayerGroup.eachLayer(layer => {
+						layer.openPopup();
+					});
+				}
+				break;
+			};
+			case "Selected Side Markers": {
+				markersLayerGroup.eachLayer(layer => {
+					layer.remove()
+				})
+				markers.forEach(marker => {
+					if (marker._player instanceof Unit) {
+						marker._marker = null;
+					}
+				})
+				// for (const marker of markers) {
+				// 	marker.manageFrame(playbackFrame);
+				// }
+				break;
+			};
+			case "Editor/Briefing Markers": {
+				if (ui.markersEnable == true) {
+					systemMarkersLayerGroup.eachLayer(layer => {
+						layer.openPopup();
+					})
+				}
+				break;
+			};
+			case "Projectile Markers": {
+				projectileMarkersLayerGroup.getLayers().forEach(layer => {
+					layer.remove()
+				})
+				markers.forEach(marker => {
+					if (marker.isMagIcon()) {
+						marker._marker = null;
+					}
+				})
+				break;
+			};
+
+			default: {
+				break;
+			};
+		};
+	});
+	map.on("overlayremove", (event) => {
+		// console.log(event.name); // Print out the new active layer
+		// console.log(event);
+		switch (event.name) {
+			case "Units and Vehicles": {
+				// ui.hideMarkerPopups = false;
+				// entitiesLayerGroup.eachLayer(layer => {
+				// 	layer.openPopup();
+				// });
+				break;
+			};
+			case "Selected Side Markers": {
+				markersLayerGroup.eachLayer(layer => {
+					// layer.remove()
+				})
+				break;
+			};
+			case "Editor/Briefing Markers": {
+				// systemMarkersLayerGroup.eachLayer(layer => {
+				// 	layer.openPopup();
+				// })
+				break;
+			};
+			case "Projectile Markers": {
+				projectileMarkersLayerGroup.getLayers().forEach(layer => {
+					layer.remove()
+				})
+
+				break;
+			};
+
+			default: {
+				break;
+			};
+		};
+	});
+
+
 
 	// Add keypress event listener
 	mapDiv.addEventListener("keypress", function (event) {
@@ -268,7 +1071,7 @@ function initMap (world) {
 	}
 
 	document.dispatchEvent(new Event("mapInited"));
-	//test();
+	// test();
 }
 
 function createInitialMarkers () {
@@ -316,7 +1119,7 @@ function defineIcons () {
 	let imgPathUnknown = "images/markers/unknown/";
 
 
-	let imgs = ["blufor", "opfor", "ind", "civ", "unknown", "dead", "hit", "follow", "unconscious"];
+	let imgs = ["blufor", "opfor", "ind", "civ", "logic", "unknown", "dead", "hit", "follow", "unconscious"];
 	imgs.forEach((img, i) => {
 		icons.man[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathMan}${img}.svg` });
 		// icons.manMG[img] = L.icon({ className: "animation", iconSize: [16, 16], iconUrl: `${imgPathManMG}${img}.svg` });
@@ -354,11 +1157,43 @@ function goFullscreen () {
 		element.msRequestFullscreen();
 	}
 }
-
+// http://127.0.0.1:5000/?file=2021_08_20__21_24_FNF_TheMountain_Youre_A_Towel_V2_Destroy_EU.json&frame=87&zoom=1&x=-134.6690319189602&y=78.0822715759277
 // Converts Arma coordinates [x,y] to LatLng
 function armaToLatLng (coords) {
-	const pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
+	var pixelCoords;
+	pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 	return map.unproject(pixelCoords, mapMaxNativeZoom);
+}
+
+function geoJsonToLatLng (coords) {
+	// var latLng = coords;
+	// latLng = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
+
+	// pixelCoords = map.project(L.latLng(latLng[0], latLng[1]), mapMaxNativeZoom);
+	// pixelCoords = [(pixelCoords.x * multiplier) + trim, (imageSize - (pixelCoords.y * multiplier)) + trim];
+	// return map.unproject(pixelCoords, mapMaxNativeZoom);
+
+
+	// coords = map.layerPointToContainerPoint([coords[0], coords[1]]);
+	// coords = [coords.x * 0.007, coords.y * 0.004];
+
+	coords = [(coords[0] * multiplier) + trim, -1 * (imageSize - (coords[1] * multiplier)) + trim];
+	coords = map.unproject(coords, mapMaxNativeZoom);
+	coords = [coords.lng, coords.lat];
+
+	// coords = map.layerPointToLatLng(coords);
+
+	// coords = map.project(L.latLng(coords[1], coords[0]), mapMaxNativeZoom);
+	// coords = [coords.x * 0.007 * multiplier, -1 * coords.y * 0.004 * multiplier];
+
+	// coords = map.unproject([coords[0], -1 * coords[1]]);
+	// coords = [coords.lng / window.multiplier, -1 * coords.lat / window.multiplier];
+	// coords = [coords.lng * 0.015, coords.lat * 0.015];
+
+	// coords = armaToLatLng([coords[0], -1 * coords[1]]);
+	// coords = [coords.lng - 100, -1 * coords.lat];
+	// coords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
+	return coords
 }
 
 // Returns date object as little endian (day, month, year) string
@@ -366,69 +1201,7 @@ function dateToLittleEndianString (date) {
 	return (date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear());
 }
 
-function test () {
-	// Add marker to map on click
-	map.on("click", function (e) {
-		//console.log(e.latlng);
-
-		console.log(map.project(e.latlng, mapMaxNativeZoom));
-
-		brushPattern = {
-			color: "#FF0000",
-			opacity: 1,
-			angle: 45,
-			weight: 2,
-			spaceWeight: 6
-		};
-
-		var brushPatternObj = new L.StripePattern(brushPattern);
-		brushPatternObj.addTo(map)
-
-		shapeOptions = {
-			color: "#FF0000",
-			stroke: true,
-			fill: true,
-			fillPattern: brushPatternObj
-		};
-
-		var circleMarker;
-		circleMarker = L.circle(e.latlng, shapeOptions);
-		L.Util.setOptions(circleMarker, { radius: 20, interactive: false });
-		circleMarker.addTo(map);
-
-
-		let pos = e.latlng;
-		let startX = pos.lat;
-		let startY = pos.lng;
-		let sizeX = 75;
-		let sizeY = 75;
-
-		let pointsRaw = [
-			[startX - sizeX, startY + sizeY], // top left
-			[startX + sizeX, startY + sizeY], // top right
-			[startX + sizeX, startY - sizeY], // bottom right
-			[startX - sizeX, startY - sizeY] // bottom left
-		];
-
-		const sqMarker = L.polygon(pointsRaw, {noClip: true, interactive: false});
-		L.Util.setOptions(sqMarker, shapeOptions);
-		// if (brushPattern) {
-		// 	L.Util.setOptions(sqMarker, { fillPattern: brushPatternObj, fillOpacity: 1.0});
-		// };
-		sqMarker.addTo(map);
-
-		// var marker = L.circleMarker(e.latlng).addTo(map);
-		// marker.setRadius(5);
-	});
-
-	// var marker = L.circleMarker(armaToLatLng([2438.21, 820])).addTo(map);
-	// marker.setRadius(5);
-
-	// var marker = L.circleMarker(armaToLatLng([2496.58, 5709.34])).addTo(map);
-	// marker.setRadius(5);
-}
-
-function dateToTimeString(date, isUtc = false) {
+function dateToTimeString (date, isUtc = false) {
 	let hours = date.getHours();
 	let minutes = date.getMinutes();
 	let seconds = date.getSeconds();
@@ -483,13 +1256,16 @@ function processOp (filepath) {
 	const time = new Date();
 	fileName = filepath.substr(5, filepath.length);
 
+	let data;
 	return fetch(filepath)
 		.then((res) => res.json())
-		.then((data) => {
+		.then((json) => {
+			data = json;
 			worldName = data.worldName.toLowerCase();
-			return Promise.all([data, getWorldByName(worldName)]);
+			return worldName;
 		})
-		.then(([data, world]) => {
+		.then((wn) => getWorldByName(wn))
+		.then((world) => {
 			var multiplier = world.multiplier;
 			missionName = data.missionName;
 			ui.setMissionName(missionName);
@@ -688,11 +1464,12 @@ function processOp (filepath) {
 
 						// Incrememt kill/death count for killer/victim
 						if (type === "killed" && (causedBy != null)) {
-							if (causedBy !== victim && causedBy._side === victim._side) {
-								causedBy.teamKillCount++;
-							}
 							if (causedBy !== victim) {
-								causedBy.killCount++;
+								if (causedBy._side === victim._side) {
+									causedBy.teamKillCount++;
+								} else {
+									causedBy.killCount++;
+								}
 							}
 							victim.deathCount++;
 						}
@@ -743,6 +1520,9 @@ function processOp (filepath) {
 						break;
 					case (type == "endMission"):
 						gameEvent = new endMissionEvent(frameNum, type, eventJSON[2][0], eventJSON[2][1]);
+						break;
+					case (type == "generalEvent"):
+						gameEvent = new generalEvent(frameNum, type, eventJSON[2]);
 						break;
 				}
 				// Add event to gameEvents list
@@ -902,10 +1682,19 @@ function startPlaybackLoop () {
 				}
 				for (const marker of markers) {
 					marker.manageFrame(playbackFrame);
-					if (ui.markersEnable) {
-						marker.hideMarkerPopup(false);
-					} else {
-						marker.hideMarkerPopup(true);
+					if (!marker.isMagIcon()) {
+						if (ui.markersEnable) {
+							marker.hideMarkerPopup(false);
+						} else {
+							marker.hideMarkerPopup(true);
+						}
+					}
+					if (marker.isMagIcon()) {
+						if (ui.nicknameEnable) {
+							marker.hideMarkerPopup(false);
+						} else {
+							marker.hideMarkerPopup(true);
+						}
 					}
 				}
 
@@ -948,7 +1737,7 @@ function startPlaybackLoop () {
 	var playbackTimeout = setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
 }
 
-function colorElement(element, color) {
+function colorElement (element, color) {
 	if (!color) {
 		return;
 	}
@@ -966,7 +1755,7 @@ function colorElement(element, color) {
 	}
 }
 
-function getMarkerColor(color, defaultColor = "ffffff") {
+function getMarkerColor (color, defaultColor = "ffffff") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -988,12 +1777,12 @@ function getMarkerColor(color, defaultColor = "ffffff") {
 
 	return hexColor;
 }
-function colorMarkerIcon(element, icon, color) {
+function colorMarkerIcon (element, icon, color) {
 	element.src = `/images/markers/${icon}/${getMarkerColor(color)}.png`;
 }
 
 
-function getPulseMarkerColor(color, defaultColor = "000000") {
+function getPulseMarkerColor (color, defaultColor = "000000") {
 	let hexColor = defaultColor;
 	if (!color) {
 		return hexColor;
@@ -1022,7 +1811,7 @@ String.prototype.encodeHTMLEntities = function () {
 	});
 }
 
-function closestEquivalentAngle(from, to) {
+function closestEquivalentAngle (from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
 }
