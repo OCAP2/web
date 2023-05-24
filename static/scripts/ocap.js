@@ -1269,7 +1269,10 @@ function processOp (filepath) {
 			var multiplier = world.multiplier;
 			missionName = data.missionName;
 			ui.setMissionName(missionName);
-
+			extensionVersion = data.extensionVersion;
+			ui.setExtensionVersion(extensionVersion);
+			addonVersion = data.addonVersion;
+			ui.setAddonVersion(addonVersion);
 			endFrame = data.endFrame;
 			frameCaptureDelay = data.captureDelay * 1000;
 			ui.setMissionEndTime(endFrame);

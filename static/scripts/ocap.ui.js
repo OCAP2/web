@@ -23,6 +23,8 @@ class UI {
 		this.statsDialog = null;
 		this.statsDialogBody = null;
 		this.missionName = null;
+		this.extensionVersion = null;
+		this.addonVersion = null;
 		//this.loadOpButton = null;
 		this.playPauseButton = null;
 		this.playbackSpeedSliderContainer = null;
@@ -351,6 +353,14 @@ class UI {
 		this.missionName.textContent = name;
 	}
 
+	setAddonVersion(version) {
+		this.addonVersion = version;
+	}
+
+	setExtensionVersion(version) {
+		this.extensionVersion = version;
+	}
+
 	detectTimes(times) {
 		for (const time of times) {
 			if (time.frameNum === 0) {
@@ -649,7 +659,9 @@ class UI {
 		this.modalBody.innerHTML = `
 			<img src="images/ocap-logo.png" height="60px" alt="OCAP">
 			<h4 style=line-height:0>Operation Capture And Playback</h4>
-			<a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
+			<a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a><br/>
+			<span id="versionInfo-extension"></span><br/>
+			<span id="versionInfo-addon"></span><br/>
 			<br/>
 			<br/>
 			<span id="keyControl-playPause"></span><br/>
@@ -661,7 +673,12 @@ class UI {
 				<option value="ru"${current_lang == "ru" ? 'selected/' : ''}>Русский</option>
 				<option value="en"${current_lang == "en" ? 'selected/' : ''}>English</option>
 				<option value="de"${current_lang == "de" ? 'selected/' : ''}>Deutsch</option>
-			</select>`;
+			</select>
+			`;
+		localizable(document.getElementById("versionInfo-extension"),"version-extension");
+		document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
+		localizable(document.getElementById("versionInfo-addon"),"version-addon");
+		document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
 		localizable(document.getElementById("keyControl-leftPanel"), "show-hide-left-panel");
 		localizable(document.getElementById("keyControl-rightPanel"), "show-hide-right-panel");
