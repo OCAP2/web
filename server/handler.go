@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -45,46 +46,56 @@ func NewHandler(
 
 	e.Use(hdlr.errorHandler)
 
-	e.GET(
+	prefixURL := strings.TrimRight(hdlr.setting.PrefixURL, "/")
+	g := e.Group(prefixURL)
+
+	g.GET(
 		"/api/v1/operations",
 		hdlr.GetOperations,
 	)
-	e.POST(
+	g.POST(
 		"/api/v1/operations/add",
 		hdlr.StoreOperation,
 	)
-	e.GET(
+	g.GET(
 		"/api/v1/customize",
 		hdlr.GetCustomize,
 	)
-	e.GET(
+	g.GET(
 		"/api/version",
 		hdlr.GetVersion,
 	)
-	e.GET(
+	g.GET(
 		"/data/:name",
 		hdlr.GetCapture,
 		hdlr.cacheControl(CacheDuration),
 	)
-	e.GET(
+	g.GET(
 		"/images/markers/:name/:color",
 		hdlr.GetMarker,
 		hdlr.cacheControl(CacheDuration),
 	)
-	e.GET(
+	g.GET(
 		"/images/markers/magicons/:name",
 		hdlr.GetAmmo,
 		hdlr.cacheControl(CacheDuration),
 	)
-	e.GET(
+	g.GET(
 		"/images/maps/*",
 		hdlr.GetMapTitle,
 		hdlr.cacheControl(CacheDuration),
 	)
-	e.GET(
+	g.GET(
 		"/*",
 		hdlr.GetStatic,
 		hdlr.cacheControl(0),
+	)
+	g.GET(
+		"",
+		hdlr.GetStatic,
+		middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+			RedirectCode: http.StatusMovedPermanently,
+		}),
 	)
 }
 
@@ -242,23 +253,25 @@ func (h *Handler) GetMarker(c echo.Context) error {
 }
 
 func (h *Handler) GetMapTitle(c echo.Context) error {
-	upath, err := url.PathUnescape(c.Param("*"))
+	relativePath, err := paramPath(c, "*")
 	if err != nil {
-		return err
+		return fmt.Errorf("clean path: %s: %w", err.Error(), ErrNotFound)
 	}
-	upath = filepath.Join(h.setting.Maps, filepath.Clean("/"+upath))
 
-	return c.File(upath)
+	absolutePath := filepath.Join(h.setting.Maps, relativePath)
+
+	return c.File(absolutePath)
 }
 
 func (h *Handler) GetStatic(c echo.Context) error {
-	upath, err := url.PathUnescape(c.Param("*"))
+	relativePath, err := paramPath(c, "*")
 	if err != nil {
-		return err
+		return fmt.Errorf("clean path: %s: %w", err.Error(), ErrNotFound)
 	}
-	upath = filepath.Join(h.setting.Static, filepath.Clean("/"+upath))
 
-	return c.File(upath)
+	absolutePath := filepath.Join(h.setting.Static, relativePath)
+
+	return c.File(absolutePath)
 }
 
 func (h *Handler) GetAmmo(c echo.Context) error {
@@ -288,4 +301,18 @@ func (h *Handler) GetAmmo(c echo.Context) error {
 	}
 
 	return c.File(upath)
+}
+
+func paramPath(c echo.Context, param string) (string, error) {
+	urlPath, err := url.PathUnescape(c.Param(param))
+	if err != nil {
+		return "", fmt.Errorf("path unescape: %w", err)
+	}
+
+	cleanPath := filepath.Clean("/" + urlPath)
+	if cleanPath != "/"+urlPath {
+		return "", ErrInvalidPath
+	}
+
+	return cleanPath, nil
 }

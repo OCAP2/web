@@ -496,7 +496,7 @@ class UI {
 		var DateNewer = calendar1.value;
 		var DateOlder = calendar2.value;
 
-		return fetch(`/api/v1/operations?tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`, {
+		return fetch(`api/v1/operations?tag=${tag}&name=${name}&newer=${DateNewer}&older=${DateOlder}`, {
 			cache: "no-cache"
 		})
 			.then((response) => response.json())
@@ -817,7 +817,7 @@ class UI {
 	}
 
 	updateCustomize() {
-		return fetch("/api/v1/customize")
+		return fetch("api/v1/customize")
 			.then(response => response.json())
 			.then((data) => {
 				const container = document.getElementById("container");
