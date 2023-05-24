@@ -658,6 +658,7 @@ class UI {
 				<option value="ru"${current_lang == "ru" ? 'selected/' : ''}>Русский</option>
 				<option value="en"${current_lang == "en" ? 'selected/' : ''}>English</option>
 				<option value="de"${current_lang == "de" ? 'selected/' : ''}>Deutsch</option>
+				<option value="de"${current_lang == "cs" ? 'selected/' : ''}>Čeština</option>
 				<option value="it"${current_lang == "it" ? 'selected/' : ''}>Italiano</option>
 			</select>`;
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
