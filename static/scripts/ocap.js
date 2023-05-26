@@ -63,13 +63,15 @@ var terrainDarkLayer = null;
 var contourLayer = null;
 var baseLayerControl = null;
 var overlayLayerControl = null;
-var geoJsonHouses = null;
 var entitiesLayerGroup = L.layerGroup([]);
 var markersLayerGroup = L.layerGroup([]);
 var systemMarkersLayerGroup = L.layerGroup([]);
 var projectileMarkersLayerGroup = L.layerGroup([]);
 var map = null;
 var mapDiv = null;
+var mapBounds = null;
+var worldObject = null;
+var mapAvailable = false;
 var frameCaptureDelay = 1000; // Delay between capture of each frame in-game (ms). Default: 1000
 var playbackMultiplier = 10; // Playback speed. 1 = realtime.
 var maxPlaybackMultipler = 60; // Max speed user can set playback to
@@ -104,13 +106,16 @@ const skipAnimationDistance = 222; // 800 kph at 1 sec frame delay, cruise for m
 let requestedFrame;
 
 function getArguments () {
-	let args = new Object();
-	window.location.search.replace("?", "").split("&").forEach(function (s) {
-		let values = s.split("=");
-		if (values.length > 1) {
-			args[values[0]] = values[1].replace(/%20/g, " ");
-		}
-	});
+	// let args = new Object();
+	// window.location.search.replace("?", "").split("&").forEach(function (s) {
+	// 	let values = s.split("=");
+	// 	if (values.length > 1) {
+	// 		args[values[0]] = values[1].replace(/%20/g, " ");
+	// 	}
+	// });
+
+	let args = new URLSearchParams(window.location.search);
+
 	// console.log(args);
 	return args;
 }
@@ -140,8 +145,6 @@ function initOCAP () {
 						let coords = [parseFloat(args.x), parseFloat(args.y)];
 						let zoom = parseFloat(args.zoom);
 						map.setView(coords, zoom);
-					} else {
-						map.setView([0, 0], mapMaxNativeZoom);
 					}
 					if (args.frame) {
 						ui.setMissionCurTime(parseInt(args.frame));
@@ -149,6 +152,11 @@ function initOCAP () {
 				}, false);
 				return processOp("data/" + args.file);
 			}
+
+			document.addEventListener("operationProcessed", function (event) {
+				let bounds = getMapMarkerBounds();
+				map.fitBounds(bounds);
+			});
 		})
 		.catch((error) => {
 			ui.showHint(error);
@@ -162,6 +170,7 @@ async function getWorldByName (worldName) {
 
 	let defaultMap = {
 		"name": "NOT FOUND",
+		"displayName": "NOT FOUND",
 		"worldname": "NOT FOUND",
 		"worldSize": 16384,
 		"imageSize": 16384,
@@ -176,7 +185,10 @@ async function getWorldByName (worldName) {
 	};
 
 	// Check for, and return local map data if available
-	const localMapRes = await fetch('images/maps/' + worldName + '/map.json');
+	const localMapRes = await fetch(
+		'images/maps/' + worldName + '/map.json',
+		{ cache: "no-store" }
+	);
 	if (localMapRes.status === 200) {
 		try {
 			return Object.assign(defaultMap, await localMapRes.json());
@@ -188,7 +200,10 @@ async function getWorldByName (worldName) {
 
 	// Fallback to cloud CDN if enabled
 	if (ui.useCloudTiles) {
-		const cloudMapRes = await fetch(`https://maps.ocap2.com/${worldName}/map.json`);
+		const cloudMapRes = await fetch(
+			`https://maps.ocap2.com/${worldName}/map.json`,
+			{ cache: "no-store" }
+		);
 		if (cloudMapRes.status === 200) {
 			try {
 				return Object.assign(defaultMap, await cloudMapRes.json(), { _useCloudTiles: true });
@@ -197,7 +212,19 @@ async function getWorldByName (worldName) {
 				return Promise.reject(`Cloud map "${worldName}" data parsing failed.`);
 			}
 		} else {
-			return Promise.reject(`Map "${worldName}" is not available on cloud (${cloudMapRes.status})`);
+			// clone default map if not found
+			Object.assign(defaultMap, {
+				"imageSize": 30720,
+				"worldSize": 30720,
+				"multiplier": 1,
+				"worldName": worldName
+			});
+			worldName = "";
+			console.warn("World not found, using blank map")
+			alert(`The map for this mission (worldName: ${worldName}) is not available locally or in the cloud.\n\nA placeholder will be shown instead. Please report this issue on the OCAP2 Discord.\n\nhttps://discord.gg/wQusAQnrBP`);
+
+			return Promise.resolve(defaultMap);
+			// return Promise.reject(`Map "${worldName}" is not available on cloud (${cloudMapRes.status})`);
 		}
 	} else {
 		return Promise.reject(`Map "${worldName}" is not installed`);
@@ -207,7 +234,7 @@ async function getWorldByName (worldName) {
 function initMap (world) {
 	// Bad
 	mapMaxNativeZoom = world.maxZoom
-	mapMaxZoom = mapMaxNativeZoom + 3
+	mapMaxZoom = mapMaxNativeZoom + 2
 
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
@@ -248,11 +275,13 @@ function initMap (world) {
 
 	// Create map
 	map = L.map('map', {
+		center: [0, 0],
+		zoom: 0,
 		maxNativeZoom: mapMaxNativeZoom,
 		maxZoom: mapMaxZoom,
 		minNativeZoom: 0,
 		minZoom: 0,
-		zoominfoControl: true,
+		// zoominfoControl: true, // moved for custom position
 		zoomControl: false,
 		scrollWheelZoom: true,
 		zoomAnimation: true,
@@ -264,7 +293,6 @@ function initMap (world) {
 		closePopupOnClick: false,
 		preferCanvas: true
 	});
-
 
 
 	// Hide marker popups once below a certain zoom level
@@ -323,45 +351,9 @@ function initMap (world) {
 			entityToFollow.unfollow();
 		}
 	});
-	console.log("Got world: ", world);
 
 
-	let args = getArguments();
-	if (!args.x || !args.y || !args.zoom) {
-		map.setView(map.unproject([imageSize / 2, imageSize / 2]), mapMinZoom);
-	}
-
-
-	var mapBounds = new L.LatLngBounds(
-		map.unproject([0, imageSize], mapMaxNativeZoom),
-		map.unproject([imageSize, 0], mapMaxNativeZoom)
-	);
-	map.fitBounds(mapBounds);
-
-
-
-	// Setup tile layer
-	// L.tileLayer('images/maps/' + worldName + '/{z}/{x}/{y}.png', {
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	maxZoom: mapMaxZoom,
-	// 	minZoom: mapMinZoom,
-	// 	bounds: mapBounds,
-	// 	//attribution: 'MisterGoodson',
-	// 	noWrap: true,
-	// 	tms: false
-	// }).addTo(map);
-
-	overlayLayerControl = L.control.layers({}, {
-		// overlay layers
-		"Units and Vehicles": entitiesLayerGroup,
-		"Selected Side Markers": markersLayerGroup,
-		"Editor/Briefing Markers": systemMarkersLayerGroup,
-		"Projectile Markers": projectileMarkersLayerGroup
-	}, {
-		position: 'topright',
-		collapsed: false
-	}).addTo(map);
-
+	// Setup tile layers
 	var baseLayers = [];
 
 	entitiesLayerGroup.addTo(map);
@@ -377,22 +369,28 @@ function initMap (world) {
 	let topoDarkLayerUrl = "";
 	let topoReliefLayerUrl = "";
 	let colorReliefLayerUrl = "";
-	let contourLayerUrl = "";
 
-	console.log('world._useCloudTiles', Boolean(world._useCloudTiles));
-	if (Boolean(world._useCloudTiles)) {
+
+	if (worldName === "") {
+		console.log("World name missing or not rendered. Using default map.")
+		// if default map is used as placeholder, use custom topo layer url
+		topoLayerUrl = 'http://maps.ocap2.com/missing_tiles.png';
+	} else if (Boolean(world._useCloudTiles)) {
+		console.log("Streaming map tiles from the cloud (maps.ocap2.com).")
 		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
 		topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
 		topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
 		colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
-		contourLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/contours.geojson');
 	} else {
+		console.log("Streaming map tiles from the local OCAP2 installation.")
 		topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
 		topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
 		topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
 		colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
-		contourLayerUrl = ('images/maps/' + worldName + '/contours.geojson');
 	}
+
+	console.log("Getting bounds for layers...")
+	mapBounds = getMapImageBounds()
 
 	if (world.hasTopo) {
 		topoLayer = L.tileLayer(topoLayerUrl, {
@@ -463,45 +461,36 @@ function initMap (world) {
 	}
 
 
+	// setup controls
 
-	baseLayerControl = map.addControl(L.control.basemaps({
+	overlayLayerControl = L.control.layers({}, {
+		// overlay layers
+		"Units and Vehicles": entitiesLayerGroup,
+		"Selected Side Markers": markersLayerGroup,
+		"Editor/Briefing Markers": systemMarkersLayerGroup,
+		"Projectile Markers": projectileMarkersLayerGroup
+	}, {
+		position: 'bottomright',
+		collapsed: false
+	});
+	overlayLayerControl.addTo(map);
+
+
+	baseLayerControl = L.control.basemaps({
 		basemaps: baseLayers,
 		tileX: 2,  // tile X coordinate
 		tileY: 6,  // tile Y coordinate
 		tileZ: 4   // tile zoom level
-	}));
+	}, {
+		position: 'bottomright',
+	});
+	baseLayerControl.addTo(map);
 
 
-	map.createPane("buildings");
-	map.createPane("roads");
-	map.createPane("forest");
-	map.createPane("rock");
-
-
-	function getGeoJson (path) {
-		return fetch(path)
-			.then((res) => res.json())
-			.then((data) => {
-				return data;
-			});
-	}
-	function RGBToHex (rgbArr) {
-		r = rgbArr[0].toString(16);
-		g = rgbArr[1].toString(16);
-		b = rgbArr[2].toString(16);
-
-		if (r.length == 1)
-			r = "0" + r;
-		if (g.length == 1)
-			g = "0" + g;
-		if (b.length == 1)
-			b = "0" + b;
-
-		return "#" + r + g + b;
-	}
-	var myRenderer = L.canvas({ padding: 0.5 });
-
-
+	// Add zoom control
+	L.control.zoominfo({
+		position: 'bottomright'
+	}).addTo(map);
 
 
 	function test () {
@@ -516,440 +505,6 @@ function initMap (world) {
 			console.debug(map.project(e.latlng, mapMaxNativeZoom));
 		})
 	}
-
-
-
-	// tree
-	// getGeoJson(`images/maps/${worldName}/geojson/tree.geojson`)
-	// 	.then(geoJson => {
-	// 		console.log(geoJson.features[0].geometry.coordinates);
-
-	// var t = {
-	// 	"type": "FeatureCollection",
-	// 	"features": []
-	// }
-	// t.features = geoJson.features.map(feature => {
-	// 	// feature.geometry.coordinates.pop()
-	// 	var coords = feature.geometry.coordinates;
-	// 	// coords = geoJsonToLatLng(coords);
-	// 	// coords = armaToLatLng(coords);
-	// 	// coords = [coords.lng, -1 * coords.lat];
-
-	// 	var origin = map.getPixelOrigin();
-	// 	coords[0] = (coords[0] + origin.x) * 0.015;
-	// 	coords[1] = (coords[1] + origin.y) * 0.015;
-
-	// 	// console.debug(coords);
-
-
-
-
-	// 	// L.circleMarker(coords, {
-	// 	// 	radius: 1,
-	// 	// 	color: "#00FF00"
-	// 	// }).addTo(map);
-	// 	feature.geometry.coordinates = coords;
-	// 	// console.debug(feature.geometry.coordinates);
-	// 	return feature;
-	// })
-	// // var r = t.map(feature => {
-	// // 	feature.geometry.coordinates = armaToLatLng(feature.geometry.coordinates)
-	// // 	return feature;
-	// // })
-	// console.log(t.features[0].geometry.coordinates);
-	// return t
-
-	// 	return geoJson
-	// })
-	// .then(geoJson => {
-	// console.log(geoJson);
-	// L.geoJSON(geoJson, {
-	// 	pointToLayer: function (geoJsonPoint, latlng) {
-	// 		// return L.corridor(latlng, {
-	// 		// 	radius: 5 * 0.015 * window.multiplier,
-	// 		// 	color: "#009900",
-	// 		// 	opacity: 0.8,
-	// 		// 	fill: false,
-	// 		// 	interactive: false
-	// 		// })
-	// 		// return L.marker(latlng, {
-	// 		// 	icon: L.icon({
-	// 		// 		iconUrl: `images/maps/${worldName}/tree.png`,
-	// 		// 		iconSize: [5, 5]
-	// 		// 	}),
-	// 		// 	opacity: 1,
-	// 		// 	interactive: false
-	// 		// })
-	// 		return L.circleMarker(latlng, {
-	// 			radius: 5 * 0.015 * window.multiplier,
-	// 			color: "#009900",
-	// 			opacity: 0.4,
-	// 			fill: false,
-	// 			interactive: false
-	// 		});
-	// 	},
-	// 	coordsToLatLng: function (coords) {
-	// 		return armaToLatLng(coords);
-	// 	},
-	// 	pane: map.getPane("forest")
-	// }).addTo(map)
-
-	// L.vectorGrid.slicer(geoJson, {
-	// 	rendererFactory: L.canvas.tile,
-	// 	maxNativeZoom: mapMaxNativeZoom,
-	// 	// maxZoom: mapMaxZoom,
-	// 	// minNativeZoom: 6,
-	// 	minZoom: 0,
-	// 	// minZoom: 6,
-	// 	// bounds: mapBounds,
-	// 	attribution: "11Map Data &copy; " + world.attribution,
-	// 	noWrap: true,
-	// 	tms: false,
-	// 	keepBuffer: 4,
-	// 	updateWhenIdle: true,
-	// 	updateWhenZooming: false,
-	// 	// coordsToLatLng: function (coords) {
-	// 	// 	return armaToLatLng(coords);
-	// 	// },
-	// 	vectorTileLayerStyles: {
-	// 		// 	function (properties, zoom, geometryDimension)
-	// 		sliced: function (properties, zoom, geometryDimension) {
-	// 			// 	// return L.circle(properties.geometry.coordinates), {
-	// 			return {
-	// 				radius: 5 * 0.015 * window.multiplier,
-	// 				// radius: 5 * window.multiplier,
-	// 				color: "#009900",
-	// 				opacity: 0.4,
-	// 				fill: false,
-	// 				interactive: false
-	// 			}
-	// 		}
-	// 	}
-	// }).addTo(map);
-
-	// console.log("Loaded trees");
-
-	// })
-
-	// forest
-	// getGeoJson(`images/maps/${worldName}/geojson/forest.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson[0]);
-	// 		var t = geoJson.map(feature => {
-	// 			feature.geometry.coordinates[0].pop()
-	// 			return feature;
-	// 		})
-	// 		// console.log(t[0]);
-	// 		return t
-	// 	})
-	// 	.then(geoJson => {
-	// 		console.log("Loaded forest");
-	// 		console.log(geoJson);
-	// 		return L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#00FF00",
-	// 					interactive: false,
-	// 					fill: true,
-	// 					opacity: 0.5,
-	// 					fillOpacity: 0.2,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
-	// 				};
-	// 			},
-	// 			// onEachFeature: function (feature, layer) {
-	// 			// 	return houseLayer.addLayer(layer);
-	// 			// },
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("forest")
-	// 		}).addTo(map)
-	// 	})
-	// 	.then(result => {
-	// 		console.log(result);
-	// 	})
-
-
-
-	// road
-	// getGeoJson(`images/maps/${worldName}/geojson/road.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FFD966",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// road bridge
-	// getGeoJson(`images/maps/${worldName}/geojson/road-bridge.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#AA0000",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// main road
-	// getGeoJson(`images/maps/${worldName}/geojson/main_road.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FFFFFF",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// main road bridge
-	// getGeoJson(`images/maps/${worldName}/geojson/main_road-bridge.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#AA0000",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			onEachFeature: function (feature, layer) {
-
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-
-	// track
-	// getGeoJson(`images/maps/${worldName}/geojson/track.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					color: "#FF8099",
-	// 					interactive: false,
-	// 					weight: geoJsonFeature.properties.width * window.multiplier,
-	// 					noClip: true,
-	// 					opacity: 1,
-	// 					// renderer: L.canvas()
-	// 				}
-	// 			},
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("roads")
-	// 		}).addTo(map)
-	// 	})
-
-	// houses
-	// getGeoJson(`images/maps/${worldName}/geojson/house.geojson`)
-	// 	// .then(geoJson => {
-	// 	// console.log(geoJson[0]);
-	// 	// var t = geoJson.features.map(feature => {
-	// 	// 	feature.geometry.coordinates[0].pop()
-	// 	// 	return feature;
-	// 	// })
-	// 	// console.log(t[0]);
-	// 	// return t
-
-	// 	// })
-	// 	.then(geoJson => {
-	// 		console.log("Loaded houses");
-	// 		// console.log(geoJson);
-	// 		geoJsonHouses = L.geoJSON(geoJson, {
-	// 			style: function (geoJsonFeature) {
-	// 				return {
-	// 					// color: RGBToHex(geoJsonFeature.properties.color),
-	// 					color: "#4D4D4D",
-	// 					interactive: false,
-	// 					fill: true,
-	// 					opacity: 0,
-	// 					fillOpacity: 0,
-	// 					noClip: true,
-	// 					// renderer: L.canvas()
-	// 					// weight: geoJsonFeature.properties.width * window.multiplier,
-	// 				};
-	// 			},
-	// 			// onEachFeature: function (feature, layer) {
-	// 			// 	return houseLayer.addLayer(layer);
-	// 			// },
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pane: map.getPane("buildings")
-	// 		}).addTo(map);
-	// 		// L.glify.shapes({
-	// 		// 	map,
-	// 		// 	data: geoJson,
-	// 		// 	color: "#009900"
-	// 		// });
-	// 	})
-	// .then(result => {
-	// 	console.log(result);
-	// })
-
-	// nameCity
-	// getGeoJson(`images/maps/${worldName}/geojson/nameCity.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pointToLayer: function (geoJsonPoint, latlng) {
-	// 				return L.marker(latlng, {
-	// 					opacity: 0,
-	// 					interactive: false,
-	// 					renderer: L.canvas()
-	// 				}).bindTooltip(geoJsonPoint.properties.name, {
-	// 					permanent: true,
-	// 					opacity: 0.8,
-	// 					direction: "top"
-	// 				}).openTooltip();
-	// 			}
-	// 		}).addTo(map);
-	// 	})
-
-	// nameVillage
-	// getGeoJson(`images/maps/${worldName}/geojson/nameVillage.geojson`)
-	// 	.then(geoJson => {
-	// 		// console.log(geoJson);
-	// 		L.geoJSON(geoJson, {
-	// 			coordsToLatLng: function (coords) {
-	// 				return armaToLatLng(coords);
-	// 			},
-	// 			pointToLayer: function (geoJsonPoint, latlng) {
-	// 				return L.marker(latlng, {
-	// 					opacity: 0,
-	// 					interactive: false,
-	// 					renderer: L.canvas()
-	// 				}).bindTooltip(geoJsonPoint.properties.name, {
-	// 					permanent: true,
-	// 					opacity: 0.4,
-	// 					direction: "top"
-	// 				}).openTooltip();
-	// 			}
-	// 		})
-	// 			.bindPopup(function (layer) {
-	// 				return layer.feature.properties.name;
-	// 			}).addTo(map);
-	// 	})
-
-
-
-	// gdal_contour -a ELEV -i 20 dem.asc contours.geojson
-	// only try if a relief map is rendered -- only case in which a contouer is likely present
-	let contourLayer;
-	if (world.hasTopoRelief) {
-		$.ajax({
-			type: "GET",
-			url: contourLayerUrl
-		})
-			.then((res) => {
-				if (res.status == 200) {
-					return res.responseJSON();
-				} else {
-					throw "Contour layer geoJson for " + worldName + " not found."
-				}
-			})
-			.then(geoJson => {
-				console.log("Loaded contour lines");
-				console.debug(geoJson);
-
-				let contourPane = map.createPane("contourPane");
-
-				var layer = L.geoJSON(geoJson, {
-					filter: function (geoJsonFeature) {
-						if (geoJsonFeature.properties.ELEV > 0) {
-							return true;
-						} else {
-							return false;
-						}
-					},
-					style: function (geoJsonFeature) {
-						var props = geoJsonFeature.properties;
-						var color;
-						if (props.index == 1) { color = "#FF7777" } else { color = "#444444" };
-						return {
-							color: color,
-							interactive: false,
-							fill: false,
-							opacity: 0.5,
-							// fillOpacity: 0.2,
-							noClip: true,
-							// renderer: L.canvas()
-							// weight: geoJsonFeature.properties.width * window.multiplier,
-						};
-					},
-					coordsToLatLng: function (coords) {
-						return armaToLatLng(coords);
-					},
-					pane: contourPane
-				});
-				overlayLayerControl.addOverlay(
-					layer,
-					"20m Contours"
-				);
-
-				contourLayer = layer;
-			})
-			.catch(err => console.warn("Contour layer geoJson for " + worldName + " not found."))
-	};
-
-
-
-
-
-
-
 
 
 	map.on("baselayerchange", (event) => {
@@ -1058,17 +613,9 @@ function initMap (world) {
 		}
 	});
 
+
+
 	createInitialMarkers();
-	let boundaryMarks = markers.filter(item => {
-		return item._type === "moduleCoverMap"
-	});
-	if (boundaryMarks.length === 4) {
-		let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
-		let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
-		map.flyToBounds(boundaryPolygon.getBounds());
-	} else {
-		map.flyToBounds(map.getBounds());
-	}
 
 	document.dispatchEvent(new Event("mapInited"));
 	// test();
@@ -1082,6 +629,57 @@ function createInitialMarkers () {
 			entity.createMarker(armaToLatLng(pos.position));
 		}
 	});
+}
+
+function getMapImageBounds () {
+	console.debug("Calculating map bounds from map image size");
+	mapBounds = new L.LatLngBounds(
+		map.unproject([0, worldObject.imageSize], mapMaxNativeZoom),
+		map.unproject([worldObject.imageSize, 0], mapMaxNativeZoom)
+	);
+	return mapBounds;
+}
+
+function getMapMarkerBounds () {
+
+	let boundaryMarks = markers.filter(item => {
+		return item._type === "moduleCoverMap"
+	});
+
+	if (boundaryMarks.length === 4) {
+		console.debug("Found boundary marks from BIS_moduleCoverMap")
+		let boundaryPoints = boundaryMarks.map(item => armaToLatLng(item._positions[0][1]));
+		let boundaryPolygon = L.polygon(boundaryPoints, { color: "#000000", fill: false, interactive: false, noClip: true }).addTo(map);
+
+		return boundaryPolygon.getBounds();
+	}
+
+	// calculate map bounds from markers
+	console.debug(`Calculating map bounds from ${markers.length} markers`)
+	var markerBounds = L.latLngBounds()
+	let invalidMarkers = [];
+	markers.forEach(item => {
+		if (item._positions[0] === undefined) {
+			return invalidMarkers.push(item)
+		}
+		if (item._positions[0][1] === undefined) {
+			return invalidMarkers.push(item)
+		}
+
+		// some marker positions are nested in an array, account for this
+		if (Array.isArray(item._positions[0][1][0])) {
+			return markerBounds.extend(armaToLatLng(item._positions[0][1][0]));
+		} else {
+			return markerBounds.extend(armaToLatLng(item._positions[0][1]));
+		};
+	});
+
+	if (invalidMarkers.length > 0) {
+		console.debug(`Found ${invalidMarkers.length} potentially invalid markers, ignoring them`, invalidMarkers)
+	}
+
+
+	return markerBounds;
 }
 
 function defineIcons () {
@@ -1165,37 +763,6 @@ function armaToLatLng (coords) {
 	return map.unproject(pixelCoords, mapMaxNativeZoom);
 }
 
-function geoJsonToLatLng (coords) {
-	// var latLng = coords;
-	// latLng = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
-
-	// pixelCoords = map.project(L.latLng(latLng[0], latLng[1]), mapMaxNativeZoom);
-	// pixelCoords = [(pixelCoords.x * multiplier) + trim, (imageSize - (pixelCoords.y * multiplier)) + trim];
-	// return map.unproject(pixelCoords, mapMaxNativeZoom);
-
-
-	// coords = map.layerPointToContainerPoint([coords[0], coords[1]]);
-	// coords = [coords.x * 0.007, coords.y * 0.004];
-
-	coords = [(coords[0] * multiplier) + trim, -1 * (imageSize - (coords[1] * multiplier)) + trim];
-	coords = map.unproject(coords, mapMaxNativeZoom);
-	coords = [coords.lng, coords.lat];
-
-	// coords = map.layerPointToLatLng(coords);
-
-	// coords = map.project(L.latLng(coords[1], coords[0]), mapMaxNativeZoom);
-	// coords = [coords.x * 0.007 * multiplier, -1 * coords.y * 0.004 * multiplier];
-
-	// coords = map.unproject([coords[0], -1 * coords[1]]);
-	// coords = [coords.lng / window.multiplier, -1 * coords.lat / window.multiplier];
-	// coords = [coords.lng * 0.015, coords.lat * 0.015];
-
-	// coords = armaToLatLng([coords[0], -1 * coords[1]]);
-	// coords = [coords.lng - 100, -1 * coords.lat];
-	// coords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
-	return coords
-}
-
 // Returns date object as little endian (day, month, year) string
 function dateToLittleEndianString (date) {
 	return (date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear());
@@ -1251,7 +818,7 @@ function secondsToTimeString (seconds) {
 }
 
 // Read operation JSON data and create unit objects
-function processOp (filepath) {
+function processOp (filepath, opRecord) {
 	console.log("Processing operation: (" + filepath + ")...");
 	const time = new Date();
 	fileName = filepath.substr(5, filepath.length);
@@ -1266,9 +833,24 @@ function processOp (filepath) {
 		})
 		.then((wn) => getWorldByName(wn))
 		.then((world) => {
-			var multiplier = world.multiplier;
+			worldObject = world;
+			document.dispatchEvent(new Event("worldLoaded"))
+			multiplier = world.multiplier;
 			missionName = data.missionName;
-			ui.setMissionName(missionName);
+
+			let playedDate = opRecord.date;
+			let worldDisplayName;
+			if ([undefined, "NOT FOUND"].includes(world.displayName)) {
+				if (world.name == "NOT FOUND") {
+					worldDisplayName = world.worldName
+				} else {
+					worldDisplayName = world.name
+				}
+			} else {
+				worldDisplayName = world.displayName
+			}
+			ui.setMissionName(`${missionName} - Recorded ${playedDate} on ${worldDisplayName}`);
+
 			extensionVersion = data.extensionVersion;
 			ui.setExtensionVersion(extensionVersion);
 			addonVersion = data.addonVersion;
@@ -1401,7 +983,7 @@ function processOp (filepath) {
 							markers.push(marker);
 						}
 					} catch (err) {
-						console.error(`Failed to process ${markerJSON[9]} with text "${markerJSON[1]}"\nError: ${err}`);
+						console.error(`Failed to process ${markerJSON[9]} with type ${markerJSON[0]} and text "${markerJSON[1]}"\nError: ${err}\nMarkerJSON: ${JSON.stringify(markerJSON, null, 2)}`)
 					}
 				});
 			}
@@ -1437,11 +1019,13 @@ function processOp (filepath) {
 			}
 
 			// Loop through events
+			var invalidHitKilledEvents = [];
 			data.events.forEach(function (eventJSON) {
 				var frameNum = eventJSON[0];
 				var type = eventJSON[1];
 
 				var gameEvent = null;
+
 				switch (true) {
 					case (type == "killed" || type == "hit"):
 						const causedByInfo = eventJSON[3];
@@ -1462,7 +1046,12 @@ function processOp (filepath) {
 
 						// TODO: Find out why victim/causedBy can sometimes be null
 						if (causedBy == null || victim == null) {
-							console.warn("unknown victim/causedBy", victim, causedBy);
+							invalidHitKilledEvents.push({
+								"reason": "null/unknown victim/causedBy",
+								"victim": victim,
+								"causedBy": causedBy,
+								"event": eventJSON
+							});
 						}
 
 						// Incrememt kill/death count for killer/victim
@@ -1528,20 +1117,41 @@ function processOp (filepath) {
 						gameEvent = new generalEvent(frameNum, type, eventJSON[2]);
 						break;
 				}
+
 				// Add event to gameEvents list
 				if (gameEvent != null) {
 					gameEvents.addEvent(gameEvent);
 				}
 			});
 
+			if (invalidHitKilledEvents.length > 0) {
+				console.warn("WARNING: " + invalidHitKilledEvents.length + " hit/killed events will use 'something' as the victim/killer. See the debug stream for a full list.");
+				console.debug(invalidHitKilledEvents);
+			}
+
 			gameEvents.init();
 
 			console.log("Finished processing operation (" + (new Date() - time) + "ms).");
+			console.debug("Addon version: " + data.addonVersion);
+			console.debug("Extension version: " + data.extensionVersion);
+			console.debug("Extension build: " + data.extensionBuild);
+			console.debug("Total frames: " + data.endFrame);
+			console.debug("Total entities: " + data.entities.length);
+			console.debug("Total markers: " + data.Markers.length);
+			console.debug("Total events: " + data.events.length);
+			if (data.Markers.length > 50000) {
+				console.warn("WARNING: This mission contains more than 50,000 markers. This may cause performance issues and indicate configured or malformed marker exclusion settings in the addon.");
+			}
+			console.log("Initializing map...");
+			console.debug(JSON.stringify(world, null, 2));
 			initMap(world);
 			startPlaybackLoop();
 			toggleHitEvents(false);
 			// playPause();
 			ui.hideModal();
+
+			// fire event
+			document.dispatchEvent(new Event('operationLoaded'));
 		}).catch((error) => {
 			ui.modalBody.innerHTML = `Error: "${filepath}" failed to load.<br/>${error}.`;
 			console.error(error);

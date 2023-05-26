@@ -1,8 +1,10 @@
-html, body, #map {
-	width:100%;
-	height:100%;
-	margin:0;
-	padding:0;
+html,
+body,
+#map {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
 	font-family: Roboto, Arial, sans-serif;
 	color: #F2F2F2;
 	overflow: hidden;
@@ -47,6 +49,7 @@ html, body, #map {
 	background-repeat: no-repeat;
 	float: right;
 }
+
 #aboutButton {
 	font-size: 30px;
 	position: relative;
@@ -56,6 +59,7 @@ html, body, #map {
 	float: right;
 	margin: 12px;
 }
+
 #statsButton {
 	font-size: 30px;
 	position: relative;
@@ -96,7 +100,8 @@ html, body, #map {
 	display: inline-block;
 }
 
-#leftPanel .panelContent, #rightPanel .panelContent {
+#leftPanel .panelContent,
+#rightPanel .panelContent {
 	overflow-y: auto;
 	overflow-x: auto;
 	height: calc(100% - 10px - 10px - 50px - 40px);
@@ -106,14 +111,17 @@ html, body, #map {
 #controlSide {
 	height: 50px;
 	width: 350px;
-	background-color: rgba(0,0,0,0.5);
+	background-color: rgba(0, 0, 0, 0.5);
 }
 
-#sideWest, #sideEast, #sideGuer, #sideCiv {
-	display : inline-block;
-	width : calc(25% - 3px);
-	height : 50px;
-	cursor : pointer;
+#sideWest,
+#sideEast,
+#sideGuer,
+#sideCiv {
+	display: inline-block;
+	width: calc(25% - 3px);
+	height: 50px;
+	cursor: pointer;
 	text-align: center;
 	padding-top: 13px;
 	vertical-align: top;
@@ -123,8 +131,9 @@ html, body, #map {
 	height: calc(100% - 40px - 60px);
 }
 
-#leftPanel, #rightPanel {
-	background-color: rgba(0,0,0,0.75);
+#leftPanel,
+#rightPanel {
+	background-color: rgba(0, 0, 0, 0.75);
 	position: absolute;
 	top: 40px;
 	font-size: 14px;
@@ -142,8 +151,9 @@ html, body, #map {
 	height: 50%;
 }
 
-#leftPanel .title, #rightPanel .title {
-	background-color: rgba(0,0,0,0.5);
+#leftPanel .title,
+#rightPanel .title {
+	background-color: rgba(0, 0, 0, 0.5);
 	width: 100%;
 	height: 30px;
 	text-align: center;
@@ -152,13 +162,14 @@ html, body, #map {
 }
 
 .filterBox {
-	background-color: rgba(0,0,0,0.25);
+	background-color: rgba(0, 0, 0, 0.25);
 	width: 100%;
 	height: 25px;
 	padding-top: 4px;
 }
 
-.filterConnect, .filterHit {
+.filterConnect,
+.filterHit {
 	float: left;
 	display: inline-block;
 	height: 18px;
@@ -176,7 +187,8 @@ html, body, #map {
 	margin-left: 5px;
 }
 
-#filterEventsInput, #filterUnitsInput {
+#filterEventsInput,
+#filterUnitsInput {
 	float: left;
 	display: inline-block;
 	padding-left: 2px;
@@ -195,25 +207,31 @@ html, body, #map {
 	width: 186px;
 }
 
-#filterEventsInput, #filterUnitsInput::-webkit-input-placeholder  {
+#filterEventsInput,
+#filterUnitsInput::-webkit-input-placeholder {
 	color: #666666;
 }
 
-#filterEventsInput, #filterUnitsInput:focus {
+#filterEventsInput,
+#filterUnitsInput:focus {
 	outline: none;
 }
 
-#leftPanel ul, #rightPanel ul {
+#leftPanel ul,
+#rightPanel ul {
 	padding: 0;
 	list-style-type: none;
 }
 
-#listWest, #listGuer, #listEast, #listCiv {
+#listWest,
+#listGuer,
+#listEast,
+#listCiv {
 	display: none;
 }
 
 .extraInfoBox {
-	background-color: rgba(0,0,0,0.75);
+	background-color: rgba(0, 0, 0, 0.75);
 	position: absolute;
 	right: 0;
 	bottom: 40px;
@@ -227,7 +245,7 @@ html, body, #map {
 }
 
 #bottomPanel {
-	background-color: rgba(0,0,0,0.8);
+	background-color: rgba(0, 0, 0, 0.8);
 	position: absolute;
 	bottom: 0;
 	left: 0;
@@ -242,14 +260,24 @@ html, body, #map {
 	height: 100%;
 }
 
-#timecodeContainer, #toggleFirelines, #toggleNickname, #toggleMapMarker, #versionInfoContainer, #playbackSpeedSliderContainer, #playbackSpeedSliderContainer, .fullscreenButton  {
+#timecodeContainer,
+#toggleFirelines,
+#toggleNickname,
+#toggleMapMarker,
+#versionInfoContainer,
+#playbackSpeedSliderContainer,
+#playbackSpeedSliderContainer,
+.fullscreenButton {
 	margin-top: 5px;
 	margin-left: 10px;
 	margin-right: 10px;
 	display: inline-block;
 }
 
-#toggleFirelines, #toggleMapMarker, #toggleNickname, .fullscreenButton {
+#toggleFirelines,
+#toggleMapMarker,
+#toggleNickname,
+.fullscreenButton {
 	background-image: url("../images/bullets.svg");
 	background-size: auto 20px;
 	height: 20px;
@@ -258,6 +286,7 @@ html, body, #map {
 	float: right;
 	cursor: pointer;
 }
+
 .toggleTime {
 	float: right;
 	height: 26px;
@@ -305,13 +334,16 @@ html, body, #map {
 	height: 16px;
 	padding: 3px 0;
 }
+
 #frameSliderContainer .frameSliderContainer2 {
 	position: relative;
 	bottom: 14px;
 }
+
 #frameSliderContainer .frameSliderContainer2 input::-moz-range-track {
 	background-color: transparent;
 }
+
 #frameSliderContainer .frameSliderContainer2 input::-webkit-slider-runnable-track {
 	background-color: transparent;
 }
@@ -376,6 +408,7 @@ html, body, #map {
 #playbackSpeedSlider::-webkit-slider-thumb {
 	background-color: #404040;
 }
+
 #playbackSpeedSlider::-moz-range-thumb {
 	background-color: #404040;
 }
@@ -400,8 +433,10 @@ html, body, #map {
 }
 
 input[type=range] {
-	-webkit-appearance: none; /* Hides the slider so that custom slider can be made */
-	width: 100%; /* Specific width is required for Firefox. */
+	-webkit-appearance: none;
+	/* Hides the slider so that custom slider can be made */
+	width: 100%;
+	/* Specific width is required for Firefox. */
 	background: transparent;
 }
 
@@ -437,10 +472,12 @@ input[type=range]::-webkit-slider-runnable-track {
 	border-bottom: 1px solid rgba(0, 0, 0, 0.3);
 	opacity: 0;
 }
+
 .liEvent.reveal {
 	opacity: 1;
 	transition: opacity 1s;
 }
+
 .liEvent.action {
 	cursor: pointer;
 }
@@ -460,8 +497,8 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 .liUnit:hover {
-	background-color: rgb(205,134,20);
-	background-color: rgba(205,134,20,0.9);
+	background-color: rgb(205, 134, 20);
+	background-color: rgba(205, 134, 20, 0.9);
 }
 
 .sideTitle {
@@ -494,27 +531,30 @@ input[type=range]::-webkit-slider-runnable-track {
 	width: 100%;
 	height: 100%;
 	overflow: auto;
-	background-color: rgba(0,0,0,0.4);
+	background-color: rgba(0, 0, 0, 0.4);
 }
+
 .modalContent {
 	background: none;
 	margin: 10% auto auto;
 	/*	border: 1px solid black;*/
 	width: 1200px;
-    height: 65%;
+	height: 65%;
 }
+
 .modalHeader {
 	box-sizing: border-box;
 	font-size: 16px;
-	background-color: rgba(155,0,0,0.9);
+	background-color: rgba(155, 0, 0, 0.9);
 	width: 100%;
 	margin-bottom: 3px;
 	padding: 5px 10px;
 	font-weight: 500;
 }
+
 .modalFilter {
 	box-sizing: border-box;
-	background-color: rgba(0,0,0,0.6);
+	background-color: rgba(0, 0, 0, 0.6);
 	width: 100%;
 	height: 50px;
 	padding: 4px 16px;
@@ -522,9 +562,10 @@ input[type=range]::-webkit-slider-runnable-track {
 	overflow-y: auto;
 	overflow-x: auto;
 }
+
 .modalBody {
 	box-sizing: border-box;
-	background-color: rgba(0,0,0,0.6);
+	background-color: rgba(0, 0, 0, 0.6);
 	width: 100%;
 	min-height: 200px;
 	max-height: 400px;
@@ -541,22 +582,25 @@ input[type=range]::-webkit-slider-runnable-track {
 	top: 0;
 	height: 100vh;
 	width: 100vw;
-	background-color: rgba(0,0,0,0.4);
+	background-color: rgba(0, 0, 0, 0.4);
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
+
 .modalDialog.closed {
 	display: none;
 }
+
 .modalDialog .dialogBase {
 	position: relative;
 	z-index: 601;
 	display: flex;
 	flex-direction: column
 }
+
 .modalDialog .dialogHeader {
-	background-color: rgba(155,0,0,0.9);
+	background-color: rgba(155, 0, 0, 0.9);
 	margin-bottom: 3px;
 	color: white;
 	border-bottom: 1px solid black;
@@ -565,32 +609,40 @@ input[type=range]::-webkit-slider-runnable-track {
 	font-weight: 500;
 	font-size: 16px;
 }
+
 .modalDialog .dialogBody {
 	background-color: #000000ed;
 	overflow-y: scroll;
 	min-width: 1300px;
-	min-height: 700px;                     /*  title bar is 50 so we need the extra 70 here  */
-	max-height: calc(75vh - 50px);        /*  compensate for title bar                      */
+	min-height: 700px;
+	/*  title bar is 50 so we need the extra 70 here  */
+	max-height: calc(75vh - 50px);
+	/*  compensate for title bar                      */
 	max-width: 75vw;
-	flex:1;
+	flex: 1;
 	padding: 5px;
 }
+
 .modalDialog .dialogFooter {
 	margin-top: 3px;
 }
+
 .modalDialog .dialogFooter .modalButton {
 	float: right;
 }
 
 #ShareLink {
-	width:100%;
-	padding:10px 0;
-	color:white;
-	background-color:rgba(0,0,0,0.4);
-	border:1px solid black;
+	width: 100%;
+	padding: 10px 0;
+	color: white;
+	background-color: rgba(0, 0, 0, 0.4);
+	border: 1px solid black;
 }
 
-.filterTagGameInput, #filterGameInput, #calendar1, #calendar2 {
+.filterTagGameInput,
+#filterGameInput,
+#calendar1,
+#calendar2 {
 	margin: 4px;
 }
 
@@ -632,22 +684,27 @@ input[type=range]::-webkit-slider-runnable-track {
 	border: none;
 	width: 100%;
 }
+
 .modalBody th {
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgba(0, 0, 0, 0.7);
 	padding: 3px;
 	font-weight: 500;
 }
+
 .modalBody td {
 	padding-right: 20px;
 	padding: 3px;
 }
+
 .modalBody tr {
 	text-align: left;
 }
+
 .modalBody tr:hover {
-	background-color: rgb(205,134,20);
-	background-color: rgba(205,134,20,0.9);
+	background-color: rgb(205, 134, 20);
+	background-color: rgba(205, 134, 20, 0.9);
 }
+
 .modalButtons {
 	box-sizing: border-box;
 	width: 100%;
@@ -656,13 +713,14 @@ input[type=range]::-webkit-slider-runnable-track {
 	margin-top: 3px;
 	height: 15px;
 }
+
 .modalButton {
 	display: inline-block;
 	background-color: none;
 	height: 100%;
 	min-width: 100px;
-	background-color: rgba(0,0,0);
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgba(0, 0, 0);
+	background-color: rgba(0, 0, 0, 0.7);
 	margin-right: 10px;
 	padding: 5px;
 	text-transform: uppercase;
@@ -680,8 +738,8 @@ input[type=range]::-webkit-slider-runnable-track {
 
 .hint {
 	display: none;
-	background-color: rgb(0,0,0);
-	background-color: rgba(0,0,0,0.7);
+	background-color: rgb(0, 0, 0);
+	background-color: rgba(0, 0, 0, 0.7);
 	position: absolute;
 	margin: auto;
 	left: 0;
@@ -721,34 +779,40 @@ input[type=range]::-webkit-slider-runnable-track {
 /* Override leaflet styles */
 /* */
 
-.leaflet-top {
+/* .leaflet-top {
 	top: 55%;
-}
-.leaflet-right {
+} */
+
+/* .leaflet-right {
 	right: 1%;
-}
+} */
+
 .leaflet-left {
 	left: 360px;
 	top: 50px;
 }
+
 .leaflet-bottom {
 	bottom: 65px;
 }
-.leaflet-control-attribution {
+
+/* .leaflet-control-attribution {
 	right: 0px;
 	bottom: 0px;
-}
+} */
 
-.basemaps {
+/* this was custom positioning code for the basemaps control */
+/* .basemaps {
 	bottom: 223px;
-}
+} */
+
 /* .leaflet-tile { */
-	/* border: solid black 1px; */
+/* border: solid black 1px; */
 /* } */
 
 /* .leaflet-tile-container { */
-	/* 'pixelated' preserves sharpness of tiles */
-	/* image-rendering: pixelated;  */
+/* 'pixelated' preserves sharpness of tiles */
+/* image-rendering: pixelated;  */
 /* } */
 
 
@@ -756,26 +820,85 @@ input[type=range]::-webkit-slider-runnable-track {
 	pointer-events: none;
 }
 
-#container.marker-transition:not(.zooming) .leaflet-marker-icon.animation { transition: transform .15s linear; }
-#container.marker-transition.speed-9:not(.zooming) .leaflet-marker-icon.animation { transition: transform .2s linear; }
-#container.marker-transition.speed-8:not(.zooming) .leaflet-marker-icon.animation { transition: transform .3s linear; }
-#container.marker-transition.speed-7:not(.zooming) .leaflet-marker-icon.animation { transition: transform .4s linear; }
-#container.marker-transition.speed-6:not(.zooming) .leaflet-marker-icon.animation { transition: transform .5s linear; }
-#container.marker-transition.speed-5:not(.zooming) .leaflet-marker-icon.animation { transition: transform .6s linear; }
-#container.marker-transition.speed-4:not(.zooming) .leaflet-marker-icon.animation { transition: transform .7s linear; }
-#container.marker-transition.speed-3:not(.zooming) .leaflet-marker-icon.animation { transition: transform .8s linear; }
-#container.marker-transition.speed-2:not(.zooming) .leaflet-marker-icon.animation { transition: transform .9s linear; }
-#container.marker-transition.speed-1:not(.zooming) .leaflet-marker-icon.animation { transition: transform 1s linear; }
-#container.marker-transition:not(.zooming) .leaflet-popup.animation { transition: transform .15s linear !important; }
-#container.marker-transition.speed-9:not(.zooming) .leaflet-popup.animation { transition: transform .2s linear !important; }
-#container.marker-transition.speed-8:not(.zooming) .leaflet-popup.animation { transition: transform .3s linear !important; }
-#container.marker-transition.speed-7:not(.zooming) .leaflet-popup.animation { transition: transform .4s linear !important; }
-#container.marker-transition.speed-6:not(.zooming) .leaflet-popup.animation { transition: transform .5s linear !important; }
-#container.marker-transition.speed-5:not(.zooming) .leaflet-popup.animation { transition: transform .6s linear !important; }
-#container.marker-transition.speed-4:not(.zooming) .leaflet-popup.animation { transition: transform .7s linear !important; }
-#container.marker-transition.speed-3:not(.zooming) .leaflet-popup.animation { transition: transform .8s linear !important; }
-#container.marker-transition.speed-2:not(.zooming) .leaflet-popup.animation { transition: transform .9s linear !important; }
-#container.marker-transition.speed-1:not(.zooming) .leaflet-popup.animation { transition: transform 1s linear !important; }
+#container.marker-transition:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .15s linear;
+}
+
+#container.marker-transition.speed-9:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .2s linear;
+}
+
+#container.marker-transition.speed-8:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .3s linear;
+}
+
+#container.marker-transition.speed-7:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .4s linear;
+}
+
+#container.marker-transition.speed-6:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .5s linear;
+}
+
+#container.marker-transition.speed-5:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .6s linear;
+}
+
+#container.marker-transition.speed-4:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .7s linear;
+}
+
+#container.marker-transition.speed-3:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .8s linear;
+}
+
+#container.marker-transition.speed-2:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform .9s linear;
+}
+
+#container.marker-transition.speed-1:not(.zooming) .leaflet-marker-icon.animation {
+	transition: transform 1s linear;
+}
+
+#container.marker-transition:not(.zooming) .leaflet-popup.animation {
+	transition: transform .15s linear !important;
+}
+
+#container.marker-transition.speed-9:not(.zooming) .leaflet-popup.animation {
+	transition: transform .2s linear !important;
+}
+
+#container.marker-transition.speed-8:not(.zooming) .leaflet-popup.animation {
+	transition: transform .3s linear !important;
+}
+
+#container.marker-transition.speed-7:not(.zooming) .leaflet-popup.animation {
+	transition: transform .4s linear !important;
+}
+
+#container.marker-transition.speed-6:not(.zooming) .leaflet-popup.animation {
+	transition: transform .5s linear !important;
+}
+
+#container.marker-transition.speed-5:not(.zooming) .leaflet-popup.animation {
+	transition: transform .6s linear !important;
+}
+
+#container.marker-transition.speed-4:not(.zooming) .leaflet-popup.animation {
+	transition: transform .7s linear !important;
+}
+
+#container.marker-transition.speed-3:not(.zooming) .leaflet-popup.animation {
+	transition: transform .8s linear !important;
+}
+
+#container.marker-transition.speed-2:not(.zooming) .leaflet-popup.animation {
+	transition: transform .9s linear !important;
+}
+
+#container.marker-transition.speed-1:not(.zooming) .leaflet-popup.animation {
+	transition: transform 1s linear !important;
+}
 
 .leaflet-popup-content-wrapper {
 	/* background: white; */
@@ -812,7 +935,10 @@ input[type=range]::-webkit-slider-runnable-track {
 .stats .name {
 	width: 200px;
 }
-.stats .kills, .stats .tkills, .stats .deaths {
+
+.stats .kills,
+.stats .tkills,
+.stats .deaths {
 	width: 70px;
 	text-align: right;
 }

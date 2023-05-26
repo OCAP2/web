@@ -68,7 +68,7 @@ class UI {
 		this._init();
 	};
 
-	_init() {
+	_init () {
 		// Setup top panel
 		this.missionName = document.getElementById("missionName");
 
@@ -128,7 +128,7 @@ class UI {
 
 		// Change time view
 		this.toggleTime = document.getElementById("toggleTime");
-		for (const timeValue of ["elapsed","mission","system"]) {
+		for (const timeValue of ["elapsed", "mission", "system"]) {
 			const option = document.createElement("option");
 			option.value = timeValue;
 			localizable(option, `time_${timeValue}`, "", "");
@@ -247,8 +247,8 @@ class UI {
 		// Hide/show ui on keypress
 		var left_title = document.getElementById("leftPanel").getElementsByClassName("title")[0];
 		var right_title = document.getElementById("rightPanel").getElementsByClassName("title")[0];
-		left_title.onclick = () => {this.toggleLeftPanel()};
-		right_title.onclick = () => {this.toggleRightPanel()};
+		left_title.onclick = () => { this.toggleLeftPanel() };
+		right_title.onclick = () => { this.toggleRightPanel() };
 		mapDiv.addEventListener("keypress", (event) => {
 			if (event.charCode === 101) this.toggleLeftPanel();
 			else if (event.charCode === 114) this.toggleRightPanel();
@@ -304,7 +304,7 @@ class UI {
 		this.frameSliderWidthInPercent = (this.frameSlider.offsetWidth / this.frameSlider.parentElement.offsetWidth) * 100;
 	};
 
-	checkAvailableTimes() {
+	checkAvailableTimes () {
 		for (const option of this.toggleTime.options) {
 			if (option.value === "system") {
 				option.disabled = !this.systemTime;
@@ -314,7 +314,7 @@ class UI {
 		}
 	}
 
-	getTimeString(frame) {
+	getTimeString (frame) {
 		let date = new Date(frame * frameCaptureDelay);
 		let isUTC = true;
 		if (this.timeToShow === "system") {
@@ -327,7 +327,7 @@ class UI {
 		return dateToTimeString(date, isUTC);
 	}
 
-	showCursorTooltip(text) {
+	showCursorTooltip (text) {
 		let tooltip = this.cursorTooltip;
 		tooltip.textContent = text;
 		tooltip.className = "cursorTooltip";
@@ -345,23 +345,23 @@ class UI {
 		console.log(this.cursorTooltip);
 	}
 
-	_moveCursorTooltip(event) {
+	_moveCursorTooltip (event) {
 		ui.cursorTooltip.style.transform = `translate3d(${event.pageX}px, ${event.pageY}px, 0px)`;
 	}
 
-	setMissionName(name) {
+	setMissionName (name) {
 		this.missionName.textContent = name;
 	}
 
-	setAddonVersion(version) {
+	setAddonVersion (version) {
 		this.addonVersion = version;
 	}
 
-	setExtensionVersion(version) {
+	setExtensionVersion (version) {
 		this.extensionVersion = version;
 	}
 
-	detectTimes(times) {
+	detectTimes (times) {
 		for (const time of times) {
 			if (time.frameNum === 0) {
 				this.systemTime = new Date(time.systemTimeUTC + "Z");
@@ -385,8 +385,8 @@ class UI {
 
 	// Set mission time based on given frame
 	// Move playback + slider to given frame in time
-	setMissionCurTime(f) {
-		missionCurDate.setTime(f*frameCaptureDelay);
+	setMissionCurTime (f) {
+		missionCurDate.setTime(f * frameCaptureDelay);
 		this.updateCurrentTime(f);
 		this.setFrameSliderVal(f);
 		playbackFrame = +f;
@@ -396,17 +396,17 @@ class UI {
 		}
 	}
 
-	updateCurrentTime(f = playbackFrame) {
+	updateCurrentTime (f = playbackFrame) {
 		this.missionCurTime.textContent = ui.getTimeString(f);
 	}
 
-	setMissionEndTime(f) {
+	setMissionEndTime (f) {
 		this.updateEndTime(f);
 		this.setFrameSliderMax(f);
 	}
 
-	updateEndTime(f = this.frameSlider.max) {
-		let date = new Date(f*frameCaptureDelay);
+	updateEndTime (f = this.frameSlider.max) {
+		let date = new Date(f * frameCaptureDelay);
 		let isUTC = true;
 		if (this.systemTime && this.timeToShow === "system") {
 			date = new Date(this.systemTime.getTime() + (this.frameSlider.max * frameCaptureDelay));
@@ -418,15 +418,15 @@ class UI {
 		this.missionEndTime.textContent = dateToTimeString(date, isUTC);
 	}
 
-	setFrameSliderMax(f) {
+	setFrameSliderMax (f) {
 		this.frameSlider.max = f;
 	};
 
-	setFrameSliderVal(f) {
+	setFrameSliderVal (f) {
 		this.frameSlider.value = f;
 	};
 
-	toggleLeftPanel() {
+	toggleLeftPanel () {
 		if (this.leftPanel.style.display == "none") {
 			this.leftPanel.style.display = "initial";
 		} else {
@@ -434,14 +434,14 @@ class UI {
 		}
 	};
 
-	updateTitleSide() {
+	updateTitleSide () {
 		sideCiv.textContent = "CIV\n\r(" + countCiv + ")";
 		sideEast.textContent = "OPFOR\n\r(" + countEast + ")";
 		sideGuer.textContent = "IND\n\r(" + countGuer + ")";
 		sideWest.textContent = "BLUFOR\n\r(" + countWest + ")";
 	};
 
-	switchSide(side) {
+	switchSide (side) {
 		this.currentSide = side;
 		this.sideEast.style.backgroundColor = "rgba(255, 183, 38,0.1)";
 		this.listEast.style.display = "none";
@@ -466,7 +466,7 @@ class UI {
 		}
 	};
 
-	toggleRightPanel() {
+	toggleRightPanel () {
 		if (this.rightPanel.style.display == "none") {
 			this.rightPanel.style.display = "initial";
 		} else {
@@ -474,32 +474,32 @@ class UI {
 		}
 	};
 
-	showModalOpSelection() {
+	showModalOpSelection () {
 		// Set header/body
 		localizable(this.modalHeader, "select_mission");
 		localizable(this.modalBody, "list_compilation");
 
 		// Add buttons
-/*		var playButton = document.createElement("div");
-		playButton.className = "modalButton";
-		playButton.textContent = "Play";
-		var cancelButton = document.createElement("div");
-		cancelButton.className = "modalButton";
-		cancelButton.textContent = "Cancel";
-		var hideModal = this.hideModal;
-		cancelButton.addEventListener("click", function() {
-			this.hideModal();
-		});
-
-		this.modalButtons.appendChild(cancelButton);
-		this.modalButtons.appendChild(playButton);*/
+		/*		var playButton = document.createElement("div");
+				playButton.className = "modalButton";
+				playButton.textContent = "Play";
+				var cancelButton = document.createElement("div");
+				cancelButton.className = "modalButton";
+				cancelButton.textContent = "Cancel";
+				var hideModal = this.hideModal;
+				cancelButton.addEventListener("click", function() {
+					this.hideModal();
+				});
+		
+				this.modalButtons.appendChild(cancelButton);
+				this.modalButtons.appendChild(playButton);*/
 
 		// Show modal
 		this.showModal();
 		this.modalFilter.style.display = "inherit";
 	};
 
-	setModalOpList() {
+	setModalOpList () {
 		var OpList;
 		var n = filterTagGameInput.options.selectedIndex;
 		var tag = n != -1 ? filterTagGameInput.options[n].value : "";
@@ -539,7 +539,7 @@ class UI {
 				var headerRow = document.createElement("tr");
 
 				var columnNames = ["mission", "map", "data", "durability", "tag"];
-				columnNames.forEach(function(name) {
+				columnNames.forEach(function (name) {
 					var th = document.createElement("th");
 					localizable(th, name);
 					th.className = "medium";
@@ -558,7 +558,7 @@ class UI {
 						secondsToTimeString(op.mission_duration),
 						op.tag
 					];
-					vals.forEach(function(val) {
+					vals.forEach(function (val) {
 						var cell = document.createElement("td");
 						cell.textContent = val;
 						row.appendChild(cell);
@@ -566,7 +566,7 @@ class UI {
 
 					row.addEventListener("click", () => {
 						localizable(this.modalBody, "loading");
-						processOp("data/" + op.filename);
+						processOp("data/" + op.filename, op);
 					});
 					table.insertBefore(row, table.childNodes[1]);
 				});
@@ -575,7 +575,7 @@ class UI {
 			});
 	};
 
-	makeModalButton(text, func) {
+	makeModalButton (text, func) {
 		var button = document.createElement("div");
 		button.className = "modalButton";
 		button.textContent = text;
@@ -584,7 +584,7 @@ class UI {
 		return button;
 	};
 
-	showModalStats() {
+	showModalStats () {
 		// localizable(this.statsDialogHeader, "info");
 
 		const units = [];
@@ -610,7 +610,7 @@ class UI {
 				}
 			}
 		}
-		units.sort((a,b) => {
+		units.sort((a, b) => {
 			if (a.name < b.name) return -1;
 			if (a.name > b.name) return 1;
 			return 0;
@@ -653,7 +653,7 @@ class UI {
 		this.statsDialog.classList.remove("closed");
 	};
 
-	showModalAbout() {
+	showModalAbout () {
 		localizable(this.modalHeader, "info");
 
 		this.modalBody.innerHTML = `
@@ -675,26 +675,26 @@ class UI {
 				<option value="de"${current_lang == "de" ? 'selected/' : ''}>Deutsch</option>
 			</select>
 			`;
-		localizable(document.getElementById("versionInfo-extension"),"version-extension");
+		localizable(document.getElementById("versionInfo-extension"), "version-extension");
 		document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
-		localizable(document.getElementById("versionInfo-addon"),"version-addon");
+		localizable(document.getElementById("versionInfo-addon"), "version-addon");
 		document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
 		localizable(document.getElementById("keyControl-leftPanel"), "show-hide-left-panel");
 		localizable(document.getElementById("keyControl-rightPanel"), "show-hide-right-panel");
 		localizable(document.getElementById("keyControl-experimental"), "show-experimental");
 		localizable(document.getElementById("keyControl-lang"), "language");
-		document.getElementById("switchLang").onchange = function(){switchLocalizable(this.value)};
+		document.getElementById("switchLang").onchange = function () { switchLocalizable(this.value) };
 		deleteLocalizable(this.modalBody);
 		this.modalButtons.innerHTML = "";
-		this.modalButtons.appendChild(this.makeModalButton("Close", function() {
+		this.modalButtons.appendChild(this.makeModalButton("Close", function () {
 			ui.hideModal();
 		}));
 
 		this.showModal();
 	};
 
-	showModalShare() {
+	showModalShare () {
 		this.modal.wasStopped = false;
 		if (!playbackPaused) {
 			this.modal.wasStopped = true;
@@ -713,12 +713,12 @@ class UI {
 
 		let line = document.getElementById("ShareLink");
 		line.value = text;
-		line.addEventListener("click", function(event) {
+		line.addEventListener("click", function (event) {
 			this.select();
 		});
 
 		this.modalButtons.innerHTML = "";
-		this.modalButtons.appendChild(this.makeModalButton(getLocalizable("close"), function() {
+		this.modalButtons.appendChild(this.makeModalButton(getLocalizable("close"), function () {
 			ui.hideModal();
 			if (ui.modal.wasStopped) {
 				playPause();
@@ -728,24 +728,24 @@ class UI {
 		this.showModal();
 	};
 
-	showModal() {
+	showModal () {
 		this.modal.style.display = "inherit";
 	};
 
-	hideModal() {
+	hideModal () {
 		this.modal.style.display = "none";
 		this.modalFilter.style.display = "none";
 	};
 
-	showPlaybackSpeedSlider() {
+	showPlaybackSpeedSlider () {
 		this.playbackSpeedSlider.style.display = "inherit";
 	};
 
-	hidePlaybackSpeedSlider() {
+	hidePlaybackSpeedSlider () {
 		this.playbackSpeedSlider.style.display = "none";
 	};
 
-	removeEvent(event) {
+	removeEvent (event) {
 		var el = event.getElement();
 		el.classList.remove("reveal");
 
@@ -755,7 +755,7 @@ class UI {
 		}
 	};
 
-	addEvent(event) {
+	addEvent (event) {
 		if (typeof event.updateTime === "function") {
 			event.updateTime();
 		}
@@ -776,24 +776,24 @@ class UI {
 			}
 		}
 
-/*		if (event.type == "hit") {
-			if (this.showHitEvents) {
-				el.style.display = "inherit";
-			} else {
-				el.style.display = "none";
-			};
-		};*/
+		/*		if (event.type == "hit") {
+					if (this.showHitEvents) {
+						el.style.display = "inherit";
+					} else {
+						el.style.display = "none";
+					};
+				};*/
 
 		this.filterEvent(event);
 	}
 
-	updateEventTimes() {
+	updateEventTimes () {
 		for (const event of gameEvents.getActiveEvents()) {
 			event.updateTime();
 		}
 	}
 
-	showHint(text) {
+	showHint (text) {
 		this.hint.textContent = text;
 		this.hint.style.display = "inherit";
 
@@ -802,7 +802,7 @@ class UI {
 		}, 5000);
 	};
 
-	addTickToTimeline(frameNum) {
+	addTickToTimeline (frameNum) {
 		var frameWidth = this.frameSliderWidthInPercent / endFrame;
 		var tick = document.createElement("div");
 
@@ -812,7 +812,7 @@ class UI {
 		this.eventTimeline.appendChild(tick);
 	};
 
-	filterEvent(event) {
+	filterEvent (event) {
 		var el = event.getElement();
 		var filterText = this.filterEventsInput.value.toLowerCase();
 
@@ -828,13 +828,13 @@ class UI {
 			el.style.display = "none";
 		} else if (el.innerHTML.toLowerCase().includes(filterText)) {
 			el.style.display = "inherit";
-				//console.log("Matches filter (" + filterText + ")");
+			//console.log("Matches filter (" + filterText + ")");
 		} else {
 			el.style.display = "none";
 		}
 	}
 
-	updateCustomize() {
+	updateCustomize () {
 		return fetch("/api/v1/customize")
 			.then(response => response.json())
 			.then((data) => {
@@ -864,7 +864,7 @@ class UI {
 			});
 	}
 
-	showExperimental() {
+	showExperimental () {
 		this.statsButton.classList.remove("hiddenExperimental");
 		const container = document.getElementById("container");
 		container.classList.add("marker-transition");

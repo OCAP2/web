@@ -1,10 +1,11 @@
 # OCAP Web component
 
 ## Configuration
+
 The configuration file is called `setting.json`
 
-**"listen"**: Listener for the web server, change to "0.0.0.0:5000" to listen on all interfaces   
-**"secret"**: Secret used for authenticate on record upload   
+**"listen"**: Listener for the web server, change to "0.0.0.0:5000" to listen on all interfaces
+**"secret"**: Secret used for authenticate on record upload
 **"logger"**: Enables request logging to STDOUT
 
 ## Docker
@@ -58,16 +59,19 @@ docker run --name ocap-web -d \
 This Project is based on [Golang](https://golang.org/dl/)
 
 ### Windows
+
 ```bash
-go build -o ocap-webserver.exe ./src/web
+go build -o ocap-webserver.exe ./cmd
 ```
 
 ### Linux
+
 ```
-go build -o ocap-webserver ./src/web
+go build -o ocap-webserver ./cmd
 ```
 
 ### Docker
+
 ```
 docker build -t ocap-webserver .
 ```

@@ -66,7 +66,8 @@ class Unit extends Entity {
 		}
 		if (this._name !== name) {
 			this._name = name;
-			this._marker.getPopup()._contentNode.textContent = name;
+			var popupNode = this._marker.getPopup()._contentNode
+			if (popupNode) { popupNode.textContent = name; }
 			this.updateElementText();
 		}
 	}
