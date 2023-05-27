@@ -22,7 +22,7 @@ body,
 .customize.logo {
 	position: absolute;
 	bottom: 85px;
-	right: 1%;
+	left: 375px;
 	z-index: 1;
 	opacity: 0.8;
 }

@@ -429,8 +429,12 @@ class UI {
 	toggleLeftPanel () {
 		if (this.leftPanel.style.display == "none") {
 			this.leftPanel.style.display = "initial";
+			// adjust customize logo to accomodate left panel
+			this.customizeLogo ? this.customizeLogo.style.left = "375px" : null;
 		} else {
 			this.leftPanel.style.display = "none";
+			// adjust customize logo to accomodate left panel
+			this.customizeLogo ? this.customizeLogo.style.left = "15px" : null;
 		}
 	};
 
@@ -857,6 +861,8 @@ class UI {
 					} else {
 						container.prepend(logo);
 					}
+
+					this.customizeLogo = logo;
 				}
 
 				this.disableKillCount = data.disableKillCount;

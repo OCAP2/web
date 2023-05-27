@@ -116,6 +116,7 @@ function getArguments () {
 
 	let args = new URLSearchParams(window.location.search);
 
+
 	// console.log(args);
 	return args;
 }
@@ -138,22 +139,24 @@ function initOCAP () {
 					};
 				});
 			*/
-			if (args.file) {
+			if (args.get('file')) {
 				document.addEventListener("mapInited", function (event) {
 					let args = getArguments();
-					if (args.x && args.y && args.zoom) {
-						let coords = [parseFloat(args.x), parseFloat(args.y)];
-						let zoom = parseFloat(args.zoom);
+					if (args.get('x') && args.get('y') && args.get('zoom')) {
+						let coords = [parseFloat(args.get('x')), parseFloat(args.get('y'))];
+						let zoom = parseFloat(args.get('zoom'));
 						map.setView(coords, zoom);
 					}
-					if (args.frame) {
-						ui.setMissionCurTime(parseInt(args.frame));
+					if (args.get('frame')) {
+						ui.setMissionCurTime(parseInt(args.get('frame')));
 					}
 				}, false);
-				return processOp("data/" + args.file);
-			}
+				return processOp("data/" + args.get('file'), null);
+			};
+
 
 			document.addEventListener("operationProcessed", function (event) {
+				event.preventDefault();
 				let bounds = getMapMarkerBounds();
 				map.fitBounds(bounds);
 			});
@@ -162,7 +165,7 @@ function initOCAP () {
 			ui.showHint(error);
 		});
 
-	if (args.experimental) ui.showExperimental();
+	if (args.get('experimental')) ui.showExperimental();
 }
 
 async function getWorldByName (worldName) {
@@ -838,7 +841,21 @@ function processOp (filepath, opRecord) {
 			multiplier = world.multiplier;
 			missionName = data.missionName;
 
-			let playedDate = opRecord.date;
+			let playedDate;
+			if (opRecord) {
+				playedDate = opRecord.date;
+			} else {
+				// try to parse from filename
+				// if filename has "\d__\d" format, use that
+				// else no date, in the event a temp file is referenced
+				let dateMatch = fileName.match(/^\d{4}_\d{2}_\d{2}/);
+				if (dateMatch) {
+					playedDate = dateMatch[0].replace(/_/g, "-");
+				} else {
+					playedDate = "<UnknownDate>";
+				}
+			}
+
 			let worldDisplayName;
 			if ([undefined, "NOT FOUND"].includes(world.displayName)) {
 				if (world.name == "NOT FOUND") {
