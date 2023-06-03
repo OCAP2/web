@@ -9,6 +9,7 @@ import (
 
 type Setting struct {
 	Listen    string    `json:"listen" yaml:"listen"`
+	PrefixURL string    `json:"prefixURL" yaml:"prefixURL"`
 	Secret    string    `json:"secret" yaml:"secret"`
 	DB        string    `json:"db" yaml:"db"`
 	Markers   string    `json:"markers" yaml:"markers"`
@@ -42,6 +43,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.AddConfigPath(".")
 
 	viper.SetDefault("listen", "127.0.0.1:5000")
+	viper.SetDefault("prefixURL", "")
 	viper.SetDefault("db", "data.db")
 	viper.SetDefault("markers", "markers")
 	viper.SetDefault("ammo", "ammo")
@@ -52,7 +54,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
