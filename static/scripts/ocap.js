@@ -156,7 +156,6 @@ function initOCAP () {
 
 
 			document.addEventListener("operationProcessed", function (event) {
-				event.preventDefault();
 				let bounds = getMapMarkerBounds();
 				map.fitBounds(bounds);
 			});
@@ -203,10 +202,26 @@ async function getWorldByName (worldName) {
 
 	// Fallback to cloud CDN if enabled
 	if (ui.useCloudTiles) {
-		const cloudMapRes = await fetch(
-			`https://maps.ocap2.com/${worldName}/map.json`,
-			{ cache: "no-store" }
-		);
+		let cloudMapRes;
+		try {
+			cloudMapRes = await fetch(
+				`https://maps.ocap2.com/${worldName}/map.json`,
+				{ cache: "no-store" }
+			);
+		} catch (error) {
+			// clone default map if not found
+			Object.assign(defaultMap, {
+				"imageSize": 30720,
+				"worldSize": 30720,
+				"multiplier": 1,
+				"worldName": worldName
+			});
+			console.warn("World not found, using blank map")
+			alert(`The map for this mission (worldName: ${worldName}) is not available locally or in the cloud.\n\nA placeholder will be shown instead. Please report this issue on the OCAP2 Discord.\n\nhttps://discord.gg/wQusAQnrBP`);
+			worldName = "";
+
+			return Promise.resolve(defaultMap);
+		};
 		if (cloudMapRes.status === 200) {
 			try {
 				return Object.assign(defaultMap, await cloudMapRes.json(), { _useCloudTiles: true });
