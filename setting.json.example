@@ -7,5 +7,8 @@
 		"websiteLogo": "",
 		"websiteLogoSize": "128px",
 		"disableKillCount": false
+	},
+	"database": {
+		"dsn": "user=postgres password=postgres dbname=ocap sslmode=disable"
 	}
 }

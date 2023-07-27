@@ -1,0 +1,8 @@
+# bash
+docker run --rm -v $(pwd):/src -w /src kjconroy/sqlc:latest generate
+
+# powershell
+docker run --rm -v ${PWD}:/src -w /src kjconroy/sqlc:latest generate
+
+# CMD prompt
+docker run --rm -v "%cd%:/src" -w /src kjconroy/sqlc:latest generate

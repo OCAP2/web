@@ -17,7 +17,12 @@ type Setting struct {
 	Data      string    `json:"data" yaml:"data"`
 	Static    string    `json:"static" yaml:"static"`
 	Logger    bool      `json:"logger" yaml:"logger"`
+	Database  DBSetting `json:"database" yaml:"database"`
 	Customize Customize `json:"customize" yaml:"customize"`
+}
+
+type DBSetting struct {
+	DSN string `json:"dsn" yaml:"dsn"`
 }
 
 type Customize struct {

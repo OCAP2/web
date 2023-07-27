@@ -48,7 +48,7 @@ class Vehicle extends Entity {
 		this._positionsHasFrames = (positions.length > 0 && !!positions[0].frames);
 	}
 
-	createMarker(latLng) {
+	createMarker (latLng) {
 		super.createMarker(latLng);
 
 		let popup = this._createPopup(this._name);
@@ -70,15 +70,15 @@ class Vehicle extends Entity {
 				});*/
 	}
 
-	_updateAtFrame(relativeFrameIndex) {
+	_updateAtFrame (relativeFrameIndex) {
 		super._updateAtFrame(relativeFrameIndex);
 
 		const position = this.getPosAtFrame(relativeFrameIndex);
-		if (!position) return;
+		if (!position || position === undefined) return;
 		this.setCrew(position.crew);
 	}
 
-	setCrew(crew) {
+	setCrew (crew) {
 		let content = "";
 		if (ui.nicknameEnable) {
 			this._crew = crew;
@@ -116,14 +116,14 @@ class Vehicle extends Entity {
 			// }
 			popup.setContent(content);
 		}
-		
+
 	}
 
-	getCrew() {
+	getCrew () {
 		return this._crew;
 	}
 
-	getCrewString() {
+	getCrewString () {
 		if (this._crew.length === 0) { return " " }
 
 		let str = "";
@@ -133,7 +133,7 @@ class Vehicle extends Entity {
 
 			// Only include player names
 			// if (unit.isPlayer) {
-				str += (unit.getName().encodeHTMLEntities() + "<br/>");
+			str += (unit.getName().encodeHTMLEntities() + "<br/>");
 			// }
 			//};
 		});
@@ -141,7 +141,7 @@ class Vehicle extends Entity {
 	}
 
 	// If vehicle has crew, return side colour of 1st crew member. Else return black.
-	getSideColour() {
+	getSideColour () {
 		let crew = this._crew;
 		if (crew.length > 0) {
 			return entities.getById(crew[0]).getSideColour();

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"io"
 	"os"
 
 	"github.com/OCAP2/web/server"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	_ "github.com/lib/pq"
 )
 
 func check(err error) {
@@ -28,6 +31,8 @@ func main() {
 	ammo, err := server.NewRepoAmmo(setting.Ammo)
 	check(err)
 
+	db, query := server.GetDB(context.Background(), setting)
+
 	e := echo.New()
 
 	loggerConfig := middleware.DefaultLoggerConfig
@@ -42,7 +47,8 @@ func main() {
 	e.Use(
 		middleware.LoggerWithConfig(loggerConfig),
 	)
-	server.NewHandler(e, operation, marker, ammo, setting)
+	e.Use(middleware.Gzip())
+	server.NewHandler(e, operation, marker, ammo, setting, db, query)
 
 	err = e.Start(setting.Listen)
 	check(err)

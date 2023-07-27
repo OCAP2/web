@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OCAP2/web/db/sqlgen"
+	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -27,6 +29,8 @@ type Handler struct {
 	repoMarker    *RepoMarker
 	repoAmmo      *RepoAmmo
 	setting       Setting
+	db            *pgx.Conn
+	query         *sqlgen.Queries
 }
 
 func NewHandler(
@@ -35,16 +39,24 @@ func NewHandler(
 	repoMarker *RepoMarker,
 	repoAmmo *RepoAmmo,
 	setting Setting,
+	db *pgx.Conn,
+	query *sqlgen.Queries,
 ) {
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
 		setting:       setting,
+		db:            db,
+		query:         query,
 	}
 
 	e.Use(hdlr.errorHandler)
 
+	e.GET(
+		"/healthcheck",
+		hdlr.HealthCheck,
+	)
 	e.GET(
 		"/api/v1/operations",
 		hdlr.GetOperations,
@@ -86,6 +98,44 @@ func NewHandler(
 		hdlr.GetStatic,
 		hdlr.cacheControl(0),
 	)
+
+	// api v2
+	e.GET(
+		"/api/v2/worlds",
+		hdlr.GetWorlds,
+	)
+	e.GET(
+		"/api/v2/worlds/:id",
+		hdlr.GetWorldById,
+	)
+	e.GET(
+		"/api/v2/missions",
+		hdlr.GetMissions,
+	)
+	e.GET(
+		"/api/v2/missions/:id",
+		hdlr.GetMissionById,
+	)
+	e.GET(
+		"/api/v2/missions/:id/entities",
+		hdlr.GetEntities,
+	)
+	e.GET(
+		"/api/v2/missions/:id/soldier-detail/:ocapid",
+		hdlr.GetSoldierDetailsByOcapId,
+	)
+	e.GET(
+		"/api/v2/missions/:id/vehicle-detail/:ocapid",
+		hdlr.GetVehicleDetailsByOcapId,
+	)
+	e.GET(
+		"/api/v2/missions/:id/chat",
+		hdlr.GetOtherChatEvents,
+	)
+	e.GET(
+		"/api/v2/missions/:id/fps",
+		hdlr.GetServerFpsEvents,
+	)
 }
 
 func (*Handler) cacheControl(duration time.Duration) echo.MiddlewareFunc {
@@ -116,6 +166,10 @@ func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		return nil
 	}
+}
+
+func (h *Handler) HealthCheck(c echo.Context) error {
+	return c.NoContent(http.StatusOK)
 }
 
 func (h *Handler) GetOperations(c echo.Context) error {
@@ -288,4 +342,402 @@ func (h *Handler) GetAmmo(c echo.Context) error {
 	}
 
 	return c.File(upath)
+}
+
+func (h *Handler) GetMissions(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+	)
+
+	missions, err := h.query.GetMissions(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, missions)
+}
+
+func (h *Handler) GetMissionById(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+		r   = c.Request()
+	)
+
+	// mission id is a path param
+	if c.Param("id") == "" {
+		// accept query: ?id=1
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			return echo.ErrBadRequest
+		}
+		c.SetParamNames("id")
+		c.SetParamValues(id)
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return err
+	}
+
+	mission, err := h.query.GetMissionById(ctx, int32(id))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, mission)
+}
+
+func (h *Handler) GetWorlds(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+	)
+
+	worlds, err := h.query.GetWorlds(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, worlds)
+}
+
+func (h *Handler) GetWorldById(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+		r   = c.Request()
+	)
+
+	// world id is a path param
+	if c.Param("id") == "" {
+		// accept query: ?id=1
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			return echo.ErrBadRequest
+		}
+		c.SetParamNames("id")
+		c.SetParamValues(id)
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return err
+	}
+
+	worlds, err := h.query.GetWorldById(ctx, int32(id))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, worlds)
+}
+
+func (h *Handler) getMissionIdQuery(
+	missionId string,
+) (
+	missionIdInt32 int32,
+	err error,
+) {
+	if missionId == "" {
+		return 0, err
+	}
+
+	missionIdInt, err := strconv.Atoi(missionId)
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(missionIdInt), nil
+}
+
+func (h *Handler) getFrameQuery(
+	startFrame string,
+	endFrame string,
+) (
+	startFrameInt32 int32,
+	endFrameInt32 int32,
+	err error,
+) {
+
+	var startFrameInt, endFrameInt int
+
+	if startFrame != "" && endFrame != "" {
+		startFrameInt, err = strconv.Atoi(startFrame)
+		if err != nil {
+			return 0, 0, err
+		}
+		endFrameInt, err = strconv.Atoi(endFrame)
+		if err != nil {
+			return 0, 0, err
+		}
+	} else {
+		return 0, 0, echo.ErrBadRequest
+	}
+
+	return int32(startFrameInt), int32(endFrameInt), nil
+}
+
+func (h *Handler) GetEntities(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+	)
+
+	missionId, err := h.getMissionIdQuery(c.Param("id"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	entities, err := h.query.GetEntities(ctx, missionId)
+	if err != nil {
+		return echo.ErrInternalServerError
+	}
+
+	return c.JSON(http.StatusOK, entities)
+}
+
+func (h *Handler) GetSoldierDetailsByOcapId(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+		r   = c.Request()
+	)
+
+	missionId, err := h.getMissionIdQuery(c.Param("id"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	ocapId, err := strconv.Atoi(c.Param("ocapid"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	params := sqlgen.GetSoldierByOcapIdParams{
+		MissionID: missionId,
+		OcapID:    int32(ocapId),
+	}
+
+	// look for startFrame and endFrame query params
+	startFrame, endFrame, err := h.getFrameQuery(
+		r.URL.Query().Get("startFrame"),
+		r.URL.Query().Get("endFrame"),
+	)
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrBadRequest
+	}
+
+	outJson := map[string]interface{}{}
+
+	soldier, err := h.query.GetSoldierByOcapId(ctx, params)
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if err == pgx.ErrNoRows || !(soldier.ID > 0) {
+		return echo.ErrNotFound
+	}
+	outJson["soldier"] = soldier
+
+	states, err := h.query.GetSoldierStates(ctx, sqlgen.GetSoldierStatesParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if err == pgx.ErrNoRows {
+		return echo.ErrNotFound
+	} else {
+		outJson["states"] = states
+	}
+
+	firedEvents, err := h.query.GetFiredEvents(ctx, sqlgen.GetFiredEventsParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if !firedEvents[0].ID.Valid {
+		outJson["firedEvents"] = [][]byte{}
+	} else {
+		outJson["firedEvents"] = firedEvents
+	}
+
+	killEvents, err := h.query.GetKillEvents(ctx, sqlgen.GetKillEventsParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if !killEvents[0].ID.Valid {
+		outJson["killEvents"] = [][]byte{}
+	} else {
+		outJson["killEvents"] = killEvents
+	}
+
+	hitEvents, err := h.query.GetHitEvents(ctx, sqlgen.GetHitEventsParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if !hitEvents[0].ID.Valid {
+		outJson["hitEvents"] = [][]byte{}
+	} else {
+		outJson["hitEvents"] = hitEvents
+	}
+
+	chatEvents, err := h.query.GetChatEvents(ctx, sqlgen.GetChatEventsParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if !chatEvents[0].ID.Valid {
+		outJson["chatEvents"] = [][]byte{}
+	} else {
+		outJson["chatEvents"] = chatEvents
+	}
+
+	radioEvents, err := h.query.GetRadioEvents(ctx, sqlgen.GetRadioEventsParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if !radioEvents[0].ID.Valid {
+		outJson["radioEvents"] = [][]byte{}
+	} else {
+		outJson["radioEvents"] = radioEvents
+	}
+
+	return c.JSON(http.StatusOK, outJson)
+}
+
+func (h *Handler) GetVehicleDetailsByOcapId(c echo.Context) (err error) {
+	var (
+		ctx = c.Request().Context()
+		r   = c.Request()
+	)
+
+	missionId, err := h.getMissionIdQuery(c.Param("id"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	ocapId, err := strconv.Atoi(c.Param("ocapid"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	params := sqlgen.GetVehicleByOcapIdParams{
+		MissionID: missionId,
+		OcapID:    int32(ocapId),
+	}
+
+	// look for startFrame and endFrame query params
+	startFrame, endFrame, err := h.getFrameQuery(
+		r.URL.Query().Get("startFrame"),
+		r.URL.Query().Get("endFrame"),
+	)
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrBadRequest
+	}
+
+	outJson := map[string]interface{}{}
+
+	vehicle, err := h.query.GetVehicleByOcapId(ctx, params)
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if err == pgx.ErrNoRows || !(vehicle.ID > 0) {
+		return echo.ErrNotFound
+	}
+	outJson["vehicle"] = vehicle
+
+	states, err := h.query.GetVehicleStates(ctx, sqlgen.GetVehicleStatesParams{
+		MissionID:  missionId,
+		StartFrame: startFrame,
+		EndFrame:   endFrame,
+		OcapID:     int32(ocapId),
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if err == pgx.ErrNoRows {
+		return echo.ErrNotFound
+	} else {
+		outJson["states"] = states
+	}
+
+	return c.JSON(http.StatusOK, outJson)
+}
+
+func (h *Handler) GetOtherChatEvents(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+	)
+
+	missionId, err := h.getMissionIdQuery(c.Param("id"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	chatEvents, err := h.query.GetOtherChatEvents(ctx, sqlgen.GetOtherChatEventsParams{
+		MissionID: missionId,
+	})
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if len(chatEvents) == 0 {
+		return echo.ErrNotFound
+	}
+
+	return c.JSON(http.StatusOK, chatEvents)
+}
+
+func (h *Handler) GetServerFpsEvents(c echo.Context) error {
+	var (
+		ctx = c.Request().Context()
+	)
+
+	missionId, err := h.getMissionIdQuery(c.Param("id"))
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	fpsEvents, err := h.query.GetServerFpsEvents(ctx, missionId)
+
+	if err != nil {
+		fmt.Println(err)
+		return echo.ErrInternalServerError
+	}
+	if len(fpsEvents) == 0 {
+		return echo.ErrNotFound
+	}
+
+	return c.JSON(http.StatusOK, fpsEvents)
 }
