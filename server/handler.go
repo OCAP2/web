@@ -71,6 +71,11 @@ func NewHandler(
 		hdlr.cacheControl(CacheDuration),
 	)
 	g.GET(
+		"/file/:name",
+		hdlr.GetCaptureFile,
+		hdlr.cacheControl(CacheDuration),
+	)
+	g.GET(
 		"/images/markers/:name/:color",
 		hdlr.GetMarker,
 		hdlr.cacheControl(CacheDuration),
@@ -225,6 +230,19 @@ func (h *Handler) GetCapture(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "application/json")
 
 	return c.File(upath)
+}
+
+func (h *Handler) GetCaptureFile(c echo.Context) error {
+	name, err := url.PathUnescape(c.Param("name"))
+	if err != nil {
+		return err
+	}
+
+	filename := filepath.Base(name + ".gz")
+
+	c.Response().Header().Set("Content-Disposition", "attachment;filename=\""+filename+"\"")
+
+	return c.Attachment(filepath.Join(h.setting.Data, filename), filename)
 }
 
 func (h *Handler) GetMarker(c echo.Context) error {

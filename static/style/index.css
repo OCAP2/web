@@ -41,6 +41,13 @@ html, body, #map {
 	background-repeat: no-repeat;
 }
 
+#downloadButton {
+    background-image: url("../images/download.svg");
+    background-size: 25px 25px;
+    background-repeat: no-repeat;
+    float: right;
+}
+
 #shareButton {
 	background-image: url("../images/share.svg");
 	background-size: 25px 25px;

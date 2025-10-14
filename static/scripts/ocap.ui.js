@@ -29,6 +29,7 @@ class UI {
 		this.playbackSpeedSlider = null;
 		this.playbackSpeedVal = null;
 		this.aboutButton = null;
+		this.downloadButton = null;
 		this.shareButton = null;
 		this.statsButton = null;
 		this.toggleFirelinesButton = null;
@@ -85,6 +86,10 @@ class UI {
 		this.shareButton = document.getElementById("shareButton");
 		this.shareButton.addEventListener("click", () => {
 			this.showModalShare();
+		});
+		this.downloadButton = document.getElementById("downloadButton");
+		this.downloadButton.addEventListener("click", () => {
+			this.downloadFile();
 		});
 		this.statsButton = document.getElementById("statsButton");
 		this.statsButton.addEventListener("click", () => {
@@ -717,6 +722,10 @@ class UI {
 	hideModal() {
 		this.modal.style.display = "none";
 		this.modalFilter.style.display = "none";
+	};
+
+	downloadFile() {
+		window.open("file/" + fileName, "_blank");
 	};
 
 	showPlaybackSpeedSlider() {
