@@ -1,10 +1,10 @@
-FROM golang:1.20-alpine as builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /go/pkg/ocap
 COPY . .
 ARG build_commit
 RUN apk add --no-cache alpine-sdk && go build -ldflags "-X github.com/OCAP2/web/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/server.BuildCommit=$build_commit" -a -o app ./cmd
 
-FROM alpine:3.14
+FROM alpine:3.20
 WORKDIR /usr/local/ocap
 RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
     echo '{}' > /etc/ocap/setting.json

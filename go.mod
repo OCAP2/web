@@ -1,10 +1,10 @@
 module github.com/OCAP2/web
 
-go 1.20
+go 1.22
 
 require (
 	github.com/labstack/echo/v4 v4.10.2
-	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
 )
