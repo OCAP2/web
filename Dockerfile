@@ -4,7 +4,7 @@ COPY . .
 ARG build_commit
 RUN apk add --no-cache alpine-sdk && go build -ldflags "-X github.com/OCAP2/web/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/server.BuildCommit=$build_commit" -a -o app ./cmd
 
-FROM alpine:3.20
+FROM alpine:3.23
 WORKDIR /usr/local/ocap
 RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
     echo '{}' > /etc/ocap/setting.json
