@@ -78,6 +78,24 @@ class Vehicle extends Entity {
 		this.setCrew(position.crew);
 	}
 
+	/**
+	 * Update vehicle state from decoded EntityState (streaming mode)
+	 * @param {Object} state - Decoded EntityState from protobuf/flatbuffers
+	 */
+	updateFromState(state) {
+		// Call parent implementation for position, direction, alive
+		super.updateFromState(state);
+
+		if (!state) return;
+
+		// Handle vehicle-specific properties - crew IDs
+		if (state.crewIds && state.crewIds.length > 0) {
+			this.setCrew(state.crewIds);
+		} else {
+			this.setCrew([]);
+		}
+	}
+
 	setCrew(crew) {
 		let content = "";
 		if (ui.nicknameEnable) {

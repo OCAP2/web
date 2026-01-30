@@ -489,7 +489,7 @@ function loadOperation(op) {
 	// Use streaming for protobuf/flatbuffers formats
 	if (op.storageFormat === 'protobuf' || op.storageFormat === 'flatbuffers') {
 		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat})`);
-		return processOpStreaming(op.id);
+		return processOpStreaming(op.id, op.storageFormat);
 	}
 	// Fall back to legacy JSON loading
 	console.log(`Loading operation using legacy JSON mode`);
@@ -1130,11 +1130,15 @@ async function getOperationFormat(operationId) {
 /**
  * Process operation using streaming/chunked mode
  * @param {string} operationId - Operation ID from database
+ * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
  * @returns {Promise<void>}
  */
-async function processOpStreaming(operationId) {
-	console.log(`Processing operation (streaming mode): ${operationId}`);
+async function processOpStreaming(operationId, format = 'protobuf') {
+	console.log(`Processing operation (streaming mode): ${operationId} (format: ${format})`);
 	const time = new Date();
+
+	// Select the appropriate decoder
+	const decoder = format === 'flatbuffers' ? FlatBuffersDecoder : ProtobufDecoder;
 
 	// Show loading indicator
 	ui.showLoading('Initializing streaming playback...');
@@ -1151,7 +1155,7 @@ async function processOpStreaming(operationId) {
 	let manifest;
 	const cachedManifest = await storageManager.getManifest(operationId);
 	if (cachedManifest) {
-		manifest = ProtobufDecoder.decodeManifest(cachedManifest);
+		manifest = decoder.decodeManifest(cachedManifest);
 		console.log('Loaded manifest from cache');
 	} else {
 		const response = await fetch(`api/v1/operations/${operationId}/manifest`);
@@ -1159,16 +1163,16 @@ async function processOpStreaming(operationId) {
 			throw new Error(`Failed to fetch manifest: ${response.status}`);
 		}
 		const data = await response.arrayBuffer();
-		manifest = ProtobufDecoder.decodeManifest(data);
+		manifest = decoder.decodeManifest(data);
 		// Cache manifest
 		storageManager.saveManifest(operationId, data).catch(e => {
 			console.warn('Failed to cache manifest:', e);
 		});
 	}
 
-	// Initialize chunk manager
+	// Initialize chunk manager with format
 	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
-	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl);
+	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl, format);
 	isStreamingMode = true;
 
 	// Set up mission metadata
@@ -1383,8 +1387,12 @@ function startStreamingPlaybackLoop() {
 						if (state) {
 							entity.updateFromState(state);
 						} else if (entity._marker) {
-							// Entity doesn't exist in this frame
-							entity.removeMarker();
+							// Only remove marker if chunk is loaded (entity truly doesn't exist in this frame)
+							// If chunk is loading, keep the last known position to prevent flickering
+							if (chunkManager.isChunkLoaded(playbackFrame)) {
+								entity.removeMarker();
+							}
+							// If chunk is loading, do nothing - entity keeps its last position
 						}
 					} else {
 						entity.updateRender(playbackFrame);

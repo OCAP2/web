@@ -358,7 +358,13 @@ func (h *Handler) GetOperationChunk(c echo.Context) error {
 	}
 	defer reader.Close()
 
-	return c.Stream(http.StatusOK, "application/x-protobuf", reader)
+	// Set content type based on format
+	contentType := "application/x-protobuf"
+	if format == "flatbuffers" {
+		contentType = "application/x-flatbuffers"
+	}
+
+	return c.Stream(http.StatusOK, contentType, reader)
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {

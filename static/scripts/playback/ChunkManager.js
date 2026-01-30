@@ -11,12 +11,14 @@ class ChunkManager {
      * @param {Object} manifest - The decoded manifest object
      * @param {StorageManager} storageManager - Storage backend
      * @param {string} baseUrl - Base URL for chunk fetching
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      */
-    constructor(missionId, manifest, storageManager, baseUrl) {
+    constructor(missionId, manifest, storageManager, baseUrl, format = 'protobuf') {
         this._missionId = missionId;
         this._manifest = manifest;
         this._storage = storageManager;
         this._baseUrl = baseUrl;
+        this._format = format;
 
         // Chunk cache with LRU eviction (max 3 in memory)
         this._maxChunksInMemory = 3;
@@ -125,19 +127,27 @@ class ChunkManager {
     }
 
     /**
-     * Decode protobuf chunk data
+     * Decode chunk data based on format
      * @param {ArrayBuffer} data
      * @returns {Promise<Object>}
      * @private
      */
     async _decodeChunk(data) {
-        // Uses the ProtobufDecoder (Task 15)
-        if (typeof ProtobufDecoder !== 'undefined') {
-            return ProtobufDecoder.decodeChunk(data);
+        if (this._format === 'flatbuffers') {
+            if (typeof FlatBuffersDecoder !== 'undefined') {
+                return FlatBuffersDecoder.decodeChunk(data);
+            }
+            console.warn('FlatBuffersDecoder not available');
+        } else {
+            // Default to protobuf
+            if (typeof ProtobufDecoder !== 'undefined') {
+                return ProtobufDecoder.decodeChunk(data);
+            }
+            console.warn('ProtobufDecoder not available');
         }
 
         // Fallback: return raw data if decoder not available
-        console.warn('ProtobufDecoder not available, returning raw data');
+        console.warn('No decoder available, returning raw data');
         return { raw: data };
     }
 
@@ -227,6 +237,26 @@ class ChunkManager {
         const frameIndexInChunk = frameNum - chunkStartFrame;
 
         return chunk.frames[frameIndexInChunk] || null;
+    }
+
+    /**
+     * Check if the chunk for a frame is currently loading
+     * @param {number} frameNum
+     * @returns {boolean}
+     */
+    isChunkLoading(frameNum) {
+        const chunkIndex = this.getChunkIndex(frameNum);
+        return this._loadingChunks.has(chunkIndex);
+    }
+
+    /**
+     * Check if the chunk for a frame is loaded
+     * @param {number} frameNum
+     * @returns {boolean}
+     */
+    isChunkLoaded(frameNum) {
+        const chunkIndex = this.getChunkIndex(frameNum);
+        return this._loadedChunks.has(chunkIndex);
     }
 
     /**

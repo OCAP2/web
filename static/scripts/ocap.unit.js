@@ -110,6 +110,40 @@ class Unit extends Entity {
 		}*/
 	}
 
+	/**
+	 * Update unit state from decoded EntityState (streaming mode)
+	 * @param {Object} state - Decoded EntityState from protobuf/flatbuffers
+	 */
+	updateFromState(state) {
+		// Call parent implementation for position, direction, alive
+		super.updateFromState(state);
+
+		if (!state) return;
+
+		// Handle unit-specific properties
+		this.setIsInVehicle(state.isInVehicle || false);
+
+		// Update name with player status
+		if (state.name) {
+			let displayName = state.name;
+			if (!state.isPlayer) {
+				displayName += ' [AI]';
+			}
+			if (this._name !== displayName) {
+				this._name = displayName;
+				if (this._marker && this._marker.getPopup()) {
+					this._marker.getPopup().setContent(displayName);
+				}
+				this.updateElementText();
+			}
+		}
+
+		// Update isPlayer if changed (for stats tracking)
+		if (state.isPlayer !== undefined) {
+			this.isPlayer = state.isPlayer;
+		}
+	}
+
 	get sideClass() { return this._sideClass }
 
 	// Check if unit fired on given frame
