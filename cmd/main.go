@@ -89,7 +89,7 @@ func runConvert(args []string) error {
 		return convertSingleFile(ctx, *inputFile, setting.Data, uint32(*chunkSize), *format)
 
 	case *all:
-		return convertAllPending(ctx, repo, setting, uint32(*chunkSize), *format)
+		return convertAll(ctx, repo, setting, uint32(*chunkSize), *format)
 
 	default:
 		fs.Usage()
@@ -149,18 +149,18 @@ func convertSingleFile(ctx context.Context, inputFile, dataDir string, chunkSize
 	return nil
 }
 
-func convertAllPending(ctx context.Context, repo *server.RepoOperation, setting server.Setting, chunkSize uint32, format string) error {
-	pending, err := repo.SelectPending(ctx, 1000)
+func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.Setting, chunkSize uint32, format string) error {
+	operations, err := repo.SelectAll(ctx)
 	if err != nil {
-		return fmt.Errorf("select pending: %w", err)
+		return fmt.Errorf("select operations: %w", err)
 	}
 
-	if len(pending) == 0 {
-		log.Println("No pending operations to convert")
+	if len(operations) == 0 {
+		log.Println("No operations to convert")
 		return nil
 	}
 
-	log.Printf("Found %d pending operations (format: %s)", len(pending), format)
+	log.Printf("Found %d operations to convert (format: %s)", len(operations), format)
 
 	worker := conversion.NewWorker(
 		&repoAdapter{repo},
@@ -171,7 +171,7 @@ func convertAllPending(ctx context.Context, repo *server.RepoOperation, setting 
 		},
 	)
 
-	for _, op := range pending {
+	for _, op := range operations {
 		log.Printf("Converting operation %d: %s", op.ID, op.Filename)
 		if err := worker.ConvertOne(ctx, op.ID, op.Filename); err != nil {
 			log.Printf("Error converting %s: %v", op.Filename, err)

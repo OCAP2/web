@@ -287,6 +287,20 @@ func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operati
 	return r.scan(ctx, rows)
 }
 
+// SelectAll returns all operations for conversion
+func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		 FROM operations
+		 ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scan(ctx, rows)
+}
+
 // UpdateConversionStatus updates the conversion status for an operation
 func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
 	_, err := r.db.ExecContext(ctx,
