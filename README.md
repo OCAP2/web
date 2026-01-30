@@ -130,15 +130,15 @@ data/
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `OCAP_SECRET` | Secret for authorizing record uploads |
-| `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website |
-| `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo |
-| `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size (default: 32px) |
-| `OCAP_CONVERSION_ENABLED` | Enable automatic conversion (`true`/`false`) |
-| `OCAP_CONVERSION_INTERVAL` | Conversion check interval (e.g. `"5m"`) |
-| `OCAP_CONVERSION_STORAGEENGINE` | Format: `"protobuf"` or `"flatbuffers"` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OCAP_SECRET` | Secret for authorizing record uploads | *required* |
+| `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
+| `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
+| `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
+| `OCAP_CONVERSION_ENABLED` | Enable automatic conversion | `false` |
+| `OCAP_CONVERSION_INTERVAL` | Conversion check interval | `5m` |
+| `OCAP_CONVERSION_STORAGEENGINE` | Format: `protobuf` or `flatbuffers` | `protobuf` |
 
 ### Volumes
 
