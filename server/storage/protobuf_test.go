@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/proto"
+	pb "github.com/OCAP2/web/schemas/protobuf"
 )
 
 func TestProtobufEngineBasics(t *testing.T) {

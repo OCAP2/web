@@ -11,7 +11,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/proto"
+	pb "github.com/OCAP2/web/schemas/protobuf"
 )
 
 func TestConverter_Convert(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	pb "github.com/OCAP2/web/proto"
+	pb "github.com/OCAP2/web/schemas/protobuf"
 	"github.com/OCAP2/web/server/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"

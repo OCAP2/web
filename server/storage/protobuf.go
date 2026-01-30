@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/proto"
+	pb "github.com/OCAP2/web/schemas/protobuf"
 )
 
 // ProtobufEngine reads chunked protobuf recordings

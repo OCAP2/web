@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	fb "github.com/OCAP2/web/ocap/fb"
-	pb "github.com/OCAP2/web/proto"
+	fb "github.com/OCAP2/web/schemas/flatbuffers/generated"
+	pb "github.com/OCAP2/web/schemas/protobuf"
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
