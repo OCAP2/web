@@ -1,16 +1,16 @@
 # IDE
 .idea
 
-# builds
-/ocap-webserver.exe
+# Build artifacts
 /ocap-webserver
+/ocap-webserver.exe
 
-# data
+# Runtime data
 data.db
 data/
 maps/
 static/data
 static/images/maps
 
-# logs
-ocap.log
+# Logs
+*.log

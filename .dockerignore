@@ -1,3 +1,26 @@
+# Git
+.git
+.gitignore
+
+# GitHub
 .github
-ocap-webserver.exe
-static/images/buildScripts
+
+# IDE
+.idea
+
+# Documentation
+docs/
+*.md
+
+# Build artifacts
+/ocap-webserver
+/ocap-webserver.exe
+
+# Runtime data
+data.db
+data/
+maps/
+*.log
+
+# Local config
+setting.json
