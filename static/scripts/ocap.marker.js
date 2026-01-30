@@ -65,24 +65,7 @@ class Marker {
 
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
-
-			// ! leaflet.pattern is broken, need another solution
-			// let brushPattern;
-			// if (["Cross", "Grid", "DiagGrid"].includes(brush)) {
-			// 	// brushPattern.addTo(systemMarkersLayerGroup);
-			// 	// brushPattern = new L.StripePattern({
-			// 	// 	color: this._color,
-			// 	// 	opacity: 0.8,
-			// 	// 	angle: 45,
-			// 	// 	weight: 1,
-			// 	// 	spaceWeight: 3,
-			// 	// 	spaceOpacity: 0.0
-			// 	// });
-			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
-			// } else if (["Horizontal", "Vertical", "FDiagonal", "BDiagonal"].includes(brush)) {
-			// 	brushPattern = new L.StripePattern({ renderer: L.svg() });
-			// }
-			// this._brushPattern = brushPattern;
+			this._brushPattern = null;
 			this._brushPatternOptions = null;
 			switch (brush) {
 				case "solid":
@@ -234,6 +217,11 @@ class Marker {
 					break;
 				default:
 					break;
+			}
+
+			// Create stripe pattern if brush options were set
+			if (this._brushPatternOptions) {
+				this._brushPattern = new L.StripePattern(this._brushPatternOptions);
 			}
 		} else {
 			this._shapeOptions = {
@@ -537,25 +525,22 @@ class Marker {
 		if (this._shape === "ELLIPSE") {
 			let rad = this._size[0] * 0.015 * window.multiplier;
 
-			// ! leaflet.pattern is broken, need another solution
-			// if (this._brushPattern) {
-				// L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
-				// this._brushPattern.addTo(map);
-				// marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
-				// L.Util.setOptions(marker, this._shapeOptions);
-			// } else {
-				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false/* , renderer: L.canvas() */ });
+			if (this._brushPattern) {
+				this._brushPattern.addTo(map);
+				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false, fillPattern: this._brushPattern });
 				L.Util.setOptions(marker, this._shapeOptions);
-			// }
+			} else {
+				marker = L.circle(latLng, { radius: rad, noClip: false, interactive: false });
+				L.Util.setOptions(marker, this._shapeOptions);
+			}
 			marker.addTo(systemMarkersLayerGroup);
 		} else if (this._shape === "RECTANGLE") {
 			if (this._brushPattern) {
-				L.Util.setOptions(this._brushPattern, this._brushPatternOptions);
 				this._brushPattern.addTo(map);
 				marker = L.polygon(latLng, { noClip: false, interactive: false, fillPattern: this._brushPattern });
 				L.Util.setOptions(marker, this._shapeOptions);
 			} else {
-				marker = L.polygon(latLng, { noClip: false, interactive: false/* , renderer: L.canvas() */ });
+				marker = L.polygon(latLng, { noClip: false, interactive: false });
 				L.Util.setOptions(marker, this._shapeOptions);
 			}
 
