@@ -3,6 +3,7 @@ package conversion
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -210,4 +211,247 @@ func TestWorker_MissingFile(t *testing.T) {
 
 	// Status should be set to converting before failure
 	assert.Equal(t, "converting", repo.status[1])
+}
+
+func TestDefaultConfig(t *testing.T) {
+	cfg := DefaultConfig()
+
+	assert.Equal(t, 5*time.Minute, cfg.Interval)
+	assert.Equal(t, 1, cfg.BatchSize)
+	assert.Equal(t, uint32(storage.DefaultChunkSize), cfg.ChunkSize)
+	assert.Empty(t, cfg.DataDir)
+	assert.Empty(t, cfg.StorageFormat)
+}
+
+func TestNewWorker_Defaults(t *testing.T) {
+	dir := t.TempDir()
+	repo := newMockRepo()
+
+	t.Run("applies default interval", func(t *testing.T) {
+		worker := NewWorker(repo, Config{
+			DataDir:  dir,
+			Interval: 0, // Zero should be replaced with default
+		})
+		assert.Equal(t, 5*time.Minute, worker.interval)
+	})
+
+	t.Run("applies default batch size", func(t *testing.T) {
+		worker := NewWorker(repo, Config{
+			DataDir:   dir,
+			BatchSize: 0, // Zero should be replaced with default
+		})
+		assert.Equal(t, 1, worker.batchSize)
+	})
+
+	t.Run("applies default storage format", func(t *testing.T) {
+		worker := NewWorker(repo, Config{
+			DataDir:       dir,
+			StorageFormat: "", // Empty should be replaced with default
+		})
+		assert.Equal(t, "protobuf", worker.storageFormat)
+	})
+
+	t.Run("respects custom values", func(t *testing.T) {
+		worker := NewWorker(repo, Config{
+			DataDir:       dir,
+			Interval:      10 * time.Minute,
+			BatchSize:     5,
+			StorageFormat: "flatbuffers",
+		})
+		assert.Equal(t, 10*time.Minute, worker.interval)
+		assert.Equal(t, 5, worker.batchSize)
+		assert.Equal(t, "flatbuffers", worker.storageFormat)
+	})
+}
+
+func TestTriggerConversion(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON data
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Trigger Test",
+		"captureDelay": 1,
+		"endFrame": 5,
+		"entities": [],
+		"events": [],
+		"times": []
+	}`
+
+	// Write gzipped JSON file
+	jsonPath := filepath.Join(dir, "trigger_mission.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newMockRepo()
+	worker := NewWorker(repo, Config{
+		DataDir:   dir,
+		ChunkSize: 10,
+	})
+
+	// TriggerConversion is async, so we need to wait for it
+	worker.TriggerConversion(1, "trigger_mission")
+
+	// Wait for async conversion to complete
+	timeout := time.After(5 * time.Second)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			t.Fatal("Timeout waiting for async conversion")
+		case <-ticker.C:
+			if status, ok := repo.status[1]; ok && status == "completed" {
+				// Conversion completed
+				assert.Equal(t, "protobuf", repo.format[1])
+				return
+			}
+		}
+	}
+}
+
+func TestTriggerConversion_Failure(t *testing.T) {
+	dir := t.TempDir()
+	repo := newMockRepo()
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	// Trigger conversion for non-existent file
+	worker.TriggerConversion(99, "nonexistent_file")
+
+	// Wait for async conversion to fail
+	timeout := time.After(2 * time.Second)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			t.Fatal("Timeout waiting for async conversion failure")
+		case <-ticker.C:
+			if status, ok := repo.status[99]; ok && status == "failed" {
+				// Conversion failed as expected
+				return
+			}
+		}
+	}
+}
+
+func TestWorker_FlatBuffersFormat(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON data
+	testData := `{
+		"worldName": "altis",
+		"missionName": "FlatBuffers Test",
+		"captureDelay": 1,
+		"endFrame": 5,
+		"entities": [
+			{
+				"id": 1,
+				"type": "unit",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 45, 1, 0, "Player1", 1]
+				],
+				"framesFired": [],
+				"name": "Player1",
+				"group": "Alpha",
+				"side": "WEST",
+				"isPlayer": 1
+			}
+		],
+		"events": [],
+		"times": []
+	}`
+
+	// Write gzipped JSON file
+	jsonPath := filepath.Join(dir, "fb_test.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newMockRepo()
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		ChunkSize:     10,
+		StorageFormat: "flatbuffers",
+	})
+
+	ctx := context.Background()
+	err = worker.ConvertOne(ctx, 1, "fb_test")
+	assert.NoError(t, err)
+
+	// Verify flatbuffers format was used
+	assert.Equal(t, "completed", repo.status[1])
+	assert.Equal(t, "flatbuffers", repo.format[1])
+
+	// Verify output files exist
+	outputDir := filepath.Join(dir, "fb_test")
+	_, err = os.Stat(filepath.Join(outputDir, "manifest.fb"))
+	assert.NoError(t, err)
+}
+
+func TestWorker_ContextCancellation(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON data for multiple operations
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Cancel Test",
+		"captureDelay": 1,
+		"endFrame": 5,
+		"entities": [],
+		"events": [],
+		"times": []
+	}`
+
+	// Write multiple gzipped JSON files
+	for i := 1; i <= 3; i++ {
+		jsonPath := filepath.Join(dir, fmt.Sprintf("cancel_%d.gz", i))
+		f, _ := os.Create(jsonPath)
+		gw := gzip.NewWriter(f)
+		gw.Write([]byte(testData))
+		gw.Close()
+		f.Close()
+	}
+
+	repo := newMockRepo()
+	repo.pending = []Operation{
+		{ID: 1, Filename: "cancel_1"},
+		{ID: 2, Filename: "cancel_2"},
+		{ID: 3, Filename: "cancel_3"},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir:   dir,
+		BatchSize: 10, // Allow all operations
+	})
+
+	// Create a cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	// processOnce should exit early due to cancelled context
+	worker.processOnce(ctx)
+
+	// Not all operations should be completed
+	completedCount := 0
+	for _, status := range repo.status {
+		if status == "completed" {
+			completedCount++
+		}
+	}
+	// At most 1 should complete (the one that started before cancel was checked)
+	assert.LessOrEqual(t, completedCount, 1)
 }

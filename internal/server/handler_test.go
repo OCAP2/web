@@ -1,19 +1,24 @@
 package server
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -515,4 +520,697 @@ func TestGetOperationChunk(t *testing.T) {
 	httpErr, ok = err.(*echo.HTTPError)
 	assert.True(t, ok)
 	assert.Equal(t, http.StatusNotFound, httpErr.Code)
+}
+
+func TestGetOperations(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store test operations
+	ops := []*Operation{
+		{
+			WorldName:        "altis",
+			MissionName:      "Mission Alpha",
+			MissionDuration:  3600,
+			Filename:         "mission_alpha",
+			Date:             "2026-01-15",
+			Tag:              "coop",
+			StorageFormat:    "json",
+			ConversionStatus: "completed",
+		},
+		{
+			WorldName:        "stratis",
+			MissionName:      "Mission Beta",
+			MissionDuration:  1800,
+			Filename:         "mission_beta",
+			Date:             "2026-01-20",
+			Tag:              "tvt",
+			StorageFormat:    "protobuf",
+			ConversionStatus: "completed",
+		},
+	}
+
+	for _, op := range ops {
+		err = repo.Store(ctx, op)
+		require.NoError(t, err)
+	}
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{},
+	}
+
+	t.Run("get all operations", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetOperations(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var result []Operation
+		err = json.Unmarshal(rec.Body.Bytes(), &result)
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+	})
+
+	t.Run("filter by name", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations?name=Alpha", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetOperations(c)
+		assert.NoError(t, err)
+
+		var result []Operation
+		err = json.Unmarshal(rec.Body.Bytes(), &result)
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Equal(t, "Mission Alpha", result[0].MissionName)
+	})
+
+	t.Run("filter by tag", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations?tag=tvt", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetOperations(c)
+		assert.NoError(t, err)
+
+		var result []Operation
+		err = json.Unmarshal(rec.Body.Bytes(), &result)
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Equal(t, "tvt", result[0].Tag)
+	})
+
+	t.Run("filter by date range", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations?newer=2026-01-18&older=2026-01-25", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetOperations(c)
+		assert.NoError(t, err)
+
+		var result []Operation
+		err = json.Unmarshal(rec.Body.Bytes(), &result)
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Equal(t, "Mission Beta", result[0].MissionName)
+	})
+}
+
+func TestGetCustomize(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{
+			Customize: Customize{
+				WebsiteURL:       "https://example.com",
+				WebsiteLogo:      "/logo.png",
+				WebsiteLogoSize:  "64px",
+				DisableKillCount: true,
+			},
+		},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/customize", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.GetCustomize(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result Customize
+	err = json.Unmarshal(rec.Body.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "https://example.com", result.WebsiteURL)
+	assert.Equal(t, "/logo.png", result.WebsiteLogo)
+	assert.Equal(t, "64px", result.WebsiteLogoSize)
+	assert.True(t, result.DisableKillCount)
+}
+
+func TestGetVersion(t *testing.T) {
+	// Set build variables
+	originalCommit := BuildCommit
+	originalDate := BuildDate
+	BuildCommit = "abc123"
+	BuildDate = "2026-01-30"
+	defer func() {
+		BuildCommit = originalCommit
+		BuildDate = originalDate
+	}()
+
+	hdlr := Handler{}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/version", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.GetVersion(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result struct {
+		BuildCommit string
+		BuildDate   string
+	}
+	err = json.Unmarshal(rec.Body.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "abc123", result.BuildCommit)
+	assert.Equal(t, "2026-01-30", result.BuildDate)
+}
+
+func TestStoreOperation(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	t.Run("successful upload", func(t *testing.T) {
+		// Create multipart form
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		writer.WriteField("secret", "test-secret")
+		writer.WriteField("worldName", "altis")
+		writer.WriteField("missionName", "Test Mission")
+		writer.WriteField("missionDuration", "3600")
+		writer.WriteField("filename", "test_upload")
+		writer.WriteField("tag", "coop")
+
+		// Create file part
+		fileWriter, err := writer.CreateFormFile("file", "test_upload.gz")
+		require.NoError(t, err)
+
+		// Write gzipped JSON data
+		gw := gzip.NewWriter(fileWriter)
+		gw.Write([]byte(`{"test": "data"}`))
+		gw.Close()
+
+		writer.Close()
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err = hdlr.StoreOperation(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Verify file was created
+		_, err = os.Stat(filepath.Join(dataDir, "test_upload.gz"))
+		assert.NoError(t, err)
+	})
+
+	t.Run("wrong secret", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		writer.WriteField("secret", "wrong-secret")
+		writer.Close()
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.StoreOperation(c)
+		assert.Equal(t, echo.ErrForbidden, err)
+	})
+
+	t.Run("invalid duration", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		writer.WriteField("secret", "test-secret")
+		writer.WriteField("missionDuration", "not-a-number")
+		writer.Close()
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.StoreOperation(c)
+		assert.Error(t, err)
+	})
+}
+
+func TestGetCapture(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	// Create test gzipped file
+	testData := `{"test": "capture data"}`
+	testPath := filepath.Join(dataDir, "test_capture.gz")
+	err = writeGzipped(testPath, []byte(testData))
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Data: dataDir},
+	}
+
+	t.Run("get existing capture", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/data/test_capture", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("test_capture")
+
+		err := hdlr.GetCapture(c)
+		assert.NoError(t, err)
+		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+	})
+
+	t.Run("get nonexistent capture", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/data/nonexistent", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("nonexistent")
+
+		err := hdlr.GetCapture(c)
+		// File not found returns error
+		assert.Error(t, err)
+	})
+}
+
+func TestGetCaptureFile(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	// Create test gzipped file
+	testPath := filepath.Join(dataDir, "download_test.gz")
+	err = writeGzipped(testPath, []byte(`{"download": "test"}`))
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/file/download_test", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("name")
+	c.SetParamValues("download_test")
+
+	err = hdlr.GetCaptureFile(c)
+	assert.NoError(t, err)
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "download_test.gz")
+}
+
+func TestGetMapTitle(t *testing.T) {
+	dir := t.TempDir()
+	mapsDir := filepath.Join(dir, "maps")
+	err := os.MkdirAll(filepath.Join(mapsDir, "altis"), 0755)
+	require.NoError(t, err)
+
+	// Create test tile
+	tilePath := filepath.Join(mapsDir, "altis", "0_0.png")
+	err = os.WriteFile(tilePath, []byte("fake png data"), 0644)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Maps: mapsDir},
+	}
+
+	t.Run("get existing tile", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/maps/altis/0_0.png", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("altis/0_0.png")
+
+		err := hdlr.GetMapTitle(c)
+		assert.NoError(t, err)
+	})
+
+	t.Run("path traversal blocked", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/maps/../../../etc/passwd", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("../../../etc/passwd")
+
+		err := hdlr.GetMapTitle(c)
+		assert.Error(t, err)
+	})
+}
+
+func TestGetStatic(t *testing.T) {
+	dir := t.TempDir()
+	staticDir := filepath.Join(dir, "static")
+	err := os.MkdirAll(staticDir, 0755)
+	require.NoError(t, err)
+
+	// Create test static file
+	indexPath := filepath.Join(staticDir, "index.html")
+	err = os.WriteFile(indexPath, []byte("<html>test</html>"), 0644)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Static: staticDir},
+	}
+
+	t.Run("get static file", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("index.html")
+
+		err := hdlr.GetStatic(c)
+		assert.NoError(t, err)
+	})
+
+	t.Run("path traversal blocked", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/../../../etc/passwd", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("../../../etc/passwd")
+
+		err := hdlr.GetStatic(c)
+		assert.Error(t, err)
+	})
+}
+
+func TestCacheControl(t *testing.T) {
+	hdlr := Handler{}
+
+	t.Run("with duration", func(t *testing.T) {
+		mw := hdlr.cacheControl(CacheDuration)
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := mw(func(c echo.Context) error {
+			return c.String(http.StatusOK, "test")
+		})
+
+		err := handler(c)
+		assert.NoError(t, err)
+		assert.Equal(t, "max-age=604800", rec.Header().Get("Cache-Control"))
+	})
+
+	t.Run("no cache", func(t *testing.T) {
+		mw := hdlr.cacheControl(0)
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := mw(func(c echo.Context) error {
+			return c.String(http.StatusOK, "test")
+		})
+
+		err := handler(c)
+		assert.NoError(t, err)
+		assert.Equal(t, "no-cache", rec.Header().Get("Cache-Control"))
+	})
+
+	t.Run("short duration treated as no cache", func(t *testing.T) {
+		mw := hdlr.cacheControl(500 * time.Millisecond)
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := mw(func(c echo.Context) error {
+			return c.String(http.StatusOK, "test")
+		})
+
+		err := handler(c)
+		assert.NoError(t, err)
+		assert.Equal(t, "no-cache", rec.Header().Get("Cache-Control"))
+	})
+}
+
+func TestErrorHandler(t *testing.T) {
+	hdlr := Handler{}
+
+	t.Run("handles ErrNotFound", func(t *testing.T) {
+		mw := hdlr.errorHandler
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := mw(func(c echo.Context) error {
+			return ErrNotFound
+		})
+
+		err := handler(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("passes through other errors", func(t *testing.T) {
+		mw := hdlr.errorHandler
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		expectedErr := echo.NewHTTPError(http.StatusBadRequest, "bad request")
+		handler := mw(func(c echo.Context) error {
+			return expectedErr
+		})
+
+		err := handler(c)
+		assert.Equal(t, expectedErr, err)
+	})
+
+	t.Run("nil error passes through", func(t *testing.T) {
+		mw := hdlr.errorHandler
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := mw(func(c echo.Context) error {
+			return c.String(http.StatusOK, "success")
+		})
+
+		err := handler(c)
+		assert.NoError(t, err)
+	})
+}
+
+func TestWithConversionTrigger(t *testing.T) {
+	trigger := &mockConversionTrigger{}
+
+	opt := WithConversionTrigger(trigger)
+
+	hdlr := &Handler{}
+	opt(hdlr)
+
+	assert.Equal(t, trigger, hdlr.conversionTrigger)
+}
+
+// mockConversionTrigger implements ConversionTrigger for testing
+type mockConversionTrigger struct {
+	triggered bool
+	id        int64
+	filename  string
+}
+
+func (m *mockConversionTrigger) TriggerConversion(id int64, filename string) {
+	m.triggered = true
+	m.id = id
+	m.filename = filename
+}
+
+func TestStoreOperationWithConversionTrigger(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	trigger := &mockConversionTrigger{}
+
+	hdlr := Handler{
+		repoOperation:     repo,
+		conversionTrigger: trigger,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	// Create multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Trigger Test")
+	writer.WriteField("missionDuration", "3600")
+	writer.WriteField("filename", "trigger_test")
+	writer.WriteField("tag", "coop")
+
+	fileWriter, _ := writer.CreateFormFile("file", "trigger_test.gz")
+	gw := gzip.NewWriter(fileWriter)
+	gw.Write([]byte(`{"test": "trigger"}`))
+	gw.Close()
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	assert.NoError(t, err)
+
+	// Verify trigger was called
+	assert.True(t, trigger.triggered)
+	assert.Equal(t, "trigger_test", trigger.filename)
+}
+
+func TestNewHandler(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	markerDir := filepath.Join(dir, "markers")
+	ammoDir := filepath.Join(dir, "ammo")
+
+	for _, d := range []string{dataDir, markerDir, ammoDir} {
+		err := os.MkdirAll(d, 0755)
+		require.NoError(t, err)
+	}
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+
+	repoAmmo, err := NewRepoAmmo(ammoDir)
+	require.NoError(t, err)
+
+	setting := Setting{
+		Listen:    "127.0.0.1:5000",
+		PrefixURL: "/aar/",
+		Secret:    "test-secret",
+		Data:      dataDir,
+		Markers:   markerDir,
+		Ammo:      ammoDir,
+	}
+
+	e := echo.New()
+
+	// Should not panic
+	NewHandler(e, repo, repoMarker, repoAmmo, setting)
+
+	// Verify routes are registered
+	routes := e.Routes()
+	assert.NotEmpty(t, routes)
+
+	// Check for expected routes
+	routePaths := make([]string, len(routes))
+	for i, r := range routes {
+		routePaths[i] = r.Path
+	}
+	assert.Contains(t, routePaths, "/aar/api/v1/operations")
+	assert.Contains(t, routePaths, "/aar/api/v1/operations/add")
+	assert.Contains(t, routePaths, "/aar/api/version")
+}
+
+func TestNewHandlerWithOptions(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	markerDir := filepath.Join(dir, "markers")
+	ammoDir := filepath.Join(dir, "ammo")
+
+	for _, d := range []string{dataDir, markerDir, ammoDir} {
+		os.MkdirAll(d, 0755)
+	}
+
+	repo, _ := NewRepoOperation(pathDB)
+	defer repo.db.Close()
+	repoMarker, _ := NewRepoMarker(markerDir)
+	repoAmmo, _ := NewRepoAmmo(ammoDir)
+
+	setting := Setting{
+		Data:    dataDir,
+		Markers: markerDir,
+		Ammo:    ammoDir,
+	}
+
+	trigger := &mockConversionTrigger{}
+	e := echo.New()
+
+	// Should apply options
+	NewHandler(e, repo, repoMarker, repoAmmo, setting, WithConversionTrigger(trigger))
+
+	// Routes should still be registered
+	assert.NotEmpty(t, e.Routes())
+}
+
+// Helper to read gzipped response body
+func readGzippedBody(t *testing.T, body io.Reader) string {
+	t.Helper()
+	gr, err := gzip.NewReader(body)
+	require.NoError(t, err)
+	defer gr.Close()
+
+	data, err := io.ReadAll(gr)
+	require.NoError(t, err)
+	return string(data)
 }
