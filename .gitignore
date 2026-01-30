@@ -1,5 +1,6 @@
 # IDE
 .idea
+.vscode
 
 # Build artifacts
 /ocap-webserver
@@ -11,6 +12,9 @@ data/
 maps/
 static/data
 static/images/maps
+/data/*.json.gz
+/data/*.json
+/maps/*/
 
 # Logs
 *.log

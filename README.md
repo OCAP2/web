@@ -168,16 +168,19 @@ docker run --name ocap-web -d \
 This Project is based on [Golang](https://golang.org/dl/)
 
 ### Windows
+
 ```bash
 go build -o ocap-webserver.exe ./cmd
 ```
 
 ### Linux
+
 ```bash
 go build -o ocap-webserver ./cmd
 ```
 
 ### Docker
+
 ```bash
 docker build -t ocap-webserver .
 ```

@@ -113,14 +113,14 @@ let _localizable = {
 	},
 	"nickname": {
 		"ru": "Никнеймы игроков и название техники ",
-		"en": "Player nicknames and vehicle names",
-		"de": "Spieler- und Fahrzeugnamen",
+		"en": "Player, vehicle, and projectile tags",
+		"de": "Spieler-, Fahrzeug und Projektilnamen",
 		"cs": "Hráčské přezdívky a názvy vozidel",
 		"it": "Nome giocatori e veicoli"
 	},
 	"markers": {
 		"ru": "Маркеры",
-		"en": "Markers",
+		"en": "Marker names",
 		"de": "Markierungen",
 		"cs": "Značení",
 		"it": "Indicatori"
@@ -260,15 +260,15 @@ let _localizable = {
 	},
 	"time_mission": {
 		"ru": "Время миссии",
-		"en": "Mission Time Elapsed",
+		"en": "In-Game World Time",
 		"de": "Verstrichene Missionszeit",
 		"cs": "Čas mise",
 		"it": "Orario missione"
 	},
 	"time_system": {
 		"ru": "Системное время",
-		"en": "System time",
-		"de": "Systemzeit",
+		"en": "Server Time UTC",
+		"de": "Systemzeit (UTC)",
 		"cs": "Čas systému",
 		"it": "Orario sistema"
 	},
@@ -292,6 +292,20 @@ let _localizable = {
 		"de": " hat den Hack unterbrochen",
 		"cs": " přerušil hackování",
 		"it": " ha interrotto l'hackeraggio"
+	},
+	"version-extension": {
+		"ru": "Pасширения bерсия : ",
+		"en": "Extension version: ",
+		"de": "Erweiterungs Version: ",
+		"cs": "Verze rozšíření: ",
+		"it": "Versione estensione: "
+	},
+	"version-addon": {
+		"ru": "Aддона bерсия: ",
+		"en": "Addon version: ",
+		"de": "Addon Version: ",
+		"cs": "Verze addonu: ",
+		"it": "Versione addon: "
 	}
 };
 let localizableElement = [];
@@ -316,6 +330,8 @@ function switchLocalizable(lang) {
 		if (item.length != 0)
 			localizable(item[0], item[1], item[2], item[3]);
 	});
+	document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
+	document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
 }
 function deleteLocalizable(elem) {
 	var id = elem.dataset.lbId;
