@@ -4,10 +4,14 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
@@ -347,5 +351,391 @@ func writeTestGzippedJSON(t *testing.T, path string, data interface{}) {
 	defer gw.Close()
 
 	err = json.NewEncoder(gw).Encode(data)
+	require.NoError(t, err)
+}
+
+// TestIntegration_MarkerServing tests full HTTP flow for marker requests
+func TestIntegration_MarkerServing(t *testing.T) {
+	dir := t.TempDir()
+	markerDir := filepath.Join(dir, "markers")
+	err := os.MkdirAll(markerDir, 0755)
+	require.NoError(t, err)
+
+	// Create SVG marker
+	svgContent := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="40" fill="#{{.}}"/>
+</svg>`
+	err = os.WriteFile(filepath.Join(markerDir, "man.svg"), []byte(svgContent), 0644)
+	require.NoError(t, err)
+
+	// Create PNG marker as fallback "unknown"
+	unknownPath := filepath.Join(markerDir, "unknown.png")
+	createIntegrationTestPNG(t, unknownPath)
+
+	// Create marker repository
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+
+	// Create handler
+	hdlr := Handler{
+		repoMarker: repoMarker,
+		setting:    Setting{Markers: markerDir},
+	}
+
+	t.Run("GET SVG marker with named color", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/blufor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("man", "blufor")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/svg+xml", rec.Header().Get("Content-Type"))
+
+		// Verify color substitution (blufor = 004c99)
+		body := rec.Body.String()
+		assert.Contains(t, body, "004c99ff")
+	})
+
+	t.Run("GET SVG marker with hex color", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/ff0000", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("man", "ff0000")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		body := rec.Body.String()
+		assert.Contains(t, body, "ff0000ff")
+	})
+
+	t.Run("GET PNG marker (unknown fallback)", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/unknown/dead", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("unknown", "dead")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+
+		// Verify it's valid PNG data
+		img, err := png.Decode(rec.Body)
+		assert.NoError(t, err)
+		assert.NotNil(t, img)
+	})
+
+	t.Run("GET nonexistent marker falls back to unknown", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/nonexistent/blufor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("nonexistent", "blufor")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		// Falls back to unknown.png
+		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+	})
+
+	t.Run("GET marker with invalid color", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/invalidcolor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("man", "invalidcolor")
+
+		err := hdlr.GetMarker(c)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrNotFound)
+	})
+
+	t.Run("GET marker with color extension stripped", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/blufor.png", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("man", "blufor.png")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		// Should work after stripping .png
+	})
+
+	t.Run("GET marker case insensitive", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/MAN/BLUFOR", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("MAN", "BLUFOR")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+// TestIntegration_AmmoServing tests full HTTP flow for ammo icon requests
+func TestIntegration_AmmoServing(t *testing.T) {
+	dir := t.TempDir()
+	ammoDir := filepath.Join(dir, "ammo")
+	err := os.MkdirAll(ammoDir, 0755)
+	require.NoError(t, err)
+
+	// Create subdirectory for mod-specific ammo
+	aceDir := filepath.Join(ammoDir, "ace")
+	err = os.MkdirAll(aceDir, 0755)
+	require.NoError(t, err)
+
+	// Create test ammo icons
+	createIntegrationTestPNG(t, filepath.Join(ammoDir, "grenade.png"))
+	createIntegrationTestPNG(t, filepath.Join(aceDir, "ace_m84_x_ca.png"))
+
+	// Create ammo repository
+	repoAmmo, err := NewRepoAmmo(ammoDir)
+	require.NoError(t, err)
+
+	// Create handler
+	hdlr := Handler{
+		repoAmmo: repoAmmo,
+		setting:  Setting{Ammo: ammoDir},
+	}
+
+	t.Run("GET ammo icon", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("grenade")
+
+		err := hdlr.GetAmmo(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GET ammo from subdirectory", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/ace_m84_x_ca", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("ace_m84_x_ca")
+
+		err := hdlr.GetAmmo(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GET ammo case insensitive", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/GRENADE", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("GRENADE")
+
+		err := hdlr.GetAmmo(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GET ammo with extension stripped", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade.png", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("grenade.png")
+
+		err := hdlr.GetAmmo(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GET ammo with .paa.png format", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade.paa.png", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("grenade.paa.png")
+
+		err := hdlr.GetAmmo(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GET nonexistent ammo", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/nonexistent", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name")
+		c.SetParamValues("nonexistent")
+
+		err := hdlr.GetAmmo(c)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrNotFound)
+	})
+}
+
+// TestIntegration_MarkerColorVariants tests all named color variants
+func TestIntegration_MarkerColorVariants(t *testing.T) {
+	dir := t.TempDir()
+	markerDir := filepath.Join(dir, "markers")
+	err := os.MkdirAll(markerDir, 0755)
+	require.NoError(t, err)
+
+	// Create SVG marker
+	svgContent := `<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#{{.}}"/></svg>`
+	err = os.WriteFile(filepath.Join(markerDir, "test.svg"), []byte(svgContent), 0644)
+	require.NoError(t, err)
+
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		repoMarker: repoMarker,
+		setting:    Setting{Markers: markerDir},
+	}
+
+	// All named colors that should work
+	colors := []string{
+		"follow", "hit", "dead", "default", "black", "grey", "red", "brown",
+		"orange", "yellow", "khaki", "green", "blue", "pink", "white", "unknown",
+		"blufor", "west", "opfor", "east", "ind", "independent", "guer",
+		"civ", "civilian", "unconscious",
+	}
+
+	for _, colorName := range colors {
+		t.Run("color_"+colorName, func(t *testing.T) {
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/images/markers/test/"+colorName, nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("name", "color")
+			c.SetParamValues("test", colorName)
+
+			err := hdlr.GetMarker(c)
+			assert.NoError(t, err, "color %s should be valid", colorName)
+			assert.Equal(t, http.StatusOK, rec.Code)
+		})
+	}
+}
+
+// TestIntegration_FullMarkerFlow tests complete marker workflow with real assets structure
+func TestIntegration_FullMarkerFlow(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create directory structure similar to production
+	markerDir := filepath.Join(dir, "assets", "markers")
+	a3Dir := filepath.Join(markerDir, "a3")
+	modDir := filepath.Join(markerDir, "custom_mod")
+
+	for _, d := range []string{a3Dir, modDir} {
+		err := os.MkdirAll(d, 0755)
+		require.NoError(t, err)
+	}
+
+	// Create markers in different directories
+	svgContent := `<svg><circle fill="#{{.}}"/></svg>`
+	err := os.WriteFile(filepath.Join(a3Dir, "infantry.svg"), []byte(svgContent), 0644)
+	require.NoError(t, err)
+
+	createIntegrationTestPNG(t, filepath.Join(modDir, "special_unit.png"))
+	createIntegrationTestPNG(t, filepath.Join(markerDir, "unknown.png"))
+
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		repoMarker: repoMarker,
+		setting:    Setting{Markers: markerDir},
+	}
+
+	t.Run("access marker from subdirectory", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/infantry/blufor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("infantry", "blufor")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/svg+xml", rec.Header().Get("Content-Type"))
+	})
+
+	t.Run("access mod marker", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/special_unit/opfor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("special_unit", "opfor")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+	})
+
+	t.Run("fallback to unknown for missing marker", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/images/markers/does_not_exist/blufor", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("name", "color")
+		c.SetParamValues("does_not_exist", "blufor")
+
+		err := hdlr.GetMarker(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		// Falls back to unknown.png at root level
+		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+	})
+}
+
+// createIntegrationTestPNG creates a valid 4x4 PNG file for integration tests
+func createIntegrationTestPNG(t *testing.T, path string) {
+	t.Helper()
+
+	// Ensure parent directory exists
+	dir := filepath.Dir(path)
+	if !strings.HasSuffix(dir, string(filepath.Separator)) {
+		err := os.MkdirAll(dir, 0755)
+		require.NoError(t, err)
+	}
+
+	img := image.NewNRGBA(image.Rect(0, 0, 4, 4))
+	for x := 0; x < 4; x++ {
+		for y := 0; y < 4; y++ {
+			img.Set(x, y, color.NRGBA{255, 255, 255, 128})
+		}
+	}
+
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+
+	err = png.Encode(f, img)
 	require.NoError(t, err)
 }
