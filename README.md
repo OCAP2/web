@@ -96,17 +96,17 @@ Traditional JSON recordings load entirely into browser memory, which causes cras
 flowchart TD
     A[User selects recording] --> B{Check storageFormat}
 
-    B -->|"protobuf" or "flatbuffers"| C[Streaming Mode]
-    B -->|"json" or empty| D[Legacy Mode]
+    B -->|protobuf / flatbuffers| C[Streaming Mode]
+    B -->|json or empty| D[Legacy Mode]
 
-    subgraph Legacy["Legacy Mode (small recordings)"]
+    subgraph Legacy[Legacy Mode - small recordings]
         D --> D1[Download entire JSON.gz]
         D1 --> D2[Decompress in browser]
         D2 --> D3[Load all data into memory]
         D3 --> D4[Start playback]
     end
 
-    subgraph Streaming["Streaming Mode (large recordings)"]
+    subgraph Streaming[Streaming Mode - large recordings]
         C --> C1[Fetch manifest]
         C1 --> C2[Initialize entities from manifest]
         C2 --> C3[Start playback]
@@ -143,9 +143,9 @@ flowchart TD
     C -->|Yes| F[Mark as pending]
     F --> G[Background worker picks up]
 
-    subgraph Conversion["Conversion Process"]
+    subgraph Conversion[Conversion Process]
         G --> H[Read JSON.gz]
-        H --> I[Parse entities & frames]
+        H --> I[Parse entities and frames]
         I --> J[Split into chunks]
         J --> K{Target format?}
         K -->|Protobuf| L[Encode as .pb files]
@@ -158,9 +158,9 @@ flowchart TD
     O --> P[storageFormat = protobuf/flatbuffers]
     P --> Q[Streaming playback available]
 
-    subgraph Manual["Manual Conversion (CLI)"]
-        R[Run: convert --input file.gz] --> H
-        S[Run: convert --all] --> G
+    subgraph Manual[Manual Conversion via CLI]
+        R[convert --input file.gz] --> H
+        S[convert --all] --> G
     end
 ```
 
