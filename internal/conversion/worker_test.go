@@ -455,3 +455,235 @@ func TestWorker_ContextCancellation(t *testing.T) {
 	// At most 1 should complete (the one that started before cancel was checked)
 	assert.LessOrEqual(t, completedCount, 1)
 }
+
+// errorMockRepo is a mock that can return errors for testing error paths
+type errorMockRepo struct {
+	pending               []Operation
+	status                map[int64]string
+	format                map[int64]string
+	duration              map[int64]float64
+	selectPendingErr      error
+	updateStatusErr       error
+	updateFormatErr       error
+	updateDurationErr     error
+	failStatusUpdateOnID  int64 // only fail for this ID
+	failStatusUpdateAfter string // only fail when setting this status
+}
+
+func newErrorMockRepo() *errorMockRepo {
+	return &errorMockRepo{
+		pending:  []Operation{},
+		status:   make(map[int64]string),
+		format:   make(map[int64]string),
+		duration: make(map[int64]float64),
+	}
+}
+
+func (m *errorMockRepo) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+	if m.selectPendingErr != nil {
+		return nil, m.selectPendingErr
+	}
+	if len(m.pending) <= limit {
+		return m.pending, nil
+	}
+	return m.pending[:limit], nil
+}
+
+func (m *errorMockRepo) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
+	if m.updateStatusErr != nil {
+		if m.failStatusUpdateOnID == 0 || m.failStatusUpdateOnID == id {
+			if m.failStatusUpdateAfter == "" || m.failStatusUpdateAfter == status {
+				return m.updateStatusErr
+			}
+		}
+	}
+	m.status[id] = status
+	return nil
+}
+
+func (m *errorMockRepo) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
+	if m.updateFormatErr != nil {
+		return m.updateFormatErr
+	}
+	m.format[id] = format
+	return nil
+}
+
+func (m *errorMockRepo) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
+	if m.updateDurationErr != nil {
+		return m.updateDurationErr
+	}
+	m.duration[id] = duration
+	return nil
+}
+
+func TestProcessOnce_SelectPendingError(t *testing.T) {
+	dir := t.TempDir()
+	repo := newErrorMockRepo()
+	repo.selectPendingErr = fmt.Errorf("database connection failed")
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	// Should not panic, just log error and return
+	worker.processOnce(ctx)
+
+	// No operations should be processed
+	assert.Empty(t, repo.status)
+}
+
+func TestProcessOnce_ConversionFailureStatusUpdateError(t *testing.T) {
+	dir := t.TempDir()
+	repo := newErrorMockRepo()
+	repo.pending = []Operation{
+		{ID: 1, Filename: "nonexistent"},
+	}
+	// Fail the "failed" status update after conversion error
+	repo.updateStatusErr = fmt.Errorf("status update failed")
+	repo.failStatusUpdateAfter = "failed"
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	// Should not panic, conversion fails and then status update fails
+	worker.processOnce(ctx)
+
+	// Status for "converting" should be set (before the failure)
+	assert.Equal(t, "converting", repo.status[1])
+}
+
+func TestConvertOperation_UpdateConvertingStatusError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON file
+	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
+	jsonPath := filepath.Join(dir, "test.gz")
+	f, _ := os.Create(jsonPath)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newErrorMockRepo()
+	repo.updateStatusErr = fmt.Errorf("cannot update to converting")
+	repo.failStatusUpdateAfter = "converting"
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	err := worker.ConvertOne(ctx, 1, "test")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "update status to converting")
+}
+
+func TestConvertOperation_UpdateStorageFormatError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON file
+	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
+	jsonPath := filepath.Join(dir, "test.gz")
+	f, _ := os.Create(jsonPath)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newErrorMockRepo()
+	repo.updateFormatErr = fmt.Errorf("cannot update format")
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	err := worker.ConvertOne(ctx, 1, "test")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "update storage format")
+}
+
+func TestConvertOperation_UpdateCompletedStatusError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON file
+	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
+	jsonPath := filepath.Join(dir, "test.gz")
+	f, _ := os.Create(jsonPath)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newErrorMockRepo()
+	repo.updateStatusErr = fmt.Errorf("cannot update to completed")
+	repo.failStatusUpdateAfter = "completed"
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	err := worker.ConvertOne(ctx, 1, "test")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "update status to completed")
+}
+
+func TestConvertOperation_UpdateDurationError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON file
+	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
+	jsonPath := filepath.Join(dir, "test.gz")
+	f, _ := os.Create(jsonPath)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newErrorMockRepo()
+	repo.updateDurationErr = fmt.Errorf("cannot update duration")
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	// Should complete successfully despite duration update failure (it's just a warning)
+	err := worker.ConvertOne(ctx, 1, "test")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "completed", repo.status[1])
+}
+
+func TestConvertOperation_InvalidStorageFormat(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON file
+	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
+	jsonPath := filepath.Join(dir, "test.gz")
+	f, _ := os.Create(jsonPath)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	repo := newErrorMockRepo()
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "invalid_format",
+	})
+
+	ctx := context.Background()
+	err := worker.ConvertOne(ctx, 1, "test")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get storage engine")
+}

@@ -1214,3 +1214,523 @@ func readGzippedBody(t *testing.T, body io.Reader) string {
 	require.NoError(t, err)
 	return string(data)
 }
+
+func TestGetOperationFormat_EmptyStorageFormat(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with empty StorageFormat (should default to "json")
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Empty Format Test",
+		MissionDuration:  3600,
+		Filename:         "empty_format_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "", // Empty - should trigger default to json
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationFormat(c)
+	assert.NoError(t, err)
+
+	var result FormatInfo
+	err = json.Unmarshal(rec.Body.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "json", result.Format)
+}
+
+func TestGetOperationFormat_UnknownFormat(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with unknown storage format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Unknown Format Test",
+		MissionDuration:  3600,
+		Filename:         "unknown_format_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "unknown_format", // Unknown - should fallback to json
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine as fallback
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationFormat(c)
+	assert.NoError(t, err)
+
+	var result FormatInfo
+	err = json.Unmarshal(rec.Body.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "json", result.Format) // Should fallback to json
+}
+
+func TestGetOperationManifest_FlatBuffers(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with flatbuffers format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "FlatBuffers Manifest Test",
+		MissionDuration:  3600,
+		Filename:         "fb_manifest_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "flatbuffers",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Create flatbuffers manifest file
+	missionDir := filepath.Join(dataDir, "fb_manifest_test")
+	err = os.MkdirAll(missionDir, 0755)
+	require.NoError(t, err)
+
+	// Write a simple test file (just raw bytes for testing content type)
+	manifestData := []byte("flatbuffers manifest data")
+	err = os.WriteFile(filepath.Join(missionDir, "manifest.fb"), manifestData, 0644)
+	require.NoError(t, err)
+
+	// Register FlatBuffers engine
+	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationManifest(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "application/x-flatbuffers", rec.Header().Get("Content-Type"))
+}
+
+func TestGetOperationManifest_JSONFormat(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with json format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "JSON Manifest Test",
+		MissionDuration:  3600,
+		Filename:         "json_manifest_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "json",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Create JSON recording file
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "JSON Manifest Test",
+		"endFrame": 100,
+		"captureDelay": 1,
+		"entities": [],
+		"events": []
+	}`
+	err = writeGzipped(filepath.Join(dataDir, "json_manifest_test.gz"), []byte(testJSON))
+	require.NoError(t, err)
+
+	// Register JSON engine
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationManifest(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "application/json")
+
+	// Verify it returns manifest data
+	var manifest storage.Manifest
+	err = json.Unmarshal(rec.Body.Bytes(), &manifest)
+	assert.NoError(t, err)
+	assert.Equal(t, "altis", manifest.WorldName)
+}
+
+func TestGetOperationChunk_FlatBuffers(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with flatbuffers format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "FlatBuffers Chunk Test",
+		MissionDuration:  3600,
+		Filename:         "fb_chunk_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "flatbuffers",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Create flatbuffers chunk file
+	missionDir := filepath.Join(dataDir, "fb_chunk_test")
+	chunksDir := filepath.Join(missionDir, "chunks")
+	err = os.MkdirAll(chunksDir, 0755)
+	require.NoError(t, err)
+
+	// Write test chunk file
+	chunkData := []byte("flatbuffers chunk data")
+	err = os.WriteFile(filepath.Join(chunksDir, "0000.fb"), chunkData, 0644)
+	require.NoError(t, err)
+
+	// Register FlatBuffers engine
+	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id", "index")
+	c.SetParamValues("1", "0")
+
+	err = hdlr.GetOperationChunk(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "application/x-flatbuffers", rec.Header().Get("Content-Type"))
+}
+
+func TestGetOperationChunk_EmptyStorageFormat(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with empty storage format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Empty Format Chunk Test",
+		MissionDuration:  3600,
+		Filename:         "empty_format_chunk",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "", // Empty - should default to json
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id", "index")
+	c.SetParamValues("1", "0")
+
+	// JSON engine doesn't support chunks, should return error
+	err = hdlr.GetOperationChunk(c)
+	assert.Error(t, err)
+}
+
+func TestGetMarker_WithExtension(t *testing.T) {
+	dir := t.TempDir()
+	markerDir := filepath.Join(dir, "markers")
+	err := os.MkdirAll(markerDir, 0755)
+	require.NoError(t, err)
+
+	// Create test SVG marker
+	svgContent := `<svg xmlns="http://www.w3.org/2000/svg"><circle fill="{{.}}" r="10"/></svg>`
+	err = os.WriteFile(filepath.Join(markerDir, "test_marker.svg"), []byte(svgContent), 0644)
+	require.NoError(t, err)
+
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		repoMarker: repoMarker,
+	}
+
+	// Test with .png extension in color parameter (deprecated format)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/images/markers/test_marker/blufor.png", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("name", "color")
+	c.SetParamValues("test_marker", "blufor.png")
+
+	err = hdlr.GetMarker(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestGetAmmo_WithPaaExtension(t *testing.T) {
+	dir := t.TempDir()
+	ammoDir := filepath.Join(dir, "ammo")
+	subDir := filepath.Join(ammoDir, "test")
+	err := os.MkdirAll(subDir, 0755)
+	require.NoError(t, err)
+
+	// Create test ammo icon
+	err = os.WriteFile(filepath.Join(subDir, "grenade_x_ca.png"), []byte("fake png"), 0644)
+	require.NoError(t, err)
+
+	repoAmmo, err := NewRepoAmmo(ammoDir)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		repoAmmo: repoAmmo,
+	}
+
+	// Test with .paa extension (should be stripped)
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/images/ammo/grenade_x_ca.paa.png", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("name")
+	c.SetParamValues("grenade_x_ca.paa.png")
+
+	err = hdlr.GetAmmo(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestStoreOperation_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	// Create multipart form without file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "No File Test")
+	writer.WriteField("missionDuration", "3600")
+	writer.WriteField("filename", "no_file_test")
+	writer.WriteField("tag", "coop")
+	// No file field added
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	assert.Error(t, err)
+	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
+func TestStoreOperation_InvalidMissionDuration(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	// Create multipart form with invalid missionDuration
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Invalid Duration Test")
+	writer.WriteField("missionDuration", "not-a-number") // Invalid
+	writer.WriteField("filename", "invalid_duration_test")
+	writer.WriteField("tag", "coop")
+
+	fileWriter, _ := writer.CreateFormFile("file", "test.gz")
+	gw := gzip.NewWriter(fileWriter)
+	gw.Write([]byte(`{"test": "data"}`))
+	gw.Close()
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	assert.Error(t, err)
+}
+
+func TestStoreOperation_WrongSecret(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "correct-secret",
+			Data:   dataDir,
+		},
+	}
+
+	// Create multipart form with wrong secret
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "wrong-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Wrong Secret Test")
+	writer.WriteField("missionDuration", "3600")
+	writer.WriteField("filename", "wrong_secret_test")
+	writer.WriteField("tag", "coop")
+
+	fileWriter, _ := writer.CreateFormFile("file", "test.gz")
+	gw := gzip.NewWriter(fileWriter)
+	gw.Write([]byte(`{"test": "data"}`))
+	gw.Close()
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	assert.Equal(t, echo.ErrForbidden, err)
+}
