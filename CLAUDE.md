@@ -10,16 +10,16 @@ OCAP2-Web is a Go-based web server for the Operation Capture And Playback system
 
 ```bash
 # Build (Linux)
-go build -o ocap-webserver ./cmd
+go build -o ocap-webserver ./cmd/ocap-webserver
 
 # Build (Windows)
-go build -o ocap-webserver.exe ./cmd
+go build -o ocap-webserver.exe ./cmd/ocap-webserver
 
 # Run tests
 go test ./...
 
 # Run single test
-go test -run TestName ./server
+go test -run TestName ./internal/server
 
 # Docker build
 docker build -t ocap-webserver .
@@ -29,14 +29,16 @@ docker build -t ocap-webserver .
 
 ### Backend (Go)
 
-Entry point: `cmd/main.go` initializes repositories and starts the Echo server.
+Entry point: `cmd/ocap-webserver/main.go` initializes repositories and starts the Echo server.
 
-**Core packages in `server/`:**
-- `handler.go` - HTTP endpoints using Echo framework
-- `operation.go` - SQLite repository for mission metadata (RepoOperation)
-- `marker.go` - Dynamic marker image generation with color transforms (RepoMarker)
-- `ammo.go` - Equipment/gear icon lookup (RepoAmmo)
-- `setting.go` - Configuration via Viper (env vars, JSON/YAML files)
+**Core packages in `internal/`:**
+- `server/` - HTTP endpoints, repositories (operation, marker, ammo), configuration
+- `storage/` - Storage engines (JSON, Protobuf, FlatBuffers)
+- `conversion/` - Background format conversion worker
+
+**Public packages in `pkg/schemas/`:**
+- `protobuf/` - Protocol Buffers schema and generated Go code
+- `flatbuffers/` - FlatBuffers schema and generated Go code
 
 **API Endpoints (all under configurable `prefixURL`, default `/aar/`):**
 - `GET /api/v1/operations` - Query missions with filters
@@ -63,10 +65,10 @@ Static SPA in `static/` using Leaflet for map rendering. No build step required.
 
 ### Data Storage
 
-- **SQLite database** - Mission metadata (`db/` or `OCAP_DB`)
-- **Mission files** - Gzipped JSON in `data/` or `OCAP_DATA`
-- **Map tiles** - Downloaded separately to `maps/` or `OCAP_MAPS`
-- **Assets** - `markers/` and `ammo/` directories contain mod-specific icons
+- **SQLite database** - Mission metadata (default `data.db`, configure via `OCAP_DB`)
+- **Mission files** - Gzipped JSON (default `data/`, configure via `OCAP_DATA`)
+- **Map tiles** - Downloaded separately (default `maps/`, configure via `OCAP_MAPS`)
+- **Assets** - `assets/markers/` and `assets/ammo/` contain mod-specific icons
 
 ## Configuration
 

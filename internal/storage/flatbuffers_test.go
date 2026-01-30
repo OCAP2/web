@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	fb "github.com/OCAP2/web/schemas/flatbuffers/generated"
+	fb "github.com/OCAP2/web/pkg/schemas/flatbuffers/generated"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

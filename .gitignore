@@ -7,6 +7,8 @@ ocap-webserver
 
 # data
 data.db
+data/
+maps/
 static/data
 static/images/maps
 

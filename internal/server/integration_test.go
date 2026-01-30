@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	pb "github.com/OCAP2/web/schemas/protobuf"
-	"github.com/OCAP2/web/server/storage"
+	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

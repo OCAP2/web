@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OCAP2/web/server/storage"
+	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

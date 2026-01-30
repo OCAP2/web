@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/OCAP2/web/server/storage"
+	"github.com/OCAP2/web/internal/storage"
 )
 
 // OperationRepo defines the repository interface needed by the worker

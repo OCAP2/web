@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OCAP2/web/server/storage"
+	"github.com/OCAP2/web/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 

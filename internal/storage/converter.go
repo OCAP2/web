@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/schemas/protobuf"
+	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 )
 
 // DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)

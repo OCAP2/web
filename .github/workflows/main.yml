@@ -33,7 +33,7 @@ jobs:
         run: go test ./...
 
       - name: Build
-        run: go build -o ocap-webserver ./cmd/
+        run: go build -o ocap-webserver ./cmd/ocap-webserver
 
   docker-build-and-push-image:
     runs-on: ubuntu-latest
@@ -96,7 +96,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Build windows binary
-        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/OCAP2/web/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/server.BuildCommit=$GITHUB_SHA" -o ocap-webserver.exe ./cmd/
+        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ocap-webserver.exe ./cmd/ocap-webserver
 
       - name: Upload windows binary
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

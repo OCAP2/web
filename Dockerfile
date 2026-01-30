@@ -2,7 +2,7 @@ FROM golang:1.24-alpine AS builder
 WORKDIR /go/pkg/ocap
 COPY . .
 ARG build_commit
-RUN apk add --no-cache alpine-sdk && go build -ldflags "-X github.com/OCAP2/web/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/server.BuildCommit=$build_commit" -a -o app ./cmd
+RUN apk add --no-cache alpine-sdk && go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -a -o app ./cmd/ocap-webserver
 
 FROM alpine:3.23
 WORKDIR /usr/local/ocap
@@ -20,8 +20,8 @@ ENV OCAP_DATA /var/lib/ocap/data
 ENV OCAP_LISTEN 0.0.0.0:5000
 EXPOSE 5000/tcp
 
-COPY markers /usr/local/ocap/markers
-COPY ammo /usr/local/ocap/ammo
+COPY assets/markers /usr/local/ocap/markers
+COPY assets/ammo /usr/local/ocap/ammo
 COPY static /usr/local/ocap/static
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
 
