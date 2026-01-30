@@ -89,7 +89,7 @@ func (e *FlatBuffersEngine) Convert(ctx context.Context, jsonPath, outputPath st
 		return fmt.Errorf("load JSON: %w", err)
 	}
 
-	pbManifest, entityPositions, err := converter.parseJSONData(data)
+	pbManifest, entityPositions, err := converter.parseJSONDataVersioned(data)
 	if err != nil {
 		return fmt.Errorf("parse JSON: %w", err)
 	}

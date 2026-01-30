@@ -14,6 +14,96 @@ import (
 	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 )
 
+func TestConverter_UsesVersionedParser(t *testing.T) {
+	// Create test JSON data
+	data := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test",
+		"endFrame":     10.0,
+		"captureDelay": 1.0,
+		"entities":     []interface{}{},
+		"events":       []interface{}{},
+	}
+
+	c := NewConverter(300)
+	manifest, positions, err := c.parseJSONDataVersioned(data)
+	if err != nil {
+		t.Fatalf("parseJSONDataVersioned error: %v", err)
+	}
+
+	if manifest.Version != 1 {
+		t.Errorf("expected version 1, got %d", manifest.Version)
+	}
+	_ = positions // positions can be empty for this test
+}
+
+func TestConverter_UsesVersionedParser_WithEntities(t *testing.T) {
+	// Create test JSON data with entities
+	data := map[string]interface{}{
+		"worldName":    "Stratis",
+		"missionName":  "Test Mission",
+		"endFrame":     5.0,
+		"captureDelay": 0.5,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id":            1.0,
+				"type":          "unit",
+				"name":          "Player1",
+				"side":          "WEST",
+				"group":         "Alpha",
+				"role":          "Rifleman",
+				"startFrameNum": 0.0,
+				"isPlayer":      1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "Player1", 1.0},
+				},
+			},
+		},
+		"events":  []interface{}{},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+
+	c := NewConverter(300)
+	manifest, positions, err := c.parseJSONDataVersioned(data)
+	if err != nil {
+		t.Fatalf("parseJSONDataVersioned error: %v", err)
+	}
+
+	if manifest.WorldName != "Stratis" {
+		t.Errorf("expected WorldName 'Stratis', got %q", manifest.WorldName)
+	}
+	if len(manifest.Entities) != 1 {
+		t.Errorf("expected 1 entity, got %d", len(manifest.Entities))
+	}
+	if len(positions) != 1 {
+		t.Errorf("expected 1 position entry, got %d", len(positions))
+	}
+}
+
+func TestConverter_UsesVersionedParser_UnknownVersion(t *testing.T) {
+	// Create minimal JSON data that doesn't match V1 requirements
+	// Missing required fields should still work (fallback to V1)
+	data := map[string]interface{}{
+		"worldName":    "Test",
+		"missionName":  "Test",
+		"endFrame":     5.0,
+		"captureDelay": 1.0,
+		"entities":     []interface{}{},
+	}
+
+	c := NewConverter(300)
+	manifest, _, err := c.parseJSONDataVersioned(data)
+	if err != nil {
+		t.Fatalf("parseJSONDataVersioned error: %v", err)
+	}
+
+	// Should fall back to V1 and parse successfully
+	if manifest.Version != 1 {
+		t.Errorf("expected version 1 (fallback), got %d", manifest.Version)
+	}
+}
+
 func TestConverter_Convert(t *testing.T) {
 	// Create temp directories
 	tmpDir := t.TempDir()
@@ -472,8 +562,8 @@ func TestNewConverter_DefaultChunkSize(t *testing.T) {
 	}
 }
 
-func TestConverter_ParseEvent(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
+func TestParserV1_ParseEvent(t *testing.T) {
+	parser := &ParserV1{}
 
 	tests := []struct {
 		name     string
@@ -503,7 +593,7 @@ func TestConverter_ParseEvent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			event := converter.parseEvent(tt.input)
+			event := parser.parseEvent(tt.input)
 			if tt.wantOK {
 				if event == nil {
 					t.Error("expected non-nil event")
@@ -643,11 +733,11 @@ func TestToString(t *testing.T) {
 	}
 }
 
-func TestConverter_ParseMarkerPosition(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
+func TestParserV1_ParseMarkerPosition(t *testing.T) {
+	parser := &ParserV1{}
 
 	t.Run("simple format [x, y, z]", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0, 10.0})
+		pos := parser.parseMarkerPosition([]interface{}{100.0, 200.0, 10.0})
 		if pos == nil {
 			t.Fatal("expected non-nil position")
 		}
@@ -663,7 +753,7 @@ func TestConverter_ParseMarkerPosition(t *testing.T) {
 	})
 
 	t.Run("simple format [x, y] without z", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0})
+		pos := parser.parseMarkerPosition([]interface{}{100.0, 200.0})
 		if pos == nil {
 			t.Fatal("expected non-nil position")
 		}
@@ -679,7 +769,7 @@ func TestConverter_ParseMarkerPosition(t *testing.T) {
 	})
 
 	t.Run("complex format [[x, y, z], frameNum, direction, alpha]", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{
+		pos := parser.parseMarkerPosition([]interface{}{
 			[]interface{}{100.0, 200.0, 10.0},
 			50.0,
 			90.0,
@@ -709,7 +799,7 @@ func TestConverter_ParseMarkerPosition(t *testing.T) {
 	})
 
 	t.Run("complex format [[x, y], frameNum] without z", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{
+		pos := parser.parseMarkerPosition([]interface{}{
 			[]interface{}{100.0, 200.0},
 			50.0,
 		})
@@ -728,29 +818,29 @@ func TestConverter_ParseMarkerPosition(t *testing.T) {
 	})
 
 	t.Run("nil input", func(t *testing.T) {
-		pos := converter.parseMarkerPosition(nil)
+		pos := parser.parseMarkerPosition(nil)
 		if pos != nil {
 			t.Error("expected nil position for nil input")
 		}
 	})
 
 	t.Run("non-array input", func(t *testing.T) {
-		pos := converter.parseMarkerPosition("not an array")
+		pos := parser.parseMarkerPosition("not an array")
 		if pos != nil {
 			t.Error("expected nil position for non-array input")
 		}
 	})
 
 	t.Run("empty array", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{})
+		pos := parser.parseMarkerPosition([]interface{}{})
 		if pos != nil {
 			t.Error("expected nil position for empty array")
 		}
 	})
 }
 
-func TestConverter_CalculateEndFrame(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
+func TestParserV1_CalculateEndFrame(t *testing.T) {
+	parser := &ParserV1{}
 
 	t.Run("with positions", func(t *testing.T) {
 		em := map[string]interface{}{
@@ -762,7 +852,7 @@ func TestConverter_CalculateEndFrame(t *testing.T) {
 				[]interface{}{},
 			},
 		}
-		endFrame := converter.calculateEndFrame(em, 10)
+		endFrame := parser.calculateEndFrame(em, 10)
 		// startFrame + len(positions) - 1 = 10 + 5 - 1 = 14
 		if endFrame != 14 {
 			t.Errorf("endFrame = %d, want 14", endFrame)
@@ -771,7 +861,7 @@ func TestConverter_CalculateEndFrame(t *testing.T) {
 
 	t.Run("without positions", func(t *testing.T) {
 		em := map[string]interface{}{}
-		endFrame := converter.calculateEndFrame(em, 10)
+		endFrame := parser.calculateEndFrame(em, 10)
 		// Should return startFrame when no positions
 		if endFrame != 10 {
 			t.Errorf("endFrame = %d, want 10", endFrame)
@@ -782,7 +872,7 @@ func TestConverter_CalculateEndFrame(t *testing.T) {
 		em := map[string]interface{}{
 			"positions": "not an array",
 		}
-		endFrame := converter.calculateEndFrame(em, 10)
+		endFrame := parser.calculateEndFrame(em, 10)
 		// Should return startFrame when positions is wrong type
 		if endFrame != 10 {
 			t.Errorf("endFrame = %d, want 10", endFrame)
@@ -790,12 +880,12 @@ func TestConverter_CalculateEndFrame(t *testing.T) {
 	})
 }
 
-func TestConverter_ParseEvent_Distance(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
+func TestParserV1_ParseEvent_Distance(t *testing.T) {
+	parser := &ParserV1{}
 
 	t.Run("event with numeric distance at index 4", func(t *testing.T) {
 		// When index 4 is a number (not a weapon string), it's treated as distance
-		event := converter.parseEvent([]interface{}{100.0, "move", 1.0, 2.0, 50.5})
+		event := parser.parseEvent([]interface{}{100.0, "move", 1.0, 2.0, 50.5})
 		if event == nil {
 			t.Fatal("expected non-nil event")
 		}
@@ -806,7 +896,7 @@ func TestConverter_ParseEvent_Distance(t *testing.T) {
 
 	t.Run("event with message at index 4", func(t *testing.T) {
 		// For non-hit/killed events, string at index 4 is message
-		event := converter.parseEvent([]interface{}{100.0, "chat", 1.0, 2.0, "Hello world"})
+		event := parser.parseEvent([]interface{}{100.0, "chat", 1.0, 2.0, "Hello world"})
 		if event == nil {
 			t.Fatal("expected non-nil event")
 		}
@@ -817,7 +907,7 @@ func TestConverter_ParseEvent_Distance(t *testing.T) {
 
 	t.Run("event with weapon and distance", func(t *testing.T) {
 		// killed/hit events have weapon at index 4 and distance at index 5
-		event := converter.parseEvent([]interface{}{100.0, "killed", 1.0, 2.0, "arifle_MX", 150.5})
+		event := parser.parseEvent([]interface{}{100.0, "killed", 1.0, 2.0, "arifle_MX", 150.5})
 		if event == nil {
 			t.Fatal("expected non-nil event")
 		}

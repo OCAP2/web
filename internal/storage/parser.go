@@ -7,6 +7,14 @@ import (
 	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 )
 
+// entityPositionData holds parsed position data for an entity
+type entityPositionData struct {
+	ID         uint32
+	Type       string
+	StartFrame uint32
+	Positions  []interface{} // Raw position arrays
+}
+
 // ParseResult contains the parsed manifest and position data
 type ParseResult struct {
 	Manifest        *pb.Manifest
