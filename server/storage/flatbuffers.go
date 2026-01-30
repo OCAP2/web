@@ -46,6 +46,12 @@ func (e *FlatBuffersEngine) GetManifest(ctx context.Context, filename string) (*
 	return e.convertManifest(fbManifest), nil
 }
 
+// GetManifestReader returns a reader for raw manifest data
+func (e *FlatBuffersEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) {
+	path := filepath.Join(e.dataDir, filename, "manifest.fb")
+	return os.Open(path)
+}
+
 // GetChunk reads and decodes a chunk file
 func (e *FlatBuffersEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.fb", chunkIndex))

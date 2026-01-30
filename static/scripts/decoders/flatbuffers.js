@@ -154,12 +154,13 @@ const FlatBuffersDecoder = {
             chunkCount: 0,
             entities: [],
             events: [],
-            times: []
+            times: [],
+            markers: []
         };
 
-        // Field indices for Manifest table (matching schema order)
+        // Field indices for Manifest table (matching schema order in ocap.fbs)
         // 0: version, 1: world_name, 2: mission_name, 3: frame_count,
-        // 4: chunk_size, 5: capture_delay_ms, 6: chunk_count, 7: entities, 8: events, 9: times
+        // 4: chunk_size, 5: capture_delay_ms, 6: chunk_count, 7: entities, 8: times, 9: events, 10: markers
 
         let fieldOffset = reader.getFieldOffset(rootOffset, 0);
         if (fieldOffset) manifest.version = reader.readUint32(rootOffset + fieldOffset);
@@ -182,7 +183,7 @@ const FlatBuffersDecoder = {
         fieldOffset = reader.getFieldOffset(rootOffset, 6);
         if (fieldOffset) manifest.chunkCount = reader.readUint32(rootOffset + fieldOffset);
 
-        // Read entities vector
+        // Read entities vector (index 7)
         fieldOffset = reader.getFieldOffset(rootOffset, 7);
         if (fieldOffset) {
             const vecOffset = rootOffset + fieldOffset;
@@ -192,23 +193,23 @@ const FlatBuffersDecoder = {
             }
         }
 
-        // Read events vector
+        // Read times vector (index 8)
         fieldOffset = reader.getFieldOffset(rootOffset, 8);
         if (fieldOffset) {
             const vecOffset = rootOffset + fieldOffset;
             const count = reader.readVectorLength(vecOffset);
             for (let i = 0; i < count; i++) {
-                manifest.events.push(this.decodeEvent(reader, reader.readTableFromVector(vecOffset, i)));
+                manifest.times.push(this.decodeTimeSample(reader, reader.readTableFromVector(vecOffset, i)));
             }
         }
 
-        // Read times vector
+        // Read events vector (index 9)
         fieldOffset = reader.getFieldOffset(rootOffset, 9);
         if (fieldOffset) {
             const vecOffset = rootOffset + fieldOffset;
             const count = reader.readVectorLength(vecOffset);
             for (let i = 0; i < count; i++) {
-                manifest.times.push(this.decodeTimeSample(reader, reader.readTableFromVector(vecOffset, i)));
+                manifest.events.push(this.decodeEvent(reader, reader.readTableFromVector(vecOffset, i)));
             }
         }
 

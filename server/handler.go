@@ -12,11 +12,9 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/OCAP2/web/schemas/protobuf"
 	"github.com/OCAP2/web/server/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"google.golang.org/protobuf/proto"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -245,81 +243,27 @@ func (h *Handler) GetOperationManifest(c echo.Context) error {
 		format = "json"
 	}
 
+	// For binary formats (protobuf, flatbuffers), stream raw file
+	if format == "protobuf" || format == "flatbuffers" {
+		reader, err := engine.GetManifestReader(c.Request().Context(), op.Filename)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
+		}
+		defer reader.Close()
+
+		contentType := "application/x-protobuf"
+		if format == "flatbuffers" {
+			contentType = "application/x-flatbuffers"
+		}
+		return c.Stream(http.StatusOK, contentType, reader)
+	}
+
+	// For JSON format, return as JSON
 	manifest, err := engine.GetManifest(c.Request().Context(), op.Filename)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
 	}
-
-	// For protobuf format, serialize to binary
-	if format == "protobuf" {
-		pbManifest := manifestToProto(manifest)
-		data, err := proto.Marshal(pbManifest)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to serialize manifest")
-		}
-		return c.Blob(http.StatusOK, "application/x-protobuf", data)
-	}
-
-	// For JSON format, return as JSON
 	return c.JSON(http.StatusOK, manifest)
-}
-
-// manifestToProto converts storage.Manifest to proto.Manifest
-func manifestToProto(m *storage.Manifest) *pb.Manifest {
-	pbManifest := &pb.Manifest{
-		Version:        m.Version,
-		WorldName:      m.WorldName,
-		MissionName:    m.MissionName,
-		FrameCount:     m.FrameCount,
-		ChunkSize:      m.ChunkSize,
-		CaptureDelayMs: m.CaptureDelayMs,
-		ChunkCount:     m.ChunkCount,
-	}
-
-	for _, ent := range m.Entities {
-		pbManifest.Entities = append(pbManifest.Entities, &pb.EntityDef{
-			Id:           ent.ID,
-			Type:         stringToEntityType(ent.Type),
-			Name:         ent.Name,
-			Side:         stringToSide(ent.Side),
-			GroupName:    ent.Group,
-			Role:         ent.Role,
-			StartFrame:   ent.StartFrame,
-			EndFrame:     ent.EndFrame,
-			IsPlayer:     ent.IsPlayer,
-			VehicleClass: ent.VehicleClass,
-		})
-	}
-
-	return pbManifest
-}
-
-func stringToEntityType(s string) pb.EntityType {
-	switch s {
-	case "unit":
-		return pb.EntityType_ENTITY_TYPE_UNIT
-	case "vehicle":
-		return pb.EntityType_ENTITY_TYPE_VEHICLE
-	default:
-		return pb.EntityType_ENTITY_TYPE_UNKNOWN
-	}
-}
-
-func stringToSide(s string) pb.Side {
-	switch s {
-	case "WEST":
-		return pb.Side_SIDE_WEST
-	case "EAST":
-		return pb.Side_SIDE_EAST
-	case "GUER":
-		return pb.Side_SIDE_GUER
-	case "CIV":
-		return pb.Side_SIDE_CIV
-	case "GLOBAL":
-		return pb.Side_SIDE_GLOBAL
-	default:
-		return pb.Side_SIDE_UNKNOWN
-	}
 }
 
 func (h *Handler) GetOperationChunk(c echo.Context) error {

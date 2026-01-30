@@ -35,54 +35,59 @@ class StorageManager {
     /**
      * Check if manifest exists for a mission
      * @param {string} missionId
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<boolean>}
      */
-    async hasManifest(missionId) {
+    async hasManifest(missionId, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.hasManifest(missionId);
+        return this._backend.hasManifest(missionId, format);
     }
 
     /**
      * Get manifest for a mission
      * @param {string} missionId
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<ArrayBuffer|null>}
      */
-    async getManifest(missionId) {
+    async getManifest(missionId, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.getManifest(missionId);
+        return this._backend.getManifest(missionId, format);
     }
 
     /**
      * Save manifest for a mission
      * @param {string} missionId
      * @param {ArrayBuffer} data
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<void>}
      */
-    async saveManifest(missionId, data) {
+    async saveManifest(missionId, data, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.saveManifest(missionId, data);
+        return this._backend.saveManifest(missionId, data, format);
     }
 
     /**
      * Check if chunk exists
      * @param {string} missionId
      * @param {number} chunkIndex
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<boolean>}
      */
-    async hasChunk(missionId, chunkIndex) {
+    async hasChunk(missionId, chunkIndex, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.hasChunk(missionId, chunkIndex);
+        return this._backend.hasChunk(missionId, chunkIndex, format);
     }
 
     /**
      * Get chunk data
      * @param {string} missionId
      * @param {number} chunkIndex
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<ArrayBuffer|null>}
      */
-    async getChunk(missionId, chunkIndex) {
+    async getChunk(missionId, chunkIndex, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.getChunk(missionId, chunkIndex);
+        return this._backend.getChunk(missionId, chunkIndex, format);
     }
 
     /**
@@ -90,11 +95,12 @@ class StorageManager {
      * @param {string} missionId
      * @param {number} chunkIndex
      * @param {ArrayBuffer} data
+     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Promise<void>}
      */
-    async saveChunk(missionId, chunkIndex, data) {
+    async saveChunk(missionId, chunkIndex, data, format = 'protobuf') {
         await this._ensureInitialized();
-        return this._backend.saveChunk(missionId, chunkIndex, data);
+        return this._backend.saveChunk(missionId, chunkIndex, data, format);
     }
 
     /**
@@ -169,22 +175,24 @@ class OPFSStorage {
         await this._loadAccessTimes();
     }
 
-    async hasManifest(missionId) {
+    async hasManifest(missionId, format = 'protobuf') {
         try {
             const missionDir = await this._getMissionDir(missionId, false);
             if (!missionDir) return false;
-            await missionDir.getFileHandle('manifest.pb');
+            const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+            await missionDir.getFileHandle(filename);
             return true;
         } catch (e) {
             return false;
         }
     }
 
-    async getManifest(missionId) {
+    async getManifest(missionId, format = 'protobuf') {
         try {
             const missionDir = await this._getMissionDir(missionId, false);
             if (!missionDir) return null;
-            const fileHandle = await missionDir.getFileHandle('manifest.pb');
+            const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+            const fileHandle = await missionDir.getFileHandle(filename);
             const file = await fileHandle.getFile();
             await this._updateAccessTime(missionId, 'manifest');
             return file.arrayBuffer();
@@ -193,31 +201,32 @@ class OPFSStorage {
         }
     }
 
-    async saveManifest(missionId, data) {
+    async saveManifest(missionId, data, format = 'protobuf') {
         const missionDir = await this._getMissionDir(missionId, true);
-        const fileHandle = await missionDir.getFileHandle('manifest.pb', { create: true });
+        const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+        const fileHandle = await missionDir.getFileHandle(filename, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(data);
         await writable.close();
         await this._updateAccessTime(missionId, 'manifest');
     }
 
-    async hasChunk(missionId, chunkIndex) {
+    async hasChunk(missionId, chunkIndex, format = 'protobuf') {
         try {
             const chunksDir = await this._getChunksDir(missionId, false);
             if (!chunksDir) return false;
-            await chunksDir.getFileHandle(this._chunkFileName(chunkIndex));
+            await chunksDir.getFileHandle(this._chunkFileName(chunkIndex, format));
             return true;
         } catch (e) {
             return false;
         }
     }
 
-    async getChunk(missionId, chunkIndex) {
+    async getChunk(missionId, chunkIndex, format = 'protobuf') {
         try {
             const chunksDir = await this._getChunksDir(missionId, false);
             if (!chunksDir) return null;
-            const fileHandle = await chunksDir.getFileHandle(this._chunkFileName(chunkIndex));
+            const fileHandle = await chunksDir.getFileHandle(this._chunkFileName(chunkIndex, format));
             const file = await fileHandle.getFile();
             await this._updateAccessTime(missionId, `chunk_${chunkIndex}`);
             return file.arrayBuffer();
@@ -226,9 +235,9 @@ class OPFSStorage {
         }
     }
 
-    async saveChunk(missionId, chunkIndex, data) {
+    async saveChunk(missionId, chunkIndex, data, format = 'protobuf') {
         const chunksDir = await this._getChunksDir(missionId, true);
-        const fileHandle = await chunksDir.getFileHandle(this._chunkFileName(chunkIndex), { create: true });
+        const fileHandle = await chunksDir.getFileHandle(this._chunkFileName(chunkIndex, format), { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(data);
         await writable.close();
@@ -308,8 +317,9 @@ class OPFSStorage {
         }
     }
 
-    _chunkFileName(index) {
-        return String(index).padStart(4, '0') + '.pb';
+    _chunkFileName(index, format = 'protobuf') {
+        const ext = format === 'flatbuffers' ? '.fb' : '.pb';
+        return String(index).padStart(4, '0') + ext;
     }
 
     async _updateAccessTime(missionId, item) {
@@ -392,18 +402,20 @@ class IndexedDBStorage {
         });
     }
 
-    async hasManifest(missionId) {
+    async hasManifest(missionId, format = 'protobuf') {
+        const key = `${missionId}:${format}`;
         return new Promise((resolve) => {
             const tx = this._db.transaction('manifests', 'readonly');
             const store = tx.objectStore('manifests');
-            const request = store.get(missionId);
+            const request = store.get(key);
             request.onsuccess = () => resolve(request.result !== undefined);
             request.onerror = () => resolve(false);
         });
     }
 
-    async getManifest(missionId) {
-        const record = await this._getRecord('manifests', missionId);
+    async getManifest(missionId, format = 'protobuf') {
+        const key = `${missionId}:${format}`;
+        const record = await this._getRecord('manifests', key);
         if (record) {
             await this._updateAccessTime(missionId, 'manifest');
             return record.data;
@@ -411,13 +423,14 @@ class IndexedDBStorage {
         return null;
     }
 
-    async saveManifest(missionId, data) {
-        await this._putRecord('manifests', { missionId, data });
+    async saveManifest(missionId, data, format = 'protobuf') {
+        const key = `${missionId}:${format}`;
+        await this._putRecord('manifests', { missionId: key, data });
         await this._updateAccessTime(missionId, 'manifest');
     }
 
-    async hasChunk(missionId, chunkIndex) {
-        const id = this._chunkId(missionId, chunkIndex);
+    async hasChunk(missionId, chunkIndex, format = 'protobuf') {
+        const id = this._chunkId(missionId, chunkIndex, format);
         return new Promise((resolve) => {
             const tx = this._db.transaction('chunks', 'readonly');
             const store = tx.objectStore('chunks');
@@ -427,8 +440,8 @@ class IndexedDBStorage {
         });
     }
 
-    async getChunk(missionId, chunkIndex) {
-        const id = this._chunkId(missionId, chunkIndex);
+    async getChunk(missionId, chunkIndex, format = 'protobuf') {
+        const id = this._chunkId(missionId, chunkIndex, format);
         const record = await this._getRecord('chunks', id);
         if (record) {
             await this._updateAccessTime(missionId, `chunk_${chunkIndex}`);
@@ -437,8 +450,8 @@ class IndexedDBStorage {
         return null;
     }
 
-    async saveChunk(missionId, chunkIndex, data) {
-        const id = this._chunkId(missionId, chunkIndex);
+    async saveChunk(missionId, chunkIndex, data, format = 'protobuf') {
+        const id = this._chunkId(missionId, chunkIndex, format);
         await this._putRecord('chunks', { id, missionId, chunkIndex, data });
         await this._updateAccessTime(missionId, `chunk_${chunkIndex}`);
     }
@@ -503,8 +516,9 @@ class IndexedDBStorage {
         return { used: 0, quota: 0 };
     }
 
-    _chunkId(missionId, chunkIndex) {
-        return `${missionId}:${String(chunkIndex).padStart(4, '0')}`;
+    _chunkId(missionId, chunkIndex, format = 'protobuf') {
+        const ext = format === 'flatbuffers' ? 'fb' : 'pb';
+        return `${missionId}:${String(chunkIndex).padStart(4, '0')}:${ext}`;
     }
 
     async _updateAccessTime(missionId, item) {

@@ -1153,7 +1153,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 
 	// Fetch manifest
 	let manifest;
-	const cachedManifest = await storageManager.getManifest(operationId);
+	const cachedManifest = await storageManager.getManifest(operationId, format);
 	if (cachedManifest) {
 		manifest = decoder.decodeManifest(cachedManifest);
 		console.log('Loaded manifest from cache');
@@ -1165,7 +1165,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 		const data = await response.arrayBuffer();
 		manifest = decoder.decodeManifest(data);
 		// Cache manifest
-		storageManager.saveManifest(operationId, data).catch(e => {
+		storageManager.saveManifest(operationId, data, format).catch(e => {
 			console.warn('Failed to cache manifest:', e);
 		});
 	}

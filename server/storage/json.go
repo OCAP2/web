@@ -65,6 +65,10 @@ func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifes
 	return manifest, nil
 }
 
+func (e *JSONEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("JSON engine does not support raw manifest streaming")
+}
+
 func (e *JSONEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	return nil, fmt.Errorf("JSON engine does not support chunked loading")
 }

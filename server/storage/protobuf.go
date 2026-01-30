@@ -67,6 +67,11 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 	return manifest, nil
 }
 
+func (e *ProtobufEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) {
+	path := filepath.Join(e.dataDir, filename, "manifest.pb")
+	return os.Open(path)
+}
+
 func (e *ProtobufEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.pb", chunkIndex))
 	data, err := os.ReadFile(path)

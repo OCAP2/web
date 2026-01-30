@@ -37,6 +37,8 @@ func runConvert(args []string) error {
 	inputFile := fs.String("input", "", "Convert a single JSON file")
 	all := fs.Bool("all", false, "Convert all pending operations")
 	status := fs.Bool("status", false, "Show conversion status of all operations")
+	setFormat := fs.String("set-format", "", "Set storage format for an operation (use with --id)")
+	opID := fs.Int64("id", 0, "Operation ID (for --set-format)")
 	chunkSize := fs.Uint("chunk-size", 300, "Frames per chunk (default: 300)")
 	format := fs.String("format", "protobuf", "Output format: protobuf or flatbuffers")
 
@@ -49,6 +51,7 @@ func runConvert(args []string) error {
 		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz --format flatbuffers   Convert to flatbuffers\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s convert --all                                     Convert all pending\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s convert --status                                  Show conversion status\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --set-format flatbuffers --id 1          Set format for operation\n", os.Args[0])
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -69,6 +72,16 @@ func runConvert(args []string) error {
 
 	switch {
 	case *status:
+		return showConversionStatus(ctx, repo)
+
+	case *setFormat != "":
+		if *opID == 0 {
+			return fmt.Errorf("--id is required when using --set-format")
+		}
+		if err := repo.UpdateStorageFormat(ctx, *opID, *setFormat); err != nil {
+			return fmt.Errorf("update format: %w", err)
+		}
+		log.Printf("Updated operation %d to format: %s", *opID, *setFormat)
 		return showConversionStatus(ctx, repo)
 
 	case *inputFile != "":

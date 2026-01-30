@@ -20,6 +20,9 @@ func (m *mockEngine) SupportsStreaming() bool { return m.supportsStreaming }
 func (m *mockEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {
 	return nil, nil
 }
+func (m *mockEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) {
+	return nil, nil
+}
 func (m *mockEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	return nil, nil
 }

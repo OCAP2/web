@@ -84,6 +84,10 @@ type Engine interface {
 	// GetManifest returns mission metadata and entity definitions
 	GetManifest(ctx context.Context, filename string) (*Manifest, error)
 
+	// GetManifestReader returns a reader for raw manifest data (for streaming to client)
+	// Returns nil if the format doesn't support raw streaming (e.g., JSON)
+	GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error)
+
 	// GetChunk returns position/event data for a frame range
 	GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error)
 

@@ -97,7 +97,7 @@ class ChunkManager {
      */
     async _loadChunkInternal(chunkIndex) {
         // Try storage cache first
-        const cached = await this._storage.getChunk(this._missionId, chunkIndex);
+        const cached = await this._storage.getChunk(this._missionId, chunkIndex, this._format);
         if (cached) {
             this._cacheHits++;
             const chunk = await this._decodeChunk(cached);
@@ -117,7 +117,7 @@ class ChunkManager {
         const data = await response.arrayBuffer();
 
         // Save to storage cache (async, don't wait)
-        this._storage.saveChunk(this._missionId, chunkIndex, data).catch(e => {
+        this._storage.saveChunk(this._missionId, chunkIndex, data, this._format).catch(e => {
             console.warn('Failed to cache chunk:', e);
         });
 
