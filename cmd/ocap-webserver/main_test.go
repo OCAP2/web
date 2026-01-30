@@ -320,5 +320,134 @@ func TestConvertAll_Empty(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestConvertAll_WithOperations(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := server.NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Create test JSON file
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "Convert All Test",
+		"endFrame": 5,
+		"captureDelay": 1,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Player1",
+				"side": "WEST",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 45, 1, 0, "Player1", 1],
+					[[101, 201], 46, 1, 0, "Player1", 1],
+					[[102, 202], 47, 1, 0, "Player1", 1],
+					[[103, 203], 48, 1, 0, "Player1", 1],
+					[[104, 204], 49, 1, 0, "Player1", 1]
+				]
+			}
+		],
+		"events": [],
+		"Markers": []
+	}`
+
+	// Write gzipped JSON
+	jsonPath := filepath.Join(dataDir, "test_op.gz")
+	f, err := os.Create(jsonPath)
+	require.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	_, err = gw.Write([]byte(testJSON))
+	require.NoError(t, err)
+	gw.Close()
+	f.Close()
+
+	// Store operation in database
+	op := &server.Operation{
+		WorldName:        "altis",
+		MissionName:      "Convert All Test",
+		Filename:         "test_op",
+		Date:             "2026-01-01",
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	setting := server.Setting{Data: dataDir}
+
+	// Register engines
+	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
+
+	// Capture stdout
+	old := os.Stdout
+	_, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err = convertAll(ctx, repo, setting, 300, "protobuf")
+
+	w.Close()
+	os.Stdout = old
+
+	require.NoError(t, err)
+
+	// Verify conversion was attempted
+	updated, err := repo.GetByID(ctx, "1")
+	require.NoError(t, err)
+	assert.Equal(t, "completed", updated.ConversionStatus)
+}
+
+func TestConvertAll_WithFailedOperation(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := server.NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Store operation without creating the JSON file (will fail conversion)
+	op := &server.Operation{
+		WorldName:        "altis",
+		MissionName:      "Missing File Test",
+		Filename:         "nonexistent",
+		Date:             "2026-01-01",
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	setting := server.Setting{Data: dataDir}
+
+	// Register engines
+	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
+
+	// Capture stdout
+	old := os.Stdout
+	_, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err = convertAll(ctx, repo, setting, 300, "protobuf")
+
+	w.Close()
+	os.Stdout = old
+
+	// Should not return error even if conversion fails
+	require.NoError(t, err)
+
+	// Verify status was updated to failed
+	updated, err := repo.GetByID(ctx, "1")
+	require.NoError(t, err)
+	assert.Equal(t, "failed", updated.ConversionStatus)
+}
+
 // Verify repoAdapter implements conversion.OperationRepo
 var _ conversion.OperationRepo = (*repoAdapter)(nil)
