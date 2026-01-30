@@ -11,14 +11,17 @@ class ChunkManager {
      * @param {Object} manifest - The decoded manifest object
      * @param {StorageManager} storageManager - Storage backend
      * @param {string} baseUrl - Base URL for chunk fetching
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {Object} options - Configuration options
+     * @param {string} options.format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {boolean} options.enableBrowserCache - Enable browser storage caching (default: false)
      */
-    constructor(missionId, manifest, storageManager, baseUrl, format = 'protobuf') {
+    constructor(missionId, manifest, storageManager, baseUrl, options = {}) {
         this._missionId = missionId;
         this._manifest = manifest;
         this._storage = storageManager;
         this._baseUrl = baseUrl;
-        this._format = format;
+        this._format = options.format || 'protobuf';
+        this._enableBrowserCache = options.enableBrowserCache || false;
 
         // Chunk cache with LRU eviction (max 3 in memory)
         this._maxChunksInMemory = 3;
@@ -96,13 +99,15 @@ class ChunkManager {
      * @private
      */
     async _loadChunkInternal(chunkIndex) {
-        // Try storage cache first
-        const cached = await this._storage.getChunk(this._missionId, chunkIndex, this._format);
-        if (cached) {
-            this._cacheHits++;
-            const chunk = await this._decodeChunk(cached);
-            this._storeInMemory(chunkIndex, chunk);
-            return chunk;
+        // Try storage cache first (if enabled)
+        if (this._enableBrowserCache) {
+            const cached = await this._storage.getChunk(this._missionId, chunkIndex, this._format);
+            if (cached) {
+                this._cacheHits++;
+                const chunk = await this._decodeChunk(cached);
+                this._storeInMemory(chunkIndex, chunk);
+                return chunk;
+            }
         }
 
         // Fetch from network
@@ -116,10 +121,12 @@ class ChunkManager {
 
         const data = await response.arrayBuffer();
 
-        // Save to storage cache (async, don't wait)
-        this._storage.saveChunk(this._missionId, chunkIndex, data, this._format).catch(e => {
-            console.warn('Failed to cache chunk:', e);
-        });
+        // Save to storage cache (async, don't wait) - only if enabled
+        if (this._enableBrowserCache) {
+            this._storage.saveChunk(this._missionId, chunkIndex, data, this._format).catch(e => {
+                console.warn('Failed to cache chunk:', e);
+            });
+        }
 
         const chunk = await this._decodeChunk(data);
         this._storeInMemory(chunkIndex, chunk);
@@ -301,7 +308,8 @@ class ChunkManager {
             loadedChunks: this._loadedChunks.size,
             cacheHits: this._cacheHits,
             networkFetches: this._networkFetches,
-            hitRate: this._cacheHits / (this._cacheHits + this._networkFetches) || 0
+            hitRate: this._cacheHits / (this._cacheHits + this._networkFetches) || 0,
+            browserCacheEnabled: this._enableBrowserCache
         };
     }
 

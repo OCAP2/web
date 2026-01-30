@@ -167,7 +167,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := r.db.ExecContext(
+	result, err := r.db.ExecContext(
 		ctx,
 		query,
 		operation.WorldName,
@@ -182,6 +182,14 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 	if err != nil {
 		return err
 	}
+
+	// Set the auto-generated ID on the operation
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	operation.ID = id
+
 	return nil
 }
 
@@ -290,5 +298,12 @@ func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, st
 func (r *RepoOperation) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE operations SET storage_format = ? WHERE id = ?`, format, id)
+	return err
+}
+
+// UpdateMissionDuration updates the mission duration for an operation
+func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET mission_duration = ? WHERE id = ?`, duration, id)
 	return err
 }

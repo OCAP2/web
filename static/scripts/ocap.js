@@ -1140,11 +1140,15 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 	// Select the appropriate decoder
 	const decoder = format === 'flatbuffers' ? FlatBuffersDecoder : ProtobufDecoder;
 
+	// Check if browser caching is enabled (opt-in via URL param ?cache=1)
+	const urlParams = new URLSearchParams(window.location.search);
+	const enableBrowserCache = urlParams.get('cache') === '1';
+
 	// Show loading indicator
 	ui.showLoading('Initializing streaming playback...');
 
-	// Initialize storage manager if needed
-	if (!storageManager) {
+	// Initialize storage manager if needed (only if caching enabled)
+	if (enableBrowserCache && !storageManager) {
 		storageManager = new StorageManager();
 		await storageManager.init();
 	}
@@ -1153,7 +1157,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 
 	// Fetch manifest
 	let manifest;
-	const cachedManifest = await storageManager.getManifest(operationId, format);
+	const cachedManifest = enableBrowserCache ? await storageManager.getManifest(operationId, format) : null;
 	if (cachedManifest) {
 		manifest = decoder.decodeManifest(cachedManifest);
 		console.log('Loaded manifest from cache');
@@ -1164,15 +1168,20 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 		}
 		const data = await response.arrayBuffer();
 		manifest = decoder.decodeManifest(data);
-		// Cache manifest
-		storageManager.saveManifest(operationId, data, format).catch(e => {
-			console.warn('Failed to cache manifest:', e);
-		});
+		// Cache manifest (only if enabled)
+		if (enableBrowserCache) {
+			storageManager.saveManifest(operationId, data, format).catch(e => {
+				console.warn('Failed to cache manifest:', e);
+			});
+		}
 	}
 
-	// Initialize chunk manager with format
+	// Initialize chunk manager with format and cache setting
 	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
-	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl, format);
+	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl, {
+		format: format,
+		enableBrowserCache: enableBrowserCache
+	});
 	isStreamingMode = true;
 
 	// Set up mission metadata
@@ -1283,9 +1292,10 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 		if (m.type.includes('zoneTrigger') || m.type.includes('Empty')) continue;
 
 		const player = m.playerId >= 0 ? entities.getById(m.playerId) : -1;
+		// Format: [frameNum, [posX, posY, posZ], direction, alpha]
 		const positions = m.positions.map(p => [
-			[p.posX, p.posY, p.posZ],
 			p.frameNum,
+			[p.posX, p.posY, p.posZ],
 			p.direction,
 			p.alpha
 		]);

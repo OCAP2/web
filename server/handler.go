@@ -24,11 +24,17 @@ var (
 	BuildDate   string
 )
 
+// ConversionTrigger triggers async conversion of an operation
+type ConversionTrigger interface {
+	TriggerConversion(id int64, filename string)
+}
+
 type Handler struct {
-	repoOperation *RepoOperation
-	repoMarker    *RepoMarker
-	repoAmmo      *RepoAmmo
-	setting       Setting
+	repoOperation       *RepoOperation
+	repoMarker          *RepoMarker
+	repoAmmo            *RepoAmmo
+	setting             Setting
+	conversionTrigger   ConversionTrigger // optional, nil if conversion disabled
 }
 
 // FormatInfo contains storage format details for a recording
@@ -38,12 +44,23 @@ type FormatInfo struct {
 	SupportsStreaming bool   `json:"supportsStreaming"`
 }
 
+// HandlerOption configures the Handler
+type HandlerOption func(*Handler)
+
+// WithConversionTrigger sets the conversion trigger for event-driven conversion
+func WithConversionTrigger(trigger ConversionTrigger) HandlerOption {
+	return func(h *Handler) {
+		h.conversionTrigger = trigger
+	}
+}
+
 func NewHandler(
 	e *echo.Echo,
 	repoOperation *RepoOperation,
 	repoMarker *RepoMarker,
 	repoAmmo *RepoAmmo,
 	setting Setting,
+	opts ...HandlerOption,
 ) {
 	// Register storage engines
 	storage.RegisterEngine(storage.NewJSONEngine(setting.Data))
@@ -55,6 +72,11 @@ func NewHandler(
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
 		setting:       setting,
+	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(&hdlr)
 	}
 
 	e.Use(hdlr.errorHandler)
@@ -358,6 +380,11 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 
 	if _, err = io.Copy(writer, file); err != nil {
 		return err
+	}
+
+	// Trigger conversion immediately if enabled (async, non-blocking)
+	if h.conversionTrigger != nil {
+		h.conversionTrigger.TriggerConversion(op.ID, op.Filename)
 	}
 
 	return c.NoContent(http.StatusOK)

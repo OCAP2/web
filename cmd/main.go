@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -184,12 +185,26 @@ func convertAllPending(ctx context.Context, repo *server.RepoOperation, setting 
 	return showConversionStatus(ctx, repo)
 }
 
-
 func app() error {
 	setting, err := server.NewSetting()
 	if err != nil {
 		return fmt.Errorf("setting: %w", err)
 	}
+
+	// Configure structured JSON logging
+	var logOutput io.Writer = os.Stdout
+	var flog *os.File
+	if setting.Logger {
+		flog, err = os.OpenFile("ocap.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return fmt.Errorf("open logger file: %w", err)
+		}
+		defer flog.Close()
+		logOutput = io.MultiWriter(os.Stdout, flog)
+	}
+
+	// Set up slog with JSON handler for consistent logging
+	slog.SetDefault(slog.New(slog.NewJSONHandler(logOutput, nil)))
 
 	operation, err := server.NewRepoOperation(setting.DB)
 	if err != nil {
@@ -209,25 +224,17 @@ func app() error {
 	e := echo.New()
 
 	loggerConfig := middleware.DefaultLoggerConfig
-	if setting.Logger {
-		flog, err := os.OpenFile("ocap.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			return fmt.Errorf("open logger file: %w", err)
-		}
-		defer flog.Close()
-
-		loggerConfig.Output = io.MultiWriter(os.Stdout, flog)
-	}
+	loggerConfig.Output = logOutput
 
 	e.Use(
 		middleware.LoggerWithConfig(loggerConfig),
 	)
-	server.NewHandler(e, operation, marker, ammo, setting)
 
-	// Start conversion worker if enabled
+	// Create conversion worker if enabled (before handler so we can pass it)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var handlerOpts []server.HandlerOption
 	if setting.Conversion.Enabled {
 		interval, err := time.ParseDuration(setting.Conversion.Interval)
 		if err != nil {
@@ -245,8 +252,15 @@ func app() error {
 				StorageFormat: setting.Conversion.StorageEngine,
 			},
 		)
+
+		// Pass worker to handler for event-driven conversion on upload
+		handlerOpts = append(handlerOpts, server.WithConversionTrigger(worker))
+
+		// Start background worker for retries and batch processing
 		go worker.Start(ctx)
 	}
+
+	server.NewHandler(e, operation, marker, ammo, setting, handlerOpts...)
 
 	// Handle graceful shutdown
 	go func() {
@@ -291,4 +305,8 @@ func (a *repoAdapter) UpdateConversionStatus(ctx context.Context, id int64, stat
 
 func (a *repoAdapter) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
 	return a.repo.UpdateStorageFormat(ctx, id, format)
+}
+
+func (a *repoAdapter) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
+	return a.repo.UpdateMissionDuration(ctx, id, duration)
 }

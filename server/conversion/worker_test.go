@@ -20,16 +20,18 @@ func init() {
 
 // mockRepo implements OperationRepo for testing
 type mockRepo struct {
-	pending []Operation
-	status  map[int64]string
-	format  map[int64]string
+	pending  []Operation
+	status   map[int64]string
+	format   map[int64]string
+	duration map[int64]float64
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		pending: []Operation{},
-		status:  make(map[int64]string),
-		format:  make(map[int64]string),
+		pending:  []Operation{},
+		status:   make(map[int64]string),
+		format:   make(map[int64]string),
+		duration: make(map[int64]float64),
 	}
 }
 
@@ -47,6 +49,11 @@ func (m *mockRepo) UpdateConversionStatus(ctx context.Context, id int64, status 
 
 func (m *mockRepo) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
 	m.format[id] = format
+	return nil
+}
+
+func (m *mockRepo) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
+	m.duration[id] = duration
 	return nil
 }
 
