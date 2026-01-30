@@ -42,6 +42,7 @@ type FormatInfo struct {
 	Format            string `json:"format"`
 	ChunkCount        int    `json:"chunkCount"`
 	SupportsStreaming bool   `json:"supportsStreaming"`
+	JSONFormatVersion int    `json:"jsonFormatVersion,omitempty"`
 }
 
 // HandlerOption configures the Handler
@@ -241,6 +242,7 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 		Format:            format,
 		ChunkCount:        chunkCount,
 		SupportsStreaming: engine.SupportsStreaming(),
+		JSONFormatVersion: op.JSONFormatVersion,
 	})
 }
 

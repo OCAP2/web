@@ -75,14 +75,15 @@ func TestGetOperationFormat(t *testing.T) {
 
 	ctx := context.Background()
 	op := &Operation{
-		WorldName:        "altis",
-		MissionName:      "Test Mission",
-		MissionDuration:  3600,
-		Filename:         "test_mission",
-		Date:             "2026-01-30",
-		Tag:              "coop",
-		StorageFormat:    "json",
-		ConversionStatus: "completed",
+		WorldName:         "altis",
+		MissionName:       "Test Mission",
+		MissionDuration:   3600,
+		Filename:          "test_mission",
+		Date:              "2026-01-30",
+		Tag:               "coop",
+		StorageFormat:     "json",
+		ConversionStatus:  "completed",
+		JSONFormatVersion: 1,
 	}
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
@@ -114,6 +115,7 @@ func TestGetOperationFormat(t *testing.T) {
 	assert.Equal(t, "json", formatInfo.Format)
 	assert.Equal(t, 1, formatInfo.ChunkCount)
 	assert.False(t, formatInfo.SupportsStreaming)
+	assert.Equal(t, 1, formatInfo.JSONFormatVersion)
 
 	// Test: Get format for non-existing operation
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/operations/999/format", nil)
@@ -141,14 +143,15 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 
 	ctx := context.Background()
 	op := &Operation{
-		WorldName:        "altis",
-		MissionName:      "Test Mission Protobuf",
-		MissionDuration:  3600,
-		Filename:         "test_mission_pb",
-		Date:             "2026-01-30",
-		Tag:              "coop",
-		StorageFormat:    "protobuf",
-		ConversionStatus: "completed",
+		WorldName:         "altis",
+		MissionName:       "Test Mission Protobuf",
+		MissionDuration:   3600,
+		Filename:          "test_mission_pb",
+		Date:              "2026-01-30",
+		Tag:               "coop",
+		StorageFormat:     "protobuf",
+		ConversionStatus:  "completed",
+		JSONFormatVersion: 1,
 	}
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
@@ -179,6 +182,7 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "protobuf", formatInfo.Format)
 	assert.True(t, formatInfo.SupportsStreaming)
+	assert.Equal(t, 1, formatInfo.JSONFormatVersion)
 }
 
 func TestGetOperationManifest(t *testing.T) {
@@ -1264,6 +1268,7 @@ func TestGetOperationFormat_EmptyStorageFormat(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "json", result.Format)
+	assert.Equal(t, 1, result.JSONFormatVersion) // Default version is 1
 }
 
 func TestGetOperationFormat_UnknownFormat(t *testing.T) {
@@ -1315,6 +1320,7 @@ func TestGetOperationFormat_UnknownFormat(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "json", result.Format) // Should fallback to json
+	assert.Equal(t, 1, result.JSONFormatVersion) // Default version is 1
 }
 
 func TestGetOperationManifest_FlatBuffers(t *testing.T) {
