@@ -1734,3 +1734,193 @@ func TestStoreOperation_WrongSecret(t *testing.T) {
 	err = hdlr.StoreOperation(c)
 	assert.Equal(t, echo.ErrForbidden, err)
 }
+
+func TestGetOperationManifest_JSONError(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with json format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "JSON Error Test",
+		MissionDuration:  3600,
+		Filename:         "missing_json_file",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "json",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine (but don't create the file)
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationManifest(c)
+	assert.Error(t, err)
+	httpErr, ok := err.(*echo.HTTPError)
+	assert.True(t, ok)
+	assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
+}
+
+func TestGetOperationManifest_ProtobufReadError(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with protobuf format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Protobuf Error Test",
+		MissionDuration:  3600,
+		Filename:         "missing_protobuf",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "protobuf",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register protobuf engine (but don't create the manifest file)
+	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationManifest(c)
+	assert.Error(t, err)
+	httpErr, ok := err.(*echo.HTTPError)
+	assert.True(t, ok)
+	assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
+}
+
+func TestGetOperationChunk_JSONNotSupported(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with json format
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "JSON Chunk Test",
+		MissionDuration:  3600,
+		Filename:         "json_chunk_test",
+		Date:             "2026-01-30",
+		Tag:              "coop",
+		StorageFormat:    "json",
+		ConversionStatus: "completed",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunks/0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id", "index")
+	c.SetParamValues("1", "0")
+
+	err = hdlr.GetOperationChunk(c)
+	assert.Error(t, err)
+	httpErr, ok := err.(*echo.HTTPError)
+	assert.True(t, ok)
+	// JSON engine returns error for chunked loading, handler returns 404
+	assert.Equal(t, http.StatusNotFound, httpErr.Code)
+}
+
+func TestGetCapture_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/data/nonexistent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("name")
+	c.SetParamValues("nonexistent")
+
+	err = hdlr.GetCapture(c)
+	assert.Error(t, err)
+}
+
+func TestGetCaptureFile_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	hdlr := Handler{
+		setting: Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/file/nonexistent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("name")
+	c.SetParamValues("nonexistent")
+
+	err = hdlr.GetCaptureFile(c)
+	assert.Error(t, err)
+}
