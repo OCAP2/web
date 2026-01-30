@@ -3,17 +3,18 @@ module github.com/OCAP2/web
 go 1.24.0
 
 require (
+	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -33,6 +34,5 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
