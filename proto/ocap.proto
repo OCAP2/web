@@ -1,0 +1,114 @@
+// proto/ocap.proto
+syntax = "proto3";
+package ocap;
+option go_package = "github.com/OCAP2/web/proto";
+
+// Manifest - loaded once at playback start (~10-100KB)
+message Manifest {
+  uint32 version = 1;
+  string world_name = 2;
+  string mission_name = 3;
+  uint32 frame_count = 4;
+  uint32 chunk_size = 5;
+  uint32 capture_delay_ms = 6;
+  uint32 chunk_count = 7;
+  repeated EntityDef entities = 8;
+  repeated TimeSample times = 9;
+  repeated Event events = 10;
+  repeated MarkerDef markers = 11;
+}
+
+message EntityDef {
+  uint32 id = 1;
+  EntityType type = 2;
+  string name = 3;
+  Side side = 4;
+  string group_name = 5;
+  string role = 6;
+  uint32 start_frame = 7;
+  uint32 end_frame = 8;
+  bool is_player = 9;
+  string vehicle_class = 10;
+}
+
+enum EntityType {
+  ENTITY_TYPE_UNKNOWN = 0;
+  ENTITY_TYPE_UNIT = 1;
+  ENTITY_TYPE_VEHICLE = 2;
+}
+
+enum Side {
+  SIDE_UNKNOWN = 0;
+  SIDE_WEST = 1;
+  SIDE_EAST = 2;
+  SIDE_GUER = 3;
+  SIDE_CIV = 4;
+  SIDE_GLOBAL = 5;
+}
+
+message TimeSample {
+  uint32 frame_num = 1;
+  string system_time_utc = 2;
+  string date = 3;
+  float time_multiplier = 4;
+  float time = 5;
+}
+
+// Chunk - loaded on demand (~100KB-1MB each)
+message Chunk {
+  uint32 index = 1;
+  uint32 start_frame = 2;
+  uint32 frame_count = 3;
+  repeated Frame frames = 4;
+}
+
+message Frame {
+  uint32 frame_num = 1;
+  repeated EntityState entities = 2;
+}
+
+message EntityState {
+  uint32 entity_id = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  uint32 direction = 4;
+  uint32 alive = 5;
+  repeated uint32 crew_ids = 6;
+  uint32 vehicle_id = 7;
+  bool is_in_vehicle = 8;
+  string name = 9;
+  bool is_player = 10;
+}
+
+message Event {
+  uint32 frame_num = 1;
+  string type = 2;
+  uint32 source_id = 3;
+  uint32 target_id = 4;
+  string message = 5;
+  float distance = 6;
+  string weapon = 7;
+}
+
+message MarkerDef {
+  string type = 1;
+  string text = 2;
+  uint32 start_frame = 3;
+  uint32 end_frame = 4;
+  int32 player_id = 5;
+  string color = 6;
+  Side side = 7;
+  repeated MarkerPosition positions = 8;
+  repeated float size = 9;
+  string shape = 10;
+  string brush = 11;
+}
+
+message MarkerPosition {
+  uint32 frame_num = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  float pos_z = 4;
+  float direction = 5;
+  float alpha = 6;
+}
