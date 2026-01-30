@@ -1778,6 +1778,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 
 	// Get world info and init map
 	const world = await getWorldByName(worldName);
+	worldObject = world;  // Set global for getMapImageBounds()
 	initMap(world);
 
 	ui.updateLoadingProgress(4, 4, 'Starting playback...');
