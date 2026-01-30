@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	fb "github.com/OCAP2/web/pkg/schemas/flatbuffers/generated"
+	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -370,4 +371,292 @@ func TestFlatBuffersTypeConversions(t *testing.T) {
 	assert.Equal(t, fb.SideCiv, stringToFBSide("CIVILIAN"))
 	assert.Equal(t, fb.SideGlobal, stringToFBSide("GLOBAL"))
 	assert.Equal(t, fb.SideUnknown, stringToFBSide("invalid"))
+}
+
+func TestFlatBuffersEngineGetManifestReader(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create test manifest data
+	testData := []byte("test flatbuffers manifest data")
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), testData, 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	reader, err := engine.GetManifestReader(context.Background(), "test_mission")
+	require.NoError(t, err)
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Equal(t, testData, data)
+}
+
+func TestFlatBuffersEngineGetManifestReaderMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	engine := NewFlatBuffersEngine(dir)
+
+	_, err := engine.GetManifestReader(context.Background(), "nonexistent")
+	require.Error(t, err)
+}
+
+func TestFlatBuffersEngineConvert(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "test.json")
+	outputPath := filepath.Join(dir, "output")
+
+	// Create test JSON data
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "FlatBuffers Convert Test",
+		"endFrame": 10,
+		"captureDelay": 1,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Player1",
+				"side": "WEST",
+				"group": "Alpha",
+				"role": "Rifleman",
+				"startFrameNum": 0,
+				"isPlayer": 1,
+				"positions": [
+					[[100, 200], 45, 1, 0, "Player1", 1],
+					[[101, 201], 46, 1, 0, "Player1", 1],
+					[[102, 202], 47, 1, 0, "Player1", 1],
+					[[103, 203], 48, 1, 0, "Player1", 1],
+					[[104, 204], 49, 1, 0, "Player1", 1],
+					[[105, 205], 50, 1, 0, "Player1", 1],
+					[[106, 206], 51, 1, 0, "Player1", 1],
+					[[107, 207], 52, 1, 0, "Player1", 1],
+					[[108, 208], 53, 1, 0, "Player1", 1],
+					[[109, 209], 54, 0, 0, "Player1", 1]
+				]
+			},
+			{
+				"id": 1,
+				"type": "vehicle",
+				"name": "Truck",
+				"class": "B_Truck_01",
+				"startFrameNum": 0,
+				"positions": [
+					[[500, 600], 180, 1, []],
+					[[501, 601], 181, 1, []],
+					[[502, 602], 182, 1, []],
+					[[503, 603], 183, 1, []],
+					[[504, 604], 184, 1, []],
+					[[505, 605], 185, 1, []],
+					[[506, 606], 186, 1, []],
+					[[507, 607], 187, 1, []],
+					[[508, 608], 188, 1, []],
+					[[509, 609], 189, 1, []]
+				]
+			}
+		],
+		"events": [
+			[9, "killed", 0, 0, "arifle_MX"]
+		],
+		"Markers": [],
+		"times": []
+	}`
+
+	require.NoError(t, os.WriteFile(inputPath, []byte(testJSON), 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	ctx := context.Background()
+
+	err := engine.Convert(ctx, inputPath, outputPath)
+	require.NoError(t, err)
+
+	// Verify manifest was created
+	manifestPath := filepath.Join(outputPath, "manifest.fb")
+	_, err = os.Stat(manifestPath)
+	require.NoError(t, err)
+
+	// Verify we can read the manifest
+	newEngine := NewFlatBuffersEngine(filepath.Dir(outputPath))
+	manifest, err := newEngine.GetManifest(ctx, "output")
+	require.NoError(t, err)
+
+	assert.Equal(t, "altis", manifest.WorldName)
+	assert.Equal(t, "FlatBuffers Convert Test", manifest.MissionName)
+	assert.Equal(t, uint32(10), manifest.FrameCount)
+	assert.Len(t, manifest.Entities, 2)
+
+	// Verify first entity
+	assert.Equal(t, "unit", manifest.Entities[0].Type)
+	assert.Equal(t, "Player1", manifest.Entities[0].Name)
+	assert.Equal(t, "WEST", manifest.Entities[0].Side)
+	assert.True(t, manifest.Entities[0].IsPlayer)
+
+	// Verify vehicle
+	assert.Equal(t, "vehicle", manifest.Entities[1].Type)
+	assert.Equal(t, "Truck", manifest.Entities[1].Name)
+	assert.Equal(t, "B_Truck_01", manifest.Entities[1].VehicleClass)
+
+	// Verify chunks were created
+	chunksDir := filepath.Join(outputPath, "chunks")
+	_, err = os.Stat(filepath.Join(chunksDir, "0000.fb"))
+	require.NoError(t, err)
+
+	// Read and verify chunk
+	chunk, err := newEngine.GetChunk(ctx, "output", 0)
+	require.NoError(t, err)
+	assert.Greater(t, len(chunk.Frames), 0)
+}
+
+func TestFlatBuffersEngineConvertMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	engine := NewFlatBuffersEngine(dir)
+
+	err := engine.Convert(context.Background(), "nonexistent.json", "output")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "load JSON")
+}
+
+func TestPbEntityTypeToString(t *testing.T) {
+	tests := []struct {
+		input    pb.EntityType
+		expected string
+	}{
+		{pb.EntityType_ENTITY_TYPE_UNIT, "unit"},
+		{pb.EntityType_ENTITY_TYPE_VEHICLE, "vehicle"},
+		{pb.EntityType_ENTITY_TYPE_UNKNOWN, "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			result := pbEntityTypeToString(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPbSideToString(t *testing.T) {
+	tests := []struct {
+		input    pb.Side
+		expected string
+	}{
+		{pb.Side_SIDE_WEST, "WEST"},
+		{pb.Side_SIDE_EAST, "EAST"},
+		{pb.Side_SIDE_GUER, "GUER"},
+		{pb.Side_SIDE_CIV, "CIV"},
+		{pb.Side_SIDE_GLOBAL, "GLOBAL"},
+		{pb.Side_SIDE_UNKNOWN, "UNKNOWN"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			result := pbSideToString(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPbManifestToStorageManifest(t *testing.T) {
+	pbManifest := &pb.Manifest{
+		Version:        2,
+		WorldName:      "stratis",
+		MissionName:    "Conversion Test",
+		FrameCount:     500,
+		ChunkSize:      100,
+		CaptureDelayMs: 1000,
+		ChunkCount:     5,
+		Entities: []*pb.EntityDef{
+			{
+				Id:           1,
+				Type:         pb.EntityType_ENTITY_TYPE_UNIT,
+				Name:         "Squad Leader",
+				Side:         pb.Side_SIDE_GUER,
+				GroupName:    "Bravo",
+				Role:         "Leader",
+				StartFrame:   0,
+				EndFrame:     450,
+				IsPlayer:     true,
+				VehicleClass: "",
+			},
+			{
+				Id:           2,
+				Type:         pb.EntityType_ENTITY_TYPE_VEHICLE,
+				Name:         "Transport",
+				Side:         pb.Side_SIDE_WEST,
+				GroupName:    "",
+				Role:         "",
+				StartFrame:   10,
+				EndFrame:     400,
+				IsPlayer:     false,
+				VehicleClass: "B_Heli_Transport",
+			},
+		},
+		Events: []*pb.Event{
+			{
+				FrameNum: 100,
+				Type:     "hit",
+				SourceId: 1,
+				TargetId: 2,
+				Message:  "",
+				Distance: 50.5,
+				Weapon:   "arifle_MX",
+			},
+		},
+	}
+
+	manifest := pbManifestToStorageManifest(pbManifest)
+
+	// Verify basic fields
+	assert.Equal(t, uint32(2), manifest.Version)
+	assert.Equal(t, "stratis", manifest.WorldName)
+	assert.Equal(t, "Conversion Test", manifest.MissionName)
+	assert.Equal(t, uint32(500), manifest.FrameCount)
+	assert.Equal(t, uint32(100), manifest.ChunkSize)
+	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)
+	assert.Equal(t, uint32(5), manifest.ChunkCount)
+
+	// Verify entities
+	require.Len(t, manifest.Entities, 2)
+
+	ent0 := manifest.Entities[0]
+	assert.Equal(t, uint32(1), ent0.ID)
+	assert.Equal(t, "unit", ent0.Type)
+	assert.Equal(t, "Squad Leader", ent0.Name)
+	assert.Equal(t, "GUER", ent0.Side)
+	assert.Equal(t, "Bravo", ent0.Group)
+	assert.Equal(t, "Leader", ent0.Role)
+	assert.Equal(t, uint32(0), ent0.StartFrame)
+	assert.Equal(t, uint32(450), ent0.EndFrame)
+	assert.True(t, ent0.IsPlayer)
+	assert.Empty(t, ent0.VehicleClass)
+
+	ent1 := manifest.Entities[1]
+	assert.Equal(t, uint32(2), ent1.ID)
+	assert.Equal(t, "vehicle", ent1.Type)
+	assert.Equal(t, "Transport", ent1.Name)
+	assert.Equal(t, "WEST", ent1.Side)
+	assert.Equal(t, "B_Heli_Transport", ent1.VehicleClass)
+	assert.False(t, ent1.IsPlayer)
+
+	// Verify events
+	require.Len(t, manifest.Events, 1)
+	evt := manifest.Events[0]
+	assert.Equal(t, uint32(100), evt.FrameNum)
+	assert.Equal(t, "hit", evt.Type)
+	assert.Equal(t, uint32(1), evt.SourceID)
+	assert.Equal(t, uint32(2), evt.TargetID)
+	assert.Equal(t, float32(50.5), evt.Distance)
+	assert.Equal(t, "arifle_MX", evt.Weapon)
+}
+
+func TestPbManifestToStorageManifestEmpty(t *testing.T) {
+	pbManifest := &pb.Manifest{
+		Version:     1,
+		WorldName:   "empty",
+		MissionName: "Empty Test",
+	}
+
+	manifest := pbManifestToStorageManifest(pbManifest)
+
+	assert.Equal(t, "empty", manifest.WorldName)
+	assert.Empty(t, manifest.Entities)
+	assert.Empty(t, manifest.Events)
 }

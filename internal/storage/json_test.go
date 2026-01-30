@@ -157,6 +157,17 @@ func TestJSONEngineEmptyEntities(t *testing.T) {
 	assert.Empty(t, manifest.Entities)
 }
 
+func TestJSONEngineGetManifestReader(t *testing.T) {
+	engine := NewJSONEngine(t.TempDir())
+	ctx := context.Background()
+
+	// JSON engine does not support raw manifest streaming
+	reader, err := engine.GetManifestReader(ctx, "test")
+	assert.Nil(t, reader)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support")
+}
+
 func TestHelperFunctions(t *testing.T) {
 	m := map[string]interface{}{
 		"stringVal": "hello",

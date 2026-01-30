@@ -237,6 +237,39 @@ func TestProtobufEngineGetChunkReaderMissingFile(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestProtobufEngineGetManifestReader(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create test manifest
+	pbManifest := &pb.Manifest{
+		Version:     1,
+		WorldName:   "altis",
+		MissionName: "Reader Test",
+	}
+	data, err := proto.Marshal(pbManifest)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), data, 0644))
+
+	engine := NewProtobufEngine(dir)
+	reader, err := engine.GetManifestReader(context.Background(), "test_mission")
+	require.NoError(t, err)
+	defer reader.Close()
+
+	readData, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Equal(t, data, readData)
+}
+
+func TestProtobufEngineGetManifestReaderMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	engine := NewProtobufEngine(dir)
+
+	_, err := engine.GetManifestReader(context.Background(), "nonexistent")
+	require.Error(t, err)
+}
+
 func TestProtobufEngineConvert(t *testing.T) {
 	dir := t.TempDir()
 	engine := NewProtobufEngine(dir)
