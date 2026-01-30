@@ -10,13 +10,15 @@ import (
 )
 
 type Operation struct {
-	ID              int64   `json:"id"`
-	WorldName       string  `json:"world_name"`
-	MissionName     string  `json:"mission_name"`
-	MissionDuration float64 `json:"mission_duration"`
-	Filename        string  `json:"filename"`
-	Date            string  `json:"date"`
-	Tag             string  `json:"tag"`
+	ID               int64   `json:"id"`
+	WorldName        string  `json:"world_name"`
+	MissionName      string  `json:"mission_name"`
+	MissionDuration  float64 `json:"mission_duration"`
+	Filename         string  `json:"filename"`
+	Date             string  `json:"date"`
+	Tag              string  `json:"tag"`
+	StorageFormat    string  `json:"storageFormat"`
+	ConversionStatus string  `json:"conversionStatus"`
 }
 
 type Filter struct {
@@ -150,11 +152,20 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 }
 
 func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
+	storageFormat := operation.StorageFormat
+	if storageFormat == "" {
+		storageFormat = "json"
+	}
+	conversionStatus := operation.ConversionStatus
+	if conversionStatus == "" {
+		conversionStatus = "pending"
+	}
+
 	query := `
 		INSERT INTO operations
-			(world_name, mission_name, mission_duration, filename, date, tag)
+			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status)
 		VALUES
-			($1, $2, $3, $4, $5, $6)
+			($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	_, err := r.db.ExecContext(
 		ctx,
@@ -165,6 +176,8 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		operation.Filename,
 		operation.Date,
 		operation.Tag,
+		storageFormat,
+		conversionStatus,
 	)
 	if err != nil {
 		return err
@@ -175,7 +188,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation, error) {
 	query := `
 		SELECT
-			*
+			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
 		FROM
 			operations
 		WHERE
@@ -214,6 +227,8 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 			&o.Filename,
 			&o.Date,
 			&o.Tag,
+			&o.StorageFormat,
+			&o.ConversionStatus,
 		)
 		if err != nil {
 			return nil, err
