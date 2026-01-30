@@ -395,7 +395,7 @@ function initMap (world) {
 	if (worldName === "") {
 		console.log("World name missing or not rendered. Using default map.")
 		// if default map is used as placeholder, use custom topo layer url
-		topoLayerUrl = 'http://maps.ocap2.com/missing_tiles.png';
+		topoLayerUrl = 'https://maps.ocap2.com/missing_tiles.png';
 	} else if (Boolean(world._useCloudTiles)) {
 		console.log("Streaming map tiles from the cloud (maps.ocap2.com).")
 		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
@@ -425,7 +425,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.7,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoLayer);
 	}
@@ -442,7 +442,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.8,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoDarkLayer);
 	}
@@ -459,7 +459,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 0.9,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(topoReliefLayer);
 	}
@@ -476,7 +476,7 @@ function initMap (world) {
 			tms: false,
 			keepBuffer: 4,
 			// opacity: 1,
-			errorTileUrl: 'http://maps.ocap2.com/missing_tiles.png'
+			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
 		});
 		baseLayers.push(colorReliefLayer);
 	}
