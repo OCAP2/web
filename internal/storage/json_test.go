@@ -186,3 +186,96 @@ func TestHelperFunctions(t *testing.T) {
 	assert.Equal(t, uint32(100), getUint32(m, "intVal"))
 	assert.Equal(t, uint32(0), getUint32(m, "missing"))
 }
+
+func TestJSONEngineInvalidGzip(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a file with .gz extension but invalid gzip data
+	invalidGzPath := filepath.Join(dir, "invalid.gz")
+	err := os.WriteFile(invalidGzPath, []byte("not valid gzip data"), 0644)
+	require.NoError(t, err)
+
+	engine := NewJSONEngine(dir)
+	_, err = engine.GetManifest(context.Background(), "invalid")
+	assert.Error(t, err)
+}
+
+func TestJSONEngineInvalidJSONInGzip(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create gzipped file with invalid JSON content
+	gzPath := filepath.Join(dir, "badjson.gz")
+	f, err := os.Create(gzPath)
+	require.NoError(t, err)
+
+	gw := gzip.NewWriter(f)
+	_, err = gw.Write([]byte("{ invalid json }"))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, f.Close())
+
+	engine := NewJSONEngine(dir)
+	_, err = engine.GetManifest(context.Background(), "badjson")
+	assert.Error(t, err)
+}
+
+func TestJSONEngineInvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create plain JSON file with invalid content
+	jsonPath := filepath.Join(dir, "invalid.json")
+	err := os.WriteFile(jsonPath, []byte("{ this is not valid json }"), 0644)
+	require.NoError(t, err)
+
+	engine := NewJSONEngine(dir)
+	_, err = engine.GetManifest(context.Background(), "invalid")
+	assert.Error(t, err)
+}
+
+func TestJSONEngineEntityWithNoType(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON with entity that has non-map type in entities array
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Test",
+		"endFrame": 10,
+		"captureDelay": 1,
+		"entities": [
+			"not a map",
+			{"id": 0, "type": "unit", "name": "Player1"}
+		]
+	}`
+
+	err := os.WriteFile(filepath.Join(dir, "badentity.json"), []byte(testData), 0644)
+	require.NoError(t, err)
+
+	engine := NewJSONEngine(dir)
+	manifest, err := engine.GetManifest(context.Background(), "badentity")
+	require.NoError(t, err)
+	// Only valid entity should be parsed
+	assert.Len(t, manifest.Entities, 1)
+	assert.Equal(t, "Player1", manifest.Entities[0].Name)
+}
+
+func TestJSONEngineEntitiesNotArray(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test JSON with entities not being an array
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Test",
+		"endFrame": 10,
+		"captureDelay": 1,
+		"entities": "not an array"
+	}`
+
+	err := os.WriteFile(filepath.Join(dir, "badentities.json"), []byte(testData), 0644)
+	require.NoError(t, err)
+
+	engine := NewJSONEngine(dir)
+	manifest, err := engine.GetManifest(context.Background(), "badentities")
+	require.NoError(t, err)
+	// Should have no entities since parsing skips invalid format
+	assert.Empty(t, manifest.Entities)
+}

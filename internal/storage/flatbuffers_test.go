@@ -660,3 +660,189 @@ func TestPbManifestToStorageManifestEmpty(t *testing.T) {
 	assert.Empty(t, manifest.Entities)
 	assert.Empty(t, manifest.Events)
 }
+
+func TestFlatBuffersEngineChunkCountError(t *testing.T) {
+	dir := t.TempDir()
+	engine := NewFlatBuffersEngine(dir)
+
+	// ChunkCount should fail when GetManifest fails (no manifest file)
+	_, err := engine.ChunkCount(context.Background(), "nonexistent")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read manifest")
+}
+
+func TestFlatBuffersEngineConvertInvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "invalid.json")
+	outputPath := filepath.Join(dir, "output")
+
+	// Create invalid JSON
+	err := os.WriteFile(inputPath, []byte("{ invalid json }"), 0644)
+	require.NoError(t, err)
+
+	engine := NewFlatBuffersEngine(dir)
+	err = engine.Convert(context.Background(), inputPath, outputPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "load JSON")
+}
+
+func TestFlatBuffersEngineConvertContextCancelled(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "test.json")
+	outputPath := filepath.Join(dir, "output")
+
+	// Create valid JSON with many frames to allow context cancellation
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "Context Cancel Test",
+		"endFrame": 1000,
+		"captureDelay": 1,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Player1",
+				"startFrameNum": 0,
+				"positions": []
+			}
+		]
+	}`
+
+	err := os.WriteFile(inputPath, []byte(testJSON), 0644)
+	require.NoError(t, err)
+
+	engine := NewFlatBuffersEngine(dir)
+
+	// Create already cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = engine.Convert(ctx, inputPath, outputPath)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestFlatBuffersEngineConvertWithEvents(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "events.json")
+	outputPath := filepath.Join(dir, "output")
+
+	// Create JSON with events
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "Events Test",
+		"endFrame": 5,
+		"captureDelay": 1,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Shooter",
+				"side": "WEST",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 45, 1, 0, "Shooter", 1],
+					[[100, 200], 45, 1, 0, "Shooter", 1],
+					[[100, 200], 45, 1, 0, "Shooter", 1],
+					[[100, 200], 45, 1, 0, "Shooter", 1],
+					[[100, 200], 45, 1, 0, "Shooter", 1]
+				]
+			},
+			{
+				"id": 1,
+				"type": "unit",
+				"name": "Target",
+				"side": "EAST",
+				"startFrameNum": 0,
+				"positions": [
+					[[150, 250], 180, 1, 0, "Target", 0],
+					[[150, 250], 180, 1, 0, "Target", 0],
+					[[150, 250], 180, 0, 0, "Target", 0],
+					[[150, 250], 180, 0, 0, "Target", 0],
+					[[150, 250], 180, 0, 0, "Target", 0]
+				]
+			}
+		],
+		"events": [
+			[1, "hit", 0, 1, "arifle_MX", 50],
+			[2, "killed", 0, 1, "arifle_MX"]
+		]
+	}`
+
+	err := os.WriteFile(inputPath, []byte(testJSON), 0644)
+	require.NoError(t, err)
+
+	engine := NewFlatBuffersEngine(dir)
+	err = engine.Convert(context.Background(), inputPath, outputPath)
+	require.NoError(t, err)
+
+	// Verify manifest has events
+	newEngine := NewFlatBuffersEngine(filepath.Dir(outputPath))
+	manifest, err := newEngine.GetManifest(context.Background(), "output")
+	require.NoError(t, err)
+
+	assert.Len(t, manifest.Events, 2)
+	assert.Equal(t, "hit", manifest.Events[0].Type)
+	assert.Equal(t, "killed", manifest.Events[1].Type)
+}
+
+func TestFlatBuffersEngineConvertWithCrewInVehicle(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "crew.json")
+	outputPath := filepath.Join(dir, "output")
+
+	// Create JSON with vehicle crew
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "Crew Test",
+		"endFrame": 3,
+		"captureDelay": 1,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Driver",
+				"side": "WEST",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 45, 1, 1, "Driver", 1],
+					[[100, 200], 45, 1, 1, "Driver", 1],
+					[[100, 200], 45, 1, 1, "Driver", 1]
+				]
+			},
+			{
+				"id": 1,
+				"type": "vehicle",
+				"name": "Truck",
+				"class": "B_Truck_01",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 90, 1, [0]],
+					[[101, 201], 91, 1, [0]],
+					[[102, 202], 92, 1, [0]]
+				]
+			}
+		]
+	}`
+
+	err := os.WriteFile(inputPath, []byte(testJSON), 0644)
+	require.NoError(t, err)
+
+	engine := NewFlatBuffersEngine(dir)
+	err = engine.Convert(context.Background(), inputPath, outputPath)
+	require.NoError(t, err)
+
+	// Verify chunk has crew data
+	newEngine := NewFlatBuffersEngine(filepath.Dir(outputPath))
+	chunk, err := newEngine.GetChunk(context.Background(), "output", 0)
+	require.NoError(t, err)
+
+	// Find vehicle entity in chunk
+	for _, frame := range chunk.Frames {
+		for _, entity := range frame.Entities {
+			if entity.EntityID == 1 { // Vehicle
+				assert.NotEmpty(t, entity.CrewIDs, "Vehicle should have crew")
+			}
+		}
+	}
+}
