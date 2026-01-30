@@ -424,6 +424,32 @@ func TestScanDir(t *testing.T) {
 	})
 }
 
+func TestPaintSVG_InvalidTemplate(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create SVG with invalid template syntax
+	invalidPath := filepath.Join(dir, "invalid.svg")
+	err := os.WriteFile(invalidPath, []byte(`<svg>{{ .Unclosed`), 0644)
+	require.NoError(t, err)
+
+	c := color.RGBA{255, 0, 0, 255}
+	_, err = paintSVG(invalidPath, c)
+	assert.Error(t, err)
+}
+
+func TestPaintPNG_InvalidImage(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create file with .png extension but invalid image data
+	invalidPath := filepath.Join(dir, "invalid.png")
+	err := os.WriteFile(invalidPath, []byte("not a valid png"), 0644)
+	require.NoError(t, err)
+
+	c := color.RGBA{255, 0, 0, 255}
+	_, err = paintPNG(invalidPath, c)
+	assert.Error(t, err)
+}
+
 func TestMax(t *testing.T) {
 	tests := []struct {
 		a, b, want uint8

@@ -687,3 +687,38 @@ func TestConvertOperation_InvalidStorageFormat(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "get storage engine")
 }
+
+func TestConvertOperation_JSONFileNotFound(t *testing.T) {
+	dir := t.TempDir()
+	// Don't create the JSON file - test the "file not found" error path
+
+	repo := newErrorMockRepo()
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	err := worker.ConvertOne(ctx, 1, "nonexistent")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "JSON file not found")
+}
+
+func TestTriggerConversion_FailedStatusUpdateError(t *testing.T) {
+	dir := t.TempDir()
+	// Don't create the JSON file - will fail and try to update status to "failed"
+
+	repo := newErrorMockRepo()
+	// Make status updates fail after the initial "converting" update
+	repo.updateStatusErr = fmt.Errorf("status update failed")
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	// TriggerConversion is async, just verify it doesn't panic
+	worker.TriggerConversion(1, "nonexistent")
+
+	// Give the goroutine time to run
+	time.Sleep(100 * time.Millisecond)
+}
