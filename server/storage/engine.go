@@ -17,6 +17,18 @@ type Manifest struct {
 	CaptureDelayMs uint32      `json:"captureDelayMs"`
 	ChunkCount     uint32      `json:"chunkCount"`
 	Entities       []EntityDef `json:"entities"`
+	Events         []Event     `json:"events,omitempty"`
+}
+
+// Event represents a game event
+type Event struct {
+	FrameNum uint32  `json:"frameNum"`
+	Type     string  `json:"type"`
+	SourceID uint32  `json:"sourceId"`
+	TargetID uint32  `json:"targetId"`
+	Message  string  `json:"message,omitempty"`
+	Distance float32 `json:"distance,omitempty"`
+	Weapon   string  `json:"weapon,omitempty"`
 }
 
 // EntityDef defines an entity's metadata
@@ -49,12 +61,16 @@ type Frame struct {
 
 // EntityState is an entity's state at a frame
 type EntityState struct {
-	EntityID  uint32     `json:"entityId"`
-	Position  [2]float32 `json:"position"`
-	Direction uint32     `json:"direction"`
-	Alive     uint8      `json:"alive"`
-	CrewIDs   []uint32   `json:"crewIds,omitempty"`
-	VehicleID uint32     `json:"vehicleId,omitempty"`
+	EntityID    uint32   `json:"entityId"`
+	PosX        float32  `json:"posX"`
+	PosY        float32  `json:"posY"`
+	Direction   uint32   `json:"direction"`
+	Alive       uint32   `json:"alive"`
+	CrewIDs     []uint32 `json:"crewIds,omitempty"`
+	VehicleID   uint32   `json:"vehicleId,omitempty"`
+	IsInVehicle bool     `json:"isInVehicle,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	IsPlayer    bool     `json:"isPlayer,omitempty"`
 }
 
 // Engine defines the storage engine interface

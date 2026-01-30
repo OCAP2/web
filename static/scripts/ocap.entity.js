@@ -339,4 +339,51 @@ class Entity {
 		*/
 		entityToFollow = null;
 	}
+
+	/**
+	 * Update entity state from decoded protobuf EntityState
+	 * Used for chunked playback mode
+	 * @param {Object} state - Decoded EntityState from protobuf
+	 */
+	updateFromState(state) {
+		if (!state) return;
+
+		// Build position in the format expected by _updateAtFrame
+		const position = {
+			position: [state.posX, state.posY],
+			direction: state.direction,
+			alive: state.alive
+		};
+
+		// Update position
+		let latLng = armaToLatLng(position.position);
+		if (this._marker == null) {
+			this.createMarker(latLng);
+		} else {
+			this._marker.setLatLng(latLng);
+		}
+
+		// Update direction
+		if (this._marker.options.rotationAngle !== undefined) {
+			const angle = closestEquivalentAngle(this._marker.options.rotationAngle, position.direction);
+			this._marker.setRotationAngle(angle);
+		} else {
+			this._marker.setRotationAngle(position.direction);
+		}
+
+		// Update alive status
+		this.setAlive(position.alive);
+
+		// Update name if present (for units)
+		if (state.name && this._name !== state.name) {
+			this._name = state.name;
+			// Update popup if it exists
+			if (this._marker && this._marker.getPopup()) {
+				this._marker.getPopup().setContent(this._name);
+			}
+		}
+
+		// Hide popup if needed
+		this.hideMarkerPopup(ui.hideMarkerPopups);
+	}
 }

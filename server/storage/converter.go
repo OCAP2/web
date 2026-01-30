@@ -101,7 +101,7 @@ func (c *Converter) loadJSON(path string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-// entityPositionData holds parsed position data for an entity
+// EntityPositionData holds parsed position data for an entity
 type entityPositionData struct {
 	ID         uint32
 	Type       string

@@ -1,0 +1,124 @@
+// flatbuffers/ocap.fbs
+// FlatBuffers schema for OCAP chunked recordings
+// Zero-copy read access for maximum performance
+
+namespace ocap.fb;
+
+enum EntityType : byte {
+  Unknown = 0,
+  Unit = 1,
+  Vehicle = 2
+}
+
+enum Side : byte {
+  Unknown = 0,
+  West = 1,
+  East = 2,
+  Guer = 3,
+  Civ = 4,
+  Global = 5
+}
+
+// Entity definition - stored in manifest
+table EntityDef {
+  id: uint32;
+  type: EntityType;
+  name: string;
+  side: Side;
+  group_name: string;
+  role: string;
+  start_frame: uint32;
+  end_frame: uint32;
+  is_player: bool;
+  vehicle_class: string;
+}
+
+// Time sample for synchronization
+table TimeSample {
+  frame_num: uint32;
+  system_time_utc: string;
+  date: string;
+  time_multiplier: float;
+  time: float;
+}
+
+// Event definition
+table Event {
+  frame_num: uint32;
+  type: string;
+  source_id: uint32;
+  target_id: uint32;
+  message: string;
+  distance: float;
+  weapon: string;
+}
+
+// Marker position
+table MarkerPosition {
+  frame_num: uint32;
+  pos_x: float;
+  pos_y: float;
+  pos_z: float;
+  direction: float;
+  alpha: float;
+}
+
+// Marker definition
+table MarkerDef {
+  type: string;
+  text: string;
+  start_frame: uint32;
+  end_frame: uint32;
+  player_id: int32;
+  color: string;
+  side: Side;
+  positions: [MarkerPosition];
+  size: [float];
+  shape: string;
+  brush: string;
+}
+
+// Manifest - loaded once at playback start
+table Manifest {
+  version: uint32;
+  world_name: string;
+  mission_name: string;
+  frame_count: uint32;
+  chunk_size: uint32;
+  capture_delay_ms: uint32;
+  chunk_count: uint32;
+  entities: [EntityDef];
+  times: [TimeSample];
+  events: [Event];
+  markers: [MarkerDef];
+}
+
+// Entity state within a frame
+table EntityState {
+  entity_id: uint32;
+  pos_x: float;
+  pos_y: float;
+  direction: uint32;
+  alive: uint32;
+  crew_ids: [uint32];
+  vehicle_id: uint32;
+  is_in_vehicle: bool;
+  name: string;
+  is_player: bool;
+}
+
+// Single frame data
+table Frame {
+  frame_num: uint32;
+  entities: [EntityState];
+}
+
+// Chunk - loaded on demand
+table Chunk {
+  index: uint32;
+  start_frame: uint32;
+  frame_count: uint32;
+  frames: [Frame];
+}
+
+root_type Manifest;

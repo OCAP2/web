@@ -89,12 +89,16 @@ func (e *ProtobufEngine) GetChunk(ctx context.Context, filename string, chunkInd
 		frame := Frame{FrameNum: f.FrameNum}
 		for _, es := range f.Entities {
 			frame.Entities = append(frame.Entities, EntityState{
-				EntityID:  es.EntityId,
-				Position:  [2]float32{es.PosX, es.PosY},
-				Direction: es.Direction,
-				Alive:     uint8(es.Alive),
-				CrewIDs:   es.CrewIds,
-				VehicleID: es.VehicleId,
+				EntityID:    es.EntityId,
+				PosX:        es.PosX,
+				PosY:        es.PosY,
+				Direction:   es.Direction,
+				Alive:       es.Alive,
+				CrewIDs:     es.CrewIds,
+				VehicleID:   es.VehicleId,
+				IsInVehicle: es.IsInVehicle,
+				Name:        es.Name,
+				IsPlayer:    es.IsPlayer,
 			})
 		}
 		chunk.Frames = append(chunk.Frames, frame)
@@ -124,8 +128,9 @@ func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, 
 }
 
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
-	// Will be implemented in Task 7 (converter)
-	return fmt.Errorf("conversion not implemented in protobuf engine - use Converter")
+	// Use the existing Converter which handles protobuf conversion
+	converter := NewConverter(DefaultChunkSize)
+	return converter.Convert(ctx, jsonPath, outputPath)
 }
 
 func entityTypeToString(t pb.EntityType) string {

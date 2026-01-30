@@ -1,21 +1,176 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/OCAP2/web/server"
+	"github.com/OCAP2/web/server/conversion"
+	"github.com/OCAP2/web/server/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "convert" {
+		if err := runConvert(os.Args[2:]); err != nil {
+			log.Fatalf("convert: %v", err)
+		}
+		return
+	}
+
 	if err := app(); err != nil {
 		log.Panicln(err)
 	}
 }
+
+func runConvert(args []string) error {
+	fs := flag.NewFlagSet("convert", flag.ExitOnError)
+	inputFile := fs.String("input", "", "Convert a single JSON file")
+	all := fs.Bool("all", false, "Convert all pending operations")
+	status := fs.Bool("status", false, "Show conversion status of all operations")
+	chunkSize := fs.Uint("chunk-size", 300, "Frames per chunk (default: 300)")
+	format := fs.String("format", "protobuf", "Output format: protobuf or flatbuffers")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s convert [options]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		fs.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nExamples:\n")
+		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz                  Convert to protobuf\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz --format flatbuffers   Convert to flatbuffers\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --all                                     Convert all pending\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --status                                  Show conversion status\n", os.Args[0])
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	setting, err := server.NewSetting()
+	if err != nil {
+		return fmt.Errorf("setting: %w", err)
+	}
+
+	repo, err := server.NewRepoOperation(setting.DB)
+	if err != nil {
+		return fmt.Errorf("operation: %w", err)
+	}
+
+	ctx := context.Background()
+
+	switch {
+	case *status:
+		return showConversionStatus(ctx, repo)
+
+	case *inputFile != "":
+		return convertSingleFile(ctx, *inputFile, setting.Data, uint32(*chunkSize), *format)
+
+	case *all:
+		return convertAllPending(ctx, repo, setting, uint32(*chunkSize), *format)
+
+	default:
+		fs.Usage()
+		return nil
+	}
+}
+
+func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error {
+	ops, err := repo.Select(ctx, server.Filter{})
+	if err != nil {
+		return fmt.Errorf("select operations: %w", err)
+	}
+
+	fmt.Printf("%-6s %-30s %-10s %-12s\n", "ID", "Mission Name", "Format", "Status")
+	fmt.Println(string(make([]byte, 62)))
+
+	for _, op := range ops {
+		name := op.MissionName
+		if len(name) > 28 {
+			name = name[:28] + ".."
+		}
+		fmt.Printf("%-6d %-30s %-10s %-12s\n",
+			op.ID, name, op.StorageFormat, op.ConversionStatus)
+	}
+
+	return nil
+}
+
+func convertSingleFile(ctx context.Context, inputFile, dataDir string, chunkSize uint32, format string) error {
+	// Determine output path
+	baseName := filepath.Base(inputFile)
+	if ext := filepath.Ext(baseName); ext == ".gz" {
+		baseName = baseName[:len(baseName)-len(ext)]
+	}
+	if ext := filepath.Ext(baseName); ext == ".json" {
+		baseName = baseName[:len(baseName)-len(ext)]
+	}
+	outputPath := filepath.Join(dataDir, baseName)
+
+	log.Printf("Converting %s to %s (format: %s, chunk size: %d)", inputFile, outputPath, format, chunkSize)
+
+	// Register engines if not already done
+	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
+	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
+
+	// Get the appropriate storage engine
+	engine, err := storage.GetEngine(format)
+	if err != nil {
+		return fmt.Errorf("unknown format %q: %w", format, err)
+	}
+
+	if err := engine.Convert(ctx, inputFile, outputPath); err != nil {
+		return fmt.Errorf("conversion failed: %w", err)
+	}
+
+	log.Printf("Conversion complete: %s", outputPath)
+	return nil
+}
+
+func convertAllPending(ctx context.Context, repo *server.RepoOperation, setting server.Setting, chunkSize uint32, format string) error {
+	pending, err := repo.SelectPending(ctx, 1000)
+	if err != nil {
+		return fmt.Errorf("select pending: %w", err)
+	}
+
+	if len(pending) == 0 {
+		log.Println("No pending operations to convert")
+		return nil
+	}
+
+	log.Printf("Found %d pending operations (format: %s)", len(pending), format)
+
+	worker := conversion.NewWorker(
+		&repoAdapter{repo},
+		conversion.Config{
+			DataDir:       setting.Data,
+			ChunkSize:     chunkSize,
+			StorageFormat: format,
+		},
+	)
+
+	for _, op := range pending {
+		log.Printf("Converting operation %d: %s", op.ID, op.Filename)
+		if err := worker.ConvertOne(ctx, op.ID, op.Filename); err != nil {
+			log.Printf("Error converting %s: %v", op.Filename, err)
+			// Update status to failed
+			repo.UpdateConversionStatus(ctx, op.ID, "failed")
+		}
+	}
+
+	// Show final status
+	fmt.Println()
+	return showConversionStatus(ctx, repo)
+}
+
 
 func app() error {
 	setting, err := server.NewSetting()
@@ -56,10 +211,71 @@ func app() error {
 	)
 	server.NewHandler(e, operation, marker, ammo, setting)
 
+	// Start conversion worker if enabled
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if setting.Conversion.Enabled {
+		interval, err := time.ParseDuration(setting.Conversion.Interval)
+		if err != nil {
+			log.Printf("Invalid conversion interval %q, using default 5m", setting.Conversion.Interval)
+			interval = 5 * time.Minute
+		}
+
+		worker := conversion.NewWorker(
+			&repoAdapter{operation},
+			conversion.Config{
+				DataDir:       setting.Data,
+				Interval:      interval,
+				BatchSize:     setting.Conversion.BatchSize,
+				ChunkSize:     setting.Conversion.ChunkSize,
+				StorageFormat: setting.Conversion.StorageEngine,
+			},
+		)
+		go worker.Start(ctx)
+	}
+
+	// Handle graceful shutdown
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+		cancel()
+		e.Shutdown(context.Background())
+	}()
+
 	err = e.Start(setting.Listen)
 	if err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 
 	return nil
+}
+
+// repoAdapter adapts server.RepoOperation to conversion.OperationRepo
+type repoAdapter struct {
+	repo *server.RepoOperation
+}
+
+func (a *repoAdapter) SelectPending(ctx context.Context, limit int) ([]conversion.Operation, error) {
+	ops, err := a.repo.SelectPending(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]conversion.Operation, len(ops))
+	for i, op := range ops {
+		result[i] = conversion.Operation{
+			ID:       op.ID,
+			Filename: op.Filename,
+		}
+	}
+	return result, nil
+}
+
+func (a *repoAdapter) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
+	return a.repo.UpdateConversionStatus(ctx, id, status)
+}
+
+func (a *repoAdapter) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
+	return a.repo.UpdateStorageFormat(ctx, id, format)
 }

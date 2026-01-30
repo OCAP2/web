@@ -137,8 +137,8 @@ func TestProtobufEngineGetChunk(t *testing.T) {
 	// Check first frame
 	assert.Equal(t, uint32(0), chunk.Frames[0].FrameNum)
 	assert.Len(t, chunk.Frames[0].Entities, 1)
-	assert.Equal(t, float32(100), chunk.Frames[0].Entities[0].Position[0])
-	assert.Equal(t, float32(200), chunk.Frames[0].Entities[0].Position[1])
+	assert.Equal(t, float32(100), chunk.Frames[0].Entities[0].PosX)
+	assert.Equal(t, float32(200), chunk.Frames[0].Entities[0].PosY)
 }
 
 func TestProtobufEngineGetChunkWithCrew(t *testing.T) {
@@ -238,10 +238,13 @@ func TestProtobufEngineGetChunkReaderMissingFile(t *testing.T) {
 }
 
 func TestProtobufEngineConvert(t *testing.T) {
-	engine := NewProtobufEngine("/tmp")
-	err := engine.Convert(context.Background(), "input.json", "output")
+	dir := t.TempDir()
+	engine := NewProtobufEngine(dir)
+
+	// Test with missing input file - should fail
+	err := engine.Convert(context.Background(), "nonexistent.json", "output")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not implemented")
+	assert.Contains(t, err.Error(), "load JSON")
 }
 
 func TestEntityTypeToString(t *testing.T) {

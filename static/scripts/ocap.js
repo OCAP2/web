@@ -108,6 +108,9 @@ function initOCAP () {
 	defineIcons();
 	ui = new UI();
 
+	// Check storage persistence and warn Safari users
+	checkStoragePersistence();
+
 	const args = getArguments();
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
@@ -135,7 +138,7 @@ function initOCAP () {
 						ui.setMissionCurTime(parseInt(args.frame));
 					}
 				}, false);
-				return processOp("data/" + args.file);
+				return loadOperationByFilename(args.file);
 			}
 		})
 		.catch((error) => {
@@ -475,6 +478,48 @@ function secondsToTimeString (seconds) {
 
 		return `${hours} ${hourUnit}, ${remainingMins} ${minUnit}`;
 	}
+}
+
+/**
+ * Load an operation, automatically choosing streaming or legacy mode based on format
+ * @param {Object} op - Operation object with id, filename, storageFormat
+ * @returns {Promise}
+ */
+function loadOperation(op) {
+	// Use streaming for protobuf/flatbuffers formats
+	if (op.storageFormat === 'protobuf' || op.storageFormat === 'flatbuffers') {
+		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat})`);
+		return processOpStreaming(op.id);
+	}
+	// Fall back to legacy JSON loading
+	console.log(`Loading operation using legacy JSON mode`);
+	return processOp("data/" + op.filename);
+}
+
+/**
+ * Load an operation by filename (for URL parameter support)
+ * Fetches operation info first to determine format
+ * @param {string} filename - Operation filename
+ * @returns {Promise}
+ */
+async function loadOperationByFilename(filename) {
+	// First, try to find the operation in the database to get format info
+	try {
+		const response = await fetch('api/v1/operations');
+		if (response.ok) {
+			const operations = await response.json();
+			const op = operations.find(o => o.filename === filename);
+			if (op) {
+				return loadOperation(op);
+			}
+		}
+	} catch (e) {
+		console.warn('Could not fetch operations list:', e);
+	}
+
+	// Fallback to legacy JSON loading if operation not found in database
+	console.log(`Operation not found in database, using legacy JSON mode`);
+	return processOp("data/" + filename);
 }
 
 // Read operation JSON data and create unit objects
@@ -1025,4 +1070,417 @@ String.prototype.encodeHTMLEntities = function () {
 function closestEquivalentAngle(from, to) {
 	const delta = ((((to - from) % 360) + 540) % 360) - 180;
 	return from + delta;
+}
+
+// Global chunk manager for streaming playback
+let chunkManager = null;
+let storageManager = null;
+let isStreamingMode = false;
+
+/**
+ * Detect if browser is Safari
+ * @returns {boolean}
+ */
+function isSafari() {
+	const ua = navigator.userAgent.toLowerCase();
+	return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium');
+}
+
+/**
+ * Request persistent storage and warn Safari users about ITP limitations
+ */
+async function checkStoragePersistence() {
+	// Request persistent storage if available
+	if (navigator.storage && navigator.storage.persist) {
+		const isPersisted = await navigator.storage.persisted();
+		if (!isPersisted) {
+			const granted = await navigator.storage.persist();
+			console.log(`Persistent storage ${granted ? 'granted' : 'denied'}`);
+		}
+	}
+
+	// Warn Safari users about ITP 7-day eviction
+	if (isSafari()) {
+		console.warn('Safari detected: Storage may be evicted after 7 days due to ITP');
+		// Show warning in UI after a short delay
+		setTimeout(() => {
+			if (ui && typeof ui.showHint === 'function') {
+				ui.showHint('Safari: Cached recordings may be cleared after 7 days of inactivity');
+			}
+		}, 3000);
+	}
+}
+
+/**
+ * Check if operation supports streaming and return format info
+ * @param {string} operationId
+ * @returns {Promise<Object|null>}
+ */
+async function getOperationFormat(operationId) {
+	try {
+		const response = await fetch(`api/v1/operations/${operationId}/format`);
+		if (!response.ok) return null;
+		return response.json();
+	} catch (e) {
+		console.warn('Failed to get operation format:', e);
+		return null;
+	}
+}
+
+/**
+ * Process operation using streaming/chunked mode
+ * @param {string} operationId - Operation ID from database
+ * @returns {Promise<void>}
+ */
+async function processOpStreaming(operationId) {
+	console.log(`Processing operation (streaming mode): ${operationId}`);
+	const time = new Date();
+
+	// Show loading indicator
+	ui.showLoading('Initializing streaming playback...');
+
+	// Initialize storage manager if needed
+	if (!storageManager) {
+		storageManager = new StorageManager();
+		await storageManager.init();
+	}
+
+	ui.updateLoadingProgress(1, 4, 'Loading manifest...');
+
+	// Fetch manifest
+	let manifest;
+	const cachedManifest = await storageManager.getManifest(operationId);
+	if (cachedManifest) {
+		manifest = ProtobufDecoder.decodeManifest(cachedManifest);
+		console.log('Loaded manifest from cache');
+	} else {
+		const response = await fetch(`api/v1/operations/${operationId}/manifest`);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch manifest: ${response.status}`);
+		}
+		const data = await response.arrayBuffer();
+		manifest = ProtobufDecoder.decodeManifest(data);
+		// Cache manifest
+		storageManager.saveManifest(operationId, data).catch(e => {
+			console.warn('Failed to cache manifest:', e);
+		});
+	}
+
+	// Initialize chunk manager
+	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
+	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl);
+	isStreamingMode = true;
+
+	// Set up mission metadata
+	worldName = manifest.worldName.toLowerCase();
+	missionName = manifest.missionName;
+	endFrame = manifest.frameCount;
+	frameCaptureDelay = manifest.captureDelayMs;
+
+	ui.setMissionName(missionName);
+	ui.setMissionEndTime(endFrame);
+
+	// Process times if available
+	if (manifest.times && manifest.times.length > 0) {
+		const times = manifest.times.map(t => ({
+			frameNum: t.frameNum,
+			systemTimeUTC: t.systemTimeUtc,
+			date: t.date,
+			timeMultiplier: t.timeMultiplier,
+			time: t.time
+		}));
+		ui.detectTimes(times);
+	}
+	ui.checkAvailableTimes();
+
+	// Initialize entities from manifest
+	let showSides = { WEST: false, EAST: false, GUER: false, CIV: false };
+
+	for (const entDef of manifest.entities) {
+		if (entDef.type === 'unit') {
+			// Create group if needed
+			let group = groups.findGroup(entDef.groupName, entDef.side);
+			if (group == null) {
+				group = new Group(entDef.groupName, entDef.side);
+				groups.addGroup(group);
+			}
+
+			// Create unit with empty positions (will be filled from chunks)
+			const unit = new Unit(
+				entDef.startFrame,
+				entDef.id,
+				entDef.name,
+				group,
+				entDef.side,
+				entDef.isPlayer,
+				[], // Empty positions - will use chunks
+				[], // Empty framesFired
+				entDef.role
+			);
+			unit._streamingMode = true;
+			unit._endFrame = entDef.endFrame;
+			entities.add(unit);
+
+			// Track sides
+			if (showSides.hasOwnProperty(entDef.side)) {
+				showSides[entDef.side] = true;
+			}
+		} else {
+			// Create vehicle with empty positions
+			const vehicle = new Vehicle(
+				entDef.startFrame,
+				entDef.id,
+				entDef.vehicleClass,
+				entDef.name,
+				[] // Empty positions - will use chunks
+			);
+			vehicle._streamingMode = true;
+			vehicle._endFrame = entDef.endFrame;
+			entities.add(vehicle);
+		}
+	}
+
+	// Process events from manifest
+	for (const evt of manifest.events) {
+		let gameEvent = null;
+		switch (evt.type) {
+			case 'killed':
+			case 'hit':
+				const victim = entities.getById(evt.targetId);
+				const causedBy = entities.getById(evt.sourceId);
+				if (causedBy && evt.type === 'killed' && victim) {
+					if (causedBy !== victim && causedBy._side === victim._side) {
+						causedBy.teamKillCount++;
+					}
+					if (causedBy !== victim) {
+						causedBy.killCount++;
+					}
+					victim.deathCount++;
+				}
+				gameEvent = new HitKilledEvent(evt.frameNum, evt.type, causedBy, victim, evt.distance, evt.weapon);
+				ui.addTickToTimeline(evt.frameNum);
+				break;
+			case 'connected':
+			case 'disconnected':
+				gameEvent = new ConnectEvent(evt.frameNum, evt.type, evt.message);
+				break;
+			case 'endMission':
+				gameEvent = new endMissionEvent(evt.frameNum, evt.type, evt.message, '');
+				break;
+		}
+		if (gameEvent) {
+			gameEvents.addEvent(gameEvent);
+		}
+	}
+
+	// Process markers from manifest
+	const arrSide = ['GLOBAL', 'EAST', 'WEST', 'GUER', 'CIV'];
+	for (const m of manifest.markers) {
+		if (m.type.includes('zoneTrigger') || m.type.includes('Empty')) continue;
+
+		const player = m.playerId >= 0 ? entities.getById(m.playerId) : -1;
+		const positions = m.positions.map(p => [
+			[p.posX, p.posY, p.posZ],
+			p.frameNum,
+			p.direction,
+			p.alpha
+		]);
+
+		const marker = new Marker(
+			m.type,
+			m.text,
+			player,
+			m.color,
+			m.startFrame,
+			m.endFrame,
+			m.side,
+			positions,
+			m.size,
+			m.shape,
+			m.brush
+		);
+		markers.push(marker);
+	}
+
+	gameEvents.init();
+
+	// Show side filters
+	const countShowSide = Object.values(showSides).filter(v => v).length;
+	for (const [side, show] of Object.entries(showSides)) {
+		const elem = document.getElementById('side' + side.charAt(0) + side.slice(1).toLowerCase());
+		if (elem) {
+			if (show) {
+				elem.style.width = `calc(${100 / countShowSide}% - 2.5px)`;
+				elem.style.display = 'inline-block';
+			} else {
+				elem.style.display = 'none';
+			}
+		}
+	}
+
+	// Set initial side
+	if (showSides.WEST) ui.switchSide('WEST');
+	else if (showSides.EAST) ui.switchSide('EAST');
+	else if (showSides.GUER) ui.switchSide('IND');
+	else if (showSides.CIV) ui.switchSide('CIV');
+
+	console.log(`Finished processing manifest (${new Date() - time}ms).`);
+
+	ui.updateLoadingProgress(3, 4, 'Loading map...');
+
+	// Get world info and init map
+	const world = await getWorldByName(worldName);
+	initMap(world);
+
+	ui.updateLoadingProgress(4, 4, 'Starting playback...');
+
+	// Start playback with streaming
+	startStreamingPlaybackLoop();
+
+	toggleHitEvents(false);
+	ui.hideModal();
+	ui.hideLoading();
+	ui.showStreamingMode();
+}
+
+/**
+ * Streaming playback loop - loads chunks on demand
+ */
+function startStreamingPlaybackLoop() {
+	let killlines = [];
+	let firelines = [];
+
+	async function playbackFunction() {
+		// Ensure current chunk is loaded
+		if (chunkManager && !playbackPaused) {
+			try {
+				await chunkManager.ensureLoaded(playbackFrame);
+			} catch (e) {
+				console.error('Failed to load chunk:', e);
+				playbackPaused = true;
+				ui.showHint('Error loading playback data');
+				return;
+			}
+		}
+
+		if (!playbackPaused || lastDrawnFrame !== playbackFrame) {
+			requestedFrame = requestAnimationFrame(() => {
+				// Remove killlines & firelines from last frame
+				killlines.forEach(line => map.removeLayer(line));
+				firelines.forEach(line => map.removeLayer(line));
+				killlines = [];
+				firelines = [];
+
+				countCiv = 0;
+				countEast = 0;
+				countGuer = 0;
+				countWest = 0;
+
+				// Update entities from chunk data
+				for (const entity of entities.getAll()) {
+					if (entity._streamingMode && chunkManager) {
+						const state = chunkManager.getEntityState(playbackFrame, entity.getId());
+						if (state) {
+							entity.updateFromState(state);
+						} else if (entity._marker) {
+							// Entity doesn't exist in this frame
+							entity.removeMarker();
+						}
+					} else {
+						entity.updateRender(playbackFrame);
+						entity.manageFrame(playbackFrame);
+					}
+
+					if (entity instanceof Unit) {
+						// Count alive units
+						if (entity._alive === 1) {
+							switch (entity._side) {
+								case 'WEST': countWest++; break;
+								case 'EAST': countEast++; break;
+								case 'GUER': countGuer++; break;
+								case 'CIV': countCiv++; break;
+							}
+						}
+					}
+				}
+
+				ui.updateTitleSide();
+
+				// Display events
+				for (const event of gameEvents.getEvents()) {
+					if (event.frameNum <= playbackFrame) {
+						ui.addEvent(event);
+
+						if (event.frameNum === playbackFrame) {
+							if (event.type === 'killed') {
+								const victim = event.victim;
+								const killer = event.causedBy;
+								if (killer && killer.id && victim) {
+									const victimPos = victim.getLatLng();
+									const killerPos = killer.getLatLng();
+									if (victimPos && killerPos) {
+										const line = L.polyline([victimPos, killerPos], {
+											color: killer.getSideColour(),
+											weight: 2,
+											opacity: 0.4
+										});
+										line.addTo(map);
+										killlines.push(line);
+									}
+								}
+							}
+
+							if (event.type === 'hit' && event.victim) {
+								event.victim.flashHit();
+							}
+						}
+					} else {
+						ui.removeEvent(event);
+					}
+				}
+
+				// Update markers
+				for (const marker of markers) {
+					marker.manageFrame(playbackFrame);
+					marker.hideMarkerPopup(!ui.markersEnable);
+				}
+
+				// Handle entityToFollow
+				if (entityToFollow != null) {
+					const latLng = entityToFollow.getLatLng();
+					if (latLng) {
+						map.setView(latLng, map.getZoom());
+					} else {
+						entityToFollow.unfollow();
+					}
+				}
+
+				if (!playbackPaused && playbackFrame !== endFrame) {
+					playbackFrame++;
+				}
+				if (playbackFrame === endFrame) {
+					playbackPaused = true;
+					playPauseButton.style.backgroundPosition = '0 0';
+				}
+
+				ui.setMissionCurTime(playbackFrame);
+				lastDrawnFrame = playbackFrame;
+			});
+		} else {
+			requestAnimationFrame(() => {
+				for (const entity of entities.getAll()) {
+					if (!entity._streamingMode) {
+						entity.updateRender(playbackFrame);
+					}
+				}
+				for (const marker of markers) {
+					marker.updateRender(playbackFrame);
+				}
+			});
+		}
+
+		setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
+	}
+
+	setTimeout(playbackFunction, frameCaptureDelay / playbackMultiplier);
 }

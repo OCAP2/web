@@ -560,7 +560,7 @@ class UI {
 
 					row.addEventListener("click", () => {
 						localizable(this.modalBody, "loading");
-						processOp("data/" + op.filename);
+						loadOperation(op);
 					});
 					table.insertBefore(row, table.childNodes[1]);
 				});
@@ -858,6 +858,88 @@ class UI {
 		this.statsButton.classList.remove("hiddenExperimental");
 		const container = document.getElementById("container");
 		container.classList.add("marker-transition");
+	}
+
+	/**
+	 * Show loading indicator with optional message
+	 * @param {string} message - Loading message to display
+	 */
+	showLoading(message = 'Loading...') {
+		let loader = document.getElementById('loadingIndicator');
+		if (!loader) {
+			loader = document.createElement('div');
+			loader.id = 'loadingIndicator';
+			loader.className = 'loading-indicator';
+			loader.innerHTML = `
+				<div class="loading-spinner"></div>
+				<div class="loading-message"></div>
+			`;
+			document.getElementById('container').appendChild(loader);
+		}
+		loader.querySelector('.loading-message').textContent = message;
+		loader.style.display = 'flex';
+	}
+
+	/**
+	 * Hide loading indicator
+	 */
+	hideLoading() {
+		const loader = document.getElementById('loadingIndicator');
+		if (loader) {
+			loader.style.display = 'none';
+		}
+	}
+
+	/**
+	 * Update loading progress
+	 * @param {number} current - Current progress
+	 * @param {number} total - Total items
+	 * @param {string} message - Progress message
+	 */
+	updateLoadingProgress(current, total, message = '') {
+		let loader = document.getElementById('loadingIndicator');
+		if (loader) {
+			const percent = Math.round((current / total) * 100);
+			const msgEl = loader.querySelector('.loading-message');
+			if (msgEl) {
+				msgEl.textContent = message || `Loading... ${percent}%`;
+			}
+		}
+	}
+
+	/**
+	 * Show chunk loading status in the UI
+	 * @param {number} chunkIndex - Current chunk being loaded
+	 * @param {number} totalChunks - Total number of chunks
+	 */
+	showChunkLoadingStatus(chunkIndex, totalChunks) {
+		this.showHint(`Loading chunk ${chunkIndex + 1} of ${totalChunks}`);
+	}
+
+	/**
+	 * Show streaming mode indicator
+	 */
+	showStreamingMode() {
+		let indicator = document.getElementById('streamingIndicator');
+		if (!indicator) {
+			indicator = document.createElement('div');
+			indicator.id = 'streamingIndicator';
+			indicator.className = 'streaming-indicator';
+			indicator.title = 'Streaming mode - chunks loaded on demand';
+			indicator.innerHTML = '&#x1F4E1;'; // Satellite antenna emoji
+			document.querySelector('.bottom-panel')?.appendChild(indicator);
+		}
+		indicator.style.display = 'inline-block';
+	}
+
+	/**
+	 * Hide streaming mode indicator
+	 */
+	hideStreamingMode() {
+		const indicator = document.getElementById('streamingIndicator');
+		if (indicator) {
+			indicator.style.display = 'none';
+		}
 	}
 }
 

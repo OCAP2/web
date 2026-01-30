@@ -8,17 +8,26 @@ import (
 )
 
 type Setting struct {
-	Listen    string    `json:"listen" yaml:"listen"`
-	PrefixURL string    `json:"prefixURL" yaml:"prefixURL"`
-	Secret    string    `json:"secret" yaml:"secret"`
-	DB        string    `json:"db" yaml:"db"`
-	Markers   string    `json:"markers" yaml:"markers"`
-	Ammo      string    `json:"ammo" yaml:"ammo"`
-	Maps      string    `json:"maps" yaml:"maps"`
-	Data      string    `json:"data" yaml:"data"`
-	Static    string    `json:"static" yaml:"static"`
-	Logger    bool      `json:"logger" yaml:"logger"`
-	Customize Customize `json:"customize" yaml:"customize"`
+	Listen     string     `json:"listen" yaml:"listen"`
+	PrefixURL  string     `json:"prefixURL" yaml:"prefixURL"`
+	Secret     string     `json:"secret" yaml:"secret"`
+	DB         string     `json:"db" yaml:"db"`
+	Markers    string     `json:"markers" yaml:"markers"`
+	Ammo       string     `json:"ammo" yaml:"ammo"`
+	Maps       string     `json:"maps" yaml:"maps"`
+	Data       string     `json:"data" yaml:"data"`
+	Static     string     `json:"static" yaml:"static"`
+	Logger     bool       `json:"logger" yaml:"logger"`
+	Customize  Customize  `json:"customize" yaml:"customize"`
+	Conversion Conversion `json:"conversion" yaml:"conversion"`
+}
+
+type Conversion struct {
+	Enabled       bool   `json:"enabled" yaml:"enabled"`
+	Interval      string `json:"interval" yaml:"interval"`
+	BatchSize     int    `json:"batchSize" yaml:"batchSize"`
+	ChunkSize     uint32 `json:"chunkSize" yaml:"chunkSize"`
+	StorageEngine string `json:"storageEngine" yaml:"storageEngine"` // "protobuf" or "flatbuffers"
 }
 
 type Customize struct {
@@ -52,9 +61,14 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("static", "static")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.websiteLogoSize", "32px")
+	viper.SetDefault("conversion.enabled", false)
+	viper.SetDefault("conversion.interval", "5m")
+	viper.SetDefault("conversion.batchSize", 1)
+	viper.SetDefault("conversion.chunkSize", 300)
+	viper.SetDefault("conversion.storageEngine", "protobuf") // "protobuf" or "flatbuffers"
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.storageEngine"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

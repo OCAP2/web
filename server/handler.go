@@ -12,8 +12,11 @@ import (
 	"strings"
 	"time"
 
+	pb "github.com/OCAP2/web/proto"
+	"github.com/OCAP2/web/server/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"google.golang.org/protobuf/proto"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -30,6 +33,13 @@ type Handler struct {
 	setting       Setting
 }
 
+// FormatInfo contains storage format details for a recording
+type FormatInfo struct {
+	Format            string `json:"format"`
+	ChunkCount        int    `json:"chunkCount"`
+	SupportsStreaming bool   `json:"supportsStreaming"`
+}
+
 func NewHandler(
 	e *echo.Echo,
 	repoOperation *RepoOperation,
@@ -37,6 +47,11 @@ func NewHandler(
 	repoAmmo *RepoAmmo,
 	setting Setting,
 ) {
+	// Register storage engines
+	storage.RegisterEngine(storage.NewJSONEngine(setting.Data))
+	storage.RegisterEngine(storage.NewProtobufEngine(setting.Data))
+	storage.RegisterEngine(storage.NewFlatBuffersEngine(setting.Data))
+
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
@@ -56,6 +71,19 @@ func NewHandler(
 	g.POST(
 		"/api/v1/operations/add",
 		hdlr.StoreOperation,
+	)
+	g.GET(
+		"/api/v1/operations/:id/format",
+		hdlr.GetOperationFormat,
+	)
+	g.GET(
+		"/api/v1/operations/:id/manifest",
+		hdlr.GetOperationManifest,
+	)
+	g.GET(
+		"/api/v1/operations/:id/chunk/:index",
+		hdlr.GetOperationChunk,
+		hdlr.cacheControl(CacheDuration),
 	)
 	g.GET(
 		"/api/v1/customize",
@@ -164,6 +192,173 @@ func (h *Handler) GetVersion(c echo.Context) error {
 		BuildCommit: BuildCommit,
 		BuildDate:   BuildDate,
 	}, "\t")
+}
+
+func (h *Handler) GetOperationFormat(c echo.Context) error {
+	id := c.Param("id")
+
+	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
+	}
+
+	// Get engine for this format
+	format := op.StorageFormat
+	if format == "" {
+		format = "json"
+	}
+
+	engine, err := storage.GetEngine(format)
+	if err != nil {
+		// Fallback to json if unknown format
+		engine, _ = storage.GetEngine("json")
+		format = "json"
+	}
+
+	chunkCount, _ := engine.ChunkCount(c.Request().Context(), op.Filename)
+
+	return c.JSON(http.StatusOK, FormatInfo{
+		Format:            format,
+		ChunkCount:        chunkCount,
+		SupportsStreaming: engine.SupportsStreaming(),
+	})
+}
+
+func (h *Handler) GetOperationManifest(c echo.Context) error {
+	id := c.Param("id")
+
+	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
+	}
+
+	// Get engine for this format
+	format := op.StorageFormat
+	if format == "" {
+		format = "json"
+	}
+
+	engine, err := storage.GetEngine(format)
+	if err != nil {
+		// Fallback to json if unknown format
+		engine, _ = storage.GetEngine("json")
+		format = "json"
+	}
+
+	manifest, err := engine.GetManifest(c.Request().Context(), op.Filename)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
+	}
+
+	// For protobuf format, serialize to binary
+	if format == "protobuf" {
+		pbManifest := manifestToProto(manifest)
+		data, err := proto.Marshal(pbManifest)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to serialize manifest")
+		}
+		return c.Blob(http.StatusOK, "application/x-protobuf", data)
+	}
+
+	// For JSON format, return as JSON
+	return c.JSON(http.StatusOK, manifest)
+}
+
+// manifestToProto converts storage.Manifest to proto.Manifest
+func manifestToProto(m *storage.Manifest) *pb.Manifest {
+	pbManifest := &pb.Manifest{
+		Version:        m.Version,
+		WorldName:      m.WorldName,
+		MissionName:    m.MissionName,
+		FrameCount:     m.FrameCount,
+		ChunkSize:      m.ChunkSize,
+		CaptureDelayMs: m.CaptureDelayMs,
+		ChunkCount:     m.ChunkCount,
+	}
+
+	for _, ent := range m.Entities {
+		pbManifest.Entities = append(pbManifest.Entities, &pb.EntityDef{
+			Id:           ent.ID,
+			Type:         stringToEntityType(ent.Type),
+			Name:         ent.Name,
+			Side:         stringToSide(ent.Side),
+			GroupName:    ent.Group,
+			Role:         ent.Role,
+			StartFrame:   ent.StartFrame,
+			EndFrame:     ent.EndFrame,
+			IsPlayer:     ent.IsPlayer,
+			VehicleClass: ent.VehicleClass,
+		})
+	}
+
+	return pbManifest
+}
+
+func stringToEntityType(s string) pb.EntityType {
+	switch s {
+	case "unit":
+		return pb.EntityType_ENTITY_TYPE_UNIT
+	case "vehicle":
+		return pb.EntityType_ENTITY_TYPE_VEHICLE
+	default:
+		return pb.EntityType_ENTITY_TYPE_UNKNOWN
+	}
+}
+
+func stringToSide(s string) pb.Side {
+	switch s {
+	case "WEST":
+		return pb.Side_SIDE_WEST
+	case "EAST":
+		return pb.Side_SIDE_EAST
+	case "GUER":
+		return pb.Side_SIDE_GUER
+	case "CIV":
+		return pb.Side_SIDE_CIV
+	case "GLOBAL":
+		return pb.Side_SIDE_GLOBAL
+	default:
+		return pb.Side_SIDE_UNKNOWN
+	}
+}
+
+func (h *Handler) GetOperationChunk(c echo.Context) error {
+	id := c.Param("id")
+	indexStr := c.Param("index")
+
+	// Parse chunk index
+	chunkIndex, err := strconv.Atoi(indexStr)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid chunk index")
+	}
+
+	// Get operation by ID
+	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
+	}
+
+	// Determine format (use "json" as fallback if StorageFormat is empty)
+	format := op.StorageFormat
+	if format == "" {
+		format = "json"
+	}
+
+	// Get engine for this format
+	engine, err := storage.GetEngine(format)
+	if err != nil {
+		// Fallback to json if unknown format
+		engine, _ = storage.GetEngine("json")
+	}
+
+	// Get chunk reader for streaming
+	reader, err := engine.GetChunkReader(c.Request().Context(), op.Filename, chunkIndex)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "chunk not found")
+	}
+	defer reader.Close()
+
+	return c.Stream(http.StatusOK, "application/x-protobuf", reader)
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {

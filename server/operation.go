@@ -186,23 +186,33 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 }
 
 func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation, error) {
+	// Set defaults for date filters
+	older := filter.Older
+	if older == "" {
+		older = "9999-12-31"
+	}
+	newer := filter.Newer
+	if newer == "" {
+		newer = "0000-01-01"
+	}
+
 	query := `
 		SELECT
 			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
 		FROM
 			operations
 		WHERE
-			mission_name LIKE "%" || $2 || "%"
-			AND date <= $3
-			AND date >= $4
-			AND tag LIKE "%" || $1;
+			mission_name LIKE '%' || $1 || '%'
+			AND date <= $2
+			AND date >= $3
+			AND tag LIKE '%' || $4 || '%'
 	`
 	rows, err := r.db.QueryContext(
 		ctx,
 		query,
 		filter.Name,
-		filter.Older,
-		filter.Newer,
+		older,
+		newer,
 		filter.Tag,
 	)
 	if err != nil {
@@ -236,4 +246,49 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 		ops = append(ops, o)
 	}
 	return ops, nil
+}
+
+// GetByID retrieves a single operation by its ID
+func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		 FROM operations WHERE id = ?`, id)
+
+	var op Operation
+	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
+		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus)
+	if err != nil {
+		return nil, err
+	}
+	return &op, nil
+}
+
+// SelectPending returns operations with pending conversion status
+func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		 FROM operations
+		 WHERE conversion_status = 'pending'
+		 ORDER BY id ASC
+		 LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scan(ctx, rows)
+}
+
+// UpdateConversionStatus updates the conversion status for an operation
+func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET conversion_status = ? WHERE id = ?`, status, id)
+	return err
+}
+
+// UpdateStorageFormat updates the storage format for an operation
+func (r *RepoOperation) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET storage_format = ? WHERE id = ?`, format, id)
+	return err
 }
