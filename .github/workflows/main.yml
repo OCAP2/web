@@ -33,7 +33,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -coverprofile=cover.out ./...
+        run: go test -coverprofile=cover.out -coverpkg=./cmd/...,./internal/... ./...
 
       - name: Build
         run: go build -o ocap-webserver ./cmd/ocap-webserver
