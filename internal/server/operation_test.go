@@ -253,3 +253,187 @@ func TestSelectWithFilters(t *testing.T) {
 		assert.Len(t, result, 0)
 	})
 }
+
+func TestGetByID_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Try to get non-existent operation
+	_, err = repo.GetByID(ctx, "999")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, sql.ErrNoRows)
+}
+
+func TestSelectPending(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operations with various statuses
+	ops := []*Operation{
+		{WorldName: "altis", MissionName: "Pending 1", Filename: "p1", Date: "2026-01-01", ConversionStatus: "pending"},
+		{WorldName: "altis", MissionName: "Completed 1", Filename: "c1", Date: "2026-01-02", ConversionStatus: "completed"},
+		{WorldName: "altis", MissionName: "Pending 2", Filename: "p2", Date: "2026-01-03", ConversionStatus: "pending"},
+		{WorldName: "altis", MissionName: "Failed 1", Filename: "f1", Date: "2026-01-04", ConversionStatus: "failed"},
+	}
+
+	for _, op := range ops {
+		err = repo.Store(ctx, op)
+		assert.NoError(t, err)
+	}
+
+	// SelectPending with limit 1
+	result, err := repo.SelectPending(ctx, 1)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, "Pending 1", result[0].MissionName)
+
+	// SelectPending with limit 10 (more than available)
+	result, err = repo.SelectPending(ctx, 10)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "Pending 1", result[0].MissionName)
+	assert.Equal(t, "Pending 2", result[1].MissionName)
+}
+
+func TestUpdateConversionStatus(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Status Test",
+		Filename:         "status_test",
+		Date:             "2026-01-30",
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	assert.NoError(t, err)
+
+	// Update status
+	err = repo.UpdateConversionStatus(ctx, op.ID, "completed")
+	assert.NoError(t, err)
+
+	// Verify update
+	updated, err := repo.GetByID(ctx, "1")
+	assert.NoError(t, err)
+	assert.Equal(t, "completed", updated.ConversionStatus)
+}
+
+func TestUpdateStorageFormat(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation
+	op := &Operation{
+		WorldName:     "altis",
+		MissionName:   "Format Test",
+		Filename:      "format_test",
+		Date:          "2026-01-30",
+		StorageFormat: "json",
+	}
+	err = repo.Store(ctx, op)
+	assert.NoError(t, err)
+
+	// Update format
+	err = repo.UpdateStorageFormat(ctx, op.ID, "protobuf")
+	assert.NoError(t, err)
+
+	// Verify update
+	updated, err := repo.GetByID(ctx, "1")
+	assert.NoError(t, err)
+	assert.Equal(t, "protobuf", updated.StorageFormat)
+}
+
+func TestMigrationRerun(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	// Create and close first repo (runs migrations)
+	repo1, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	repo1.db.Close()
+
+	// Create second repo on same DB (migrations should be idempotent)
+	repo2, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo2.db.Close()
+
+	// Verify version table has the correct latest version
+	var version int
+	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, version)
+}
+
+func TestGetTypesEmpty(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// GetTypes on empty database
+	tags, err := repo.GetTypes(ctx)
+	assert.NoError(t, err)
+	assert.Empty(t, tags)
+}
+
+func TestSelectAllEmpty(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// SelectAll on empty database
+	result, err := repo.SelectAll(ctx)
+	assert.NoError(t, err)
+	assert.Empty(t, result)
+}
+
+func TestSelectPendingEmpty(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// SelectPending on empty database
+	result, err := repo.SelectPending(ctx, 10)
+	assert.NoError(t, err)
+	assert.Empty(t, result)
+}

@@ -546,3 +546,342 @@ func TestConverter_StringToSide(t *testing.T) {
 		})
 	}
 }
+
+func TestSideIndexToSide(t *testing.T) {
+	tests := []struct {
+		name  string
+		input int
+		want  pb.Side
+	}{
+		{"WEST index 0", 0, pb.Side_SIDE_WEST},
+		{"EAST index 1", 1, pb.Side_SIDE_EAST},
+		{"GUER index 2", 2, pb.Side_SIDE_GUER},
+		{"CIV index 3", 3, pb.Side_SIDE_CIV},
+		{"UNKNOWN index 4", 4, pb.Side_SIDE_UNKNOWN},
+		{"UNKNOWN negative", -1, pb.Side_SIDE_UNKNOWN},
+		{"UNKNOWN large", 100, pb.Side_SIDE_UNKNOWN},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sideIndexToSide(tt.input)
+			if got != tt.want {
+				t.Errorf("sideIndexToSide(%d) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringToEntityType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  pb.EntityType
+	}{
+		{"unit", pb.EntityType_ENTITY_TYPE_UNIT},
+		{"vehicle", pb.EntityType_ENTITY_TYPE_VEHICLE},
+		{"unknown", pb.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"", pb.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"invalid", pb.EntityType_ENTITY_TYPE_UNKNOWN},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := stringToEntityType(tt.input)
+			if got != tt.want {
+				t.Errorf("stringToEntityType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToFloat64(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  float64
+	}{
+		{"float64", 42.5, 42.5},
+		{"zero", 0.0, 0.0},
+		{"negative", -10.5, -10.5},
+		{"string", "not a number", 0.0},
+		{"int", 42, 0.0},         // int is not float64
+		{"nil", nil, 0.0},
+		{"bool", true, 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toFloat64(tt.input)
+			if got != tt.want {
+				t.Errorf("toFloat64(%v) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  string
+	}{
+		{"string", "hello", "hello"},
+		{"empty string", "", ""},
+		{"float64", 42.5, ""},
+		{"int", 42, ""},
+		{"nil", nil, ""},
+		{"bool", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toString(tt.input)
+			if got != tt.want {
+				t.Errorf("toString(%v) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConverter_ParseMarkerPosition(t *testing.T) {
+	converter := NewConverter(DefaultChunkSize)
+
+	t.Run("simple format [x, y, z]", func(t *testing.T) {
+		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0, 10.0})
+		if pos == nil {
+			t.Fatal("expected non-nil position")
+		}
+		if pos.PosX != 100.0 {
+			t.Errorf("PosX = %v, want 100.0", pos.PosX)
+		}
+		if pos.PosY != 200.0 {
+			t.Errorf("PosY = %v, want 200.0", pos.PosY)
+		}
+		if pos.PosZ != 10.0 {
+			t.Errorf("PosZ = %v, want 10.0", pos.PosZ)
+		}
+	})
+
+	t.Run("simple format [x, y] without z", func(t *testing.T) {
+		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0})
+		if pos == nil {
+			t.Fatal("expected non-nil position")
+		}
+		if pos.PosX != 100.0 {
+			t.Errorf("PosX = %v, want 100.0", pos.PosX)
+		}
+		if pos.PosY != 200.0 {
+			t.Errorf("PosY = %v, want 200.0", pos.PosY)
+		}
+		if pos.PosZ != 0.0 {
+			t.Errorf("PosZ = %v, want 0.0", pos.PosZ)
+		}
+	})
+
+	t.Run("complex format [[x, y, z], frameNum, direction, alpha]", func(t *testing.T) {
+		pos := converter.parseMarkerPosition([]interface{}{
+			[]interface{}{100.0, 200.0, 10.0},
+			50.0,
+			90.0,
+			0.5,
+		})
+		if pos == nil {
+			t.Fatal("expected non-nil position")
+		}
+		if pos.PosX != 100.0 {
+			t.Errorf("PosX = %v, want 100.0", pos.PosX)
+		}
+		if pos.PosY != 200.0 {
+			t.Errorf("PosY = %v, want 200.0", pos.PosY)
+		}
+		if pos.PosZ != 10.0 {
+			t.Errorf("PosZ = %v, want 10.0", pos.PosZ)
+		}
+		if pos.FrameNum != 50 {
+			t.Errorf("FrameNum = %v, want 50", pos.FrameNum)
+		}
+		if pos.Direction != 90.0 {
+			t.Errorf("Direction = %v, want 90.0", pos.Direction)
+		}
+		if pos.Alpha != 0.5 {
+			t.Errorf("Alpha = %v, want 0.5", pos.Alpha)
+		}
+	})
+
+	t.Run("complex format [[x, y], frameNum] without z", func(t *testing.T) {
+		pos := converter.parseMarkerPosition([]interface{}{
+			[]interface{}{100.0, 200.0},
+			50.0,
+		})
+		if pos == nil {
+			t.Fatal("expected non-nil position")
+		}
+		if pos.PosX != 100.0 {
+			t.Errorf("PosX = %v, want 100.0", pos.PosX)
+		}
+		if pos.PosY != 200.0 {
+			t.Errorf("PosY = %v, want 200.0", pos.PosY)
+		}
+		if pos.FrameNum != 50 {
+			t.Errorf("FrameNum = %v, want 50", pos.FrameNum)
+		}
+	})
+
+	t.Run("nil input", func(t *testing.T) {
+		pos := converter.parseMarkerPosition(nil)
+		if pos != nil {
+			t.Error("expected nil position for nil input")
+		}
+	})
+
+	t.Run("non-array input", func(t *testing.T) {
+		pos := converter.parseMarkerPosition("not an array")
+		if pos != nil {
+			t.Error("expected nil position for non-array input")
+		}
+	})
+
+	t.Run("empty array", func(t *testing.T) {
+		pos := converter.parseMarkerPosition([]interface{}{})
+		if pos != nil {
+			t.Error("expected nil position for empty array")
+		}
+	})
+}
+
+func TestConverter_CalculateEndFrame(t *testing.T) {
+	converter := NewConverter(DefaultChunkSize)
+
+	t.Run("with positions", func(t *testing.T) {
+		em := map[string]interface{}{
+			"positions": []interface{}{
+				[]interface{}{},
+				[]interface{}{},
+				[]interface{}{},
+				[]interface{}{},
+				[]interface{}{},
+			},
+		}
+		endFrame := converter.calculateEndFrame(em, 10)
+		// startFrame + len(positions) - 1 = 10 + 5 - 1 = 14
+		if endFrame != 14 {
+			t.Errorf("endFrame = %d, want 14", endFrame)
+		}
+	})
+
+	t.Run("without positions", func(t *testing.T) {
+		em := map[string]interface{}{}
+		endFrame := converter.calculateEndFrame(em, 10)
+		// Should return startFrame when no positions
+		if endFrame != 10 {
+			t.Errorf("endFrame = %d, want 10", endFrame)
+		}
+	})
+
+	t.Run("positions is not array", func(t *testing.T) {
+		em := map[string]interface{}{
+			"positions": "not an array",
+		}
+		endFrame := converter.calculateEndFrame(em, 10)
+		// Should return startFrame when positions is wrong type
+		if endFrame != 10 {
+			t.Errorf("endFrame = %d, want 10", endFrame)
+		}
+	})
+}
+
+func TestConverter_ParseEvent_Distance(t *testing.T) {
+	converter := NewConverter(DefaultChunkSize)
+
+	t.Run("event with numeric distance at index 4", func(t *testing.T) {
+		// When index 4 is a number (not a weapon string), it's treated as distance
+		event := converter.parseEvent([]interface{}{100.0, "move", 1.0, 2.0, 50.5})
+		if event == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if event.Distance != 50.5 {
+			t.Errorf("Distance = %v, want 50.5", event.Distance)
+		}
+	})
+
+	t.Run("event with message at index 4", func(t *testing.T) {
+		// For non-hit/killed events, string at index 4 is message
+		event := converter.parseEvent([]interface{}{100.0, "chat", 1.0, 2.0, "Hello world"})
+		if event == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if event.Message != "Hello world" {
+			t.Errorf("Message = %q, want 'Hello world'", event.Message)
+		}
+	})
+
+	t.Run("event with weapon and distance", func(t *testing.T) {
+		// killed/hit events have weapon at index 4 and distance at index 5
+		event := converter.parseEvent([]interface{}{100.0, "killed", 1.0, 2.0, "arifle_MX", 150.5})
+		if event == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if event.Weapon != "arifle_MX" {
+			t.Errorf("Weapon = %q, want 'arifle_MX'", event.Weapon)
+		}
+		if event.Distance != 150.5 {
+			t.Errorf("Distance = %v, want 150.5", event.Distance)
+		}
+	})
+}
+
+func TestConverter_GetEntityStateAtFrame(t *testing.T) {
+	converter := NewConverter(DefaultChunkSize)
+
+	t.Run("frame before entity start", func(t *testing.T) {
+		ep := entityPositionData{
+			ID:         1,
+			Type:       "unit",
+			StartFrame: 10,
+			Positions:  []interface{}{[]interface{}{[]interface{}{100.0, 200.0}, 45.0, 1.0}},
+		}
+		state := converter.getEntityStateAtFrame(ep, 5)
+		if state != nil {
+			t.Error("expected nil state for frame before start")
+		}
+	})
+
+	t.Run("frame after entity end", func(t *testing.T) {
+		ep := entityPositionData{
+			ID:         1,
+			Type:       "unit",
+			StartFrame: 0,
+			Positions:  []interface{}{[]interface{}{[]interface{}{100.0, 200.0}, 45.0, 1.0}},
+		}
+		state := converter.getEntityStateAtFrame(ep, 10)
+		if state != nil {
+			t.Error("expected nil state for frame after positions end")
+		}
+	})
+
+	t.Run("invalid position data", func(t *testing.T) {
+		ep := entityPositionData{
+			ID:         1,
+			Type:       "unit",
+			StartFrame: 0,
+			Positions:  []interface{}{"not an array"},
+		}
+		state := converter.getEntityStateAtFrame(ep, 0)
+		if state != nil {
+			t.Error("expected nil state for invalid position data")
+		}
+	})
+
+	t.Run("position array too short", func(t *testing.T) {
+		ep := entityPositionData{
+			ID:         1,
+			Type:       "unit",
+			StartFrame: 0,
+			Positions:  []interface{}{[]interface{}{100.0, 200.0}}, // Only 2 elements, need at least 3
+		}
+		state := converter.getEntityStateAtFrame(ep, 0)
+		if state != nil {
+			t.Error("expected nil state for position array too short")
+		}
+	})
+}
