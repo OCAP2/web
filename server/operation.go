@@ -105,6 +105,23 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 3 {
+		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN storage_format TEXT DEFAULT 'json'`)
+		if err != nil {
+			return fmt.Errorf("merge db to v3 failed (storage_format): %w", err)
+		}
+
+		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN conversion_status TEXT DEFAULT 'completed'`)
+		if err != nil {
+			return fmt.Errorf("merge db to v3 failed (conversion_status): %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (3)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 3: %w", err)
+		}
+	}
+
 	return nil
 }
 
