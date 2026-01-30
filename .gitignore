@@ -10,6 +10,7 @@
 data.db
 data/
 maps/
+setting.json
 static/data
 static/images/maps
 

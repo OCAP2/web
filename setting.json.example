@@ -1,11 +1,25 @@
 {
 	"listen": "127.0.0.1:5000",
-	"secret": "same-secret",
-	"logger": true,
+	"prefixURL": "",
+	"secret": "change-me",
+	"db": "data.db",
+	"markers": "assets/markers",
+	"ammo": "assets/ammo",
+	"maps": "maps",
+	"data": "data",
+	"static": "static",
+	"logger": false,
 	"customize": {
 		"websiteURL": "",
 		"websiteLogo": "",
-		"websiteLogoSize": "128px",
+		"websiteLogoSize": "32px",
 		"disableKillCount": false
+	},
+	"conversion": {
+		"enabled": false,
+		"interval": "5m",
+		"batchSize": 1,
+		"chunkSize": 300,
+		"storageEngine": "protobuf"
 	}
 }
