@@ -541,7 +541,7 @@ class UI {
 			// Binary format = streaming
 			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
 			return {
-				icon: '▶️',
+				icon: '📡',
 				textKey: 'status_streaming',
 				tooltip: formatName
 			};
