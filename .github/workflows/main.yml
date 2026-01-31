@@ -134,6 +134,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           build-args: |
+             build_version=${{ github.ref_name }}
              build_commit=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -191,7 +192,7 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: |
-          go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ${{ matrix.binary }} ./cmd/ocap-webserver
+          go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=${{ github.ref_name }} -X github.com/OCAP2/web/internal/server.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ${{ matrix.binary }} ./cmd/ocap-webserver
 
       - name: Create release archive
         run: |
