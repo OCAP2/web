@@ -579,6 +579,19 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			t.Errorf("Message = %q, want %q", evt.Message, "Wraith")
 		}
 	})
+
+	t.Run("connected event without player name", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{5.0, "connected"})
+		if evt == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if evt.Type != "connected" {
+			t.Errorf("Type = %q, want %q", evt.Type, "connected")
+		}
+		if evt.Message != "" {
+			t.Errorf("Message = %q, want empty string", evt.Message)
+		}
+	})
 }
 
 func TestParserV1_parseMarker_EdgeCases(t *testing.T) {
