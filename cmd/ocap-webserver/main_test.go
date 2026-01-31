@@ -307,6 +307,86 @@ func TestConvertSingleFile_InvalidFormat(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown format")
 }
 
+func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	// Create test JSON input file
+	inputPath := filepath.Join(dataDir, "db_test.json.gz")
+	testJSON := `{
+		"worldName": "altis",
+		"missionName": "DB Entry Test",
+		"endFrame": 5,
+		"captureDelay": 1000,
+		"entities": [
+			{
+				"id": 0,
+				"type": "unit",
+				"name": "Player1",
+				"side": "WEST",
+				"startFrameNum": 0,
+				"positions": [
+					[[100, 200], 45, 1, 0, "Player1", 1],
+					[[101, 201], 46, 1, 0, "Player1", 1],
+					[[102, 202], 47, 1, 0, "Player1", 1],
+					[[103, 203], 48, 1, 0, "Player1", 1],
+					[[104, 204], 49, 1, 0, "Player1", 1]
+				]
+			}
+		],
+		"events": [],
+		"Markers": []
+	}`
+	f, err := os.Create(inputPath)
+	require.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	_, err = gw.Write([]byte(testJSON))
+	require.NoError(t, err)
+	gw.Close()
+	f.Close()
+
+	ctx := context.Background()
+
+	// Create test database with operation entry
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := server.NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	// Store operation matching the filename
+	op := &server.Operation{
+		WorldName:        "Stratis",
+		MissionName:      "Test Op",
+		MissionDuration:  10,
+		Filename:         "db_test.json",
+		Date:             "2024-01-01",
+		StorageFormat:    "json",
+		ConversionStatus: "pending",
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register engines
+	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
+
+	// Convert - should use worker path since operation exists
+	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300, "protobuf")
+	require.NoError(t, err)
+
+	// Verify output was created
+	outputDir := filepath.Join(dataDir, "db_test.json")
+	_, err = os.Stat(filepath.Join(outputDir, "manifest.pb"))
+	require.NoError(t, err)
+
+	// Verify database was updated
+	result, err := repo.GetByFilename(ctx, "db_test.json")
+	require.NoError(t, err)
+	assert.Equal(t, "completed", result.ConversionStatus)
+	assert.Equal(t, "protobuf", result.StorageFormat)
+	assert.Greater(t, result.MissionDuration, float64(0))
+}
+
 func TestConvertAll_Empty(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
