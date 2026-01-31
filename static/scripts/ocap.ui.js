@@ -521,19 +521,27 @@ class UI {
 	getOperationStatusInfo (op) {
 		const format = op.storageFormat || 'json';
 		const conversionStatus = op.conversionStatus || 'completed';
+		const targetFormat = format === 'flatbuffers' ? 'FlatBuffers' : 'Protobuf';
 
-		if (conversionStatus === 'pending' || conversionStatus === 'converting') {
-			// Conversion in progress
+		if (conversionStatus === 'pending') {
+			// Queued for conversion
 			return {
 				icon: '⏳',
 				textKey: 'status_converting',
-				tooltip: 'JSON → ' + (format === 'flatbuffers' ? 'FlatBuffers' : 'Protobuf')
+				tooltip: 'JSON → ' + targetFormat
+			};
+		} else if (conversionStatus === 'converting') {
+			// Actively converting
+			return {
+				icon: '⚙️',
+				textKey: 'status_converting',
+				tooltip: 'JSON → ' + targetFormat
 			};
 		} else if (format === 'protobuf' || format === 'flatbuffers') {
 			// Binary format = streaming
 			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
 			return {
-				icon: '🔄',
+				icon: '▶️',
 				textKey: 'status_streaming',
 				tooltip: formatName
 			};
