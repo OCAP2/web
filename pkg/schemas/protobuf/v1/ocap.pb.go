@@ -4,9 +4,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v4.25.1
-// source: proto/ocap.proto
+// source: pkg/schemas/protobuf/v1/ocap.proto
 
-package proto
+package v1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -56,11 +56,11 @@ func (x EntityType) String() string {
 }
 
 func (EntityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_ocap_proto_enumTypes[0].Descriptor()
+	return file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[0].Descriptor()
 }
 
 func (EntityType) Type() protoreflect.EnumType {
-	return &file_proto_ocap_proto_enumTypes[0]
+	return &file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[0]
 }
 
 func (x EntityType) Number() protoreflect.EnumNumber {
@@ -69,7 +69,7 @@ func (x EntityType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EntityType.Descriptor instead.
 func (EntityType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{0}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{0}
 }
 
 type Side int32
@@ -114,11 +114,11 @@ func (x Side) String() string {
 }
 
 func (Side) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_ocap_proto_enumTypes[1].Descriptor()
+	return file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[1].Descriptor()
 }
 
 func (Side) Type() protoreflect.EnumType {
-	return &file_proto_ocap_proto_enumTypes[1]
+	return &file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[1]
 }
 
 func (x Side) Number() protoreflect.EnumNumber {
@@ -127,7 +127,7 @@ func (x Side) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Side.Descriptor instead.
 func (Side) EnumDescriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{1}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{1}
 }
 
 // Manifest - loaded once at playback start (~10-100KB)
@@ -150,7 +150,7 @@ type Manifest struct {
 
 func (x *Manifest) Reset() {
 	*x = Manifest{}
-	mi := &file_proto_ocap_proto_msgTypes[0]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -162,7 +162,7 @@ func (x *Manifest) String() string {
 func (*Manifest) ProtoMessage() {}
 
 func (x *Manifest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[0]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -175,7 +175,7 @@ func (x *Manifest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Manifest.ProtoReflect.Descriptor instead.
 func (*Manifest) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{0}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Manifest) GetVersion() uint32 {
@@ -258,9 +258,9 @@ func (x *Manifest) GetMarkers() []*MarkerDef {
 type EntityDef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type          EntityType             `protobuf:"varint,2,opt,name=type,proto3,enum=ocap.EntityType" json:"type,omitempty"`
+	Type          EntityType             `protobuf:"varint,2,opt,name=type,proto3,enum=ocap.v1.EntityType" json:"type,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Side          Side                   `protobuf:"varint,4,opt,name=side,proto3,enum=ocap.Side" json:"side,omitempty"`
+	Side          Side                   `protobuf:"varint,4,opt,name=side,proto3,enum=ocap.v1.Side" json:"side,omitempty"`
 	GroupName     string                 `protobuf:"bytes,5,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
 	Role          string                 `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"`
 	StartFrame    uint32                 `protobuf:"varint,7,opt,name=start_frame,json=startFrame,proto3" json:"start_frame,omitempty"`
@@ -273,7 +273,7 @@ type EntityDef struct {
 
 func (x *EntityDef) Reset() {
 	*x = EntityDef{}
-	mi := &file_proto_ocap_proto_msgTypes[1]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +285,7 @@ func (x *EntityDef) String() string {
 func (*EntityDef) ProtoMessage() {}
 
 func (x *EntityDef) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[1]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +298,7 @@ func (x *EntityDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityDef.ProtoReflect.Descriptor instead.
 func (*EntityDef) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{1}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *EntityDef) GetId() uint32 {
@@ -384,7 +384,7 @@ type TimeSample struct {
 
 func (x *TimeSample) Reset() {
 	*x = TimeSample{}
-	mi := &file_proto_ocap_proto_msgTypes[2]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -396,7 +396,7 @@ func (x *TimeSample) String() string {
 func (*TimeSample) ProtoMessage() {}
 
 func (x *TimeSample) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[2]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -409,7 +409,7 @@ func (x *TimeSample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSample.ProtoReflect.Descriptor instead.
 func (*TimeSample) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{2}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TimeSample) GetFrameNum() uint32 {
@@ -460,7 +460,7 @@ type Chunk struct {
 
 func (x *Chunk) Reset() {
 	*x = Chunk{}
-	mi := &file_proto_ocap_proto_msgTypes[3]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +472,7 @@ func (x *Chunk) String() string {
 func (*Chunk) ProtoMessage() {}
 
 func (x *Chunk) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[3]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +485,7 @@ func (x *Chunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chunk.ProtoReflect.Descriptor instead.
 func (*Chunk) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{3}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Chunk) GetIndex() uint32 {
@@ -526,7 +526,7 @@ type Frame struct {
 
 func (x *Frame) Reset() {
 	*x = Frame{}
-	mi := &file_proto_ocap_proto_msgTypes[4]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +538,7 @@ func (x *Frame) String() string {
 func (*Frame) ProtoMessage() {}
 
 func (x *Frame) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[4]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +551,7 @@ func (x *Frame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Frame.ProtoReflect.Descriptor instead.
 func (*Frame) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{4}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Frame) GetFrameNum() uint32 {
@@ -586,7 +586,7 @@ type EntityState struct {
 
 func (x *EntityState) Reset() {
 	*x = EntityState{}
-	mi := &file_proto_ocap_proto_msgTypes[5]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +598,7 @@ func (x *EntityState) String() string {
 func (*EntityState) ProtoMessage() {}
 
 func (x *EntityState) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[5]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +611,7 @@ func (x *EntityState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityState.ProtoReflect.Descriptor instead.
 func (*EntityState) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{5}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *EntityState) GetEntityId() uint32 {
@@ -699,7 +699,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_proto_ocap_proto_msgTypes[6]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -711,7 +711,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[6]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -724,7 +724,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{6}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Event) GetFrameNum() uint32 {
@@ -784,7 +784,7 @@ type MarkerDef struct {
 	EndFrame      uint32                 `protobuf:"varint,4,opt,name=end_frame,json=endFrame,proto3" json:"end_frame,omitempty"`
 	PlayerId      int32                  `protobuf:"varint,5,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 	Color         string                 `protobuf:"bytes,6,opt,name=color,proto3" json:"color,omitempty"`
-	Side          Side                   `protobuf:"varint,7,opt,name=side,proto3,enum=ocap.Side" json:"side,omitempty"`
+	Side          Side                   `protobuf:"varint,7,opt,name=side,proto3,enum=ocap.v1.Side" json:"side,omitempty"`
 	Positions     []*MarkerPosition      `protobuf:"bytes,8,rep,name=positions,proto3" json:"positions,omitempty"`
 	Size          []float32              `protobuf:"fixed32,9,rep,packed,name=size,proto3" json:"size,omitempty"`
 	Shape         string                 `protobuf:"bytes,10,opt,name=shape,proto3" json:"shape,omitempty"`
@@ -795,7 +795,7 @@ type MarkerDef struct {
 
 func (x *MarkerDef) Reset() {
 	*x = MarkerDef{}
-	mi := &file_proto_ocap_proto_msgTypes[7]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -807,7 +807,7 @@ func (x *MarkerDef) String() string {
 func (*MarkerDef) ProtoMessage() {}
 
 func (x *MarkerDef) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[7]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -820,7 +820,7 @@ func (x *MarkerDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerDef.ProtoReflect.Descriptor instead.
 func (*MarkerDef) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{7}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MarkerDef) GetType() string {
@@ -914,7 +914,7 @@ type MarkerPosition struct {
 
 func (x *MarkerPosition) Reset() {
 	*x = MarkerPosition{}
-	mi := &file_proto_ocap_proto_msgTypes[8]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -926,7 +926,7 @@ func (x *MarkerPosition) String() string {
 func (*MarkerPosition) ProtoMessage() {}
 
 func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ocap_proto_msgTypes[8]
+	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -939,7 +939,7 @@ func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerPosition.ProtoReflect.Descriptor instead.
 func (*MarkerPosition) Descriptor() ([]byte, []int) {
-	return file_proto_ocap_proto_rawDescGZIP(), []int{8}
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MarkerPosition) GetFrameNum() uint32 {
@@ -984,11 +984,11 @@ func (x *MarkerPosition) GetAlpha() float32 {
 	return 0
 }
 
-var File_proto_ocap_proto protoreflect.FileDescriptor
+var File_pkg_schemas_protobuf_v1_ocap_proto protoreflect.FileDescriptor
 
-const file_proto_ocap_proto_rawDesc = "" +
+const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/ocap.proto\x12\x04ocap\"\x96\x03\n" +
+	"\"pkg/schemas/protobuf/v1/ocap.proto\x12\aocap.v1\"\xa2\x03\n" +
 	"\bManifest\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x1d\n" +
 	"\n" +
@@ -1000,18 +1000,17 @@ const file_proto_ocap_proto_rawDesc = "" +
 	"chunk_size\x18\x05 \x01(\rR\tchunkSize\x12(\n" +
 	"\x10capture_delay_ms\x18\x06 \x01(\rR\x0ecaptureDelayMs\x12\x1f\n" +
 	"\vchunk_count\x18\a \x01(\rR\n" +
-	"chunkCount\x12+\n" +
-	"\bentities\x18\b \x03(\v2\x0f.ocap.EntityDefR\bentities\x12&\n" +
-	"\x05times\x18\t \x03(\v2\x10.ocap.TimeSampleR\x05times\x12#\n" +
+	"chunkCount\x12.\n" +
+	"\bentities\x18\b \x03(\v2\x12.ocap.v1.EntityDefR\bentities\x12)\n" +
+	"\x05times\x18\t \x03(\v2\x13.ocap.v1.TimeSampleR\x05times\x12&\n" +
 	"\x06events\x18\n" +
-	" \x03(\v2\v.ocap.EventR\x06events\x12)\n" +
-	"\amarkers\x18\v \x03(\v2\x0f.ocap.MarkerDefR\amarkers\"\xa8\x02\n" +
+	" \x03(\v2\x0e.ocap.v1.EventR\x06events\x12,\n" +
+	"\amarkers\x18\v \x03(\v2\x12.ocap.v1.MarkerDefR\amarkers\"\xae\x02\n" +
 	"\tEntityDef\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\rR\x02id\x12$\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x10.ocap.EntityTypeR\x04type\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1e\n" +
-	"\x04side\x18\x04 \x01(\x0e2\n" +
-	".ocap.SideR\x04side\x12\x1d\n" +
+	"\x02id\x18\x01 \x01(\rR\x02id\x12'\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x13.ocap.v1.EntityTypeR\x04type\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12!\n" +
+	"\x04side\x18\x04 \x01(\x0e2\r.ocap.v1.SideR\x04side\x12\x1d\n" +
 	"\n" +
 	"group_name\x18\x05 \x01(\tR\tgroupName\x12\x12\n" +
 	"\x04role\x18\x06 \x01(\tR\x04role\x12\x1f\n" +
@@ -1027,17 +1026,17 @@ const file_proto_ocap_proto_rawDesc = "" +
 	"\x0fsystem_time_utc\x18\x02 \x01(\tR\rsystemTimeUtc\x12\x12\n" +
 	"\x04date\x18\x03 \x01(\tR\x04date\x12'\n" +
 	"\x0ftime_multiplier\x18\x04 \x01(\x02R\x0etimeMultiplier\x12\x12\n" +
-	"\x04time\x18\x05 \x01(\x02R\x04time\"\x84\x01\n" +
+	"\x04time\x18\x05 \x01(\x02R\x04time\"\x87\x01\n" +
 	"\x05Chunk\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\rR\x05index\x12\x1f\n" +
 	"\vstart_frame\x18\x02 \x01(\rR\n" +
 	"startFrame\x12\x1f\n" +
 	"\vframe_count\x18\x03 \x01(\rR\n" +
-	"frameCount\x12#\n" +
-	"\x06frames\x18\x04 \x03(\v2\v.ocap.FrameR\x06frames\"S\n" +
+	"frameCount\x12&\n" +
+	"\x06frames\x18\x04 \x03(\v2\x0e.ocap.v1.FrameR\x06frames\"V\n" +
 	"\x05Frame\x12\x1b\n" +
-	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12-\n" +
-	"\bentities\x18\x02 \x03(\v2\x11.ocap.EntityStateR\bentities\"\x97\x02\n" +
+	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x120\n" +
+	"\bentities\x18\x02 \x03(\v2\x14.ocap.v1.EntityStateR\bentities\"\x97\x02\n" +
 	"\vEntityState\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\rR\bentityId\x12\x13\n" +
 	"\x05pos_x\x18\x02 \x01(\x02R\x04posX\x12\x13\n" +
@@ -1058,7 +1057,7 @@ const file_proto_ocap_proto_rawDesc = "" +
 	"\ttarget_id\x18\x04 \x01(\rR\btargetId\x12\x18\n" +
 	"\amessage\x18\x05 \x01(\tR\amessage\x12\x1a\n" +
 	"\bdistance\x18\x06 \x01(\x02R\bdistance\x12\x16\n" +
-	"\x06weapon\x18\a \x01(\tR\x06weapon\"\xb8\x02\n" +
+	"\x06weapon\x18\a \x01(\tR\x06weapon\"\xbe\x02\n" +
 	"\tMarkerDef\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1f\n" +
@@ -1066,10 +1065,9 @@ const file_proto_ocap_proto_rawDesc = "" +
 	"startFrame\x12\x1b\n" +
 	"\tend_frame\x18\x04 \x01(\rR\bendFrame\x12\x1b\n" +
 	"\tplayer_id\x18\x05 \x01(\x05R\bplayerId\x12\x14\n" +
-	"\x05color\x18\x06 \x01(\tR\x05color\x12\x1e\n" +
-	"\x04side\x18\a \x01(\x0e2\n" +
-	".ocap.SideR\x04side\x122\n" +
-	"\tpositions\x18\b \x03(\v2\x14.ocap.MarkerPositionR\tpositions\x12\x12\n" +
+	"\x05color\x18\x06 \x01(\tR\x05color\x12!\n" +
+	"\x04side\x18\a \x01(\x0e2\r.ocap.v1.SideR\x04side\x125\n" +
+	"\tpositions\x18\b \x03(\v2\x17.ocap.v1.MarkerPositionR\tpositions\x12\x12\n" +
 	"\x04size\x18\t \x03(\x02R\x04size\x12\x14\n" +
 	"\x05shape\x18\n" +
 	" \x01(\tR\x05shape\x12\x14\n" +
@@ -1092,46 +1090,46 @@ const file_proto_ocap_proto_rawDesc = "" +
 	"\tSIDE_EAST\x10\x02\x12\r\n" +
 	"\tSIDE_GUER\x10\x03\x12\f\n" +
 	"\bSIDE_CIV\x10\x04\x12\x0f\n" +
-	"\vSIDE_GLOBAL\x10\x05B\x1cZ\x1agithub.com/OCAP2/web/protob\x06proto3"
+	"\vSIDE_GLOBAL\x10\x05B.Z,github.com/OCAP2/web/pkg/schemas/protobuf/v1b\x06proto3"
 
 var (
-	file_proto_ocap_proto_rawDescOnce sync.Once
-	file_proto_ocap_proto_rawDescData []byte
+	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescOnce sync.Once
+	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData []byte
 )
 
-func file_proto_ocap_proto_rawDescGZIP() []byte {
-	file_proto_ocap_proto_rawDescOnce.Do(func() {
-		file_proto_ocap_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_ocap_proto_rawDesc), len(file_proto_ocap_proto_rawDesc)))
+func file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP() []byte {
+	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescOnce.Do(func() {
+		file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc), len(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc)))
 	})
-	return file_proto_ocap_proto_rawDescData
+	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData
 }
 
-var file_proto_ocap_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_proto_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_proto_ocap_proto_goTypes = []any{
-	(EntityType)(0),        // 0: ocap.EntityType
-	(Side)(0),              // 1: ocap.Side
-	(*Manifest)(nil),       // 2: ocap.Manifest
-	(*EntityDef)(nil),      // 3: ocap.EntityDef
-	(*TimeSample)(nil),     // 4: ocap.TimeSample
-	(*Chunk)(nil),          // 5: ocap.Chunk
-	(*Frame)(nil),          // 6: ocap.Frame
-	(*EntityState)(nil),    // 7: ocap.EntityState
-	(*Event)(nil),          // 8: ocap.Event
-	(*MarkerDef)(nil),      // 9: ocap.MarkerDef
-	(*MarkerPosition)(nil), // 10: ocap.MarkerPosition
+var file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_pkg_schemas_protobuf_v1_ocap_proto_goTypes = []any{
+	(EntityType)(0),        // 0: ocap.v1.EntityType
+	(Side)(0),              // 1: ocap.v1.Side
+	(*Manifest)(nil),       // 2: ocap.v1.Manifest
+	(*EntityDef)(nil),      // 3: ocap.v1.EntityDef
+	(*TimeSample)(nil),     // 4: ocap.v1.TimeSample
+	(*Chunk)(nil),          // 5: ocap.v1.Chunk
+	(*Frame)(nil),          // 6: ocap.v1.Frame
+	(*EntityState)(nil),    // 7: ocap.v1.EntityState
+	(*Event)(nil),          // 8: ocap.v1.Event
+	(*MarkerDef)(nil),      // 9: ocap.v1.MarkerDef
+	(*MarkerPosition)(nil), // 10: ocap.v1.MarkerPosition
 }
-var file_proto_ocap_proto_depIdxs = []int32{
-	3,  // 0: ocap.Manifest.entities:type_name -> ocap.EntityDef
-	4,  // 1: ocap.Manifest.times:type_name -> ocap.TimeSample
-	8,  // 2: ocap.Manifest.events:type_name -> ocap.Event
-	9,  // 3: ocap.Manifest.markers:type_name -> ocap.MarkerDef
-	0,  // 4: ocap.EntityDef.type:type_name -> ocap.EntityType
-	1,  // 5: ocap.EntityDef.side:type_name -> ocap.Side
-	6,  // 6: ocap.Chunk.frames:type_name -> ocap.Frame
-	7,  // 7: ocap.Frame.entities:type_name -> ocap.EntityState
-	1,  // 8: ocap.MarkerDef.side:type_name -> ocap.Side
-	10, // 9: ocap.MarkerDef.positions:type_name -> ocap.MarkerPosition
+var file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs = []int32{
+	3,  // 0: ocap.v1.Manifest.entities:type_name -> ocap.v1.EntityDef
+	4,  // 1: ocap.v1.Manifest.times:type_name -> ocap.v1.TimeSample
+	8,  // 2: ocap.v1.Manifest.events:type_name -> ocap.v1.Event
+	9,  // 3: ocap.v1.Manifest.markers:type_name -> ocap.v1.MarkerDef
+	0,  // 4: ocap.v1.EntityDef.type:type_name -> ocap.v1.EntityType
+	1,  // 5: ocap.v1.EntityDef.side:type_name -> ocap.v1.Side
+	6,  // 6: ocap.v1.Chunk.frames:type_name -> ocap.v1.Frame
+	7,  // 7: ocap.v1.Frame.entities:type_name -> ocap.v1.EntityState
+	1,  // 8: ocap.v1.MarkerDef.side:type_name -> ocap.v1.Side
+	10, // 9: ocap.v1.MarkerDef.positions:type_name -> ocap.v1.MarkerPosition
 	10, // [10:10] is the sub-list for method output_type
 	10, // [10:10] is the sub-list for method input_type
 	10, // [10:10] is the sub-list for extension type_name
@@ -1139,27 +1137,27 @@ var file_proto_ocap_proto_depIdxs = []int32{
 	0,  // [0:10] is the sub-list for field type_name
 }
 
-func init() { file_proto_ocap_proto_init() }
-func file_proto_ocap_proto_init() {
-	if File_proto_ocap_proto != nil {
+func init() { file_pkg_schemas_protobuf_v1_ocap_proto_init() }
+func file_pkg_schemas_protobuf_v1_ocap_proto_init() {
+	if File_pkg_schemas_protobuf_v1_ocap_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_ocap_proto_rawDesc), len(file_proto_ocap_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc), len(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc)),
 			NumEnums:      2,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_proto_ocap_proto_goTypes,
-		DependencyIndexes: file_proto_ocap_proto_depIdxs,
-		EnumInfos:         file_proto_ocap_proto_enumTypes,
-		MessageInfos:      file_proto_ocap_proto_msgTypes,
+		GoTypes:           file_pkg_schemas_protobuf_v1_ocap_proto_goTypes,
+		DependencyIndexes: file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs,
+		EnumInfos:         file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes,
+		MessageInfos:      file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes,
 	}.Build()
-	File_proto_ocap_proto = out.File
-	file_proto_ocap_proto_goTypes = nil
-	file_proto_ocap_proto_depIdxs = nil
+	File_pkg_schemas_protobuf_v1_ocap_proto = out.File
+	file_pkg_schemas_protobuf_v1_ocap_proto_goTypes = nil
+	file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs = nil
 }

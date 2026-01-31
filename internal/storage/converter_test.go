@@ -11,7 +11,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 func TestConverter_Convert(t *testing.T) {
@@ -100,18 +100,24 @@ func TestConverter_Convert(t *testing.T) {
 	// Convert with small chunk size for testing
 	converter := NewConverter(5) // 5 frames per chunk
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath); err != nil {
+	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Verify manifest was created
+	// Verify manifest was created - now with version prefix
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
 
-	var manifest pb.Manifest
+	// Skip 4-byte version prefix
+	if len(manifestData) < 4 {
+		t.Fatalf("manifest data too short")
+	}
+	manifestData = manifestData[4:]
+
+	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
 		t.Fatalf("unmarshal manifest: %v", err)
 	}
@@ -145,14 +151,14 @@ func TestConverter_Convert(t *testing.T) {
 		if ent.Id != 0 {
 			t.Errorf("Entity[0].Id = %d, want %d", ent.Id, 0)
 		}
-		if ent.Type != pb.EntityType_ENTITY_TYPE_UNIT {
-			t.Errorf("Entity[0].Type = %v, want %v", ent.Type, pb.EntityType_ENTITY_TYPE_UNIT)
+		if ent.Type != pbv1.EntityType_ENTITY_TYPE_UNIT {
+			t.Errorf("Entity[0].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_UNIT)
 		}
 		if ent.Name != "Player1" {
 			t.Errorf("Entity[0].Name = %q, want %q", ent.Name, "Player1")
 		}
-		if ent.Side != pb.Side_SIDE_WEST {
-			t.Errorf("Entity[0].Side = %v, want %v", ent.Side, pb.Side_SIDE_WEST)
+		if ent.Side != pbv1.Side_SIDE_WEST {
+			t.Errorf("Entity[0].Side = %v, want %v", ent.Side, pbv1.Side_SIDE_WEST)
 		}
 		if !ent.IsPlayer {
 			t.Errorf("Entity[0].IsPlayer = %v, want %v", ent.IsPlayer, true)
@@ -162,8 +168,8 @@ func TestConverter_Convert(t *testing.T) {
 	// Verify second entity (vehicle)
 	if len(manifest.Entities) > 1 {
 		ent := manifest.Entities[1]
-		if ent.Type != pb.EntityType_ENTITY_TYPE_VEHICLE {
-			t.Errorf("Entity[1].Type = %v, want %v", ent.Type, pb.EntityType_ENTITY_TYPE_VEHICLE)
+		if ent.Type != pbv1.EntityType_ENTITY_TYPE_VEHICLE {
+			t.Errorf("Entity[1].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_VEHICLE)
 		}
 		if ent.VehicleClass != "B_Truck_01" {
 			t.Errorf("Entity[1].VehicleClass = %q, want %q", ent.VehicleClass, "B_Truck_01")
@@ -204,13 +210,17 @@ func TestConverter_Convert(t *testing.T) {
 		t.Errorf("chunk 1 not created: %v", err)
 	}
 
-	// Read and verify chunk 0
+	// Read and verify chunk 0 - skip 4-byte version prefix
 	chunk0Data, err := os.ReadFile(chunk0Path)
 	if err != nil {
 		t.Fatalf("read chunk 0: %v", err)
 	}
+	if len(chunk0Data) < 4 {
+		t.Fatalf("chunk 0 data too short")
+	}
+	chunk0Data = chunk0Data[4:]
 
-	var chunk0 pb.Chunk
+	var chunk0 pbv1.Chunk
 	if err := proto.Unmarshal(chunk0Data, &chunk0); err != nil {
 		t.Fatalf("unmarshal chunk 0: %v", err)
 	}
@@ -259,13 +269,17 @@ func TestConverter_Convert(t *testing.T) {
 		}
 	}
 
-	// Read and verify chunk 1
+	// Read and verify chunk 1 - skip 4-byte version prefix
 	chunk1Data, err := os.ReadFile(chunk1Path)
 	if err != nil {
 		t.Fatalf("read chunk 1: %v", err)
 	}
+	if len(chunk1Data) < 4 {
+		t.Fatalf("chunk 1 data too short")
+	}
+	chunk1Data = chunk1Data[4:]
 
-	var chunk1 pb.Chunk
+	var chunk1 pbv1.Chunk
 	if err := proto.Unmarshal(chunk1Data, &chunk1); err != nil {
 		t.Fatalf("unmarshal chunk 1: %v", err)
 	}
@@ -320,18 +334,22 @@ func TestConverter_ConvertGzipped(t *testing.T) {
 	// Convert
 	converter := NewConverter(DefaultChunkSize)
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath); err != nil {
+	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Verify manifest
+	// Verify manifest - skip 4-byte version prefix
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
+	if len(manifestData) < 4 {
+		t.Fatalf("manifest data too short")
+	}
+	manifestData = manifestData[4:]
 
-	var manifest pb.Manifest
+	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
 		t.Fatalf("unmarshal manifest: %v", err)
 	}
@@ -371,7 +389,7 @@ func TestConverter_ContextCancellation(t *testing.T) {
 	cancel() // Cancel immediately
 
 	converter := NewConverter(10)
-	err = converter.Convert(ctx, inputPath, outputPath)
+	err = converter.Convert(ctx, inputPath, outputPath, "protobuf")
 	if err == nil {
 		t.Error("expected error from cancelled context")
 	}
@@ -430,18 +448,22 @@ func TestConverter_VehicleCrew(t *testing.T) {
 
 	converter := NewConverter(10)
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath); err != nil {
+	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Read chunk and verify crew
+	// Read chunk and verify crew - skip 4-byte version prefix
 	chunkPath := filepath.Join(outputPath, "chunks", "0000.pb")
 	chunkData, err := os.ReadFile(chunkPath)
 	if err != nil {
 		t.Fatalf("read chunk: %v", err)
 	}
+	if len(chunkData) < 4 {
+		t.Fatalf("chunk data too short")
+	}
+	chunkData = chunkData[4:]
 
-	var chunk pb.Chunk
+	var chunk pbv1.Chunk
 	if err := proto.Unmarshal(chunkData, &chunk); err != nil {
 		t.Fatalf("unmarshal chunk: %v", err)
 	}
@@ -472,69 +494,20 @@ func TestNewConverter_DefaultChunkSize(t *testing.T) {
 	}
 }
 
-func TestConverter_ParseEvent(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
-
-	tests := []struct {
-		name     string
-		input    []interface{}
-		wantType string
-		wantOK   bool
-	}{
-		{
-			name:     "killed event",
-			input:    []interface{}{100.0, "killed", 1.0, 2.0, "arifle_MX", 150.0},
-			wantType: "killed",
-			wantOK:   true,
-		},
-		{
-			name:     "hit event",
-			input:    []interface{}{50.0, "hit", 1.0, 2.0, "pistol"},
-			wantType: "hit",
-			wantOK:   true,
-		},
-		{
-			name:     "too short",
-			input:    []interface{}{100.0},
-			wantType: "",
-			wantOK:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			event := converter.parseEvent(tt.input)
-			if tt.wantOK {
-				if event == nil {
-					t.Error("expected non-nil event")
-					return
-				}
-				if event.Type != tt.wantType {
-					t.Errorf("Type = %q, want %q", event.Type, tt.wantType)
-				}
-			} else {
-				if event != nil {
-					t.Error("expected nil event")
-				}
-			}
-		})
-	}
-}
-
 func TestConverter_StringToSide(t *testing.T) {
 	tests := []struct {
 		input string
-		want  pb.Side
+		want  pbv1.Side
 	}{
-		{"WEST", pb.Side_SIDE_WEST},
-		{"EAST", pb.Side_SIDE_EAST},
-		{"GUER", pb.Side_SIDE_GUER},
-		{"INDEPENDENT", pb.Side_SIDE_GUER},
-		{"CIV", pb.Side_SIDE_CIV},
-		{"CIVILIAN", pb.Side_SIDE_CIV},
-		{"GLOBAL", pb.Side_SIDE_GLOBAL},
-		{"UNKNOWN", pb.Side_SIDE_UNKNOWN},
-		{"", pb.Side_SIDE_UNKNOWN},
+		{"WEST", pbv1.Side_SIDE_WEST},
+		{"EAST", pbv1.Side_SIDE_EAST},
+		{"GUER", pbv1.Side_SIDE_GUER},
+		{"INDEPENDENT", pbv1.Side_SIDE_GUER},
+		{"CIV", pbv1.Side_SIDE_CIV},
+		{"CIVILIAN", pbv1.Side_SIDE_CIV},
+		{"GLOBAL", pbv1.Side_SIDE_GLOBAL},
+		{"UNKNOWN", pbv1.Side_SIDE_UNKNOWN},
+		{"", pbv1.Side_SIDE_UNKNOWN},
 	}
 
 	for _, tt := range tests {
@@ -551,15 +524,15 @@ func TestSideIndexToSide(t *testing.T) {
 	tests := []struct {
 		name  string
 		input int
-		want  pb.Side
+		want  pbv1.Side
 	}{
-		{"WEST index 0", 0, pb.Side_SIDE_WEST},
-		{"EAST index 1", 1, pb.Side_SIDE_EAST},
-		{"GUER index 2", 2, pb.Side_SIDE_GUER},
-		{"CIV index 3", 3, pb.Side_SIDE_CIV},
-		{"UNKNOWN index 4", 4, pb.Side_SIDE_UNKNOWN},
-		{"UNKNOWN negative", -1, pb.Side_SIDE_UNKNOWN},
-		{"UNKNOWN large", 100, pb.Side_SIDE_UNKNOWN},
+		{"WEST index 0", 0, pbv1.Side_SIDE_WEST},
+		{"EAST index 1", 1, pbv1.Side_SIDE_EAST},
+		{"GUER index 2", 2, pbv1.Side_SIDE_GUER},
+		{"CIV index 3", 3, pbv1.Side_SIDE_CIV},
+		{"UNKNOWN index 4", 4, pbv1.Side_SIDE_UNKNOWN},
+		{"UNKNOWN negative", -1, pbv1.Side_SIDE_UNKNOWN},
+		{"UNKNOWN large", 100, pbv1.Side_SIDE_UNKNOWN},
 	}
 
 	for _, tt := range tests {
@@ -575,13 +548,13 @@ func TestSideIndexToSide(t *testing.T) {
 func TestStringToEntityType(t *testing.T) {
 	tests := []struct {
 		input string
-		want  pb.EntityType
+		want  pbv1.EntityType
 	}{
-		{"unit", pb.EntityType_ENTITY_TYPE_UNIT},
-		{"vehicle", pb.EntityType_ENTITY_TYPE_VEHICLE},
-		{"unknown", pb.EntityType_ENTITY_TYPE_UNKNOWN},
-		{"", pb.EntityType_ENTITY_TYPE_UNKNOWN},
-		{"invalid", pb.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"unit", pbv1.EntityType_ENTITY_TYPE_UNIT},
+		{"vehicle", pbv1.EntityType_ENTITY_TYPE_VEHICLE},
+		{"unknown", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"invalid", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
 	}
 
 	for _, tt := range tests {
@@ -604,7 +577,7 @@ func TestToFloat64(t *testing.T) {
 		{"zero", 0.0, 0.0},
 		{"negative", -10.5, -10.5},
 		{"string", "not a number", 0.0},
-		{"int", 42, 0.0},         // int is not float64
+		{"int", 42, 0.0}, // int is not float64
 		{"nil", nil, 0.0},
 		{"bool", true, 0.0},
 	}
@@ -643,245 +616,61 @@ func TestToString(t *testing.T) {
 	}
 }
 
-func TestConverter_ParseMarkerPosition(t *testing.T) {
+func TestConverter_UnknownInputVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	// Create invalid JSON data (missing required fields)
+	testData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		t.Fatalf("marshal test data: %v", err)
+	}
+	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
+		t.Fatalf("write test JSON: %v", err)
+	}
+
 	converter := NewConverter(DefaultChunkSize)
-
-	t.Run("simple format [x, y, z]", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0, 10.0})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosX != 100.0 {
-			t.Errorf("PosX = %v, want 100.0", pos.PosX)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("PosY = %v, want 200.0", pos.PosY)
-		}
-		if pos.PosZ != 10.0 {
-			t.Errorf("PosZ = %v, want 10.0", pos.PosZ)
-		}
-	})
-
-	t.Run("simple format [x, y] without z", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{100.0, 200.0})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosX != 100.0 {
-			t.Errorf("PosX = %v, want 100.0", pos.PosX)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("PosY = %v, want 200.0", pos.PosY)
-		}
-		if pos.PosZ != 0.0 {
-			t.Errorf("PosZ = %v, want 0.0", pos.PosZ)
-		}
-	})
-
-	t.Run("complex format [[x, y, z], frameNum, direction, alpha]", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{
-			[]interface{}{100.0, 200.0, 10.0},
-			50.0,
-			90.0,
-			0.5,
-		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosX != 100.0 {
-			t.Errorf("PosX = %v, want 100.0", pos.PosX)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("PosY = %v, want 200.0", pos.PosY)
-		}
-		if pos.PosZ != 10.0 {
-			t.Errorf("PosZ = %v, want 10.0", pos.PosZ)
-		}
-		if pos.FrameNum != 50 {
-			t.Errorf("FrameNum = %v, want 50", pos.FrameNum)
-		}
-		if pos.Direction != 90.0 {
-			t.Errorf("Direction = %v, want 90.0", pos.Direction)
-		}
-		if pos.Alpha != 0.5 {
-			t.Errorf("Alpha = %v, want 0.5", pos.Alpha)
-		}
-	})
-
-	t.Run("complex format [[x, y], frameNum] without z", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{
-			[]interface{}{100.0, 200.0},
-			50.0,
-		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosX != 100.0 {
-			t.Errorf("PosX = %v, want 100.0", pos.PosX)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("PosY = %v, want 200.0", pos.PosY)
-		}
-		if pos.FrameNum != 50 {
-			t.Errorf("FrameNum = %v, want 50", pos.FrameNum)
-		}
-	})
-
-	t.Run("nil input", func(t *testing.T) {
-		pos := converter.parseMarkerPosition(nil)
-		if pos != nil {
-			t.Error("expected nil position for nil input")
-		}
-	})
-
-	t.Run("non-array input", func(t *testing.T) {
-		pos := converter.parseMarkerPosition("not an array")
-		if pos != nil {
-			t.Error("expected nil position for non-array input")
-		}
-	})
-
-	t.Run("empty array", func(t *testing.T) {
-		pos := converter.parseMarkerPosition([]interface{}{})
-		if pos != nil {
-			t.Error("expected nil position for empty array")
-		}
-	})
+	ctx := context.Background()
+	err = converter.Convert(ctx, inputPath, outputPath, "protobuf")
+	if err == nil {
+		t.Error("expected error for unknown input version")
+	}
 }
 
-func TestConverter_CalculateEndFrame(t *testing.T) {
+func TestConverter_InvalidFormat(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	// Create valid JSON data
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test",
+		"endFrame":     5,
+		"captureDelay": 1.0,
+		"entities":     []interface{}{},
+		"events":       []interface{}{},
+		"Markers":      []interface{}{},
+		"times":        []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		t.Fatalf("marshal test data: %v", err)
+	}
+	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
+		t.Fatalf("write test JSON: %v", err)
+	}
+
 	converter := NewConverter(DefaultChunkSize)
-
-	t.Run("with positions", func(t *testing.T) {
-		em := map[string]interface{}{
-			"positions": []interface{}{
-				[]interface{}{},
-				[]interface{}{},
-				[]interface{}{},
-				[]interface{}{},
-				[]interface{}{},
-			},
-		}
-		endFrame := converter.calculateEndFrame(em, 10)
-		// startFrame + len(positions) - 1 = 10 + 5 - 1 = 14
-		if endFrame != 14 {
-			t.Errorf("endFrame = %d, want 14", endFrame)
-		}
-	})
-
-	t.Run("without positions", func(t *testing.T) {
-		em := map[string]interface{}{}
-		endFrame := converter.calculateEndFrame(em, 10)
-		// Should return startFrame when no positions
-		if endFrame != 10 {
-			t.Errorf("endFrame = %d, want 10", endFrame)
-		}
-	})
-
-	t.Run("positions is not array", func(t *testing.T) {
-		em := map[string]interface{}{
-			"positions": "not an array",
-		}
-		endFrame := converter.calculateEndFrame(em, 10)
-		// Should return startFrame when positions is wrong type
-		if endFrame != 10 {
-			t.Errorf("endFrame = %d, want 10", endFrame)
-		}
-	})
-}
-
-func TestConverter_ParseEvent_Distance(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
-
-	t.Run("event with numeric distance at index 4", func(t *testing.T) {
-		// When index 4 is a number (not a weapon string), it's treated as distance
-		event := converter.parseEvent([]interface{}{100.0, "move", 1.0, 2.0, 50.5})
-		if event == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if event.Distance != 50.5 {
-			t.Errorf("Distance = %v, want 50.5", event.Distance)
-		}
-	})
-
-	t.Run("event with message at index 4", func(t *testing.T) {
-		// For non-hit/killed events, string at index 4 is message
-		event := converter.parseEvent([]interface{}{100.0, "chat", 1.0, 2.0, "Hello world"})
-		if event == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if event.Message != "Hello world" {
-			t.Errorf("Message = %q, want 'Hello world'", event.Message)
-		}
-	})
-
-	t.Run("event with weapon and distance", func(t *testing.T) {
-		// killed/hit events have weapon at index 4 and distance at index 5
-		event := converter.parseEvent([]interface{}{100.0, "killed", 1.0, 2.0, "arifle_MX", 150.5})
-		if event == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if event.Weapon != "arifle_MX" {
-			t.Errorf("Weapon = %q, want 'arifle_MX'", event.Weapon)
-		}
-		if event.Distance != 150.5 {
-			t.Errorf("Distance = %v, want 150.5", event.Distance)
-		}
-	})
-}
-
-func TestConverter_GetEntityStateAtFrame(t *testing.T) {
-	converter := NewConverter(DefaultChunkSize)
-
-	t.Run("frame before entity start", func(t *testing.T) {
-		ep := entityPositionData{
-			ID:         1,
-			Type:       "unit",
-			StartFrame: 10,
-			Positions:  []interface{}{[]interface{}{[]interface{}{100.0, 200.0}, 45.0, 1.0}},
-		}
-		state := converter.getEntityStateAtFrame(ep, 5)
-		if state != nil {
-			t.Error("expected nil state for frame before start")
-		}
-	})
-
-	t.Run("frame after entity end", func(t *testing.T) {
-		ep := entityPositionData{
-			ID:         1,
-			Type:       "unit",
-			StartFrame: 0,
-			Positions:  []interface{}{[]interface{}{[]interface{}{100.0, 200.0}, 45.0, 1.0}},
-		}
-		state := converter.getEntityStateAtFrame(ep, 10)
-		if state != nil {
-			t.Error("expected nil state for frame after positions end")
-		}
-	})
-
-	t.Run("invalid position data", func(t *testing.T) {
-		ep := entityPositionData{
-			ID:         1,
-			Type:       "unit",
-			StartFrame: 0,
-			Positions:  []interface{}{"not an array"},
-		}
-		state := converter.getEntityStateAtFrame(ep, 0)
-		if state != nil {
-			t.Error("expected nil state for invalid position data")
-		}
-	})
-
-	t.Run("position array too short", func(t *testing.T) {
-		ep := entityPositionData{
-			ID:         1,
-			Type:       "unit",
-			StartFrame: 0,
-			Positions:  []interface{}{[]interface{}{100.0, 200.0}}, // Only 2 elements, need at least 3
-		}
-		state := converter.getEntityStateAtFrame(ep, 0)
-		if state != nil {
-			t.Error("expected nil state for position array too short")
-		}
-	})
+	ctx := context.Background()
+	err = converter.Convert(ctx, inputPath, outputPath, "invalid_format")
+	if err == nil {
+		t.Error("expected error for invalid format")
+	}
 }

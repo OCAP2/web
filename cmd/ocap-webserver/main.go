@@ -310,3 +310,7 @@ func (a *repoAdapter) UpdateStorageFormat(ctx context.Context, id int64, format 
 func (a *repoAdapter) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
 	return a.repo.UpdateMissionDuration(ctx, id, duration)
 }
+
+func (a *repoAdapter) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
+	return a.repo.UpdateSchemaVersion(ctx, id, version)
+}

@@ -2,7 +2,7 @@
 // FlatBuffers schema for OCAP chunked recordings
 // Zero-copy read access for maximum performance
 
-namespace ocap.fb;
+namespace ocap.v1.fb;
 
 enum EntityType : byte {
   Unknown = 0,

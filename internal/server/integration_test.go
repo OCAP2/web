@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -170,7 +170,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 	t.Run("ConvertToProtobuf", func(t *testing.T) {
 		converter := storage.NewConverter(5) // 5 frames per chunk for testing
 		outputPath := filepath.Join(dataDir, "test_integration")
-		err := converter.Convert(ctx, jsonPath, outputPath)
+		err := converter.Convert(ctx, jsonPath, outputPath, "protobuf")
 		require.NoError(t, err)
 
 		// Update database
@@ -215,8 +215,13 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
-		var manifest pb.Manifest
-		err = proto.Unmarshal(rec.Body.Bytes(), &manifest)
+		// Skip 4-byte version prefix
+		data := rec.Body.Bytes()
+		require.Greater(t, len(data), 4)
+		data = data[4:]
+
+		var manifest pbv1.Manifest
+		err = proto.Unmarshal(data, &manifest)
 		assert.NoError(t, err)
 		assert.Equal(t, "altis", manifest.WorldName)
 		assert.Equal(t, "Integration Test Mission", manifest.MissionName)
@@ -239,8 +244,13 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
-		var chunk pb.Chunk
-		err = proto.Unmarshal(rec.Body.Bytes(), &chunk)
+		// Skip 4-byte version prefix
+		data := rec.Body.Bytes()
+		require.Greater(t, len(data), 4)
+		data = data[4:]
+
+		var chunk pbv1.Chunk
+		err = proto.Unmarshal(data, &chunk)
 		assert.NoError(t, err)
 		assert.Equal(t, uint32(0), chunk.Index)
 		assert.Equal(t, uint32(0), chunk.StartFrame)
@@ -265,8 +275,13 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var chunk pb.Chunk
-		err = proto.Unmarshal(rec.Body.Bytes(), &chunk)
+		// Skip 4-byte version prefix
+		data := rec.Body.Bytes()
+		require.Greater(t, len(data), 4)
+		data = data[4:]
+
+		var chunk pbv1.Chunk
+		err = proto.Unmarshal(data, &chunk)
 		assert.NoError(t, err)
 		assert.Equal(t, uint32(1), chunk.Index)
 		assert.Equal(t, uint32(5), chunk.StartFrame)

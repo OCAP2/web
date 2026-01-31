@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	fb "github.com/OCAP2/web/pkg/schemas/flatbuffers/generated"
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	fbv1 "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,35 +35,35 @@ func TestFlatBuffersEngineGetManifest(t *testing.T) {
 	role1 := builder.CreateString("Rifleman")
 	class1 := builder.CreateString("")
 
-	fb.EntityDefStart(builder)
-	fb.EntityDefAddId(builder, 0)
-	fb.EntityDefAddType(builder, fb.EntityTypeUnit)
-	fb.EntityDefAddName(builder, name1)
-	fb.EntityDefAddSide(builder, fb.SideWest)
-	fb.EntityDefAddGroupName(builder, group1)
-	fb.EntityDefAddRole(builder, role1)
-	fb.EntityDefAddStartFrame(builder, 0)
-	fb.EntityDefAddEndFrame(builder, 100)
-	fb.EntityDefAddIsPlayer(builder, true)
-	fb.EntityDefAddVehicleClass(builder, class1)
-	entity1 := fb.EntityDefEnd(builder)
+	fbv1.EntityDefStart(builder)
+	fbv1.EntityDefAddId(builder, 0)
+	fbv1.EntityDefAddType(builder, fbv1.EntityTypeUnit)
+	fbv1.EntityDefAddName(builder, name1)
+	fbv1.EntityDefAddSide(builder, fbv1.SideWest)
+	fbv1.EntityDefAddGroupName(builder, group1)
+	fbv1.EntityDefAddRole(builder, role1)
+	fbv1.EntityDefAddStartFrame(builder, 0)
+	fbv1.EntityDefAddEndFrame(builder, 100)
+	fbv1.EntityDefAddIsPlayer(builder, true)
+	fbv1.EntityDefAddVehicleClass(builder, class1)
+	entity1 := fbv1.EntityDefEnd(builder)
 
 	name2 := builder.CreateString("Truck")
 	group2 := builder.CreateString("")
 	role2 := builder.CreateString("")
 	class2 := builder.CreateString("B_Truck_01")
 
-	fb.EntityDefStart(builder)
-	fb.EntityDefAddId(builder, 1)
-	fb.EntityDefAddType(builder, fb.EntityTypeVehicle)
-	fb.EntityDefAddName(builder, name2)
-	fb.EntityDefAddSide(builder, fb.SideWest)
-	fb.EntityDefAddGroupName(builder, group2)
-	fb.EntityDefAddRole(builder, role2)
-	fb.EntityDefAddVehicleClass(builder, class2)
-	entity2 := fb.EntityDefEnd(builder)
+	fbv1.EntityDefStart(builder)
+	fbv1.EntityDefAddId(builder, 1)
+	fbv1.EntityDefAddType(builder, fbv1.EntityTypeVehicle)
+	fbv1.EntityDefAddName(builder, name2)
+	fbv1.EntityDefAddSide(builder, fbv1.SideWest)
+	fbv1.EntityDefAddGroupName(builder, group2)
+	fbv1.EntityDefAddRole(builder, role2)
+	fbv1.EntityDefAddVehicleClass(builder, class2)
+	entity2 := fbv1.EntityDefEnd(builder)
 
-	fb.ManifestStartEntitiesVector(builder, 2)
+	fbv1.ManifestStartEntitiesVector(builder, 2)
 	builder.PrependUOffsetT(entity2)
 	builder.PrependUOffsetT(entity1)
 	entitiesVec := builder.EndVector(2)
@@ -72,16 +71,16 @@ func TestFlatBuffersEngineGetManifest(t *testing.T) {
 	worldName := builder.CreateString("altis")
 	missionName := builder.CreateString("Test Mission")
 
-	fb.ManifestStart(builder)
-	fb.ManifestAddVersion(builder, 1)
-	fb.ManifestAddWorldName(builder, worldName)
-	fb.ManifestAddMissionName(builder, missionName)
-	fb.ManifestAddFrameCount(builder, 1000)
-	fb.ManifestAddChunkSize(builder, 300)
-	fb.ManifestAddCaptureDelayMs(builder, 1000)
-	fb.ManifestAddChunkCount(builder, 4)
-	fb.ManifestAddEntities(builder, entitiesVec)
-	manifestOff := fb.ManifestEnd(builder)
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddVersion(builder, 1)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	fbv1.ManifestAddFrameCount(builder, 1000)
+	fbv1.ManifestAddChunkSize(builder, 300)
+	fbv1.ManifestAddCaptureDelayMs(builder, 1000)
+	fbv1.ManifestAddChunkCount(builder, 4)
+	fbv1.ManifestAddEntities(builder, entitiesVec)
+	manifestOff := fbv1.ManifestEnd(builder)
 
 	builder.Finish(manifestOff)
 	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), builder.FinishedBytes(), 0644))
@@ -129,56 +128,56 @@ func TestFlatBuffersEngineGetChunk(t *testing.T) {
 
 	// Build frame 0
 	name0 := builder.CreateString("")
-	fb.EntityStateStart(builder)
-	fb.EntityStateAddEntityId(builder, 0)
-	fb.EntityStateAddPosX(builder, 100)
-	fb.EntityStateAddPosY(builder, 200)
-	fb.EntityStateAddDirection(builder, 45)
-	fb.EntityStateAddAlive(builder, 1)
-	fb.EntityStateAddName(builder, name0)
-	state0 := fb.EntityStateEnd(builder)
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 0)
+	fbv1.EntityStateAddPosX(builder, 100)
+	fbv1.EntityStateAddPosY(builder, 200)
+	fbv1.EntityStateAddDirection(builder, 45)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddName(builder, name0)
+	state0 := fbv1.EntityStateEnd(builder)
 
-	fb.FrameStartEntitiesVector(builder, 1)
+	fbv1.FrameStartEntitiesVector(builder, 1)
 	builder.PrependUOffsetT(state0)
 	entities0 := builder.EndVector(1)
 
-	fb.FrameStart(builder)
-	fb.FrameAddFrameNum(builder, 0)
-	fb.FrameAddEntities(builder, entities0)
-	frame0 := fb.FrameEnd(builder)
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 0)
+	fbv1.FrameAddEntities(builder, entities0)
+	frame0 := fbv1.FrameEnd(builder)
 
 	// Build frame 1
 	name1 := builder.CreateString("")
-	fb.EntityStateStart(builder)
-	fb.EntityStateAddEntityId(builder, 0)
-	fb.EntityStateAddPosX(builder, 101)
-	fb.EntityStateAddPosY(builder, 201)
-	fb.EntityStateAddDirection(builder, 46)
-	fb.EntityStateAddAlive(builder, 1)
-	fb.EntityStateAddName(builder, name1)
-	state1 := fb.EntityStateEnd(builder)
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 0)
+	fbv1.EntityStateAddPosX(builder, 101)
+	fbv1.EntityStateAddPosY(builder, 201)
+	fbv1.EntityStateAddDirection(builder, 46)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddName(builder, name1)
+	state1 := fbv1.EntityStateEnd(builder)
 
-	fb.FrameStartEntitiesVector(builder, 1)
+	fbv1.FrameStartEntitiesVector(builder, 1)
 	builder.PrependUOffsetT(state1)
 	entities1 := builder.EndVector(1)
 
-	fb.FrameStart(builder)
-	fb.FrameAddFrameNum(builder, 1)
-	fb.FrameAddEntities(builder, entities1)
-	frame1 := fb.FrameEnd(builder)
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 1)
+	fbv1.FrameAddEntities(builder, entities1)
+	frame1 := fbv1.FrameEnd(builder)
 
 	// Build chunk
-	fb.ChunkStartFramesVector(builder, 2)
+	fbv1.ChunkStartFramesVector(builder, 2)
 	builder.PrependUOffsetT(frame1)
 	builder.PrependUOffsetT(frame0)
 	framesVec := builder.EndVector(2)
 
-	fb.ChunkStart(builder)
-	fb.ChunkAddIndex(builder, 0)
-	fb.ChunkAddStartFrame(builder, 0)
-	fb.ChunkAddFrameCount(builder, 2)
-	fb.ChunkAddFrames(builder, framesVec)
-	chunkOff := fb.ChunkEnd(builder)
+	fbv1.ChunkStart(builder)
+	fbv1.ChunkAddIndex(builder, 0)
+	fbv1.ChunkAddStartFrame(builder, 0)
+	fbv1.ChunkAddFrameCount(builder, 2)
+	fbv1.ChunkAddFrames(builder, framesVec)
+	chunkOff := fbv1.ChunkEnd(builder)
 
 	builder.Finish(chunkOff)
 	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.fb"), builder.FinishedBytes(), 0644))
@@ -211,56 +210,56 @@ func TestFlatBuffersEngineGetChunkWithCrew(t *testing.T) {
 	builder := flatbuffers.NewBuilder(1024)
 
 	// Build vehicle state with crew
-	fb.EntityStateStartCrewIdsVector(builder, 3)
+	fbv1.EntityStateStartCrewIdsVector(builder, 3)
 	builder.PrependUint32(3)
 	builder.PrependUint32(2)
 	builder.PrependUint32(1)
 	crewVec := builder.EndVector(3)
 
 	name0 := builder.CreateString("")
-	fb.EntityStateStart(builder)
-	fb.EntityStateAddEntityId(builder, 5)
-	fb.EntityStateAddPosX(builder, 500)
-	fb.EntityStateAddPosY(builder, 600)
-	fb.EntityStateAddDirection(builder, 90)
-	fb.EntityStateAddAlive(builder, 1)
-	fb.EntityStateAddCrewIds(builder, crewVec)
-	fb.EntityStateAddName(builder, name0)
-	vehicleState := fb.EntityStateEnd(builder)
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 5)
+	fbv1.EntityStateAddPosX(builder, 500)
+	fbv1.EntityStateAddPosY(builder, 600)
+	fbv1.EntityStateAddDirection(builder, 90)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddCrewIds(builder, crewVec)
+	fbv1.EntityStateAddName(builder, name0)
+	vehicleState := fbv1.EntityStateEnd(builder)
 
 	// Build unit in vehicle
 	name1 := builder.CreateString("")
-	fb.EntityStateStart(builder)
-	fb.EntityStateAddEntityId(builder, 1)
-	fb.EntityStateAddPosX(builder, 500)
-	fb.EntityStateAddPosY(builder, 600)
-	fb.EntityStateAddDirection(builder, 90)
-	fb.EntityStateAddAlive(builder, 1)
-	fb.EntityStateAddVehicleId(builder, 5)
-	fb.EntityStateAddIsInVehicle(builder, true)
-	fb.EntityStateAddName(builder, name1)
-	unitState := fb.EntityStateEnd(builder)
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 1)
+	fbv1.EntityStateAddPosX(builder, 500)
+	fbv1.EntityStateAddPosY(builder, 600)
+	fbv1.EntityStateAddDirection(builder, 90)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddVehicleId(builder, 5)
+	fbv1.EntityStateAddIsInVehicle(builder, true)
+	fbv1.EntityStateAddName(builder, name1)
+	unitState := fbv1.EntityStateEnd(builder)
 
-	fb.FrameStartEntitiesVector(builder, 2)
+	fbv1.FrameStartEntitiesVector(builder, 2)
 	builder.PrependUOffsetT(unitState)
 	builder.PrependUOffsetT(vehicleState)
 	entitiesVec := builder.EndVector(2)
 
-	fb.FrameStart(builder)
-	fb.FrameAddFrameNum(builder, 0)
-	fb.FrameAddEntities(builder, entitiesVec)
-	frameOff := fb.FrameEnd(builder)
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 0)
+	fbv1.FrameAddEntities(builder, entitiesVec)
+	frameOff := fbv1.FrameEnd(builder)
 
-	fb.ChunkStartFramesVector(builder, 1)
+	fbv1.ChunkStartFramesVector(builder, 1)
 	builder.PrependUOffsetT(frameOff)
 	framesVec := builder.EndVector(1)
 
-	fb.ChunkStart(builder)
-	fb.ChunkAddIndex(builder, 0)
-	fb.ChunkAddStartFrame(builder, 0)
-	fb.ChunkAddFrameCount(builder, 1)
-	fb.ChunkAddFrames(builder, framesVec)
-	chunkOff := fb.ChunkEnd(builder)
+	fbv1.ChunkStart(builder)
+	fbv1.ChunkAddIndex(builder, 0)
+	fbv1.ChunkAddStartFrame(builder, 0)
+	fbv1.ChunkAddFrameCount(builder, 1)
+	fbv1.ChunkAddFrames(builder, framesVec)
+	chunkOff := fbv1.ChunkEnd(builder)
 
 	builder.Finish(chunkOff)
 	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.fb"), builder.FinishedBytes(), 0644))
@@ -302,11 +301,11 @@ func TestFlatBuffersEngineChunkCount(t *testing.T) {
 	worldName := builder.CreateString("test")
 	missionName := builder.CreateString("test")
 
-	fb.ManifestStart(builder)
-	fb.ManifestAddWorldName(builder, worldName)
-	fb.ManifestAddMissionName(builder, missionName)
-	fb.ManifestAddChunkCount(builder, 5)
-	manifestOff := fb.ManifestEnd(builder)
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	fbv1.ManifestAddChunkCount(builder, 5)
+	manifestOff := fbv1.ManifestEnd(builder)
 
 	builder.Finish(manifestOff)
 	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), builder.FinishedBytes(), 0644))
@@ -347,30 +346,30 @@ func TestFlatBuffersEngineGetChunkReaderMissingFile(t *testing.T) {
 
 func TestFlatBuffersTypeConversions(t *testing.T) {
 	// Test entity type conversions
-	assert.Equal(t, "unit", fbEntityTypeToString(fb.EntityTypeUnit))
-	assert.Equal(t, "vehicle", fbEntityTypeToString(fb.EntityTypeVehicle))
-	assert.Equal(t, "unknown", fbEntityTypeToString(fb.EntityTypeUnknown))
+	assert.Equal(t, "unit", fbEntityTypeToString(fbv1.EntityTypeUnit))
+	assert.Equal(t, "vehicle", fbEntityTypeToString(fbv1.EntityTypeVehicle))
+	assert.Equal(t, "unknown", fbEntityTypeToString(fbv1.EntityTypeUnknown))
 
-	assert.Equal(t, fb.EntityTypeUnit, stringToFBEntityType("unit"))
-	assert.Equal(t, fb.EntityTypeVehicle, stringToFBEntityType("vehicle"))
-	assert.Equal(t, fb.EntityTypeUnknown, stringToFBEntityType("invalid"))
+	assert.Equal(t, fbv1.EntityTypeUnit, stringToFBEntityType("unit"))
+	assert.Equal(t, fbv1.EntityTypeVehicle, stringToFBEntityType("vehicle"))
+	assert.Equal(t, fbv1.EntityTypeUnknown, stringToFBEntityType("invalid"))
 
 	// Test side conversions
-	assert.Equal(t, "WEST", fbSideToString(fb.SideWest))
-	assert.Equal(t, "EAST", fbSideToString(fb.SideEast))
-	assert.Equal(t, "GUER", fbSideToString(fb.SideGuer))
-	assert.Equal(t, "CIV", fbSideToString(fb.SideCiv))
-	assert.Equal(t, "GLOBAL", fbSideToString(fb.SideGlobal))
-	assert.Equal(t, "UNKNOWN", fbSideToString(fb.SideUnknown))
+	assert.Equal(t, "WEST", fbSideToString(fbv1.SideWest))
+	assert.Equal(t, "EAST", fbSideToString(fbv1.SideEast))
+	assert.Equal(t, "GUER", fbSideToString(fbv1.SideGuer))
+	assert.Equal(t, "CIV", fbSideToString(fbv1.SideCiv))
+	assert.Equal(t, "GLOBAL", fbSideToString(fbv1.SideGlobal))
+	assert.Equal(t, "UNKNOWN", fbSideToString(fbv1.SideUnknown))
 
-	assert.Equal(t, fb.SideWest, stringToFBSide("WEST"))
-	assert.Equal(t, fb.SideEast, stringToFBSide("EAST"))
-	assert.Equal(t, fb.SideGuer, stringToFBSide("GUER"))
-	assert.Equal(t, fb.SideGuer, stringToFBSide("INDEPENDENT"))
-	assert.Equal(t, fb.SideCiv, stringToFBSide("CIV"))
-	assert.Equal(t, fb.SideCiv, stringToFBSide("CIVILIAN"))
-	assert.Equal(t, fb.SideGlobal, stringToFBSide("GLOBAL"))
-	assert.Equal(t, fb.SideUnknown, stringToFBSide("invalid"))
+	assert.Equal(t, fbv1.SideWest, stringToFBSide("WEST"))
+	assert.Equal(t, fbv1.SideEast, stringToFBSide("EAST"))
+	assert.Equal(t, fbv1.SideGuer, stringToFBSide("GUER"))
+	assert.Equal(t, fbv1.SideGuer, stringToFBSide("INDEPENDENT"))
+	assert.Equal(t, fbv1.SideCiv, stringToFBSide("CIV"))
+	assert.Equal(t, fbv1.SideCiv, stringToFBSide("CIVILIAN"))
+	assert.Equal(t, fbv1.SideGlobal, stringToFBSide("GLOBAL"))
+	assert.Equal(t, fbv1.SideUnknown, stringToFBSide("invalid"))
 }
 
 func TestFlatBuffersEngineGetManifestReader(t *testing.T) {
@@ -513,152 +512,6 @@ func TestFlatBuffersEngineConvertMissingFile(t *testing.T) {
 	err := engine.Convert(context.Background(), "nonexistent.json", "output")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "load JSON")
-}
-
-func TestPbEntityTypeToString(t *testing.T) {
-	tests := []struct {
-		input    pb.EntityType
-		expected string
-	}{
-		{pb.EntityType_ENTITY_TYPE_UNIT, "unit"},
-		{pb.EntityType_ENTITY_TYPE_VEHICLE, "vehicle"},
-		{pb.EntityType_ENTITY_TYPE_UNKNOWN, "unknown"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			result := pbEntityTypeToString(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestPbSideToString(t *testing.T) {
-	tests := []struct {
-		input    pb.Side
-		expected string
-	}{
-		{pb.Side_SIDE_WEST, "WEST"},
-		{pb.Side_SIDE_EAST, "EAST"},
-		{pb.Side_SIDE_GUER, "GUER"},
-		{pb.Side_SIDE_CIV, "CIV"},
-		{pb.Side_SIDE_GLOBAL, "GLOBAL"},
-		{pb.Side_SIDE_UNKNOWN, "UNKNOWN"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			result := pbSideToString(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestPbManifestToStorageManifest(t *testing.T) {
-	pbManifest := &pb.Manifest{
-		Version:        2,
-		WorldName:      "stratis",
-		MissionName:    "Conversion Test",
-		FrameCount:     500,
-		ChunkSize:      100,
-		CaptureDelayMs: 1000,
-		ChunkCount:     5,
-		Entities: []*pb.EntityDef{
-			{
-				Id:           1,
-				Type:         pb.EntityType_ENTITY_TYPE_UNIT,
-				Name:         "Squad Leader",
-				Side:         pb.Side_SIDE_GUER,
-				GroupName:    "Bravo",
-				Role:         "Leader",
-				StartFrame:   0,
-				EndFrame:     450,
-				IsPlayer:     true,
-				VehicleClass: "",
-			},
-			{
-				Id:           2,
-				Type:         pb.EntityType_ENTITY_TYPE_VEHICLE,
-				Name:         "Transport",
-				Side:         pb.Side_SIDE_WEST,
-				GroupName:    "",
-				Role:         "",
-				StartFrame:   10,
-				EndFrame:     400,
-				IsPlayer:     false,
-				VehicleClass: "B_Heli_Transport",
-			},
-		},
-		Events: []*pb.Event{
-			{
-				FrameNum: 100,
-				Type:     "hit",
-				SourceId: 1,
-				TargetId: 2,
-				Message:  "",
-				Distance: 50.5,
-				Weapon:   "arifle_MX",
-			},
-		},
-	}
-
-	manifest := pbManifestToStorageManifest(pbManifest)
-
-	// Verify basic fields
-	assert.Equal(t, uint32(2), manifest.Version)
-	assert.Equal(t, "stratis", manifest.WorldName)
-	assert.Equal(t, "Conversion Test", manifest.MissionName)
-	assert.Equal(t, uint32(500), manifest.FrameCount)
-	assert.Equal(t, uint32(100), manifest.ChunkSize)
-	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)
-	assert.Equal(t, uint32(5), manifest.ChunkCount)
-
-	// Verify entities
-	require.Len(t, manifest.Entities, 2)
-
-	ent0 := manifest.Entities[0]
-	assert.Equal(t, uint32(1), ent0.ID)
-	assert.Equal(t, "unit", ent0.Type)
-	assert.Equal(t, "Squad Leader", ent0.Name)
-	assert.Equal(t, "GUER", ent0.Side)
-	assert.Equal(t, "Bravo", ent0.Group)
-	assert.Equal(t, "Leader", ent0.Role)
-	assert.Equal(t, uint32(0), ent0.StartFrame)
-	assert.Equal(t, uint32(450), ent0.EndFrame)
-	assert.True(t, ent0.IsPlayer)
-	assert.Empty(t, ent0.VehicleClass)
-
-	ent1 := manifest.Entities[1]
-	assert.Equal(t, uint32(2), ent1.ID)
-	assert.Equal(t, "vehicle", ent1.Type)
-	assert.Equal(t, "Transport", ent1.Name)
-	assert.Equal(t, "WEST", ent1.Side)
-	assert.Equal(t, "B_Heli_Transport", ent1.VehicleClass)
-	assert.False(t, ent1.IsPlayer)
-
-	// Verify events
-	require.Len(t, manifest.Events, 1)
-	evt := manifest.Events[0]
-	assert.Equal(t, uint32(100), evt.FrameNum)
-	assert.Equal(t, "hit", evt.Type)
-	assert.Equal(t, uint32(1), evt.SourceID)
-	assert.Equal(t, uint32(2), evt.TargetID)
-	assert.Equal(t, float32(50.5), evt.Distance)
-	assert.Equal(t, "arifle_MX", evt.Weapon)
-}
-
-func TestPbManifestToStorageManifestEmpty(t *testing.T) {
-	pbManifest := &pb.Manifest{
-		Version:     1,
-		WorldName:   "empty",
-		MissionName: "Empty Test",
-	}
-
-	manifest := pbManifestToStorageManifest(pbManifest)
-
-	assert.Equal(t, "empty", manifest.WorldName)
-	assert.Empty(t, manifest.Entities)
-	assert.Empty(t, manifest.Events)
 }
 
 func TestFlatBuffersEngineChunkCountError(t *testing.T) {
@@ -845,4 +698,313 @@ func TestFlatBuffersEngineConvertWithCrewInVehicle(t *testing.T) {
 			}
 		}
 	}
+}
+
+// writeVersionPrefixFB writes a version prefix to file data
+func writeVersionPrefixFB(data []byte, version SchemaVersion) []byte {
+	prefix := make([]byte, 4)
+	prefix[0] = byte(version)
+	prefix[1] = byte(version >> 8)
+	prefix[2] = byte(version >> 16)
+	prefix[3] = byte(version >> 24)
+	return append(prefix, data...)
+}
+
+func TestFlatBuffersEngineGetManifestWithVersionPrefix(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create test manifest using FlatBuffers
+	builder := flatbuffers.NewBuilder(1024)
+
+	// Build entity definition
+	name := builder.CreateString("Player1")
+	group := builder.CreateString("Alpha")
+	role := builder.CreateString("Rifleman")
+	class := builder.CreateString("")
+
+	fbv1.EntityDefStart(builder)
+	fbv1.EntityDefAddId(builder, 0)
+	fbv1.EntityDefAddType(builder, fbv1.EntityTypeUnit)
+	fbv1.EntityDefAddName(builder, name)
+	fbv1.EntityDefAddSide(builder, fbv1.SideWest)
+	fbv1.EntityDefAddGroupName(builder, group)
+	fbv1.EntityDefAddRole(builder, role)
+	fbv1.EntityDefAddStartFrame(builder, 0)
+	fbv1.EntityDefAddEndFrame(builder, 100)
+	fbv1.EntityDefAddIsPlayer(builder, true)
+	fbv1.EntityDefAddVehicleClass(builder, class)
+	entity := fbv1.EntityDefEnd(builder)
+
+	fbv1.ManifestStartEntitiesVector(builder, 1)
+	builder.PrependUOffsetT(entity)
+	entitiesVec := builder.EndVector(1)
+
+	worldName := builder.CreateString("altis")
+	missionName := builder.CreateString("Versioned Test")
+
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddVersion(builder, 1)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	fbv1.ManifestAddFrameCount(builder, 500)
+	fbv1.ManifestAddChunkSize(builder, 300)
+	fbv1.ManifestAddCaptureDelayMs(builder, 1000)
+	fbv1.ManifestAddChunkCount(builder, 2)
+	fbv1.ManifestAddEntities(builder, entitiesVec)
+	manifestOff := fbv1.ManifestEnd(builder)
+
+	builder.Finish(manifestOff)
+
+	// Add version prefix
+	versionedData := writeVersionPrefixFB(builder.FinishedBytes(), SchemaVersionV1)
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), versionedData, 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	ctx := context.Background()
+
+	manifest, err := engine.GetManifest(ctx, "test_mission")
+	require.NoError(t, err)
+
+	assert.Equal(t, "altis", manifest.WorldName)
+	assert.Equal(t, "Versioned Test", manifest.MissionName)
+	assert.Equal(t, uint32(500), manifest.FrameCount)
+	assert.Equal(t, uint32(2), manifest.ChunkCount)
+	assert.Len(t, manifest.Entities, 1)
+	assert.Equal(t, "Player1", manifest.Entities[0].Name)
+	assert.True(t, manifest.Entities[0].IsPlayer)
+}
+
+func TestFlatBuffersEngineGetManifestWithoutVersionPrefix(t *testing.T) {
+	// This test verifies backward compatibility with legacy files (no version prefix)
+	// The existing TestFlatBuffersEngineGetManifest test also covers this case
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create test manifest WITHOUT version prefix (legacy format)
+	builder := flatbuffers.NewBuilder(256)
+	worldName := builder.CreateString("stratis")
+	missionName := builder.CreateString("Legacy Test")
+
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddVersion(builder, 1)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	fbv1.ManifestAddFrameCount(builder, 200)
+	fbv1.ManifestAddChunkSize(builder, 100)
+	fbv1.ManifestAddCaptureDelayMs(builder, 500)
+	fbv1.ManifestAddChunkCount(builder, 2)
+	manifestOff := fbv1.ManifestEnd(builder)
+
+	builder.Finish(manifestOff)
+
+	// Write directly without version prefix
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), builder.FinishedBytes(), 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	ctx := context.Background()
+
+	manifest, err := engine.GetManifest(ctx, "test_mission")
+	require.NoError(t, err)
+
+	assert.Equal(t, "stratis", manifest.WorldName)
+	assert.Equal(t, "Legacy Test", manifest.MissionName)
+	assert.Equal(t, uint32(200), manifest.FrameCount)
+}
+
+func TestFlatBuffersEngineGetChunkWithVersionPrefix(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	chunksDir := filepath.Join(missionDir, "chunks")
+	require.NoError(t, os.MkdirAll(chunksDir, 0755))
+
+	// Create test chunk using FlatBuffers
+	builder := flatbuffers.NewBuilder(1024)
+
+	// Build frame 0
+	name0 := builder.CreateString("")
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 0)
+	fbv1.EntityStateAddPosX(builder, 100)
+	fbv1.EntityStateAddPosY(builder, 200)
+	fbv1.EntityStateAddDirection(builder, 45)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddName(builder, name0)
+	state0 := fbv1.EntityStateEnd(builder)
+
+	fbv1.FrameStartEntitiesVector(builder, 1)
+	builder.PrependUOffsetT(state0)
+	entities0 := builder.EndVector(1)
+
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 0)
+	fbv1.FrameAddEntities(builder, entities0)
+	frame0 := fbv1.FrameEnd(builder)
+
+	// Build frame 1
+	name1 := builder.CreateString("")
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 0)
+	fbv1.EntityStateAddPosX(builder, 101)
+	fbv1.EntityStateAddPosY(builder, 201)
+	fbv1.EntityStateAddDirection(builder, 46)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddName(builder, name1)
+	state1 := fbv1.EntityStateEnd(builder)
+
+	fbv1.FrameStartEntitiesVector(builder, 1)
+	builder.PrependUOffsetT(state1)
+	entities1 := builder.EndVector(1)
+
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 1)
+	fbv1.FrameAddEntities(builder, entities1)
+	frame1 := fbv1.FrameEnd(builder)
+
+	// Build chunk
+	fbv1.ChunkStartFramesVector(builder, 2)
+	builder.PrependUOffsetT(frame1)
+	builder.PrependUOffsetT(frame0)
+	framesVec := builder.EndVector(2)
+
+	fbv1.ChunkStart(builder)
+	fbv1.ChunkAddIndex(builder, 0)
+	fbv1.ChunkAddStartFrame(builder, 0)
+	fbv1.ChunkAddFrameCount(builder, 2)
+	fbv1.ChunkAddFrames(builder, framesVec)
+	chunkOff := fbv1.ChunkEnd(builder)
+
+	builder.Finish(chunkOff)
+
+	// Add version prefix
+	versionedData := writeVersionPrefixFB(builder.FinishedBytes(), SchemaVersionV1)
+	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.fb"), versionedData, 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	ctx := context.Background()
+
+	chunk, err := engine.GetChunk(ctx, "test_mission", 0)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint32(0), chunk.Index)
+	assert.Equal(t, uint32(0), chunk.StartFrame)
+	assert.Equal(t, uint32(2), chunk.FrameCount)
+	assert.Len(t, chunk.Frames, 2)
+	assert.Equal(t, float32(100), chunk.Frames[0].Entities[0].PosX)
+	assert.Equal(t, float32(200), chunk.Frames[0].Entities[0].PosY)
+}
+
+func TestFlatBuffersEngineGetChunkWithoutVersionPrefix(t *testing.T) {
+	// This test verifies backward compatibility with legacy chunk files
+	// The existing TestFlatBuffersEngineGetChunk test also covers this case
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	chunksDir := filepath.Join(missionDir, "chunks")
+	require.NoError(t, os.MkdirAll(chunksDir, 0755))
+
+	// Create test chunk WITHOUT version prefix
+	builder := flatbuffers.NewBuilder(512)
+
+	name := builder.CreateString("")
+	fbv1.EntityStateStart(builder)
+	fbv1.EntityStateAddEntityId(builder, 5)
+	fbv1.EntityStateAddPosX(builder, 500)
+	fbv1.EntityStateAddPosY(builder, 600)
+	fbv1.EntityStateAddDirection(builder, 90)
+	fbv1.EntityStateAddAlive(builder, 1)
+	fbv1.EntityStateAddName(builder, name)
+	state := fbv1.EntityStateEnd(builder)
+
+	fbv1.FrameStartEntitiesVector(builder, 1)
+	builder.PrependUOffsetT(state)
+	entitiesVec := builder.EndVector(1)
+
+	fbv1.FrameStart(builder)
+	fbv1.FrameAddFrameNum(builder, 0)
+	fbv1.FrameAddEntities(builder, entitiesVec)
+	frame := fbv1.FrameEnd(builder)
+
+	fbv1.ChunkStartFramesVector(builder, 1)
+	builder.PrependUOffsetT(frame)
+	framesVec := builder.EndVector(1)
+
+	fbv1.ChunkStart(builder)
+	fbv1.ChunkAddIndex(builder, 0)
+	fbv1.ChunkAddStartFrame(builder, 0)
+	fbv1.ChunkAddFrameCount(builder, 1)
+	fbv1.ChunkAddFrames(builder, framesVec)
+	chunkOff := fbv1.ChunkEnd(builder)
+
+	builder.Finish(chunkOff)
+
+	// Write directly without version prefix
+	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.fb"), builder.FinishedBytes(), 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	chunk, err := engine.GetChunk(context.Background(), "test_mission", 0)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint32(0), chunk.Index)
+	assert.Len(t, chunk.Frames, 1)
+	assert.Equal(t, float32(500), chunk.Frames[0].Entities[0].PosX)
+}
+
+func TestFlatBuffersEngineUnsupportedVersion(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create test manifest
+	builder := flatbuffers.NewBuilder(256)
+	worldName := builder.CreateString("altis")
+	missionName := builder.CreateString("Test")
+
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	manifestOff := fbv1.ManifestEnd(builder)
+
+	builder.Finish(manifestOff)
+
+	// Add unsupported version prefix (version 2)
+	// Note: We use a small version number (< 16) so it's detected as a version prefix.
+	// Larger version numbers (>= 16) can't be reliably distinguished from FlatBuffers
+	// root offsets and will be treated as legacy files.
+	versionedData := writeVersionPrefixFB(builder.FinishedBytes(), SchemaVersion(2))
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), versionedData, 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	_, err := engine.GetManifest(context.Background(), "test_mission")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported flatbuffers schema version: 2")
+}
+
+func TestFlatBuffersEngineChunkCountWithVersionPrefix(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_mission")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Create manifest with chunk count
+	builder := flatbuffers.NewBuilder(256)
+	worldName := builder.CreateString("test")
+	missionName := builder.CreateString("test")
+
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddWorldName(builder, worldName)
+	fbv1.ManifestAddMissionName(builder, missionName)
+	fbv1.ManifestAddChunkCount(builder, 7)
+	manifestOff := fbv1.ManifestEnd(builder)
+
+	builder.Finish(manifestOff)
+
+	// Add version prefix
+	versionedData := writeVersionPrefixFB(builder.FinishedBytes(), SchemaVersionV1)
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), versionedData, 0644))
+
+	engine := NewFlatBuffersEngine(dir)
+	count, err := engine.ChunkCount(context.Background(), "test_mission")
+	require.NoError(t, err)
+	assert.Equal(t, 7, count)
 }

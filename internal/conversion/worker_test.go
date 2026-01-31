@@ -21,18 +21,20 @@ func init() {
 
 // mockRepo implements OperationRepo for testing
 type mockRepo struct {
-	pending  []Operation
-	status   map[int64]string
-	format   map[int64]string
-	duration map[int64]float64
+	pending       []Operation
+	status        map[int64]string
+	format        map[int64]string
+	duration      map[int64]float64
+	schemaVersion map[int64]uint32
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		pending:  []Operation{},
-		status:   make(map[int64]string),
-		format:   make(map[int64]string),
-		duration: make(map[int64]float64),
+		pending:       []Operation{},
+		status:        make(map[int64]string),
+		format:        make(map[int64]string),
+		duration:      make(map[int64]float64),
+		schemaVersion: make(map[int64]uint32),
 	}
 }
 
@@ -55,6 +57,11 @@ func (m *mockRepo) UpdateStorageFormat(ctx context.Context, id int64, format str
 
 func (m *mockRepo) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
 	m.duration[id] = duration
+	return nil
+}
+
+func (m *mockRepo) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
+	m.schemaVersion[id] = version
 	return nil
 }
 
@@ -462,20 +469,22 @@ type errorMockRepo struct {
 	status                map[int64]string
 	format                map[int64]string
 	duration              map[int64]float64
+	schemaVersion         map[int64]uint32
 	selectPendingErr      error
 	updateStatusErr       error
 	updateFormatErr       error
 	updateDurationErr     error
-	failStatusUpdateOnID  int64 // only fail for this ID
+	failStatusUpdateOnID  int64  // only fail for this ID
 	failStatusUpdateAfter string // only fail when setting this status
 }
 
 func newErrorMockRepo() *errorMockRepo {
 	return &errorMockRepo{
-		pending:  []Operation{},
-		status:   make(map[int64]string),
-		format:   make(map[int64]string),
-		duration: make(map[int64]float64),
+		pending:       []Operation{},
+		status:        make(map[int64]string),
+		format:        make(map[int64]string),
+		duration:      make(map[int64]float64),
+		schemaVersion: make(map[int64]uint32),
 	}
 }
 
@@ -514,6 +523,11 @@ func (m *errorMockRepo) UpdateMissionDuration(ctx context.Context, id int64, dur
 		return m.updateDurationErr
 	}
 	m.duration[id] = duration
+	return nil
+}
+
+func (m *errorMockRepo) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
+	m.schemaVersion[id] = version
 	return nil
 }
 

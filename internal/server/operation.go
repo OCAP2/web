@@ -19,6 +19,7 @@ type Operation struct {
 	Tag              string  `json:"tag"`
 	StorageFormat    string  `json:"storageFormat"`
 	ConversionStatus string  `json:"conversionStatus"`
+	SchemaVersion    uint32  `json:"schemaVersion"`
 }
 
 type Filter struct {
@@ -124,6 +125,18 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 4 {
+		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN schema_version INTEGER DEFAULT 1`)
+		if err != nil {
+			return fmt.Errorf("merge db to v4 failed (schema_version): %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (4)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 4: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -160,12 +173,16 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 	if conversionStatus == "" {
 		conversionStatus = "pending"
 	}
+	schemaVersion := operation.SchemaVersion
+	if schemaVersion == 0 {
+		schemaVersion = 1
+	}
 
 	query := `
 		INSERT INTO operations
-			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status)
+			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	result, err := r.db.ExecContext(
 		ctx,
@@ -178,6 +195,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		operation.Tag,
 		storageFormat,
 		conversionStatus,
+		schemaVersion,
 	)
 	if err != nil {
 		return err
@@ -206,7 +224,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 
 	query := `
 		SELECT
-			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
 		FROM
 			operations
 		WHERE
@@ -247,6 +265,7 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 			&o.Tag,
 			&o.StorageFormat,
 			&o.ConversionStatus,
+			&o.SchemaVersion,
 		)
 		if err != nil {
 			return nil, err
@@ -259,12 +278,12 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 // GetByID retrieves a single operation by its ID
 func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
 		 FROM operations WHERE id = ?`, id)
 
 	var op Operation
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
-		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus)
+		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +293,7 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 // SelectPending returns operations with pending conversion status
 func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
 		 FROM operations
 		 WHERE conversion_status = 'pending'
 		 ORDER BY id ASC
@@ -290,7 +309,7 @@ func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operati
 // SelectAll returns all operations for conversion
 func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
 		 FROM operations
 		 ORDER BY id ASC`)
 	if err != nil {
@@ -312,6 +331,13 @@ func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, st
 func (r *RepoOperation) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE operations SET storage_format = ? WHERE id = ?`, format, id)
+	return err
+}
+
+// UpdateSchemaVersion updates the schema version for an operation
+func (r *RepoOperation) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET schema_version = ? WHERE id = ?`, version, id)
 	return err
 }
 
