@@ -193,6 +193,7 @@ jobs:
           cp -r assets/markers release/
           cp -r assets/ammo release/
           cp -r static release/
+          cp setting.json.example release/
           cd release && ${{ matrix.archiver }} ../${{ matrix.archive }} .
 
       - name: Upload release asset
