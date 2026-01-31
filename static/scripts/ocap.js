@@ -1591,6 +1591,7 @@ function startPlaybackLoop () {
 					playPauseButton.style.backgroundPosition = "0 0";
 				}
 				ui.setMissionCurTime(playbackFrame);
+				updateCounterDisplay(playbackFrame);
 
 				lastDrawnFrame = playbackFrame;
 			});
@@ -2126,6 +2127,8 @@ function startStreamingPlaybackLoop() {
 				}
 
 				ui.setMissionCurTime(playbackFrame);
+				updateCounterDisplay(playbackFrame);
+
 				lastDrawnFrame = playbackFrame;
 			});
 		} else {
