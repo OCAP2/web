@@ -20,6 +20,7 @@
 		"interval": "5m",
 		"batchSize": 1,
 		"chunkSize": 300,
-		"storageEngine": "protobuf"
+		"storageEngine": "protobuf",
+		"retryFailed": false
 	}
 }
