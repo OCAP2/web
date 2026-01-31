@@ -1,7 +1,7 @@
 // proto/ocap.proto
 syntax = "proto3";
-package ocap;
-option go_package = "github.com/OCAP2/web/proto";
+package ocap.v1;
+option go_package = "github.com/OCAP2/web/pkg/schemas/protobuf/v1";
 
 // Manifest - loaded once at playback start (~10-100KB)
 message Manifest {
