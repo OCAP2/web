@@ -522,7 +522,7 @@ class UI {
 		const format = op.storageFormat || 'json';
 		const conversionStatus = op.conversionStatus || 'completed';
 
-		if (conversionStatus === 'pending') {
+		if (conversionStatus === 'pending' || conversionStatus === 'converting') {
 			// Conversion in progress
 			return {
 				icon: '⏳',
