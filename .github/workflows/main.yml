@@ -152,20 +152,23 @@ jobs:
             goarch: amd64
             cc: x86_64-w64-mingw32-gcc
             cxx: x86_64-w64-mingw32-g++
-            ext: .exe
-            name: ocap-webserver-windows-amd64.exe
+            binary: ocap-webserver.exe
+            archive: ocap-webserver-windows-amd64.zip
+            archiver: zip -r
           - goos: linux
             goarch: amd64
             cc: gcc
             cxx: g++
-            ext: ""
-            name: ocap-webserver-linux-amd64
+            binary: ocap-webserver
+            archive: ocap-webserver-linux-amd64.tar.gz
+            archiver: tar -czvf
           - goos: linux
             goarch: arm64
             cc: aarch64-linux-gnu-gcc
             cxx: aarch64-linux-gnu-g++
-            ext: ""
-            name: ocap-webserver-linux-arm64
+            binary: ocap-webserver
+            archive: ocap-webserver-linux-arm64.tar.gz
+            archiver: tar -czvf
 
     steps:
       - uses: actions/checkout@v6
@@ -186,9 +189,18 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: |
-          go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ${{ matrix.name }} ./cmd/ocap-webserver
+          go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ${{ matrix.binary }} ./cmd/ocap-webserver
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp ${{ matrix.binary }} release/
+          cp -r assets/markers release/
+          cp -r assets/ammo release/
+          cp -r static release/
+          cd release && ${{ matrix.archiver }} ../${{ matrix.archive }} .
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.name }}
+          files: ${{ matrix.archive }}
