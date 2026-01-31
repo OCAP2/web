@@ -195,6 +195,34 @@ let _localizable = {
 		"cs": "Tag",
 		"it": "Etichetta"
 	},
+	"status": {
+		"ru": "Статус",
+		"en": "Status",
+		"de": "Status",
+		"cs": "Stav",
+		"it": "Stato"
+	},
+	"status_static": {
+		"ru": "Статичный",
+		"en": "Static",
+		"de": "Statisch",
+		"cs": "Statický",
+		"it": "Statico"
+	},
+	"status_converting": {
+		"ru": "Конвертация",
+		"en": "Converting",
+		"de": "Konvertierung",
+		"cs": "Konverze",
+		"it": "Conversione"
+	},
+	"status_streaming": {
+		"ru": "Потоковый",
+		"en": "Streaming",
+		"de": "Streaming",
+		"cs": "Streamování",
+		"it": "Streaming"
+	},
 	"list_compilation": {
 		"ru": "Составления списка...",
 		"en": "List compilation...",
