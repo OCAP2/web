@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
@@ -89,15 +88,23 @@ func (c *Converter) loadJSON(path string) (map[string]interface{}, error) {
 
 	var reader io.Reader = f
 
-	// Check if gzipped by trying to read gzip header
-	// or by file extension
-	if filepath.Ext(path) == ".gz" {
-		gr, err := gzip.NewReader(f)
-		if err != nil {
-			return nil, fmt.Errorf("gzip reader: %w", err)
+	// Detect gzip by magic bytes (0x1f 0x8b) instead of file extension
+	// This handles mislabeled files (e.g., plain JSON with .gz extension)
+	magic := make([]byte, 2)
+	if n, err := f.Read(magic); err == nil && n == 2 {
+		// Seek back to start
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return nil, fmt.Errorf("seek: %w", err)
 		}
-		defer gr.Close()
-		reader = gr
+		// Check gzip magic bytes
+		if magic[0] == 0x1f && magic[1] == 0x8b {
+			gr, err := gzip.NewReader(f)
+			if err != nil {
+				return nil, fmt.Errorf("gzip reader: %w", err)
+			}
+			defer gr.Close()
+			reader = gr
+		}
 	}
 
 	var data map[string]interface{}
