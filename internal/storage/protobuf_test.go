@@ -584,3 +584,30 @@ func TestProtobufEngineFullEntityDef(t *testing.T) {
 	assert.True(t, ent.IsPlayer)
 	assert.Empty(t, ent.VehicleClass)
 }
+
+func TestProtobufEngineChunkCountInvalidManifest(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_invalid")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Write invalid protobuf data
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), []byte("invalid protobuf data"), 0644))
+
+	engine := NewProtobufEngine(dir)
+	_, err := engine.ChunkCount(context.Background(), "test_invalid")
+	require.Error(t, err)
+}
+
+func TestProtobufEngineReadVersionedDataTooSmall(t *testing.T) {
+	dir := t.TempDir()
+	missionDir := filepath.Join(dir, "test_small")
+	require.NoError(t, os.MkdirAll(missionDir, 0755))
+
+	// Write data smaller than version prefix size
+	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), []byte("ab"), 0644))
+
+	engine := NewProtobufEngine(dir)
+	_, err := engine.GetManifest(context.Background(), "test_small")
+	// Should fail to unmarshal but not panic
+	require.Error(t, err)
+}
