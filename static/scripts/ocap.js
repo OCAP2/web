@@ -90,6 +90,167 @@ var countWest = 0;
 var countGuer = 0;
 var countCiv = 0;
 
+// Counter/score state for respawn tickets and custom counters
+var counterState = {
+	active: false,           // Whether to show counter UI
+	type: null,              // 'respawnTickets' or 'custom'
+	sides: [],               // Array of side names being tracked (e.g., ['WEST', 'EAST'])
+	events: []               // Sorted list of {frameNum, values} for scrubbing
+};
+
+// Side name mapping for respawnTickets (indices: missionNS=0, east=1, west=2, ind=3)
+var respawnTicketsSideMap = {
+	1: 'EAST',
+	2: 'WEST',
+	3: 'GUER'
+};
+
+// Display labels for sides
+var sideDisplayLabels = {
+	'WEST': 'BLUFOR',
+	'EAST': 'OPFOR',
+	'GUER': 'IND',
+	'CIV': 'CIV'
+};
+
+// CSS classes for side colors
+var sideColorClasses = {
+	'WEST': 'blufor',
+	'EAST': 'opfor',
+	'GUER': 'ind',
+	'CIV': 'civ'
+};
+
+/**
+ * Get counter values at a specific frame (for scrubbing support)
+ * @param {number} f - Frame number
+ * @returns {Object|null} - Values object {WEST: 5, EAST: 3} or null
+ */
+function getCounterValuesAtFrame(f) {
+	let result = null;
+	for (const evt of counterState.events) {
+		if (evt.frameNum <= f) {
+			result = evt.values;
+		} else {
+			break;
+		}
+	}
+	return result;
+}
+
+/**
+ * Update the counter display UI for the given frame
+ * @param {number} f - Frame number
+ */
+function updateCounterDisplay(f) {
+	const display = document.getElementById('counterDisplay');
+	if (!display) return;
+
+	if (!counterState.active || counterState.sides.length === 0) {
+		display.style.display = 'none';
+		return;
+	}
+
+	const values = getCounterValuesAtFrame(f);
+	if (!values) {
+		display.style.display = 'none';
+		return;
+	}
+
+	// Build display content: "BLUFOR 5 : 3 OPFOR"
+	let html = '';
+	counterState.sides.forEach((side, index) => {
+		if (index > 0) {
+			html += '<span class="separator">:</span>';
+		}
+		const label = sideDisplayLabels[side] || side;
+		const colorClass = sideColorClasses[side] || '';
+		const value = values[side] !== undefined ? values[side] : '?';
+		html += `<span class="side-score ${colorClass}">${label} ${value}</span>`;
+	});
+
+	display.innerHTML = html;
+	display.style.display = 'inline-block';
+}
+
+/**
+ * Reset counter state (call when loading new operation)
+ */
+function resetCounterState() {
+	counterState.active = false;
+	counterState.type = null;
+	counterState.sides = [];
+	counterState.events = [];
+	const display = document.getElementById('counterDisplay');
+	if (display) {
+		display.style.display = 'none';
+		display.innerHTML = '';
+	}
+}
+
+/**
+ * Process a counter event and update state
+ * @param {number} frameNum - Frame number
+ * @param {string} type - Event type (respawnTickets, counterInit, counterSet)
+ * @param {Array} data - Event data
+ */
+function processCounterEvent(frameNum, type, data) {
+	if (type === 'counterInit') {
+		// Custom counter initialization - data is array of sides
+		// Only use custom counter if not already using one
+		if (counterState.type !== 'custom') {
+			counterState.active = true;
+			counterState.type = 'custom';
+			counterState.sides = data.map(side => {
+				// Normalize side names (handle both "west" and "WEST")
+				if (typeof side === 'string') {
+					return side.toUpperCase();
+				}
+				return side;
+			});
+			counterState.events = [];
+		}
+	} else if (type === 'counterSet') {
+		// Custom counter update - data is array of values matching sides order
+		if (counterState.type === 'custom' && counterState.sides.length > 0) {
+			const values = {};
+			counterState.sides.forEach((side, index) => {
+				values[side] = data[index] !== undefined ? data[index] : 0;
+			});
+			counterState.events.push({ frameNum, values });
+		}
+	} else if (type === 'respawnTickets') {
+		// BIS respawn tickets - data is [missionNS, east, west, ind]
+		// Only use if no custom counter is active
+		if (counterState.type !== 'custom') {
+			// Check if any tickets are actually used (not all -1)
+			const hasValidTickets = data.some((val, idx) => idx > 0 && val >= 0);
+			if (hasValidTickets) {
+				if (!counterState.active) {
+					counterState.active = true;
+					counterState.type = 'respawnTickets';
+					// Determine which sides have valid tickets
+					counterState.sides = [];
+					[1, 2, 3].forEach(idx => {
+						if (data[idx] >= 0 && respawnTicketsSideMap[idx]) {
+							counterState.sides.push(respawnTicketsSideMap[idx]);
+						}
+					});
+				}
+				// Add event with values
+				const values = {};
+				counterState.sides.forEach(side => {
+					const idx = Object.keys(respawnTicketsSideMap).find(k => respawnTicketsSideMap[k] === side);
+					if (idx !== undefined) {
+						values[side] = data[idx];
+					}
+				});
+				counterState.events.push({ frameNum, values });
+			}
+		}
+	}
+}
+
 // Mission details
 var worldName = "";
 var missionName = "";
