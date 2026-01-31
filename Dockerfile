@@ -1,9 +1,12 @@
 FROM golang:1.24-alpine AS builder
+RUN apk add --no-cache alpine-sdk
 WORKDIR /go/pkg/ocap
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
 ARG build_version
 ARG build_commit
-RUN apk add --no-cache alpine-sdk && go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -a -o app ./cmd/ocap-webserver
+RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -o app ./cmd/ocap-webserver
 
 FROM alpine:3.23
 WORKDIR /usr/local/ocap
