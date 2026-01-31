@@ -290,6 +290,21 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 	return &op, nil
 }
 
+// GetByFilename retrieves a single operation by its filename
+func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Operation, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		 FROM operations WHERE filename = ?`, filename)
+
+	var op Operation
+	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
+		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion)
+	if err != nil {
+		return nil, err
+	}
+	return &op, nil
+}
+
 // SelectPending returns operations with pending conversion status
 func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,

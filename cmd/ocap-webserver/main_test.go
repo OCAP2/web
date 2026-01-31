@@ -270,10 +270,15 @@ func TestConvertSingleFile(t *testing.T) {
 
 	ctx := context.Background()
 
+	// Create test database
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := server.NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
 	// Register engines
 	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 
-	err = convertSingleFile(ctx, inputPath, dataDir, 300, "protobuf")
+	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300, "protobuf")
 	require.NoError(t, err)
 
 	// Verify output was created (keeps .json suffix to match database filename)
@@ -290,9 +295,14 @@ func TestConvertSingleFile_InvalidFormat(t *testing.T) {
 	f, _ := os.Create(inputPath)
 	f.Close()
 
+	// Create test database
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := server.NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
 	ctx := context.Background()
 
-	err := convertSingleFile(ctx, inputPath, dir, 300, "invalid_format")
+	err = convertSingleFile(ctx, repo, inputPath, dir, 300, "invalid_format")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown format")
 }

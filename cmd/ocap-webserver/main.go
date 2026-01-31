@@ -86,7 +86,7 @@ func runConvert(args []string) error {
 		return showConversionStatus(ctx, repo)
 
 	case *inputFile != "":
-		return convertSingleFile(ctx, *inputFile, setting.Data, uint32(*chunkSize), *format)
+		return convertSingleFile(ctx, repo, *inputFile, setting.Data, uint32(*chunkSize), *format)
 
 	case *all:
 		return convertAll(ctx, repo, setting, uint32(*chunkSize), *format)
@@ -118,7 +118,7 @@ func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error
 	return nil
 }
 
-func convertSingleFile(ctx context.Context, inputFile, dataDir string, chunkSize uint32, format string) error {
+func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFile, dataDir string, chunkSize uint32, format string) error {
 	// Determine output path - only strip .gz to match database filename format
 	baseName := filepath.Base(inputFile)
 	if ext := filepath.Ext(baseName); ext == ".gz" {
@@ -143,6 +143,32 @@ func convertSingleFile(ctx context.Context, inputFile, dataDir string, chunkSize
 	}
 
 	log.Printf("Conversion complete: %s", outputPath)
+
+	// Try to update database if operation exists with this filename
+	if op, err := repo.GetByFilename(ctx, baseName); err == nil && op != nil {
+		log.Printf("Updating database for operation %d (%s)", op.ID, op.Filename)
+
+		// Read manifest to get duration
+		manifest, err := engine.GetManifest(ctx, baseName)
+		if err == nil {
+			durationSeconds := float64(manifest.FrameCount) * float64(manifest.CaptureDelayMs) / 1000.0
+			if err := repo.UpdateMissionDuration(ctx, op.ID, durationSeconds); err != nil {
+				log.Printf("Warning: failed to update duration: %v", err)
+			}
+		}
+
+		// Update format, status, and schema version
+		if err := repo.UpdateStorageFormat(ctx, op.ID, format); err != nil {
+			log.Printf("Warning: failed to update format: %v", err)
+		}
+		if err := repo.UpdateConversionStatus(ctx, op.ID, "completed"); err != nil {
+			log.Printf("Warning: failed to update status: %v", err)
+		}
+		if err := repo.UpdateSchemaVersion(ctx, op.ID, 1); err != nil {
+			log.Printf("Warning: failed to update schema version: %v", err)
+		}
+	}
+
 	return nil
 }
 
