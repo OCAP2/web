@@ -213,9 +213,8 @@ func (e *ProtobufEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) {
 }
 
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
-	// Use the existing Converter which handles protobuf conversion
 	converter := NewConverter(DefaultChunkSize)
-	return converter.Convert(ctx, jsonPath, outputPath)
+	return converter.Convert(ctx, jsonPath, outputPath, "protobuf")
 }
 
 func entityTypeToString(t pbv1.EntityType) string {
