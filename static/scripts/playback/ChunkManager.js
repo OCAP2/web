@@ -14,6 +14,7 @@ class ChunkManager {
      * @param {Object} options - Configuration options
      * @param {string} options.format - Storage format ('protobuf' or 'flatbuffers')
      * @param {boolean} options.enableBrowserCache - Enable browser storage caching (default: false)
+     * @param {Object} options.loader - Versioned loader for decoding chunks
      */
     constructor(missionId, manifest, storageManager, baseUrl, options = {}) {
         this._missionId = missionId;
@@ -22,6 +23,7 @@ class ChunkManager {
         this._baseUrl = baseUrl;
         this._format = options.format || 'protobuf';
         this._enableBrowserCache = options.enableBrowserCache || false;
+        this._loader = options.loader || null;
 
         // Chunk cache with LRU eviction (max 3 in memory)
         this._maxChunksInMemory = 3;
@@ -140,6 +142,12 @@ class ChunkManager {
      * @private
      */
     async _decodeChunk(data) {
+        // Use versioned loader if available
+        if (this._loader && typeof this._loader.decodeChunk === 'function') {
+            return this._loader.decodeChunk(data, this._format);
+        }
+
+        // Fallback to direct decoder usage (legacy compatibility)
         if (this._format === 'flatbuffers') {
             if (typeof FlatBuffersDecoder !== 'undefined') {
                 return FlatBuffersDecoder.decodeChunk(data);

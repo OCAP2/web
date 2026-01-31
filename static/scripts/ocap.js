@@ -840,14 +840,16 @@ function secondsToTimeString (seconds) {
 
 /**
  * Load an operation, automatically choosing streaming or legacy mode based on format
- * @param {Object} op - Operation object with id, filename, storageFormat
+ * @param {Object} op - Operation object with id, filename, storageFormat, schemaVersion
  * @returns {Promise}
  */
-function loadOperation(op) {
+async function loadOperation(op) {
 	// Use streaming for protobuf/flatbuffers formats
 	if (op.storageFormat === 'protobuf' || op.storageFormat === 'flatbuffers') {
-		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat})`);
-		return processOpStreaming(op.id, op.storageFormat);
+		// Get schema version from operation or default to 1
+		const schemaVersion = op.schemaVersion || 1;
+		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat}, schema v${schemaVersion})`);
+		return processOpStreaming(op.id, op.storageFormat, schemaVersion);
 	}
 	// Fall back to legacy JSON loading
 	console.log(`Loading operation using legacy JSON mode`);
@@ -1565,14 +1567,15 @@ async function getOperationFormat(operationId) {
  * Process operation using streaming/chunked mode
  * @param {string} operationId - Operation ID from database
  * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+ * @param {number} schemaVersion - Schema version (default: 1)
  * @returns {Promise<void>}
  */
-async function processOpStreaming(operationId, format = 'protobuf') {
-	console.log(`Processing operation (streaming mode): ${operationId} (format: ${format})`);
+async function processOpStreaming(operationId, format = 'protobuf', schemaVersion = 1) {
+	console.log(`Processing operation (streaming mode): ${operationId} (format: ${format}, schema: v${schemaVersion})`);
 	const time = new Date();
 
-	// Select the appropriate decoder
-	const decoder = format === 'flatbuffers' ? FlatBuffersDecoder : ProtobufDecoder;
+	// Get versioned loader from registry
+	const loader = LoaderRegistry.getLoader(schemaVersion);
 
 	// Check if browser caching is enabled (opt-in via URL param ?cache=1)
 	const urlParams = new URLSearchParams(window.location.search);
@@ -1593,7 +1596,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 	let manifest;
 	const cachedManifest = enableBrowserCache ? await storageManager.getManifest(operationId, format) : null;
 	if (cachedManifest) {
-		manifest = decoder.decodeManifest(cachedManifest);
+		manifest = loader.decodeManifest(cachedManifest, format);
 		console.log('Loaded manifest from cache');
 	} else {
 		const response = await fetch(`api/v1/operations/${operationId}/manifest`);
@@ -1601,7 +1604,7 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 			throw new Error(`Failed to fetch manifest: ${response.status}`);
 		}
 		const data = await response.arrayBuffer();
-		manifest = decoder.decodeManifest(data);
+		manifest = loader.decodeManifest(data, format);
 		// Cache manifest (only if enabled)
 		if (enableBrowserCache) {
 			storageManager.saveManifest(operationId, data, format).catch(e => {
@@ -1610,11 +1613,12 @@ async function processOpStreaming(operationId, format = 'protobuf') {
 		}
 	}
 
-	// Initialize chunk manager with format and cache setting
+	// Initialize chunk manager with format, loader, and cache setting
 	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
 	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl, {
 		format: format,
-		enableBrowserCache: enableBrowserCache
+		enableBrowserCache: enableBrowserCache,
+		loader: loader
 	});
 	isStreamingMode = true;
 

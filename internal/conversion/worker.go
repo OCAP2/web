@@ -18,6 +18,7 @@ type OperationRepo interface {
 	UpdateConversionStatus(ctx context.Context, id int64, status string) error
 	UpdateStorageFormat(ctx context.Context, id int64, format string) error
 	UpdateMissionDuration(ctx context.Context, id int64, duration float64) error
+	UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error
 }
 
 // Operation represents a minimal operation for conversion
