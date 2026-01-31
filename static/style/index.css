@@ -86,6 +86,25 @@ body,
 	margin: 6px;
 }
 
+#counterDisplay {
+	float: left;
+	display: inline-block;
+	font-size: 18px;
+	margin: 10px 15px;
+	padding-left: 15px;
+	border-left: 1px solid #666;
+	color: #F2F2F2;
+}
+
+#counterDisplay .side-score {
+	margin: 0 6px;
+}
+
+#counterDisplay .separator {
+	margin: 0 4px;
+	color: #888;
+}
+
 #topPanel {
 	background-color: #343434;
 	position: absolute;
