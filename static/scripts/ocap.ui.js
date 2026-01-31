@@ -692,11 +692,19 @@ class UI {
 				<option value="it"${current_lang == "it" ? 'selected/' : ''}>Italiano</option>
 			</select>`;
 		localizable(document.getElementById("versionInfo-server"), "version-server");
-		document.getElementById("versionInfo-server").innerHTML += this.serverVersion;
-		localizable(document.getElementById("versionInfo-extension"), "version-extension");
-		document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
-		localizable(document.getElementById("versionInfo-addon"), "version-addon");
-		document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
+		document.getElementById("versionInfo-server").innerHTML += this.serverVersion || 'N/A';
+		if (this.extensionVersion) {
+			localizable(document.getElementById("versionInfo-extension"), "version-extension");
+			document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
+		} else {
+			document.getElementById("versionInfo-extension").style.display = 'none';
+		}
+		if (this.addonVersion) {
+			localizable(document.getElementById("versionInfo-addon"), "version-addon");
+			document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
+		} else {
+			document.getElementById("versionInfo-addon").style.display = 'none';
+		}
 		localizable(document.getElementById("keyControl-playPause"), "play-pause");
 		localizable(document.getElementById("keyControl-leftPanel"), "show-hide-left-panel");
 		localizable(document.getElementById("keyControl-rightPanel"), "show-hide-right-panel");

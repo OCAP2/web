@@ -337,8 +337,24 @@ function switchLocalizable(lang) {
 		if (item.length != 0)
 			localizable(item[0], item[1], item[2], item[3]);
 	});
-	document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
-	document.getElementById("versionInfo-addon").innerHTML += this.addonVersion;
+	var serverEl = document.getElementById("versionInfo-server");
+	var extensionEl = document.getElementById("versionInfo-extension");
+	var addonEl = document.getElementById("versionInfo-addon");
+	if (serverEl) {
+		serverEl.innerHTML = "";
+		localizable(serverEl, "version-server");
+		serverEl.innerHTML += ui.serverVersion || 'N/A';
+	}
+	if (extensionEl && ui.extensionVersion) {
+		extensionEl.innerHTML = "";
+		localizable(extensionEl, "version-extension");
+		extensionEl.innerHTML += ui.extensionVersion;
+	}
+	if (addonEl && ui.addonVersion) {
+		addonEl.innerHTML = "";
+		localizable(addonEl, "version-addon");
+		addonEl.innerHTML += ui.addonVersion;
+	}
 }
 function deleteLocalizable(elem) {
 	var id = elem.dataset.lbId;
