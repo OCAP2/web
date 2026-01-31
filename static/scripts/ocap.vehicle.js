@@ -146,14 +146,13 @@ class Vehicle extends Entity {
 
 		let str = "";
 		this._crew.forEach(function (unitId) {
-			//if (unitId != -1) {
 			let unit = entities.getById(unitId);
 
-			// Only include player names
-			// if (unit.isPlayer) {
-				str += (unit.getName().encodeHTMLEntities() + "<br/>");
-			// }
-			//};
+			// In "players" mode, only include player names
+			if (ui.nameDisplayMode === "players" && !unit.isPlayer) {
+				return; // skip AI crew members
+			}
+			str += (unit.getName().encodeHTMLEntities() + "<br/>");
 		});
 		return str;
 	}
