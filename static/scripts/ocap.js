@@ -1837,6 +1837,9 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 	}
 	ui.checkAvailableTimes();
 
+	markers = [];
+	resetCounterState();
+
 	// Initialize entities from manifest
 	let showSides = { WEST: false, EAST: false, GUER: false, CIV: false };
 
@@ -1910,6 +1913,15 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 				break;
 			case 'endMission':
 				gameEvent = new endMissionEvent(evt.frameNum, evt.type, evt.message, '');
+				break;
+			case 'respawnTickets':
+				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
+				break;
+			case 'counterInit':
+				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
+				break;
+			case 'counterSet':
+				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
 				break;
 		}
 		if (gameEvent) {
