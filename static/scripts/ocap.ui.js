@@ -586,7 +586,7 @@ class UI {
 				var table = document.createElement("table");
 				var headerRow = document.createElement("tr");
 
-				var columnNames = ["mission", "map", "data", "durability", "tag"];
+				var columnNames = ["mission", "map", "data", "durability", "tag", "status"];
 				columnNames.forEach(function (name) {
 					var th = document.createElement("th");
 					localizable(th, name);
