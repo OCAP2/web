@@ -535,6 +535,12 @@ class UI {
 				icon: '⚙️',
 				tooltip: 'Converting (JSON → ' + targetFormat + ')'
 			};
+		} else if (conversionStatus === 'failed') {
+			// Conversion failed
+			return {
+				icon: '❌',
+				tooltip: 'Failed (JSON → ' + targetFormat + ')'
+			};
 		} else if (format === 'protobuf' || format === 'flatbuffers') {
 			// Binary format = streaming
 			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
