@@ -25,6 +25,7 @@ class UI {
 		this.missionName = null;
 		this.extensionVersion = null;
 		this.addonVersion = null;
+		this.serverVersion = null;
 		//this.loadOpButton = null;
 		this.playPauseButton = null;
 		this.playbackSpeedSliderContainer = null;
@@ -366,6 +367,10 @@ class UI {
 		this.extensionVersion = version;
 	}
 
+	setServerVersion (version) {
+		this.serverVersion = version;
+	}
+
 	detectTimes (times) {
 		for (const time of times) {
 			if (time.frameNum === 0) {
@@ -669,6 +674,7 @@ class UI {
 			<img src="images/ocap-logo.png" height="60px" alt="OCAP">
 			<h4 style=line-height:0>Operation Capture And Playback</h4>
 			<a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a><br/>
+			<span id="versionInfo-server"></span><br/>
 			<span id="versionInfo-extension"></span><br/>
 			<span id="versionInfo-addon"></span><br/>
 			<br/>
@@ -685,6 +691,8 @@ class UI {
 				<option value="cs"${current_lang == "cs" ? 'selected/' : ''}>Čeština</option>
 				<option value="it"${current_lang == "it" ? 'selected/' : ''}>Italiano</option>
 			</select>`;
+		localizable(document.getElementById("versionInfo-server"), "version-server");
+		document.getElementById("versionInfo-server").innerHTML += this.serverVersion;
 		localizable(document.getElementById("versionInfo-extension"), "version-extension");
 		document.getElementById("versionInfo-extension").innerHTML += this.extensionVersion;
 		localizable(document.getElementById("versionInfo-addon"), "version-addon");

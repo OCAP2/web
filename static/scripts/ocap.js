@@ -126,6 +126,16 @@ function initOCAP () {
 	defineIcons();
 	ui = new UI();
 
+	// Fetch server version
+	fetch('api/version')
+		.then(response => response.json())
+		.then(data => {
+			ui.setServerVersion(data.BuildVersion || 'unknown');
+		})
+		.catch(() => {
+			ui.setServerVersion('unknown');
+		});
+
 	// Check storage persistence and warn Safari users
 	checkStoragePersistence();
 

@@ -293,6 +293,13 @@ let _localizable = {
 		"cs": " přerušil hackování",
 		"it": " ha interrotto l'hackeraggio"
 	},
+	"version-server": {
+		"ru": "Версия сервера: ",
+		"en": "Server version: ",
+		"de": "Server Version: ",
+		"cs": "Verze serveru: ",
+		"it": "Versione server: "
+	},
 	"version-extension": {
 		"ru": "Pасширения bерсия : ",
 		"en": "Extension version: ",
