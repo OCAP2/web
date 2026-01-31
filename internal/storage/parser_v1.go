@@ -130,6 +130,14 @@ func (p *ParserV1) parseEvent(evtArr []interface{}) *Event {
 		Type:     toString(evtArr[1]),
 	}
 
+	// Connect/disconnect events: [frameNum, "type", "playerName"]
+	if event.Type == "connected" || event.Type == "disconnected" {
+		if len(evtArr) > 2 {
+			event.Message = toString(evtArr[2])
+		}
+		return event
+	}
+
 	// Parse additional fields based on event type
 	// Common format: [frameNum, "type", sourceId, targetId, ...]
 	if len(evtArr) > 2 {

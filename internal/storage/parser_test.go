@@ -544,6 +544,41 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			t.Errorf("Type = %q, want %q", evt.Type, "test")
 		}
 	})
+
+	t.Run("connected event", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{2.0, "connected", "Cal"})
+		if evt == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if evt.FrameNum != 2 {
+			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 2)
+		}
+		if evt.Type != "connected" {
+			t.Errorf("Type = %q, want %q", evt.Type, "connected")
+		}
+		if evt.Message != "Cal" {
+			t.Errorf("Message = %q, want %q", evt.Message, "Cal")
+		}
+		if evt.SourceID != 0 {
+			t.Errorf("SourceID = %d, want %d (should not be set)", evt.SourceID, 0)
+		}
+	})
+
+	t.Run("disconnected event", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{3.0, "disconnected", "Wraith"})
+		if evt == nil {
+			t.Fatal("expected non-nil event")
+		}
+		if evt.FrameNum != 3 {
+			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 3)
+		}
+		if evt.Type != "disconnected" {
+			t.Errorf("Type = %q, want %q", evt.Type, "disconnected")
+		}
+		if evt.Message != "Wraith" {
+			t.Errorf("Message = %q, want %q", evt.Message, "Wraith")
+		}
+	})
 }
 
 func TestParserV1_parseMarker_EdgeCases(t *testing.T) {
