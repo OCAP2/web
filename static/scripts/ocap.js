@@ -1916,13 +1916,11 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 				gameEvent = new endMissionEvent(evt.frameNum, evt.type, evt.message, '');
 				break;
 			case 'respawnTickets':
-				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
-				break;
 			case 'counterInit':
-				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
-				break;
 			case 'counterSet':
-				processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
+				if (evt.message) {
+					processCounterEvent(evt.frameNum, evt.type, JSON.parse(evt.message));
+				}
 				break;
 		}
 		if (gameEvent) {
