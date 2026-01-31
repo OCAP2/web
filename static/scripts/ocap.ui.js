@@ -527,30 +527,26 @@ class UI {
 			// Queued for conversion
 			return {
 				icon: '⏳',
-				textKey: 'status_converting',
-				tooltip: 'JSON → ' + targetFormat
+				tooltip: 'Converting (JSON → ' + targetFormat + ')'
 			};
 		} else if (conversionStatus === 'converting') {
 			// Actively converting
 			return {
 				icon: '⚙️',
-				textKey: 'status_converting',
-				tooltip: 'JSON → ' + targetFormat
+				tooltip: 'Converting (JSON → ' + targetFormat + ')'
 			};
 		} else if (format === 'protobuf' || format === 'flatbuffers') {
 			// Binary format = streaming
 			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
 			return {
 				icon: '📡',
-				textKey: 'status_streaming',
-				tooltip: formatName
+				tooltip: 'Streaming (' + formatName + ')'
 			};
 		} else {
 			// JSON, completed (no conversion or conversion not enabled)
 			return {
 				icon: '📄',
-				textKey: 'status_static',
-				tooltip: 'JSON'
+				tooltip: 'Static (JSON)'
 			};
 		}
 	}
@@ -622,7 +618,7 @@ class UI {
 					// Add status cell with icon and tooltip
 					var statusCell = document.createElement("td");
 					var statusInfo = this.getOperationStatusInfo(op);
-					localizable(statusCell, statusInfo.textKey, "", statusInfo.icon + " ");
+					statusCell.textContent = statusInfo.icon;
 					statusCell.title = statusInfo.tooltip;
 					row.appendChild(statusCell);
 
