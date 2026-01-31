@@ -26,6 +26,7 @@ type mockRepo struct {
 	format        map[int64]string
 	duration      map[int64]float64
 	schemaVersion map[int64]uint32
+	byStatus      map[string][]Operation
 }
 
 func newMockRepo() *mockRepo {
@@ -35,6 +36,7 @@ func newMockRepo() *mockRepo {
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
 		schemaVersion: make(map[int64]uint32),
+		byStatus:      make(map[string][]Operation),
 	}
 }
 
@@ -63,6 +65,21 @@ func (m *mockRepo) UpdateMissionDuration(ctx context.Context, id int64, duration
 func (m *mockRepo) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
 	m.schemaVersion[id] = version
 	return nil
+}
+
+func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+	return m.byStatus[status], nil
+}
+
+func (m *mockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
+	ops := m.byStatus[fromStatus]
+	delete(m.byStatus, fromStatus)
+	m.byStatus[toStatus] = append(m.byStatus[toStatus], ops...)
+	// Also update individual status tracking
+	for _, op := range ops {
+		m.status[op.ID] = toStatus
+	}
+	return int64(len(ops)), nil
 }
 
 func TestWorker_ConvertOne(t *testing.T) {
@@ -531,6 +548,14 @@ func (m *errorMockRepo) UpdateSchemaVersion(ctx context.Context, id int64, versi
 	return nil
 }
 
+func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+	return nil, nil
+}
+
+func (m *errorMockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
+	return 0, nil
+}
+
 func TestProcessOnce_SelectPendingError(t *testing.T) {
 	dir := t.TempDir()
 	repo := newErrorMockRepo()
@@ -735,4 +760,73 @@ func TestTriggerConversion_FailedStatusUpdateError(t *testing.T) {
 
 	// Give the goroutine time to run
 	time.Sleep(100 * time.Millisecond)
+}
+
+func TestWorker_CleanupInterrupted(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create partial output directories
+	partial1 := filepath.Join(dir, "mission1")
+	partial2 := filepath.Join(dir, "mission2")
+	os.MkdirAll(filepath.Join(partial1, "chunks"), 0755)
+	os.MkdirAll(filepath.Join(partial2, "chunks"), 0755)
+
+	// Create mock repo with converting operations
+	repo := newMockRepo()
+	repo.byStatus["converting"] = []Operation{
+		{ID: 1, Filename: "mission1"},
+		{ID: 2, Filename: "mission2"},
+	}
+	repo.byStatus["failed"] = []Operation{
+		{ID: 3, Filename: "mission3"},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "protobuf",
+		RetryFailed:   false,
+	})
+
+	ctx := context.Background()
+	worker.cleanupInterrupted(ctx)
+
+	// Verify partial directories removed
+	_, err := os.Stat(partial1)
+	assert.True(t, os.IsNotExist(err), "partial1 should be removed")
+	_, err = os.Stat(partial2)
+	assert.True(t, os.IsNotExist(err), "partial2 should be removed")
+
+	// Verify converting reset to pending
+	assert.Len(t, repo.byStatus["pending"], 2)
+	assert.Len(t, repo.byStatus["converting"], 0)
+
+	// Verify failed NOT reset (retryFailed=false)
+	assert.Len(t, repo.byStatus["failed"], 1)
+}
+
+func TestWorker_CleanupInterrupted_RetryFailed(t *testing.T) {
+	dir := t.TempDir()
+
+	repo := newMockRepo()
+	repo.byStatus["converting"] = []Operation{
+		{ID: 1, Filename: "mission1"},
+	}
+	repo.byStatus["failed"] = []Operation{
+		{ID: 2, Filename: "mission2"},
+		{ID: 3, Filename: "mission3"},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "protobuf",
+		RetryFailed:   true, // Enable retry of failed
+	})
+
+	ctx := context.Background()
+	worker.cleanupInterrupted(ctx)
+
+	// Verify both converting and failed reset to pending
+	assert.Len(t, repo.byStatus["pending"], 3)
+	assert.Len(t, repo.byStatus["converting"], 0)
+	assert.Len(t, repo.byStatus["failed"], 0)
 }
