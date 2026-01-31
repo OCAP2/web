@@ -209,6 +209,13 @@ L.Map.include({
     }
 });
 
+// Helper to get absolute URL for SVG pattern references
+// Modern browsers require absolute URLs for pattern references to work correctly
+L.Pattern._getPatternUrl = function (patternId) {
+    var baseUrl = window.location.href.split('#')[0];
+    return 'url(' + baseUrl + '#' + patternId + ')';
+};
+
 if (L.SVG) {
     L.SVG.include({
         _superUpdateStyle: L.SVG.prototype._updateStyle,
@@ -217,7 +224,7 @@ if (L.SVG) {
             this._superUpdateStyle(layer);
 
             if (layer.options.fill && layer.options.fillPattern) {
-                layer._path.setAttribute('fill', 'url(#' + L.stamp(layer.options.fillPattern) + ")");
+                layer._path.setAttribute('fill', L.Pattern._getPatternUrl(L.stamp(layer.options.fillPattern)));
             }
         }
     });
@@ -230,7 +237,7 @@ else {
             this._superUpdateStyle();
 
             if (this.options.fill && this.options.fillPattern) {
-                this._path.setAttribute('fill', 'url(#' + L.stamp(this.options.fillPattern) + ")");
+                this._path.setAttribute('fill', L.Pattern._getPatternUrl(L.stamp(this.options.fillPattern)));
             }
         }
     });
@@ -411,7 +418,7 @@ L.PatternShape = L.PatternShape.extend({
 
 		if (options.fill) {
 			if (options.fillPattern) {
-				dom.setAttribute('fill', 'url(#' + L.stamp(options.fillPattern) + ")");
+				dom.setAttribute('fill', L.Pattern._getPatternUrl(L.stamp(options.fillPattern)));
 			}
 			else {
 				dom.setAttribute('fill', options.fillColor || options.color);
