@@ -1113,6 +1113,9 @@ function processOp (filepath, opRecord) {
 			}
 			ui.checkAvailableTimes();
 
+			markers = [];
+			resetCounterState();
+
 			var showCiv = false;
 			var showWest = false;
 			var showEast = false;
@@ -1365,6 +1368,15 @@ function processOp (filepath, opRecord) {
 						break;
 					case (type == "generalEvent"):
 						gameEvent = new generalEvent(frameNum, type, eventJSON[2]);
+						break;
+					case (type === "respawnTickets"):
+						processCounterEvent(frameNum, type, eventJSON[2]);
+						break;
+					case (type === "counterInit"):
+						processCounterEvent(frameNum, type, eventJSON[2]);
+						break;
+					case (type === "counterSet"):
+						processCounterEvent(frameNum, type, eventJSON[2]);
 						break;
 				}
 
