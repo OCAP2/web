@@ -597,7 +597,6 @@ class UI {
 
 				OpList.forEach((op) => {
 					var row = document.createElement("tr");
-					var cell = document.createElement("td");
 
 					var vals = [
 						op.mission_name,
@@ -611,6 +610,13 @@ class UI {
 						cell.textContent = val;
 						row.appendChild(cell);
 					});
+
+					// Add status cell with icon and tooltip
+					var statusCell = document.createElement("td");
+					var statusInfo = this.getOperationStatusInfo(op);
+					localizable(statusCell, statusInfo.textKey, "", statusInfo.icon + " ");
+					statusCell.title = statusInfo.tooltip;
+					row.appendChild(statusCell);
 
 					row.addEventListener("click", () => {
 						localizable(this.modalBody, "loading");
