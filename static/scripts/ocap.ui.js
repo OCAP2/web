@@ -513,6 +513,40 @@ class UI {
 		this.modalFilter.style.display = "inherit";
 	};
 
+	/**
+	 * Returns status display info for an operation based on its storage format and conversion status.
+	 * @param {Object} op - Operation object with storageFormat and conversionStatus fields
+	 * @returns {{icon: string, textKey: string, tooltip: string}}
+	 */
+	getOperationStatusInfo (op) {
+		const format = op.storageFormat || 'json';
+		const conversionStatus = op.conversionStatus || 'completed';
+
+		if (format === 'protobuf' || format === 'flatbuffers') {
+			// Binary format = streaming
+			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
+			return {
+				icon: '🔄',
+				textKey: 'status_streaming',
+				tooltip: formatName
+			};
+		} else if (conversionStatus === 'pending') {
+			// JSON with pending conversion
+			return {
+				icon: '⏳',
+				textKey: 'status_converting',
+				tooltip: 'JSON'
+			};
+		} else {
+			// JSON, completed (no conversion or conversion not enabled)
+			return {
+				icon: '📄',
+				textKey: 'status_static',
+				tooltip: 'JSON'
+			};
+		}
+	}
+
 	setModalOpList () {
 		var OpList;
 		var n = filterTagGameInput.options.selectedIndex;
