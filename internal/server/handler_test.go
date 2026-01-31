@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
+	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -309,7 +309,7 @@ func TestGetOperationManifestProtobuf(t *testing.T) {
 	err = os.MkdirAll(missionDir, 0755)
 	assert.NoError(t, err)
 
-	pbManifest := &pbv1.Manifest{
+	pbManifest := &pb.Manifest{
 		Version:        1,
 		WorldName:      "altis",
 		MissionName:    "Test Mission Protobuf",
@@ -317,12 +317,12 @@ func TestGetOperationManifestProtobuf(t *testing.T) {
 		ChunkSize:      1000,
 		CaptureDelayMs: 1000,
 		ChunkCount:     1,
-		Entities: []*pbv1.EntityDef{
+		Entities: []*pb.EntityDef{
 			{
 				Id:         1,
-				Type:       pbv1.EntityType_ENTITY_TYPE_UNIT,
+				Type:       pb.EntityType_ENTITY_TYPE_UNIT,
 				Name:       "Player1",
-				Side:       pbv1.Side_SIDE_WEST,
+				Side:       pb.Side_SIDE_WEST,
 				GroupName:  "Alpha",
 				StartFrame: 0,
 				EndFrame:   100,
@@ -358,7 +358,7 @@ func TestGetOperationManifestProtobuf(t *testing.T) {
 	assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
 	// Verify we can unmarshal the returned protobuf
-	var returnedManifest pbv1.Manifest
+	var returnedManifest pb.Manifest
 	err = proto.Unmarshal(rec.Body.Bytes(), &returnedManifest)
 	assert.NoError(t, err)
 	assert.Equal(t, "altis", returnedManifest.WorldName)
@@ -412,14 +412,14 @@ func TestGetOperationChunk(t *testing.T) {
 	err = os.MkdirAll(chunksDir, 0755)
 	assert.NoError(t, err)
 
-	pbChunk := &pbv1.Chunk{
+	pbChunk := &pb.Chunk{
 		Index:      0,
 		StartFrame: 0,
 		FrameCount: 10,
-		Frames: []*pbv1.Frame{
+		Frames: []*pb.Frame{
 			{
 				FrameNum: 0,
-				Entities: []*pbv1.EntityState{
+				Entities: []*pb.EntityState{
 					{
 						EntityId:  1,
 						PosX:      100.0,
@@ -437,7 +437,7 @@ func TestGetOperationChunk(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Also create manifest for ChunkCount
-	pbManifest := &pbv1.Manifest{
+	pbManifest := &pb.Manifest{
 		Version:        1,
 		WorldName:      "altis",
 		MissionName:    "Test Mission Protobuf",
@@ -474,7 +474,7 @@ func TestGetOperationChunk(t *testing.T) {
 	assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
 	// Verify we can unmarshal the returned protobuf
-	var returnedChunk pbv1.Chunk
+	var returnedChunk pb.Chunk
 	err = proto.Unmarshal(rec.Body.Bytes(), &returnedChunk)
 	assert.NoError(t, err)
 	assert.Equal(t, uint32(0), returnedChunk.Index)

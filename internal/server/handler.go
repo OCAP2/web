@@ -42,7 +42,6 @@ type FormatInfo struct {
 	Format            string `json:"format"`
 	ChunkCount        int    `json:"chunkCount"`
 	SupportsStreaming bool   `json:"supportsStreaming"`
-	SchemaVersion     uint32 `json:"schemaVersion"`
 }
 
 // HandlerOption configures the Handler
@@ -238,17 +237,10 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 
 	chunkCount, _ := engine.ChunkCount(c.Request().Context(), op.Filename)
 
-	// Default schema version to 1 for legacy recordings
-	schemaVersion := op.SchemaVersion
-	if schemaVersion == 0 {
-		schemaVersion = 1
-	}
-
 	return c.JSON(http.StatusOK, FormatInfo{
 		Format:            format,
 		ChunkCount:        chunkCount,
 		SupportsStreaming: engine.SupportsStreaming(),
-		SchemaVersion:     schemaVersion,
 	})
 }
 

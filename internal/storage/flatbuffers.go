@@ -2,14 +2,15 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	fbv1 "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
+	fb "github.com/OCAP2/web/pkg/schemas/flatbuffers/generated"
+	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	flatbuffers "github.com/google/flatbuffers/go"
 )
 
 // FlatBuffersEngine implements the Engine interface for FlatBuffers format
@@ -36,18 +37,12 @@ func (e *FlatBuffersEngine) SupportsStreaming() bool {
 // GetManifest reads and decodes the manifest file
 func (e *FlatBuffersEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {
 	path := filepath.Join(e.dataDir, filename, "manifest.fb")
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
-	defer f.Close()
 
-	data, err := e.readVersionedData(f)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest data: %w", err)
-	}
-
-	fbManifest := fbv1.GetRootAsManifest(data, 0)
+	fbManifest := fb.GetRootAsManifest(data, 0)
 	return e.convertManifest(fbManifest), nil
 }
 
@@ -60,18 +55,12 @@ func (e *FlatBuffersEngine) GetManifestReader(ctx context.Context, filename stri
 // GetChunk reads and decodes a chunk file
 func (e *FlatBuffersEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.fb", chunkIndex))
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
 	}
-	defer f.Close()
 
-	data, err := e.readVersionedData(f)
-	if err != nil {
-		return nil, fmt.Errorf("read chunk %d data: %w", chunkIndex, err)
-	}
-
-	fbChunk := fbv1.GetRootAsChunk(data, 0)
+	fbChunk := fb.GetRootAsChunk(data, 0)
 	return e.convertChunk(fbChunk), nil
 }
 
@@ -90,75 +79,53 @@ func (e *FlatBuffersEngine) ChunkCount(ctx context.Context, filename string) (in
 	return int(manifest.ChunkCount), nil
 }
 
-// readVersionedData reads file data, handling the optional version prefix.
-// Files may have a 4-byte version prefix (new format) or not (legacy format).
-// This method provides backward compatibility with both formats.
-func (e *FlatBuffersEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) {
-	// Read the entire file
-	allData, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	// If file is too small to have version prefix, return as-is
-	if len(allData) < versionPrefixSize {
-		return allData, nil
-	}
-
-	// Check if this looks like a version prefix.
-	// Version prefix is 4 bytes little-endian. For small version numbers (1-255),
-	// bytes 2, 3, 4 will be zero: [version, 0x00, 0x00, 0x00]
-	//
-	// FlatBuffers files start with a root table offset (4 bytes little-endian).
-	// The minimum offset is typically 16+ bytes (due to file structure).
-	// Version numbers are small (1, 2, etc.), so we use the first byte value
-	// combined with the zero check on bytes 2-4 to distinguish:
-	// - Version prefix: first byte < 16 AND bytes 2-4 are all zero
-	// - Legacy FlatBuffers: first byte >= 16 (typical root offsets)
-	//
-	// This heuristic works because:
-	// - Version 1 = [0x01, 0x00, 0x00, 0x00]
-	// - FlatBuffers root offset = [0x10+, 0x00, 0x00, 0x00] for small files
-
-	// Check if bytes 2-4 are all zero AND first byte is small (< 16)
-	// This distinguishes version prefix from FlatBuffers root offset
-	hasVersionPrefix := allData[0] < 16 && allData[1] == 0 && allData[2] == 0 && allData[3] == 0
-
-	if !hasVersionPrefix {
-		// Legacy file without version prefix (or FlatBuffers root offset >= 16)
-		return allData, nil
-	}
-
-	// Looks like a version prefix, read the version
-	reader := bytes.NewReader(allData[:versionPrefixSize])
-	version, err := ReadVersionPrefix(reader)
-	if err != nil {
-		// Can't read version, treat entire file as data (legacy)
-		return allData, nil
-	}
-
-	// Check if version is supported
-	switch version {
-	case SchemaVersionV1:
-		// Version prefix present and valid, skip it
-		return allData[versionPrefixSize:], nil
-	case SchemaVersionUnknown:
-		// Version 0 with zeros in bytes 2-4 - unusual but treat as legacy
-		return allData, nil
-	default:
-		// Unsupported version
-		return nil, fmt.Errorf("unsupported flatbuffers schema version: %d", version)
-	}
-}
-
 // Convert transforms a JSON recording to FlatBuffers format
 func (e *FlatBuffersEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
+	// Load JSON data using the converter helper
 	converter := NewConverter(DefaultChunkSize)
-	return converter.Convert(ctx, jsonPath, outputPath, "flatbuffers")
+
+	data, err := converter.loadJSON(jsonPath)
+	if err != nil {
+		return fmt.Errorf("load JSON: %w", err)
+	}
+
+	pbManifest, entityPositions, err := converter.parseJSONData(data)
+	if err != nil {
+		return fmt.Errorf("parse JSON: %w", err)
+	}
+
+	// Convert protobuf manifest to storage manifest
+	manifest := pbManifestToStorageManifest(pbManifest)
+
+	// Create output directory
+	chunksDir := filepath.Join(outputPath, "chunks")
+	if err := os.MkdirAll(chunksDir, 0755); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
+	}
+
+	// Calculate chunk count
+	chunkCount := (manifest.FrameCount + converter.ChunkSize - 1) / converter.ChunkSize
+	if chunkCount == 0 {
+		chunkCount = 1
+	}
+	manifest.ChunkSize = converter.ChunkSize
+	manifest.ChunkCount = chunkCount
+
+	// Write manifest
+	if err := e.writeManifest(outputPath, manifest); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
+	}
+
+	// Write chunks
+	if err := e.writeChunks(ctx, chunksDir, manifest, entityPositions, converter); err != nil {
+		return fmt.Errorf("write chunks: %w", err)
+	}
+
+	return nil
 }
 
 // convertManifest converts FlatBuffers manifest to storage.Manifest
-func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest {
+func (e *FlatBuffersEngine) convertManifest(fbm *fb.Manifest) *Manifest {
 	manifest := &Manifest{
 		Version:        fbm.Version(),
 		WorldName:      string(fbm.WorldName()),
@@ -171,7 +138,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest {
 
 	// Convert entities
 	for i := 0; i < fbm.EntitiesLength(); i++ {
-		var ent fbv1.EntityDef
+		var ent fb.EntityDef
 		if fbm.Entities(&ent, i) {
 			manifest.Entities = append(manifest.Entities, EntityDef{
 				ID:           ent.Id(),
@@ -190,7 +157,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest {
 
 	// Convert events
 	for i := 0; i < fbm.EventsLength(); i++ {
-		var evt fbv1.Event
+		var evt fb.Event
 		if fbm.Events(&evt, i) {
 			manifest.Events = append(manifest.Events, Event{
 				FrameNum: evt.FrameNum(),
@@ -208,7 +175,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest {
 }
 
 // convertChunk converts FlatBuffers chunk to storage.Chunk
-func (e *FlatBuffersEngine) convertChunk(fbc *fbv1.Chunk) *Chunk {
+func (e *FlatBuffersEngine) convertChunk(fbc *fb.Chunk) *Chunk {
 	chunk := &Chunk{
 		Index:      fbc.Index(),
 		StartFrame: fbc.StartFrame(),
@@ -216,14 +183,14 @@ func (e *FlatBuffersEngine) convertChunk(fbc *fbv1.Chunk) *Chunk {
 	}
 
 	for i := 0; i < fbc.FramesLength(); i++ {
-		var frame fbv1.Frame
+		var frame fb.Frame
 		if fbc.Frames(&frame, i) {
 			f := Frame{
 				FrameNum: frame.FrameNum(),
 			}
 
 			for j := 0; j < frame.EntitiesLength(); j++ {
-				var state fbv1.EntityState
+				var state fb.EntityState
 				if frame.Entities(&state, j) {
 					es := EntityState{
 						EntityID:    state.EntityId(),
@@ -252,60 +219,308 @@ func (e *FlatBuffersEngine) convertChunk(fbc *fbv1.Chunk) *Chunk {
 	return chunk
 }
 
+// writeManifest writes the manifest in FlatBuffers format
+func (e *FlatBuffersEngine) writeManifest(outputPath string, manifest *Manifest) error {
+	builder := flatbuffers.NewBuilder(1024 * 1024)
+
+	// Build entity definitions
+	entityOffsets := make([]flatbuffers.UOffsetT, len(manifest.Entities))
+	for i, ent := range manifest.Entities {
+		nameOff := builder.CreateString(ent.Name)
+		groupOff := builder.CreateString(ent.Group)
+		roleOff := builder.CreateString(ent.Role)
+		classOff := builder.CreateString(ent.VehicleClass)
+
+		fb.EntityDefStart(builder)
+		fb.EntityDefAddId(builder, ent.ID)
+		fb.EntityDefAddType(builder, stringToFBEntityType(ent.Type))
+		fb.EntityDefAddName(builder, nameOff)
+		fb.EntityDefAddSide(builder, stringToFBSide(ent.Side))
+		fb.EntityDefAddGroupName(builder, groupOff)
+		fb.EntityDefAddRole(builder, roleOff)
+		fb.EntityDefAddStartFrame(builder, ent.StartFrame)
+		fb.EntityDefAddEndFrame(builder, ent.EndFrame)
+		fb.EntityDefAddIsPlayer(builder, ent.IsPlayer)
+		fb.EntityDefAddVehicleClass(builder, classOff)
+		entityOffsets[i] = fb.EntityDefEnd(builder)
+	}
+
+	fb.ManifestStartEntitiesVector(builder, len(entityOffsets))
+	for i := len(entityOffsets) - 1; i >= 0; i-- {
+		builder.PrependUOffsetT(entityOffsets[i])
+	}
+	entitiesVec := builder.EndVector(len(entityOffsets))
+
+	// Build events
+	eventOffsets := make([]flatbuffers.UOffsetT, len(manifest.Events))
+	for i, evt := range manifest.Events {
+		typeOff := builder.CreateString(evt.Type)
+		msgOff := builder.CreateString(evt.Message)
+		weaponOff := builder.CreateString(evt.Weapon)
+
+		fb.EventStart(builder)
+		fb.EventAddFrameNum(builder, evt.FrameNum)
+		fb.EventAddType(builder, typeOff)
+		fb.EventAddSourceId(builder, evt.SourceID)
+		fb.EventAddTargetId(builder, evt.TargetID)
+		fb.EventAddMessage(builder, msgOff)
+		fb.EventAddDistance(builder, evt.Distance)
+		fb.EventAddWeapon(builder, weaponOff)
+		eventOffsets[i] = fb.EventEnd(builder)
+	}
+
+	fb.ManifestStartEventsVector(builder, len(eventOffsets))
+	for i := len(eventOffsets) - 1; i >= 0; i-- {
+		builder.PrependUOffsetT(eventOffsets[i])
+	}
+	eventsVec := builder.EndVector(len(eventOffsets))
+
+	// Build manifest
+	worldNameOff := builder.CreateString(manifest.WorldName)
+	missionNameOff := builder.CreateString(manifest.MissionName)
+
+	fb.ManifestStart(builder)
+	fb.ManifestAddVersion(builder, manifest.Version)
+	fb.ManifestAddWorldName(builder, worldNameOff)
+	fb.ManifestAddMissionName(builder, missionNameOff)
+	fb.ManifestAddFrameCount(builder, manifest.FrameCount)
+	fb.ManifestAddChunkSize(builder, manifest.ChunkSize)
+	fb.ManifestAddCaptureDelayMs(builder, manifest.CaptureDelayMs)
+	fb.ManifestAddChunkCount(builder, manifest.ChunkCount)
+	fb.ManifestAddEntities(builder, entitiesVec)
+	fb.ManifestAddEvents(builder, eventsVec)
+	manifestOff := fb.ManifestEnd(builder)
+
+	builder.Finish(manifestOff)
+
+	path := filepath.Join(outputPath, "manifest.fb")
+	return os.WriteFile(path, builder.FinishedBytes(), 0644)
+}
+
+// writeChunks writes all chunk files in FlatBuffers format
+func (e *FlatBuffersEngine) writeChunks(ctx context.Context, chunksDir string, manifest *Manifest, entityPositions []entityPositionData, converter *Converter) error {
+	for chunkIdx := uint32(0); chunkIdx < manifest.ChunkCount; chunkIdx++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		startFrame := chunkIdx * manifest.ChunkSize
+		endFrame := startFrame + manifest.ChunkSize
+		if endFrame > manifest.FrameCount {
+			endFrame = manifest.FrameCount
+		}
+
+		if err := e.writeChunk(chunksDir, chunkIdx, startFrame, endFrame, entityPositions, converter); err != nil {
+			return fmt.Errorf("write chunk %d: %w", chunkIdx, err)
+		}
+	}
+	return nil
+}
+
+// writeChunk writes a single chunk file in FlatBuffers format
+func (e *FlatBuffersEngine) writeChunk(chunksDir string, chunkIdx, startFrame, endFrame uint32, entityPositions []entityPositionData, converter *Converter) error {
+	builder := flatbuffers.NewBuilder(1024 * 1024)
+
+	// Build frames
+	frameOffsets := make([]flatbuffers.UOffsetT, 0, endFrame-startFrame)
+	for frameNum := startFrame; frameNum < endFrame; frameNum++ {
+		// Build entity states for this frame
+		var stateOffsets []flatbuffers.UOffsetT
+		for _, ep := range entityPositions {
+			state := converter.getEntityStateAtFrame(ep, frameNum)
+			if state == nil {
+				continue
+			}
+
+			// Build crew IDs vector if present
+			var crewVec flatbuffers.UOffsetT
+			if len(state.CrewIds) > 0 {
+				fb.EntityStateStartCrewIdsVector(builder, len(state.CrewIds))
+				for i := len(state.CrewIds) - 1; i >= 0; i-- {
+					builder.PrependUint32(state.CrewIds[i])
+				}
+				crewVec = builder.EndVector(len(state.CrewIds))
+			}
+
+			nameOff := builder.CreateString(state.Name)
+
+			fb.EntityStateStart(builder)
+			fb.EntityStateAddEntityId(builder, state.EntityId)
+			fb.EntityStateAddPosX(builder, state.PosX)
+			fb.EntityStateAddPosY(builder, state.PosY)
+			fb.EntityStateAddDirection(builder, state.Direction)
+			fb.EntityStateAddAlive(builder, state.Alive)
+			if len(state.CrewIds) > 0 {
+				fb.EntityStateAddCrewIds(builder, crewVec)
+			}
+			fb.EntityStateAddVehicleId(builder, state.VehicleId)
+			fb.EntityStateAddIsInVehicle(builder, state.IsInVehicle)
+			fb.EntityStateAddName(builder, nameOff)
+			fb.EntityStateAddIsPlayer(builder, state.IsPlayer)
+			stateOffsets = append(stateOffsets, fb.EntityStateEnd(builder))
+		}
+
+		// Build entities vector
+		fb.FrameStartEntitiesVector(builder, len(stateOffsets))
+		for i := len(stateOffsets) - 1; i >= 0; i-- {
+			builder.PrependUOffsetT(stateOffsets[i])
+		}
+		entitiesVec := builder.EndVector(len(stateOffsets))
+
+		// Build frame
+		fb.FrameStart(builder)
+		fb.FrameAddFrameNum(builder, frameNum)
+		fb.FrameAddEntities(builder, entitiesVec)
+		frameOffsets = append(frameOffsets, fb.FrameEnd(builder))
+	}
+
+	// Build frames vector
+	fb.ChunkStartFramesVector(builder, len(frameOffsets))
+	for i := len(frameOffsets) - 1; i >= 0; i-- {
+		builder.PrependUOffsetT(frameOffsets[i])
+	}
+	framesVec := builder.EndVector(len(frameOffsets))
+
+	// Build chunk
+	fb.ChunkStart(builder)
+	fb.ChunkAddIndex(builder, chunkIdx)
+	fb.ChunkAddStartFrame(builder, startFrame)
+	fb.ChunkAddFrameCount(builder, endFrame-startFrame)
+	fb.ChunkAddFrames(builder, framesVec)
+	chunkOff := fb.ChunkEnd(builder)
+
+	builder.Finish(chunkOff)
+
+	path := filepath.Join(chunksDir, fmt.Sprintf("%04d.fb", chunkIdx))
+	return os.WriteFile(path, builder.FinishedBytes(), 0644)
+}
+
 // Helper functions for type conversion
 
-func fbEntityTypeToString(t fbv1.EntityType) string {
+func fbEntityTypeToString(t fb.EntityType) string {
 	switch t {
-	case fbv1.EntityTypeUnit:
+	case fb.EntityTypeUnit:
 		return "unit"
-	case fbv1.EntityTypeVehicle:
+	case fb.EntityTypeVehicle:
 		return "vehicle"
 	default:
 		return "unknown"
 	}
 }
 
-func stringToFBEntityType(s string) fbv1.EntityType {
+func stringToFBEntityType(s string) fb.EntityType {
 	switch s {
 	case "unit":
-		return fbv1.EntityTypeUnit
+		return fb.EntityTypeUnit
 	case "vehicle":
-		return fbv1.EntityTypeVehicle
+		return fb.EntityTypeVehicle
 	default:
-		return fbv1.EntityTypeUnknown
+		return fb.EntityTypeUnknown
 	}
 }
 
-func fbSideToString(s fbv1.Side) string {
+func fbSideToString(s fb.Side) string {
 	switch s {
-	case fbv1.SideWest:
+	case fb.SideWest:
 		return "WEST"
-	case fbv1.SideEast:
+	case fb.SideEast:
 		return "EAST"
-	case fbv1.SideGuer:
+	case fb.SideGuer:
 		return "GUER"
-	case fbv1.SideCiv:
+	case fb.SideCiv:
 		return "CIV"
-	case fbv1.SideGlobal:
+	case fb.SideGlobal:
 		return "GLOBAL"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-func stringToFBSide(s string) fbv1.Side {
+func stringToFBSide(s string) fb.Side {
 	switch s {
 	case "WEST":
-		return fbv1.SideWest
+		return fb.SideWest
 	case "EAST":
-		return fbv1.SideEast
+		return fb.SideEast
 	case "GUER", "INDEPENDENT":
-		return fbv1.SideGuer
+		return fb.SideGuer
 	case "CIV", "CIVILIAN":
-		return fbv1.SideCiv
+		return fb.SideCiv
 	case "GLOBAL":
-		return fbv1.SideGlobal
+		return fb.SideGlobal
 	default:
-		return fbv1.SideUnknown
+		return fb.SideUnknown
+	}
+}
+
+// pbManifestToStorageManifest converts protobuf manifest to storage.Manifest
+func pbManifestToStorageManifest(pbm *pb.Manifest) *Manifest {
+	manifest := &Manifest{
+		Version:        pbm.Version,
+		WorldName:      pbm.WorldName,
+		MissionName:    pbm.MissionName,
+		FrameCount:     pbm.FrameCount,
+		ChunkSize:      pbm.ChunkSize,
+		CaptureDelayMs: pbm.CaptureDelayMs,
+		ChunkCount:     pbm.ChunkCount,
+	}
+
+	for _, ent := range pbm.Entities {
+		manifest.Entities = append(manifest.Entities, EntityDef{
+			ID:           ent.Id,
+			Type:         pbEntityTypeToString(ent.Type),
+			Name:         ent.Name,
+			Side:         pbSideToString(ent.Side),
+			Group:        ent.GroupName,
+			Role:         ent.Role,
+			StartFrame:   ent.StartFrame,
+			EndFrame:     ent.EndFrame,
+			IsPlayer:     ent.IsPlayer,
+			VehicleClass: ent.VehicleClass,
+		})
+	}
+
+	for _, evt := range pbm.Events {
+		manifest.Events = append(manifest.Events, Event{
+			FrameNum: evt.FrameNum,
+			Type:     evt.Type,
+			SourceID: evt.SourceId,
+			TargetID: evt.TargetId,
+			Message:  evt.Message,
+			Distance: evt.Distance,
+			Weapon:   evt.Weapon,
+		})
+	}
+
+	return manifest
+}
+
+func pbEntityTypeToString(t pb.EntityType) string {
+	switch t {
+	case pb.EntityType_ENTITY_TYPE_UNIT:
+		return "unit"
+	case pb.EntityType_ENTITY_TYPE_VEHICLE:
+		return "vehicle"
+	default:
+		return "unknown"
+	}
+}
+
+func pbSideToString(s pb.Side) string {
+	switch s {
+	case pb.Side_SIDE_WEST:
+		return "WEST"
+	case pb.Side_SIDE_EAST:
+		return "EAST"
+	case pb.Side_SIDE_GUER:
+		return "GUER"
+	case pb.Side_SIDE_CIV:
+		return "CIV"
+	case pb.Side_SIDE_GLOBAL:
+		return "GLOBAL"
+	default:
+		return "UNKNOWN"
 	}
 }
