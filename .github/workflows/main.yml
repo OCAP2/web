@@ -98,16 +98,20 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        uses: docker/metadata-action@v5
         with:
-          # list of Docker images to use as base name for tags
           images: |
             ghcr.io/ocap2/web
-          # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -117,44 +121,74 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Log in to the Container registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           build-args: |
              build_commit=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  windows-build:
+  release-binaries:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: startsWith(github.ref, 'refs/tags/')
 
     permissions:
-      contents: read
+      contents: write
+
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            cc: x86_64-w64-mingw32-gcc
+            cxx: x86_64-w64-mingw32-g++
+            ext: .exe
+            name: ocap-webserver-windows-amd64.exe
+          - goos: linux
+            goarch: amd64
+            cc: gcc
+            cxx: g++
+            ext: ""
+            name: ocap-webserver-linux-amd64
+          - goos: linux
+            goarch: arm64
+            cc: aarch64-linux-gnu-gcc
+            cxx: aarch64-linux-gnu-g++
+            ext: ""
+            name: ocap-webserver-linux-arm64
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@v6
 
       - name: Install cross compile dependencies
-        run: sudo apt-get install -y gcc-mingw-w64 gcc-multilib
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
+          cache: true
 
-      - name: Build windows binary
-        run: CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ocap-webserver.exe ./cmd/ocap-webserver
+      - name: Build binary
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X github.com/OCAP2/web/internal/server.BuildCommit=$GITHUB_SHA" -o ${{ matrix.name }} ./cmd/ocap-webserver
 
-      - name: Upload windows binary
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
         with:
-          name: webserver
-          path: ocap-webserver.exe
+          files: ${{ matrix.name }}
