@@ -146,6 +146,13 @@ let _localizable = {
 		"cs": "Značení",
 		"it": "Indicatori"
 	},
+	"grid": {
+		"ru": "Сетка координат",
+		"en": "Coordinate grid",
+		"de": "Koordinatengitter",
+		"cs": "Souřadnicová mřížka",
+		"it": "Griglia coordinate"
+	},
 	"event_fire": {
 		"ru": "Эвенты попадания",
 		"en": "Hit events",

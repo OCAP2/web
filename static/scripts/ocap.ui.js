@@ -175,6 +175,30 @@ class UI {
 			this.showHint(getLocalizable("markers") + text);
 		});
 
+		// Toggle grid button
+		this.toggleGridButton = document.getElementById("toggleGrid");
+		this.gridEnabled = false;
+		this.toggleGridButton.addEventListener("click", () => {
+			this.gridEnabled = !this.gridEnabled;
+
+			var text;
+			if (this.gridEnabled) {
+				this.toggleGridButton.style.opacity = 1;
+				text = getLocalizable("shown");
+				if (map && gridLayer) {
+					map.addLayer(gridLayer);
+				}
+			} else {
+				this.toggleGridButton.style.opacity = 0.5;
+				text = getLocalizable("hidden");
+				if (map && gridLayer) {
+					map.removeLayer(gridLayer);
+				}
+			}
+
+			this.showHint(getLocalizable("grid") + text);
+		});
+
 		// Setup left panel
 		this.leftPanel = document.getElementById("leftPanel");
 

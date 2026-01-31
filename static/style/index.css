@@ -289,6 +289,7 @@ body,
 #timecodeContainer,
 #toggleFirelines,
 #toggleMapMarker,
+#toggleGrid,
 #versionInfoContainer,
 #playbackSpeedSliderContainer,
 #playbackSpeedSliderContainer,
@@ -301,6 +302,7 @@ body,
 
 #toggleFirelines,
 #toggleMapMarker,
+#toggleGrid,
 .fullscreenButton {
 	background-image: url("../images/bullets.svg");
 	background-size: auto 20px;
@@ -325,6 +327,11 @@ body,
 
 #toggleMapMarker {
 	background-image: url("../images/map.svg");
+}
+
+#toggleGrid {
+	background-image: url("../images/grid.svg");
+	opacity: 0.5;
 }
 
 .fullscreenButton {
@@ -1019,4 +1026,14 @@ input[type=range]::-webkit-slider-runnable-track {
 	border-radius: 4px;
 	font-size: 12px;
 	cursor: help;
+}
+
+/* Scale ruler styling for dark theme */
+.leaflet-control-scale-line {
+	background: rgba(0, 0, 0, 0.7);
+	border-color: rgba(255, 255, 255, 0.5);
+	color: #fff;
+	font-size: 11px;
+	line-height: 1.2;
+	padding: 2px 5px;
 }
