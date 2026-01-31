@@ -276,8 +276,8 @@ func TestConvertSingleFile(t *testing.T) {
 	err = convertSingleFile(ctx, inputPath, dataDir, 300, "protobuf")
 	require.NoError(t, err)
 
-	// Verify output was created
-	outputDir := filepath.Join(dataDir, "test_mission")
+	// Verify output was created (keeps .json suffix to match database filename)
+	outputDir := filepath.Join(dataDir, "test_mission.json")
 	_, err = os.Stat(filepath.Join(outputDir, "manifest.pb"))
 	require.NoError(t, err)
 }
