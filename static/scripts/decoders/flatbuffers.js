@@ -155,7 +155,9 @@ const FlatBuffersDecoder = {
             entities: [],
             events: [],
             times: [],
-            markers: []
+            markers: [],
+            extensionVersion: '',
+            addonVersion: ''
         };
 
         // Field indices for Manifest table (matching schema order in ocap.fbs)
@@ -212,6 +214,14 @@ const FlatBuffersDecoder = {
                 manifest.events.push(this.decodeEvent(reader, reader.readTableFromVector(vecOffset, i)));
             }
         }
+
+        // Read extension_version (index 11)
+        fieldOffset = reader.getFieldOffset(rootOffset, 11);
+        if (fieldOffset) manifest.extensionVersion = reader.readString(rootOffset + fieldOffset);
+
+        // Read addon_version (index 12)
+        fieldOffset = reader.getFieldOffset(rootOffset, 12);
+        if (fieldOffset) manifest.addonVersion = reader.readString(rootOffset + fieldOffset);
 
         return manifest;
     },

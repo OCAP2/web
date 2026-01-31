@@ -132,20 +132,22 @@ func (Side) EnumDescriptor() ([]byte, []int) {
 
 // Manifest - loaded once at playback start (~10-100KB)
 type Manifest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Version        uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	WorldName      string                 `protobuf:"bytes,2,opt,name=world_name,json=worldName,proto3" json:"world_name,omitempty"`
-	MissionName    string                 `protobuf:"bytes,3,opt,name=mission_name,json=missionName,proto3" json:"mission_name,omitempty"`
-	FrameCount     uint32                 `protobuf:"varint,4,opt,name=frame_count,json=frameCount,proto3" json:"frame_count,omitempty"`
-	ChunkSize      uint32                 `protobuf:"varint,5,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`
-	CaptureDelayMs uint32                 `protobuf:"varint,6,opt,name=capture_delay_ms,json=captureDelayMs,proto3" json:"capture_delay_ms,omitempty"`
-	ChunkCount     uint32                 `protobuf:"varint,7,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
-	Entities       []*EntityDef           `protobuf:"bytes,8,rep,name=entities,proto3" json:"entities,omitempty"`
-	Times          []*TimeSample          `protobuf:"bytes,9,rep,name=times,proto3" json:"times,omitempty"`
-	Events         []*Event               `protobuf:"bytes,10,rep,name=events,proto3" json:"events,omitempty"`
-	Markers        []*MarkerDef           `protobuf:"bytes,11,rep,name=markers,proto3" json:"markers,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Version          uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	WorldName        string                 `protobuf:"bytes,2,opt,name=world_name,json=worldName,proto3" json:"world_name,omitempty"`
+	MissionName      string                 `protobuf:"bytes,3,opt,name=mission_name,json=missionName,proto3" json:"mission_name,omitempty"`
+	FrameCount       uint32                 `protobuf:"varint,4,opt,name=frame_count,json=frameCount,proto3" json:"frame_count,omitempty"`
+	ChunkSize        uint32                 `protobuf:"varint,5,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`
+	CaptureDelayMs   uint32                 `protobuf:"varint,6,opt,name=capture_delay_ms,json=captureDelayMs,proto3" json:"capture_delay_ms,omitempty"`
+	ChunkCount       uint32                 `protobuf:"varint,7,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
+	Entities         []*EntityDef           `protobuf:"bytes,8,rep,name=entities,proto3" json:"entities,omitempty"`
+	Times            []*TimeSample          `protobuf:"bytes,9,rep,name=times,proto3" json:"times,omitempty"`
+	Events           []*Event               `protobuf:"bytes,10,rep,name=events,proto3" json:"events,omitempty"`
+	Markers          []*MarkerDef           `protobuf:"bytes,11,rep,name=markers,proto3" json:"markers,omitempty"`
+	ExtensionVersion string                 `protobuf:"bytes,12,opt,name=extension_version,json=extensionVersion,proto3" json:"extension_version,omitempty"`
+	AddonVersion     string                 `protobuf:"bytes,13,opt,name=addon_version,json=addonVersion,proto3" json:"addon_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Manifest) Reset() {
@@ -253,6 +255,20 @@ func (x *Manifest) GetMarkers() []*MarkerDef {
 		return x.Markers
 	}
 	return nil
+}
+
+func (x *Manifest) GetExtensionVersion() string {
+	if x != nil {
+		return x.ExtensionVersion
+	}
+	return ""
+}
+
+func (x *Manifest) GetAddonVersion() string {
+	if x != nil {
+		return x.AddonVersion
+	}
+	return ""
 }
 
 type EntityDef struct {
@@ -988,7 +1004,7 @@ var File_pkg_schemas_protobuf_v1_ocap_proto protoreflect.FileDescriptor
 
 const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	"\n" +
-	"\"pkg/schemas/protobuf/v1/ocap.proto\x12\aocap.v1\"\xa2\x03\n" +
+	"\"pkg/schemas/protobuf/v1/ocap.proto\x12\aocap.v1\"\xf4\x03\n" +
 	"\bManifest\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x1d\n" +
 	"\n" +
@@ -1005,7 +1021,9 @@ const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	"\x05times\x18\t \x03(\v2\x13.ocap.v1.TimeSampleR\x05times\x12&\n" +
 	"\x06events\x18\n" +
 	" \x03(\v2\x0e.ocap.v1.EventR\x06events\x12,\n" +
-	"\amarkers\x18\v \x03(\v2\x12.ocap.v1.MarkerDefR\amarkers\"\xae\x02\n" +
+	"\amarkers\x18\v \x03(\v2\x12.ocap.v1.MarkerDefR\amarkers\x12+\n" +
+	"\x11extension_version\x18\f \x01(\tR\x10extensionVersion\x12#\n" +
+	"\raddon_version\x18\r \x01(\tR\faddonVersion\"\xae\x02\n" +
 	"\tEntityDef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\rR\x02id\x12'\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x13.ocap.v1.EntityTypeR\x04type\x12\x12\n" +

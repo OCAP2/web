@@ -16,6 +16,8 @@ message Manifest {
   repeated TimeSample times = 9;
   repeated Event events = 10;
   repeated MarkerDef markers = 11;
+  string extension_version = 12;
+  string addon_version = 13;
 }
 
 message EntityDef {

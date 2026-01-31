@@ -144,7 +144,9 @@ const ProtobufDecoder = (function() {
             entities: [],
             times: [],
             events: [],
-            markers: []
+            markers: [],
+            extensionVersion: '',
+            addonVersion: ''
         };
 
         while (reader.pos < reader.len) {
@@ -179,6 +181,8 @@ const ProtobufDecoder = (function() {
                     const markerEnd = reader.pos + markerLen;
                     manifest.markers.push(decodeMarkerDef(reader, markerEnd));
                     break;
+                case 12: manifest.extensionVersion = reader.readString(); break;
+                case 13: manifest.addonVersion = reader.readString(); break;
                 default:
                     reader.skip(tag.wireType);
             }

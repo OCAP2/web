@@ -1641,6 +1641,16 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 	ui.setMissionName(missionName);
 	ui.setMissionEndTime(endFrame);
 
+	// Set version info from manifest
+	if (manifest.extensionVersion) {
+		extensionVersion = manifest.extensionVersion;
+		ui.setExtensionVersion(extensionVersion);
+	}
+	if (manifest.addonVersion) {
+		addonVersion = manifest.addonVersion;
+		ui.setAddonVersion(addonVersion);
+	}
+
 	// Process times if available
 	if (manifest.times && manifest.times.length > 0) {
 		const times = manifest.times.map(t => ({

@@ -91,6 +91,8 @@ table Manifest {
   times: [TimeSample];
   events: [Event];
   markers: [MarkerDef];
+  extension_version: string;
+  addon_version: string;
 }
 
 // Entity state within a frame

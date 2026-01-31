@@ -9,15 +9,17 @@ import (
 
 // Manifest contains mission metadata loaded at playback start
 type Manifest struct {
-	Version        uint32      `json:"version"`
-	WorldName      string      `json:"worldName"`
-	MissionName    string      `json:"missionName"`
-	FrameCount     uint32      `json:"frameCount"`
-	ChunkSize      uint32      `json:"chunkSize"`
-	CaptureDelayMs uint32      `json:"captureDelayMs"`
-	ChunkCount     uint32      `json:"chunkCount"`
-	Entities       []EntityDef `json:"entities"`
-	Events         []Event     `json:"events,omitempty"`
+	Version          uint32      `json:"version"`
+	WorldName        string      `json:"worldName"`
+	MissionName      string      `json:"missionName"`
+	FrameCount       uint32      `json:"frameCount"`
+	ChunkSize        uint32      `json:"chunkSize"`
+	CaptureDelayMs   uint32      `json:"captureDelayMs"`
+	ChunkCount       uint32      `json:"chunkCount"`
+	Entities         []EntityDef `json:"entities"`
+	Events           []Event     `json:"events,omitempty"`
+	ExtensionVersion string      `json:"extensionVersion,omitempty"`
+	AddonVersion     string      `json:"addonVersion,omitempty"`
 }
 
 // Event represents a game event

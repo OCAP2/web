@@ -94,13 +94,15 @@ func (w *ProtobufWriterV1) toProtoManifest(result *ParseResult) *pbv1.Manifest {
 	}
 
 	manifest := &pbv1.Manifest{
-		Version:        uint32(SchemaVersionV1),
-		WorldName:      result.WorldName,
-		MissionName:    result.MissionName,
-		FrameCount:     result.FrameCount,
-		ChunkSize:      result.ChunkSize,
-		CaptureDelayMs: result.CaptureDelayMs,
-		ChunkCount:     chunkCount,
+		Version:          uint32(SchemaVersionV1),
+		WorldName:        result.WorldName,
+		MissionName:      result.MissionName,
+		FrameCount:       result.FrameCount,
+		ChunkSize:        result.ChunkSize,
+		CaptureDelayMs:   result.CaptureDelayMs,
+		ChunkCount:       chunkCount,
+		ExtensionVersion: result.ExtensionVersion,
+		AddonVersion:     result.AddonVersion,
 	}
 
 	// Convert entities

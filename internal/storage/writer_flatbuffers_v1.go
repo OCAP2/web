@@ -145,6 +145,8 @@ func (w *FlatBuffersWriterV1) toFBManifest(builder *flatbuffers.Builder, result 
 	// Build strings
 	worldNameOff := builder.CreateString(result.WorldName)
 	missionNameOff := builder.CreateString(result.MissionName)
+	extensionVersionOff := builder.CreateString(result.ExtensionVersion)
+	addonVersionOff := builder.CreateString(result.AddonVersion)
 
 	// Build manifest
 	fbv1.ManifestStart(builder)
@@ -159,6 +161,8 @@ func (w *FlatBuffersWriterV1) toFBManifest(builder *flatbuffers.Builder, result 
 	fbv1.ManifestAddEvents(builder, eventsVec)
 	fbv1.ManifestAddMarkers(builder, markersVec)
 	fbv1.ManifestAddTimes(builder, timesVec)
+	fbv1.ManifestAddExtensionVersion(builder, extensionVersionOff)
+	fbv1.ManifestAddAddonVersion(builder, addonVersionOff)
 
 	return fbv1.ManifestEnd(builder)
 }

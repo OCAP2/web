@@ -16,11 +16,13 @@ func (p *ParserV1) Version() JSONInputVersion {
 // Parse converts JSON data to schema-agnostic ParseResult
 func (p *ParserV1) Parse(data map[string]interface{}, chunkSize uint32) (*ParseResult, error) {
 	result := &ParseResult{
-		WorldName:      getString(data, "worldName"),
-		MissionName:    getString(data, "missionName"),
-		FrameCount:     getUint32(data, "endFrame"),
-		ChunkSize:      chunkSize,
-		CaptureDelayMs: uint32(getFloat64(data, "captureDelay") * 1000),
+		WorldName:        getString(data, "worldName"),
+		MissionName:      getString(data, "missionName"),
+		FrameCount:       getUint32(data, "endFrame"),
+		ChunkSize:        chunkSize,
+		CaptureDelayMs:   uint32(getFloat64(data, "captureDelay") * 1000),
+		ExtensionVersion: getString(data, "extensionVersion"),
+		AddonVersion:     getString(data, "addonVersion"),
 	}
 
 	// Parse entities

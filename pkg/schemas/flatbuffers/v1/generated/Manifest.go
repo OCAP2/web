@@ -197,8 +197,24 @@ func (rcv *Manifest) MarkersLength() int {
 	return 0
 }
 
+func (rcv *Manifest) ExtensionVersion() []byte {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(26))
+	if o != 0 {
+		return rcv._tab.ByteVector(o + rcv._tab.Pos)
+	}
+	return nil
+}
+
+func (rcv *Manifest) AddonVersion() []byte {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(28))
+	if o != 0 {
+		return rcv._tab.ByteVector(o + rcv._tab.Pos)
+	}
+	return nil
+}
+
 func ManifestStart(builder *flatbuffers.Builder) {
-	builder.StartObject(11)
+	builder.StartObject(13)
 }
 func ManifestAddVersion(builder *flatbuffers.Builder, version uint32) {
 	builder.PrependUint32Slot(0, version, 0)
@@ -244,6 +260,12 @@ func ManifestAddMarkers(builder *flatbuffers.Builder, markers flatbuffers.UOffse
 }
 func ManifestStartMarkersVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(4, numElems, 4)
+}
+func ManifestAddExtensionVersion(builder *flatbuffers.Builder, extensionVersion flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(11, flatbuffers.UOffsetT(extensionVersion), 0)
+}
+func ManifestAddAddonVersion(builder *flatbuffers.Builder, addonVersion flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(12, flatbuffers.UOffsetT(addonVersion), 0)
 }
 func ManifestEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()
