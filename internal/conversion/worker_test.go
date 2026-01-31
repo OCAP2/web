@@ -482,22 +482,26 @@ func TestWorker_ContextCancellation(t *testing.T) {
 
 // errorMockRepo is a mock that can return errors for testing error paths
 type errorMockRepo struct {
-	pending               []Operation
-	status                map[int64]string
-	format                map[int64]string
-	duration              map[int64]float64
-	schemaVersion         map[int64]uint32
-	selectPendingErr      error
-	updateStatusErr       error
-	updateFormatErr       error
-	updateDurationErr     error
-	failStatusUpdateOnID  int64  // only fail for this ID
-	failStatusUpdateAfter string // only fail when setting this status
+	pending                  []Operation
+	byStatus                 map[string][]Operation
+	status                   map[int64]string
+	format                   map[int64]string
+	duration                 map[int64]float64
+	schemaVersion            map[int64]uint32
+	selectPendingErr         error
+	selectByStatusErr        error
+	resetConversionStatusErr error
+	updateStatusErr          error
+	updateFormatErr          error
+	updateDurationErr        error
+	failStatusUpdateOnID     int64  // only fail for this ID
+	failStatusUpdateAfter    string // only fail when setting this status
 }
 
 func newErrorMockRepo() *errorMockRepo {
 	return &errorMockRepo{
 		pending:       []Operation{},
+		byStatus:      make(map[string][]Operation),
 		status:        make(map[int64]string),
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
@@ -549,11 +553,20 @@ func (m *errorMockRepo) UpdateSchemaVersion(ctx context.Context, id int64, versi
 }
 
 func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
-	return nil, nil
+	if m.selectByStatusErr != nil {
+		return nil, m.selectByStatusErr
+	}
+	return m.byStatus[status], nil
 }
 
 func (m *errorMockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
-	return 0, nil
+	if m.resetConversionStatusErr != nil {
+		return 0, m.resetConversionStatusErr
+	}
+	ops := m.byStatus[fromStatus]
+	delete(m.byStatus, fromStatus)
+	m.byStatus[toStatus] = append(m.byStatus[toStatus], ops...)
+	return int64(len(ops)), nil
 }
 
 func TestProcessOnce_SelectPendingError(t *testing.T) {
@@ -829,4 +842,59 @@ func TestWorker_CleanupInterrupted_RetryFailed(t *testing.T) {
 	assert.Len(t, repo.byStatus["pending"], 3)
 	assert.Len(t, repo.byStatus["converting"], 0)
 	assert.Len(t, repo.byStatus["failed"], 0)
+}
+
+func TestWorker_CleanupInterrupted_SelectByStatusError(t *testing.T) {
+	dir := t.TempDir()
+
+	repo := newErrorMockRepo()
+	repo.selectByStatusErr = fmt.Errorf("database error")
+
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "protobuf",
+	})
+
+	ctx := context.Background()
+	// Should not panic, just log the error
+	worker.cleanupInterrupted(ctx)
+}
+
+func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
+	dir := t.TempDir()
+
+	repo := newErrorMockRepo()
+	repo.byStatus["converting"] = []Operation{
+		{ID: 1, Filename: "mission1"},
+	}
+	repo.resetConversionStatusErr = fmt.Errorf("database error")
+
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "protobuf",
+	})
+
+	ctx := context.Background()
+	// Should not panic, just log the error
+	worker.cleanupInterrupted(ctx)
+}
+
+func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
+	dir := t.TempDir()
+
+	repo := newErrorMockRepo()
+	repo.byStatus["failed"] = []Operation{
+		{ID: 1, Filename: "mission1"},
+	}
+	repo.resetConversionStatusErr = fmt.Errorf("database error")
+
+	worker := NewWorker(repo, Config{
+		DataDir:       dir,
+		StorageFormat: "protobuf",
+		RetryFailed:   true,
+	})
+
+	ctx := context.Background()
+	// Should not panic, just log the error
+	worker.cleanupInterrupted(ctx)
 }
