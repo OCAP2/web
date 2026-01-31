@@ -335,6 +335,31 @@ func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 	return r.scan(ctx, rows)
 }
 
+// SelectByStatus returns operations with a specific conversion status
+func (r *RepoOperation) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		 FROM operations
+		 WHERE conversion_status = ?
+		 ORDER BY id ASC`, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scan(ctx, rows)
+}
+
+// ResetConversionStatus resets all operations with fromStatus to toStatus
+func (r *RepoOperation) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET conversion_status = ? WHERE conversion_status = ?`, toStatus, fromStatus)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 // UpdateConversionStatus updates the conversion status for an operation
 func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
 	_, err := r.db.ExecContext(ctx,
