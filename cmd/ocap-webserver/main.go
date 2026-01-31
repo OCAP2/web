@@ -267,6 +267,7 @@ func app() error {
 				BatchSize:     setting.Conversion.BatchSize,
 				ChunkSize:     setting.Conversion.ChunkSize,
 				StorageFormat: setting.Conversion.StorageEngine,
+				RetryFailed:   setting.Conversion.RetryFailed,
 			},
 		)
 
@@ -330,4 +331,20 @@ func (a *repoAdapter) UpdateMissionDuration(ctx context.Context, id int64, durat
 
 func (a *repoAdapter) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
 	return a.repo.UpdateSchemaVersion(ctx, id, version)
+}
+
+func (a *repoAdapter) SelectByStatus(ctx context.Context, status string) ([]conversion.Operation, error) {
+	ops, err := a.repo.SelectByStatus(ctx, status)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]conversion.Operation, len(ops))
+	for i, op := range ops {
+		result[i] = conversion.Operation{ID: op.ID, Filename: op.Filename}
+	}
+	return result, nil
+}
+
+func (a *repoAdapter) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
+	return a.repo.ResetConversionStatus(ctx, fromStatus, toStatus)
 }
