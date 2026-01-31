@@ -114,6 +114,7 @@ func TestGetOperationFormat(t *testing.T) {
 	assert.Equal(t, "json", formatInfo.Format)
 	assert.Equal(t, 1, formatInfo.ChunkCount)
 	assert.False(t, formatInfo.SupportsStreaming)
+	assert.Equal(t, uint32(1), formatInfo.SchemaVersion) // Defaults to 1 when not set
 
 	// Test: Get format for non-existing operation
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/operations/999/format", nil)
@@ -1923,4 +1924,55 @@ func TestGetCaptureFile_MissingFile(t *testing.T) {
 
 	err = hdlr.GetCaptureFile(c)
 	assert.Error(t, err)
+}
+
+func TestGetOperationFormat_WithSchemaVersion(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation with explicit schema version
+	op := &Operation{
+		WorldName:        "altis",
+		MissionName:      "Schema Version Test",
+		MissionDuration:  3600,
+		Filename:         "schema_version_test",
+		Date:             "2026-01-30",
+		StorageFormat:    "json",
+		ConversionStatus: "completed",
+		SchemaVersion:    2,
+	}
+	err = repo.Store(ctx, op)
+	require.NoError(t, err)
+
+	// Register JSON engine
+	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = hdlr.GetOperationFormat(c)
+	assert.NoError(t, err)
+
+	var result FormatInfo
+	err = json.Unmarshal(rec.Body.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(2), result.SchemaVersion)
 }
