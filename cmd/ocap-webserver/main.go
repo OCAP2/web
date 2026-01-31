@@ -119,20 +119,40 @@ func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error
 }
 
 func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFile, dataDir string, chunkSize uint32, format string) error {
-	// Determine output path - only strip .gz to match database filename format
+	// Determine filename - only strip .gz to match database filename format
 	baseName := filepath.Base(inputFile)
 	if ext := filepath.Ext(baseName); ext == ".gz" {
 		baseName = baseName[:len(baseName)-len(ext)]
 	}
-	outputPath := filepath.Join(dataDir, baseName)
 
-	log.Printf("Converting %s to %s (format: %s, chunk size: %d)", inputFile, outputPath, format, chunkSize)
-
-	// Register engines if not already done
+	// Register engines
 	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
 
-	// Get the appropriate storage engine
+	// Check if operation exists in database - if so, use worker for consistent behavior
+	if op, err := repo.GetByFilename(ctx, baseName); err == nil && op != nil {
+		log.Printf("Converting operation %d: %s (format: %s)", op.ID, op.Filename, format)
+
+		// Use worker to ensure identical behavior as background conversion
+		worker := conversion.NewWorker(
+			&repoAdapter{repo},
+			conversion.Config{
+				DataDir:       dataDir,
+				ChunkSize:     chunkSize,
+				StorageFormat: format,
+			},
+		)
+		if err := worker.ConvertOne(ctx, op.ID, op.Filename); err != nil {
+			return err
+		}
+		log.Printf("Conversion complete: %s", op.Filename)
+		return nil
+	}
+
+	// Standalone conversion (no database entry)
+	outputPath := filepath.Join(dataDir, baseName)
+	log.Printf("Converting %s to %s (format: %s, chunk size: %d)", inputFile, outputPath, format, chunkSize)
+
 	engine, err := storage.GetEngine(format)
 	if err != nil {
 		return fmt.Errorf("unknown format %q: %w", format, err)
@@ -143,32 +163,6 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 	}
 
 	log.Printf("Conversion complete: %s", outputPath)
-
-	// Try to update database if operation exists with this filename
-	if op, err := repo.GetByFilename(ctx, baseName); err == nil && op != nil {
-		log.Printf("Updating database for operation %d (%s)", op.ID, op.Filename)
-
-		// Read manifest to get duration
-		manifest, err := engine.GetManifest(ctx, baseName)
-		if err == nil {
-			durationSeconds := float64(manifest.FrameCount) * float64(manifest.CaptureDelayMs) / 1000.0
-			if err := repo.UpdateMissionDuration(ctx, op.ID, durationSeconds); err != nil {
-				log.Printf("Warning: failed to update duration: %v", err)
-			}
-		}
-
-		// Update format, status, and schema version
-		if err := repo.UpdateStorageFormat(ctx, op.ID, format); err != nil {
-			log.Printf("Warning: failed to update format: %v", err)
-		}
-		if err := repo.UpdateConversionStatus(ctx, op.ID, "completed"); err != nil {
-			log.Printf("Warning: failed to update status: %v", err)
-		}
-		if err := repo.UpdateSchemaVersion(ctx, op.ID, 1); err != nil {
-			log.Printf("Warning: failed to update schema version: %v", err)
-		}
-	}
-
 	return nil
 }
 
