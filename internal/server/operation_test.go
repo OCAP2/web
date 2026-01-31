@@ -437,3 +437,77 @@ func TestSelectPendingEmpty(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, result)
 }
+
+func TestGetByFilename(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store an operation
+	op := &Operation{
+		WorldName:   "altis",
+		MissionName: "test_mission",
+		Filename:    "test_file.json",
+		Date:        "2024-01-01",
+	}
+	err = repo.Store(ctx, op)
+	assert.NoError(t, err)
+
+	// Get by filename
+	result, err := repo.GetByFilename(ctx, "test_file.json")
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "test_file.json", result.Filename)
+	assert.Equal(t, "altis", result.WorldName)
+}
+
+func TestGetByFilename_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Get non-existent filename
+	result, err := repo.GetByFilename(ctx, "nonexistent.json")
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
+
+func TestUpdateSchemaVersion(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store operation
+	op := &Operation{
+		WorldName:   "altis",
+		MissionName: "test_mission",
+		Filename:    "test_schema.json",
+		Date:        "2024-01-01",
+	}
+	err = repo.Store(ctx, op)
+	assert.NoError(t, err)
+
+	// Update schema version
+	err = repo.UpdateSchemaVersion(ctx, op.ID, 2)
+	assert.NoError(t, err)
+
+	// Verify
+	result, err := repo.GetByID(ctx, "1")
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(2), result.SchemaVersion)
+}
