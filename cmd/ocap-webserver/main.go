@@ -71,6 +71,10 @@ func runConvert(args []string) error {
 
 	ctx := context.Background()
 
+	// Register storage engines for CLI commands that read data directly
+	storage.RegisterEngine(storage.NewProtobufEngine(setting.Data))
+	storage.RegisterEngine(storage.NewFlatBuffersEngine(setting.Data))
+
 	switch {
 	case *status:
 		return showConversionStatus(ctx, repo)
@@ -124,10 +128,6 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 	if ext := filepath.Ext(baseName); ext == ".gz" {
 		baseName = baseName[:len(baseName)-len(ext)]
 	}
-
-	// Register engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
 
 	// Check if operation exists in database - if so, use worker for consistent behavior
 	if op, err := repo.GetByFilename(ctx, baseName); err == nil && op != nil {
