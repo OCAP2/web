@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 // ProtobufEngine reads chunked protobuf recordings
@@ -33,7 +33,7 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
 
-	var pbManifest pb.Manifest
+	var pbManifest pbv1.Manifest
 	if err := proto.Unmarshal(data, &pbManifest); err != nil {
 		return nil, fmt.Errorf("unmarshal manifest: %w", err)
 	}
@@ -79,7 +79,7 @@ func (e *ProtobufEngine) GetChunk(ctx context.Context, filename string, chunkInd
 		return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
 	}
 
-	var pbChunk pb.Chunk
+	var pbChunk pbv1.Chunk
 	if err := proto.Unmarshal(data, &pbChunk); err != nil {
 		return nil, fmt.Errorf("unmarshal chunk: %w", err)
 	}
@@ -124,7 +124,7 @@ func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, 
 		return 0, err
 	}
 
-	var manifest pb.Manifest
+	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(data, &manifest); err != nil {
 		return 0, err
 	}
@@ -138,28 +138,28 @@ func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath strin
 	return converter.Convert(ctx, jsonPath, outputPath)
 }
 
-func entityTypeToString(t pb.EntityType) string {
+func entityTypeToString(t pbv1.EntityType) string {
 	switch t {
-	case pb.EntityType_ENTITY_TYPE_UNIT:
+	case pbv1.EntityType_ENTITY_TYPE_UNIT:
 		return "unit"
-	case pb.EntityType_ENTITY_TYPE_VEHICLE:
+	case pbv1.EntityType_ENTITY_TYPE_VEHICLE:
 		return "vehicle"
 	default:
 		return "unknown"
 	}
 }
 
-func sideToString(s pb.Side) string {
+func sideToString(s pbv1.Side) string {
 	switch s {
-	case pb.Side_SIDE_WEST:
+	case pbv1.Side_SIDE_WEST:
 		return "WEST"
-	case pb.Side_SIDE_EAST:
+	case pbv1.Side_SIDE_EAST:
 		return "EAST"
-	case pb.Side_SIDE_GUER:
+	case pbv1.Side_SIDE_GUER:
 		return "GUER"
-	case pb.Side_SIDE_CIV:
+	case pbv1.Side_SIDE_CIV:
 		return "CIV"
-	case pb.Side_SIDE_GLOBAL:
+	case pbv1.Side_SIDE_GLOBAL:
 		return "GLOBAL"
 	default:
 		return "UNKNOWN"

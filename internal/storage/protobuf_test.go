@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 func TestProtobufEngineBasics(t *testing.T) {
@@ -28,7 +28,7 @@ func TestProtobufEngineGetManifest(t *testing.T) {
 	require.NoError(t, os.MkdirAll(missionDir, 0755))
 
 	// Create test manifest
-	pbManifest := &pb.Manifest{
+	pbManifest := &pbv1.Manifest{
 		Version:        1,
 		WorldName:      "altis",
 		MissionName:    "Test Mission",
@@ -36,9 +36,9 @@ func TestProtobufEngineGetManifest(t *testing.T) {
 		ChunkSize:      300,
 		CaptureDelayMs: 1000,
 		ChunkCount:     4,
-		Entities: []*pb.EntityDef{
-			{Id: 0, Type: pb.EntityType_ENTITY_TYPE_UNIT, Name: "Player1", Side: pb.Side_SIDE_WEST, IsPlayer: true},
-			{Id: 1, Type: pb.EntityType_ENTITY_TYPE_VEHICLE, Name: "Truck", VehicleClass: "B_Truck_01"},
+		Entities: []*pbv1.EntityDef{
+			{Id: 0, Type: pbv1.EntityType_ENTITY_TYPE_UNIT, Name: "Player1", Side: pbv1.Side_SIDE_WEST, IsPlayer: true},
+			{Id: 1, Type: pbv1.EntityType_ENTITY_TYPE_VEHICLE, Name: "Truck", VehicleClass: "B_Truck_01"},
 		},
 	}
 
@@ -99,20 +99,20 @@ func TestProtobufEngineGetChunk(t *testing.T) {
 	require.NoError(t, os.MkdirAll(chunksDir, 0755))
 
 	// Create test chunk
-	pbChunk := &pb.Chunk{
+	pbChunk := &pbv1.Chunk{
 		Index:      0,
 		StartFrame: 0,
 		FrameCount: 2,
-		Frames: []*pb.Frame{
+		Frames: []*pbv1.Frame{
 			{
 				FrameNum: 0,
-				Entities: []*pb.EntityState{
+				Entities: []*pbv1.EntityState{
 					{EntityId: 0, PosX: 100, PosY: 200, Direction: 45, Alive: 1},
 				},
 			},
 			{
 				FrameNum: 1,
-				Entities: []*pb.EntityState{
+				Entities: []*pbv1.EntityState{
 					{EntityId: 0, PosX: 101, PosY: 201, Direction: 46, Alive: 1},
 				},
 			},
@@ -148,14 +148,14 @@ func TestProtobufEngineGetChunkWithCrew(t *testing.T) {
 	require.NoError(t, os.MkdirAll(chunksDir, 0755))
 
 	// Create test chunk with vehicle crew
-	pbChunk := &pb.Chunk{
+	pbChunk := &pbv1.Chunk{
 		Index:      0,
 		StartFrame: 0,
 		FrameCount: 1,
-		Frames: []*pb.Frame{
+		Frames: []*pbv1.Frame{
 			{
 				FrameNum: 0,
-				Entities: []*pb.EntityState{
+				Entities: []*pbv1.EntityState{
 					{EntityId: 5, PosX: 500, PosY: 600, Direction: 90, Alive: 1, CrewIds: []uint32{1, 2, 3}},
 					{EntityId: 1, PosX: 500, PosY: 600, Direction: 90, Alive: 1, VehicleId: 5, IsInVehicle: true},
 				},
@@ -198,7 +198,7 @@ func TestProtobufEngineChunkCount(t *testing.T) {
 	missionDir := filepath.Join(dir, "test_mission")
 	require.NoError(t, os.MkdirAll(missionDir, 0755))
 
-	pbManifest := &pb.Manifest{ChunkCount: 5}
+	pbManifest := &pbv1.Manifest{ChunkCount: 5}
 	data, err := proto.Marshal(pbManifest)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), data, 0644))
@@ -243,7 +243,7 @@ func TestProtobufEngineGetManifestReader(t *testing.T) {
 	require.NoError(t, os.MkdirAll(missionDir, 0755))
 
 	// Create test manifest
-	pbManifest := &pb.Manifest{
+	pbManifest := &pbv1.Manifest{
 		Version:     1,
 		WorldName:   "altis",
 		MissionName: "Reader Test",
@@ -282,12 +282,12 @@ func TestProtobufEngineConvert(t *testing.T) {
 
 func TestEntityTypeToString(t *testing.T) {
 	tests := []struct {
-		input    pb.EntityType
+		input    pbv1.EntityType
 		expected string
 	}{
-		{pb.EntityType_ENTITY_TYPE_UNIT, "unit"},
-		{pb.EntityType_ENTITY_TYPE_VEHICLE, "vehicle"},
-		{pb.EntityType_ENTITY_TYPE_UNKNOWN, "unknown"},
+		{pbv1.EntityType_ENTITY_TYPE_UNIT, "unit"},
+		{pbv1.EntityType_ENTITY_TYPE_VEHICLE, "vehicle"},
+		{pbv1.EntityType_ENTITY_TYPE_UNKNOWN, "unknown"},
 	}
 
 	for _, tt := range tests {
@@ -300,15 +300,15 @@ func TestEntityTypeToString(t *testing.T) {
 
 func TestSideToString(t *testing.T) {
 	tests := []struct {
-		input    pb.Side
+		input    pbv1.Side
 		expected string
 	}{
-		{pb.Side_SIDE_WEST, "WEST"},
-		{pb.Side_SIDE_EAST, "EAST"},
-		{pb.Side_SIDE_GUER, "GUER"},
-		{pb.Side_SIDE_CIV, "CIV"},
-		{pb.Side_SIDE_GLOBAL, "GLOBAL"},
-		{pb.Side_SIDE_UNKNOWN, "UNKNOWN"},
+		{pbv1.Side_SIDE_WEST, "WEST"},
+		{pbv1.Side_SIDE_EAST, "EAST"},
+		{pbv1.Side_SIDE_GUER, "GUER"},
+		{pbv1.Side_SIDE_CIV, "CIV"},
+		{pbv1.Side_SIDE_GLOBAL, "GLOBAL"},
+		{pbv1.Side_SIDE_UNKNOWN, "UNKNOWN"},
 	}
 
 	for _, tt := range tests {
@@ -325,19 +325,19 @@ func TestProtobufEngineFullEntityDef(t *testing.T) {
 	require.NoError(t, os.MkdirAll(missionDir, 0755))
 
 	// Create manifest with fully populated entity definition
-	pbManifest := &pb.Manifest{
+	pbManifest := &pbv1.Manifest{
 		Version:     1,
 		WorldName:   "stratis",
 		MissionName: "Full Test",
 		FrameCount:  500,
 		ChunkSize:   100,
 		ChunkCount:  5,
-		Entities: []*pb.EntityDef{
+		Entities: []*pbv1.EntityDef{
 			{
 				Id:           42,
-				Type:         pb.EntityType_ENTITY_TYPE_UNIT,
+				Type:         pbv1.EntityType_ENTITY_TYPE_UNIT,
 				Name:         "Squad Leader",
-				Side:         pb.Side_SIDE_GUER,
+				Side:         pbv1.Side_SIDE_GUER,
 				GroupName:    "Alpha",
 				Role:         "Leader",
 				StartFrame:   10,

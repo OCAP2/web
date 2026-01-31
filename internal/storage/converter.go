@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 // DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)
@@ -110,8 +110,8 @@ type entityPositionData struct {
 }
 
 // parseJSONData converts JSON data to protobuf manifest and extracts position data
-func (c *Converter) parseJSONData(data map[string]interface{}) (*pb.Manifest, []entityPositionData, error) {
-	manifest := &pb.Manifest{
+func (c *Converter) parseJSONData(data map[string]interface{}) (*pbv1.Manifest, []entityPositionData, error) {
+	manifest := &pbv1.Manifest{
 		Version:        1,
 		WorldName:      getString(data, "worldName"),
 		MissionName:    getString(data, "missionName"),
@@ -133,7 +133,7 @@ func (c *Converter) parseJSONData(data map[string]interface{}) (*pb.Manifest, []
 			startFrame := getUint32(em, "startFrameNum")
 			endFrame := c.calculateEndFrame(em, startFrame)
 
-			def := &pb.EntityDef{
+			def := &pbv1.EntityDef{
 				Id:           getUint32(em, "id"),
 				Type:         stringToEntityType(entityType),
 				Name:         getString(em, "name"),
@@ -197,7 +197,7 @@ func (c *Converter) parseJSONData(data map[string]interface{}) (*pb.Manifest, []
 				continue
 			}
 
-			timeSample := &pb.TimeSample{
+			timeSample := &pbv1.TimeSample{
 				FrameNum:       getUint32(tm, "frameNum"),
 				SystemTimeUtc:  getString(tm, "systemTimeUTC"),
 				Date:           getString(tm, "date"),
@@ -220,12 +220,12 @@ func (c *Converter) calculateEndFrame(em map[string]interface{}, startFrame uint
 }
 
 // parseEvent converts a JSON event array to protobuf Event
-func (c *Converter) parseEvent(evtArr []interface{}) *pb.Event {
+func (c *Converter) parseEvent(evtArr []interface{}) *pbv1.Event {
 	if len(evtArr) < 2 {
 		return nil
 	}
 
-	event := &pb.Event{
+	event := &pbv1.Event{
 		FrameNum: uint32(toFloat64(evtArr[0])),
 		Type:     toString(evtArr[1]),
 	}
@@ -261,13 +261,13 @@ func (c *Converter) parseEvent(evtArr []interface{}) *pb.Event {
 }
 
 // parseMarker converts a JSON marker array to protobuf MarkerDef
-func (c *Converter) parseMarker(markerArr []interface{}) *pb.MarkerDef {
+func (c *Converter) parseMarker(markerArr []interface{}) *pbv1.MarkerDef {
 	// Format: ["type", "text", startFrame, endFrame, playerId, "color", sideIndex, positions, size, "shape", "brush"]
 	if len(markerArr) < 7 {
 		return nil
 	}
 
-	marker := &pb.MarkerDef{
+	marker := &pbv1.MarkerDef{
 		Type:       toString(markerArr[0]),
 		Text:       toString(markerArr[1]),
 		StartFrame: uint32(toFloat64(markerArr[2])),
@@ -312,14 +312,14 @@ func (c *Converter) parseMarker(markerArr []interface{}) *pb.MarkerDef {
 }
 
 // parseMarkerPosition converts position data to MarkerPosition
-func (c *Converter) parseMarkerPosition(pos interface{}) *pb.MarkerPosition {
+func (c *Converter) parseMarkerPosition(pos interface{}) *pbv1.MarkerPosition {
 	// Position format can be: [x, y, z] or [[x, y, z], frameNum, direction, alpha]
 	arr, ok := pos.([]interface{})
 	if !ok || len(arr) == 0 {
 		return nil
 	}
 
-	mp := &pb.MarkerPosition{}
+	mp := &pbv1.MarkerPosition{}
 
 	// Check if first element is a position array
 	if posArr, ok := arr[0].([]interface{}); ok {
@@ -355,7 +355,7 @@ func (c *Converter) parseMarkerPosition(pos interface{}) *pb.MarkerPosition {
 }
 
 // writeManifest writes the manifest protobuf file
-func (c *Converter) writeManifest(outputPath string, manifest *pb.Manifest) error {
+func (c *Converter) writeManifest(outputPath string, manifest *pbv1.Manifest) error {
 	data, err := proto.Marshal(manifest)
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
@@ -370,7 +370,7 @@ func (c *Converter) writeManifest(outputPath string, manifest *pb.Manifest) erro
 }
 
 // writeChunks writes all chunk files
-func (c *Converter) writeChunks(ctx context.Context, chunksDir string, manifest *pb.Manifest, entityPositions []entityPositionData) error {
+func (c *Converter) writeChunks(ctx context.Context, chunksDir string, manifest *pbv1.Manifest, entityPositions []entityPositionData) error {
 	// Build frame data by iterating through each chunk
 	for chunkIdx := uint32(0); chunkIdx < manifest.ChunkCount; chunkIdx++ {
 		select {
@@ -385,7 +385,7 @@ func (c *Converter) writeChunks(ctx context.Context, chunksDir string, manifest 
 			endFrame = manifest.FrameCount
 		}
 
-		chunk := &pb.Chunk{
+		chunk := &pbv1.Chunk{
 			Index:      chunkIdx,
 			StartFrame: startFrame,
 			FrameCount: endFrame - startFrame,
@@ -393,7 +393,7 @@ func (c *Converter) writeChunks(ctx context.Context, chunksDir string, manifest 
 
 		// Build frames for this chunk
 		for frameNum := startFrame; frameNum < endFrame; frameNum++ {
-			frame := &pb.Frame{
+			frame := &pbv1.Frame{
 				FrameNum: frameNum,
 			}
 
@@ -418,7 +418,7 @@ func (c *Converter) writeChunks(ctx context.Context, chunksDir string, manifest 
 }
 
 // getEntityStateAtFrame extracts entity state from position data at a specific frame
-func (c *Converter) getEntityStateAtFrame(ep entityPositionData, frameNum uint32) *pb.EntityState {
+func (c *Converter) getEntityStateAtFrame(ep entityPositionData, frameNum uint32) *pbv1.EntityState {
 	// Calculate index into positions array
 	if frameNum < ep.StartFrame {
 		return nil
@@ -434,7 +434,7 @@ func (c *Converter) getEntityStateAtFrame(ep entityPositionData, frameNum uint32
 		return nil
 	}
 
-	state := &pb.EntityState{
+	state := &pbv1.EntityState{
 		EntityId: ep.ID,
 	}
 
@@ -488,7 +488,7 @@ func (c *Converter) getEntityStateAtFrame(ep entityPositionData, frameNum uint32
 }
 
 // writeChunk writes a single chunk file
-func (c *Converter) writeChunk(chunksDir string, index uint32, chunk *pb.Chunk) error {
+func (c *Converter) writeChunk(chunksDir string, index uint32, chunk *pbv1.Chunk) error {
 	data, err := proto.Marshal(chunk)
 	if err != nil {
 		return fmt.Errorf("marshal chunk: %w", err)
@@ -504,46 +504,46 @@ func (c *Converter) writeChunk(chunksDir string, index uint32, chunk *pb.Chunk) 
 
 // Helper functions for type conversion
 
-func stringToEntityType(s string) pb.EntityType {
+func stringToEntityType(s string) pbv1.EntityType {
 	switch s {
 	case "unit":
-		return pb.EntityType_ENTITY_TYPE_UNIT
+		return pbv1.EntityType_ENTITY_TYPE_UNIT
 	case "vehicle":
-		return pb.EntityType_ENTITY_TYPE_VEHICLE
+		return pbv1.EntityType_ENTITY_TYPE_VEHICLE
 	default:
-		return pb.EntityType_ENTITY_TYPE_UNKNOWN
+		return pbv1.EntityType_ENTITY_TYPE_UNKNOWN
 	}
 }
 
-func stringToSide(s string) pb.Side {
+func stringToSide(s string) pbv1.Side {
 	switch s {
 	case "WEST":
-		return pb.Side_SIDE_WEST
+		return pbv1.Side_SIDE_WEST
 	case "EAST":
-		return pb.Side_SIDE_EAST
+		return pbv1.Side_SIDE_EAST
 	case "GUER", "INDEPENDENT":
-		return pb.Side_SIDE_GUER
+		return pbv1.Side_SIDE_GUER
 	case "CIV", "CIVILIAN":
-		return pb.Side_SIDE_CIV
+		return pbv1.Side_SIDE_CIV
 	case "GLOBAL":
-		return pb.Side_SIDE_GLOBAL
+		return pbv1.Side_SIDE_GLOBAL
 	default:
-		return pb.Side_SIDE_UNKNOWN
+		return pbv1.Side_SIDE_UNKNOWN
 	}
 }
 
-func sideIndexToSide(idx int) pb.Side {
+func sideIndexToSide(idx int) pbv1.Side {
 	switch idx {
 	case 0:
-		return pb.Side_SIDE_WEST
+		return pbv1.Side_SIDE_WEST
 	case 1:
-		return pb.Side_SIDE_EAST
+		return pbv1.Side_SIDE_EAST
 	case 2:
-		return pb.Side_SIDE_GUER
+		return pbv1.Side_SIDE_GUER
 	case 3:
-		return pb.Side_SIDE_CIV
+		return pbv1.Side_SIDE_CIV
 	default:
-		return pb.Side_SIDE_UNKNOWN
+		return pbv1.Side_SIDE_UNKNOWN
 	}
 }
 

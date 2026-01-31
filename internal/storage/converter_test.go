@@ -11,7 +11,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 func TestConverter_Convert(t *testing.T) {
@@ -111,7 +111,7 @@ func TestConverter_Convert(t *testing.T) {
 		t.Fatalf("read manifest: %v", err)
 	}
 
-	var manifest pb.Manifest
+	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
 		t.Fatalf("unmarshal manifest: %v", err)
 	}
@@ -145,14 +145,14 @@ func TestConverter_Convert(t *testing.T) {
 		if ent.Id != 0 {
 			t.Errorf("Entity[0].Id = %d, want %d", ent.Id, 0)
 		}
-		if ent.Type != pb.EntityType_ENTITY_TYPE_UNIT {
-			t.Errorf("Entity[0].Type = %v, want %v", ent.Type, pb.EntityType_ENTITY_TYPE_UNIT)
+		if ent.Type != pbv1.EntityType_ENTITY_TYPE_UNIT {
+			t.Errorf("Entity[0].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_UNIT)
 		}
 		if ent.Name != "Player1" {
 			t.Errorf("Entity[0].Name = %q, want %q", ent.Name, "Player1")
 		}
-		if ent.Side != pb.Side_SIDE_WEST {
-			t.Errorf("Entity[0].Side = %v, want %v", ent.Side, pb.Side_SIDE_WEST)
+		if ent.Side != pbv1.Side_SIDE_WEST {
+			t.Errorf("Entity[0].Side = %v, want %v", ent.Side, pbv1.Side_SIDE_WEST)
 		}
 		if !ent.IsPlayer {
 			t.Errorf("Entity[0].IsPlayer = %v, want %v", ent.IsPlayer, true)
@@ -162,8 +162,8 @@ func TestConverter_Convert(t *testing.T) {
 	// Verify second entity (vehicle)
 	if len(manifest.Entities) > 1 {
 		ent := manifest.Entities[1]
-		if ent.Type != pb.EntityType_ENTITY_TYPE_VEHICLE {
-			t.Errorf("Entity[1].Type = %v, want %v", ent.Type, pb.EntityType_ENTITY_TYPE_VEHICLE)
+		if ent.Type != pbv1.EntityType_ENTITY_TYPE_VEHICLE {
+			t.Errorf("Entity[1].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_VEHICLE)
 		}
 		if ent.VehicleClass != "B_Truck_01" {
 			t.Errorf("Entity[1].VehicleClass = %q, want %q", ent.VehicleClass, "B_Truck_01")
@@ -210,7 +210,7 @@ func TestConverter_Convert(t *testing.T) {
 		t.Fatalf("read chunk 0: %v", err)
 	}
 
-	var chunk0 pb.Chunk
+	var chunk0 pbv1.Chunk
 	if err := proto.Unmarshal(chunk0Data, &chunk0); err != nil {
 		t.Fatalf("unmarshal chunk 0: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestConverter_Convert(t *testing.T) {
 		t.Fatalf("read chunk 1: %v", err)
 	}
 
-	var chunk1 pb.Chunk
+	var chunk1 pbv1.Chunk
 	if err := proto.Unmarshal(chunk1Data, &chunk1); err != nil {
 		t.Fatalf("unmarshal chunk 1: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestConverter_ConvertGzipped(t *testing.T) {
 		t.Fatalf("read manifest: %v", err)
 	}
 
-	var manifest pb.Manifest
+	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
 		t.Fatalf("unmarshal manifest: %v", err)
 	}
@@ -441,7 +441,7 @@ func TestConverter_VehicleCrew(t *testing.T) {
 		t.Fatalf("read chunk: %v", err)
 	}
 
-	var chunk pb.Chunk
+	var chunk pbv1.Chunk
 	if err := proto.Unmarshal(chunkData, &chunk); err != nil {
 		t.Fatalf("unmarshal chunk: %v", err)
 	}
@@ -524,17 +524,17 @@ func TestConverter_ParseEvent(t *testing.T) {
 func TestConverter_StringToSide(t *testing.T) {
 	tests := []struct {
 		input string
-		want  pb.Side
+		want  pbv1.Side
 	}{
-		{"WEST", pb.Side_SIDE_WEST},
-		{"EAST", pb.Side_SIDE_EAST},
-		{"GUER", pb.Side_SIDE_GUER},
-		{"INDEPENDENT", pb.Side_SIDE_GUER},
-		{"CIV", pb.Side_SIDE_CIV},
-		{"CIVILIAN", pb.Side_SIDE_CIV},
-		{"GLOBAL", pb.Side_SIDE_GLOBAL},
-		{"UNKNOWN", pb.Side_SIDE_UNKNOWN},
-		{"", pb.Side_SIDE_UNKNOWN},
+		{"WEST", pbv1.Side_SIDE_WEST},
+		{"EAST", pbv1.Side_SIDE_EAST},
+		{"GUER", pbv1.Side_SIDE_GUER},
+		{"INDEPENDENT", pbv1.Side_SIDE_GUER},
+		{"CIV", pbv1.Side_SIDE_CIV},
+		{"CIVILIAN", pbv1.Side_SIDE_CIV},
+		{"GLOBAL", pbv1.Side_SIDE_GLOBAL},
+		{"UNKNOWN", pbv1.Side_SIDE_UNKNOWN},
+		{"", pbv1.Side_SIDE_UNKNOWN},
 	}
 
 	for _, tt := range tests {
@@ -551,15 +551,15 @@ func TestSideIndexToSide(t *testing.T) {
 	tests := []struct {
 		name  string
 		input int
-		want  pb.Side
+		want  pbv1.Side
 	}{
-		{"WEST index 0", 0, pb.Side_SIDE_WEST},
-		{"EAST index 1", 1, pb.Side_SIDE_EAST},
-		{"GUER index 2", 2, pb.Side_SIDE_GUER},
-		{"CIV index 3", 3, pb.Side_SIDE_CIV},
-		{"UNKNOWN index 4", 4, pb.Side_SIDE_UNKNOWN},
-		{"UNKNOWN negative", -1, pb.Side_SIDE_UNKNOWN},
-		{"UNKNOWN large", 100, pb.Side_SIDE_UNKNOWN},
+		{"WEST index 0", 0, pbv1.Side_SIDE_WEST},
+		{"EAST index 1", 1, pbv1.Side_SIDE_EAST},
+		{"GUER index 2", 2, pbv1.Side_SIDE_GUER},
+		{"CIV index 3", 3, pbv1.Side_SIDE_CIV},
+		{"UNKNOWN index 4", 4, pbv1.Side_SIDE_UNKNOWN},
+		{"UNKNOWN negative", -1, pbv1.Side_SIDE_UNKNOWN},
+		{"UNKNOWN large", 100, pbv1.Side_SIDE_UNKNOWN},
 	}
 
 	for _, tt := range tests {
@@ -575,13 +575,13 @@ func TestSideIndexToSide(t *testing.T) {
 func TestStringToEntityType(t *testing.T) {
 	tests := []struct {
 		input string
-		want  pb.EntityType
+		want  pbv1.EntityType
 	}{
-		{"unit", pb.EntityType_ENTITY_TYPE_UNIT},
-		{"vehicle", pb.EntityType_ENTITY_TYPE_VEHICLE},
-		{"unknown", pb.EntityType_ENTITY_TYPE_UNKNOWN},
-		{"", pb.EntityType_ENTITY_TYPE_UNKNOWN},
-		{"invalid", pb.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"unit", pbv1.EntityType_ENTITY_TYPE_UNIT},
+		{"vehicle", pbv1.EntityType_ENTITY_TYPE_VEHICLE},
+		{"unknown", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
+		{"invalid", pbv1.EntityType_ENTITY_TYPE_UNKNOWN},
 	}
 
 	for _, tt := range tests {

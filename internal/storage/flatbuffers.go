@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	fb "github.com/OCAP2/web/pkg/schemas/flatbuffers/generated"
-	pb "github.com/OCAP2/web/pkg/schemas/protobuf"
+	fbv1 "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
@@ -42,7 +42,7 @@ func (e *FlatBuffersEngine) GetManifest(ctx context.Context, filename string) (*
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
 
-	fbManifest := fb.GetRootAsManifest(data, 0)
+	fbManifest := fbv1.GetRootAsManifest(data, 0)
 	return e.convertManifest(fbManifest), nil
 }
 
@@ -60,7 +60,7 @@ func (e *FlatBuffersEngine) GetChunk(ctx context.Context, filename string, chunk
 		return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
 	}
 
-	fbChunk := fb.GetRootAsChunk(data, 0)
+	fbChunk := fbv1.GetRootAsChunk(data, 0)
 	return e.convertChunk(fbChunk), nil
 }
 
@@ -125,7 +125,7 @@ func (e *FlatBuffersEngine) Convert(ctx context.Context, jsonPath, outputPath st
 }
 
 // convertManifest converts FlatBuffers manifest to storage.Manifest
-func (e *FlatBuffersEngine) convertManifest(fbm *fb.Manifest) *Manifest {
+func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest {
 	manifest := &Manifest{
 		Version:        fbm.Version(),
 		WorldName:      string(fbm.WorldName()),
@@ -138,7 +138,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fb.Manifest) *Manifest {
 
 	// Convert entities
 	for i := 0; i < fbm.EntitiesLength(); i++ {
-		var ent fb.EntityDef
+		var ent fbv1.EntityDef
 		if fbm.Entities(&ent, i) {
 			manifest.Entities = append(manifest.Entities, EntityDef{
 				ID:           ent.Id(),
@@ -157,7 +157,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fb.Manifest) *Manifest {
 
 	// Convert events
 	for i := 0; i < fbm.EventsLength(); i++ {
-		var evt fb.Event
+		var evt fbv1.Event
 		if fbm.Events(&evt, i) {
 			manifest.Events = append(manifest.Events, Event{
 				FrameNum: evt.FrameNum(),
@@ -175,7 +175,7 @@ func (e *FlatBuffersEngine) convertManifest(fbm *fb.Manifest) *Manifest {
 }
 
 // convertChunk converts FlatBuffers chunk to storage.Chunk
-func (e *FlatBuffersEngine) convertChunk(fbc *fb.Chunk) *Chunk {
+func (e *FlatBuffersEngine) convertChunk(fbc *fbv1.Chunk) *Chunk {
 	chunk := &Chunk{
 		Index:      fbc.Index(),
 		StartFrame: fbc.StartFrame(),
@@ -183,14 +183,14 @@ func (e *FlatBuffersEngine) convertChunk(fbc *fb.Chunk) *Chunk {
 	}
 
 	for i := 0; i < fbc.FramesLength(); i++ {
-		var frame fb.Frame
+		var frame fbv1.Frame
 		if fbc.Frames(&frame, i) {
 			f := Frame{
 				FrameNum: frame.FrameNum(),
 			}
 
 			for j := 0; j < frame.EntitiesLength(); j++ {
-				var state fb.EntityState
+				var state fbv1.EntityState
 				if frame.Entities(&state, j) {
 					es := EntityState{
 						EntityID:    state.EntityId(),
@@ -231,21 +231,21 @@ func (e *FlatBuffersEngine) writeManifest(outputPath string, manifest *Manifest)
 		roleOff := builder.CreateString(ent.Role)
 		classOff := builder.CreateString(ent.VehicleClass)
 
-		fb.EntityDefStart(builder)
-		fb.EntityDefAddId(builder, ent.ID)
-		fb.EntityDefAddType(builder, stringToFBEntityType(ent.Type))
-		fb.EntityDefAddName(builder, nameOff)
-		fb.EntityDefAddSide(builder, stringToFBSide(ent.Side))
-		fb.EntityDefAddGroupName(builder, groupOff)
-		fb.EntityDefAddRole(builder, roleOff)
-		fb.EntityDefAddStartFrame(builder, ent.StartFrame)
-		fb.EntityDefAddEndFrame(builder, ent.EndFrame)
-		fb.EntityDefAddIsPlayer(builder, ent.IsPlayer)
-		fb.EntityDefAddVehicleClass(builder, classOff)
-		entityOffsets[i] = fb.EntityDefEnd(builder)
+		fbv1.EntityDefStart(builder)
+		fbv1.EntityDefAddId(builder, ent.ID)
+		fbv1.EntityDefAddType(builder, stringToFBEntityType(ent.Type))
+		fbv1.EntityDefAddName(builder, nameOff)
+		fbv1.EntityDefAddSide(builder, stringToFBSide(ent.Side))
+		fbv1.EntityDefAddGroupName(builder, groupOff)
+		fbv1.EntityDefAddRole(builder, roleOff)
+		fbv1.EntityDefAddStartFrame(builder, ent.StartFrame)
+		fbv1.EntityDefAddEndFrame(builder, ent.EndFrame)
+		fbv1.EntityDefAddIsPlayer(builder, ent.IsPlayer)
+		fbv1.EntityDefAddVehicleClass(builder, classOff)
+		entityOffsets[i] = fbv1.EntityDefEnd(builder)
 	}
 
-	fb.ManifestStartEntitiesVector(builder, len(entityOffsets))
+	fbv1.ManifestStartEntitiesVector(builder, len(entityOffsets))
 	for i := len(entityOffsets) - 1; i >= 0; i-- {
 		builder.PrependUOffsetT(entityOffsets[i])
 	}
@@ -258,18 +258,18 @@ func (e *FlatBuffersEngine) writeManifest(outputPath string, manifest *Manifest)
 		msgOff := builder.CreateString(evt.Message)
 		weaponOff := builder.CreateString(evt.Weapon)
 
-		fb.EventStart(builder)
-		fb.EventAddFrameNum(builder, evt.FrameNum)
-		fb.EventAddType(builder, typeOff)
-		fb.EventAddSourceId(builder, evt.SourceID)
-		fb.EventAddTargetId(builder, evt.TargetID)
-		fb.EventAddMessage(builder, msgOff)
-		fb.EventAddDistance(builder, evt.Distance)
-		fb.EventAddWeapon(builder, weaponOff)
-		eventOffsets[i] = fb.EventEnd(builder)
+		fbv1.EventStart(builder)
+		fbv1.EventAddFrameNum(builder, evt.FrameNum)
+		fbv1.EventAddType(builder, typeOff)
+		fbv1.EventAddSourceId(builder, evt.SourceID)
+		fbv1.EventAddTargetId(builder, evt.TargetID)
+		fbv1.EventAddMessage(builder, msgOff)
+		fbv1.EventAddDistance(builder, evt.Distance)
+		fbv1.EventAddWeapon(builder, weaponOff)
+		eventOffsets[i] = fbv1.EventEnd(builder)
 	}
 
-	fb.ManifestStartEventsVector(builder, len(eventOffsets))
+	fbv1.ManifestStartEventsVector(builder, len(eventOffsets))
 	for i := len(eventOffsets) - 1; i >= 0; i-- {
 		builder.PrependUOffsetT(eventOffsets[i])
 	}
@@ -279,17 +279,17 @@ func (e *FlatBuffersEngine) writeManifest(outputPath string, manifest *Manifest)
 	worldNameOff := builder.CreateString(manifest.WorldName)
 	missionNameOff := builder.CreateString(manifest.MissionName)
 
-	fb.ManifestStart(builder)
-	fb.ManifestAddVersion(builder, manifest.Version)
-	fb.ManifestAddWorldName(builder, worldNameOff)
-	fb.ManifestAddMissionName(builder, missionNameOff)
-	fb.ManifestAddFrameCount(builder, manifest.FrameCount)
-	fb.ManifestAddChunkSize(builder, manifest.ChunkSize)
-	fb.ManifestAddCaptureDelayMs(builder, manifest.CaptureDelayMs)
-	fb.ManifestAddChunkCount(builder, manifest.ChunkCount)
-	fb.ManifestAddEntities(builder, entitiesVec)
-	fb.ManifestAddEvents(builder, eventsVec)
-	manifestOff := fb.ManifestEnd(builder)
+	fbv1.ManifestStart(builder)
+	fbv1.ManifestAddVersion(builder, manifest.Version)
+	fbv1.ManifestAddWorldName(builder, worldNameOff)
+	fbv1.ManifestAddMissionName(builder, missionNameOff)
+	fbv1.ManifestAddFrameCount(builder, manifest.FrameCount)
+	fbv1.ManifestAddChunkSize(builder, manifest.ChunkSize)
+	fbv1.ManifestAddCaptureDelayMs(builder, manifest.CaptureDelayMs)
+	fbv1.ManifestAddChunkCount(builder, manifest.ChunkCount)
+	fbv1.ManifestAddEntities(builder, entitiesVec)
+	fbv1.ManifestAddEvents(builder, eventsVec)
+	manifestOff := fbv1.ManifestEnd(builder)
 
 	builder.Finish(manifestOff)
 
@@ -337,7 +337,7 @@ func (e *FlatBuffersEngine) writeChunk(chunksDir string, chunkIdx, startFrame, e
 			// Build crew IDs vector if present
 			var crewVec flatbuffers.UOffsetT
 			if len(state.CrewIds) > 0 {
-				fb.EntityStateStartCrewIdsVector(builder, len(state.CrewIds))
+				fbv1.EntityStateStartCrewIdsVector(builder, len(state.CrewIds))
 				for i := len(state.CrewIds) - 1; i >= 0; i-- {
 					builder.PrependUint32(state.CrewIds[i])
 				}
@@ -346,50 +346,50 @@ func (e *FlatBuffersEngine) writeChunk(chunksDir string, chunkIdx, startFrame, e
 
 			nameOff := builder.CreateString(state.Name)
 
-			fb.EntityStateStart(builder)
-			fb.EntityStateAddEntityId(builder, state.EntityId)
-			fb.EntityStateAddPosX(builder, state.PosX)
-			fb.EntityStateAddPosY(builder, state.PosY)
-			fb.EntityStateAddDirection(builder, state.Direction)
-			fb.EntityStateAddAlive(builder, state.Alive)
+			fbv1.EntityStateStart(builder)
+			fbv1.EntityStateAddEntityId(builder, state.EntityId)
+			fbv1.EntityStateAddPosX(builder, state.PosX)
+			fbv1.EntityStateAddPosY(builder, state.PosY)
+			fbv1.EntityStateAddDirection(builder, state.Direction)
+			fbv1.EntityStateAddAlive(builder, state.Alive)
 			if len(state.CrewIds) > 0 {
-				fb.EntityStateAddCrewIds(builder, crewVec)
+				fbv1.EntityStateAddCrewIds(builder, crewVec)
 			}
-			fb.EntityStateAddVehicleId(builder, state.VehicleId)
-			fb.EntityStateAddIsInVehicle(builder, state.IsInVehicle)
-			fb.EntityStateAddName(builder, nameOff)
-			fb.EntityStateAddIsPlayer(builder, state.IsPlayer)
-			stateOffsets = append(stateOffsets, fb.EntityStateEnd(builder))
+			fbv1.EntityStateAddVehicleId(builder, state.VehicleId)
+			fbv1.EntityStateAddIsInVehicle(builder, state.IsInVehicle)
+			fbv1.EntityStateAddName(builder, nameOff)
+			fbv1.EntityStateAddIsPlayer(builder, state.IsPlayer)
+			stateOffsets = append(stateOffsets, fbv1.EntityStateEnd(builder))
 		}
 
 		// Build entities vector
-		fb.FrameStartEntitiesVector(builder, len(stateOffsets))
+		fbv1.FrameStartEntitiesVector(builder, len(stateOffsets))
 		for i := len(stateOffsets) - 1; i >= 0; i-- {
 			builder.PrependUOffsetT(stateOffsets[i])
 		}
 		entitiesVec := builder.EndVector(len(stateOffsets))
 
 		// Build frame
-		fb.FrameStart(builder)
-		fb.FrameAddFrameNum(builder, frameNum)
-		fb.FrameAddEntities(builder, entitiesVec)
-		frameOffsets = append(frameOffsets, fb.FrameEnd(builder))
+		fbv1.FrameStart(builder)
+		fbv1.FrameAddFrameNum(builder, frameNum)
+		fbv1.FrameAddEntities(builder, entitiesVec)
+		frameOffsets = append(frameOffsets, fbv1.FrameEnd(builder))
 	}
 
 	// Build frames vector
-	fb.ChunkStartFramesVector(builder, len(frameOffsets))
+	fbv1.ChunkStartFramesVector(builder, len(frameOffsets))
 	for i := len(frameOffsets) - 1; i >= 0; i-- {
 		builder.PrependUOffsetT(frameOffsets[i])
 	}
 	framesVec := builder.EndVector(len(frameOffsets))
 
 	// Build chunk
-	fb.ChunkStart(builder)
-	fb.ChunkAddIndex(builder, chunkIdx)
-	fb.ChunkAddStartFrame(builder, startFrame)
-	fb.ChunkAddFrameCount(builder, endFrame-startFrame)
-	fb.ChunkAddFrames(builder, framesVec)
-	chunkOff := fb.ChunkEnd(builder)
+	fbv1.ChunkStart(builder)
+	fbv1.ChunkAddIndex(builder, chunkIdx)
+	fbv1.ChunkAddStartFrame(builder, startFrame)
+	fbv1.ChunkAddFrameCount(builder, endFrame-startFrame)
+	fbv1.ChunkAddFrames(builder, framesVec)
+	chunkOff := fbv1.ChunkEnd(builder)
 
 	builder.Finish(chunkOff)
 
@@ -399,64 +399,64 @@ func (e *FlatBuffersEngine) writeChunk(chunksDir string, chunkIdx, startFrame, e
 
 // Helper functions for type conversion
 
-func fbEntityTypeToString(t fb.EntityType) string {
+func fbEntityTypeToString(t fbv1.EntityType) string {
 	switch t {
-	case fb.EntityTypeUnit:
+	case fbv1.EntityTypeUnit:
 		return "unit"
-	case fb.EntityTypeVehicle:
+	case fbv1.EntityTypeVehicle:
 		return "vehicle"
 	default:
 		return "unknown"
 	}
 }
 
-func stringToFBEntityType(s string) fb.EntityType {
+func stringToFBEntityType(s string) fbv1.EntityType {
 	switch s {
 	case "unit":
-		return fb.EntityTypeUnit
+		return fbv1.EntityTypeUnit
 	case "vehicle":
-		return fb.EntityTypeVehicle
+		return fbv1.EntityTypeVehicle
 	default:
-		return fb.EntityTypeUnknown
+		return fbv1.EntityTypeUnknown
 	}
 }
 
-func fbSideToString(s fb.Side) string {
+func fbSideToString(s fbv1.Side) string {
 	switch s {
-	case fb.SideWest:
+	case fbv1.SideWest:
 		return "WEST"
-	case fb.SideEast:
+	case fbv1.SideEast:
 		return "EAST"
-	case fb.SideGuer:
+	case fbv1.SideGuer:
 		return "GUER"
-	case fb.SideCiv:
+	case fbv1.SideCiv:
 		return "CIV"
-	case fb.SideGlobal:
+	case fbv1.SideGlobal:
 		return "GLOBAL"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-func stringToFBSide(s string) fb.Side {
+func stringToFBSide(s string) fbv1.Side {
 	switch s {
 	case "WEST":
-		return fb.SideWest
+		return fbv1.SideWest
 	case "EAST":
-		return fb.SideEast
+		return fbv1.SideEast
 	case "GUER", "INDEPENDENT":
-		return fb.SideGuer
+		return fbv1.SideGuer
 	case "CIV", "CIVILIAN":
-		return fb.SideCiv
+		return fbv1.SideCiv
 	case "GLOBAL":
-		return fb.SideGlobal
+		return fbv1.SideGlobal
 	default:
-		return fb.SideUnknown
+		return fbv1.SideUnknown
 	}
 }
 
 // pbManifestToStorageManifest converts protobuf manifest to storage.Manifest
-func pbManifestToStorageManifest(pbm *pb.Manifest) *Manifest {
+func pbManifestToStorageManifest(pbm *pbv1.Manifest) *Manifest {
 	manifest := &Manifest{
 		Version:        pbm.Version,
 		WorldName:      pbm.WorldName,
@@ -497,28 +497,28 @@ func pbManifestToStorageManifest(pbm *pb.Manifest) *Manifest {
 	return manifest
 }
 
-func pbEntityTypeToString(t pb.EntityType) string {
+func pbEntityTypeToString(t pbv1.EntityType) string {
 	switch t {
-	case pb.EntityType_ENTITY_TYPE_UNIT:
+	case pbv1.EntityType_ENTITY_TYPE_UNIT:
 		return "unit"
-	case pb.EntityType_ENTITY_TYPE_VEHICLE:
+	case pbv1.EntityType_ENTITY_TYPE_VEHICLE:
 		return "vehicle"
 	default:
 		return "unknown"
 	}
 }
 
-func pbSideToString(s pb.Side) string {
+func pbSideToString(s pbv1.Side) string {
 	switch s {
-	case pb.Side_SIDE_WEST:
+	case pbv1.Side_SIDE_WEST:
 		return "WEST"
-	case pb.Side_SIDE_EAST:
+	case pbv1.Side_SIDE_EAST:
 		return "EAST"
-	case pb.Side_SIDE_GUER:
+	case pbv1.Side_SIDE_GUER:
 		return "GUER"
-	case pb.Side_SIDE_CIV:
+	case pbv1.Side_SIDE_CIV:
 		return "CIV"
-	case pb.Side_SIDE_GLOBAL:
+	case pbv1.Side_SIDE_GLOBAL:
 		return "GLOBAL"
 	default:
 		return "UNKNOWN"
