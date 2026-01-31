@@ -616,3 +616,391 @@ func TestProtobufWriterV1EmptyResult(t *testing.T) {
 		t.Errorf("expected at least 1 chunk file, got %d", len(entries))
 	}
 }
+
+// FlatBuffersWriterV1 tests
+
+func TestFlatBuffersWriterV1Registration(t *testing.T) {
+	// Clear registry and re-register
+	writers = make(map[string]Writer)
+	RegisterWriter(&FlatBuffersWriterV1{})
+
+	// Test that the writer is registered
+	w, err := GetWriter("flatbuffers", SchemaVersionV1)
+	if err != nil {
+		t.Fatalf("GetWriter returned error: %v", err)
+	}
+	if w == nil {
+		t.Fatal("GetWriter returned nil writer")
+	}
+
+	// Verify it's the FlatBuffersWriterV1
+	_, ok := w.(*FlatBuffersWriterV1)
+	if !ok {
+		t.Errorf("expected *FlatBuffersWriterV1, got %T", w)
+	}
+}
+
+func TestFlatBuffersWriterV1VersionAndFormat(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	if w.Version() != SchemaVersionV1 {
+		t.Errorf("Version() = %v, want %v", w.Version(), SchemaVersionV1)
+	}
+
+	if w.Format() != "flatbuffers" {
+		t.Errorf("Format() = %q, want %q", w.Format(), "flatbuffers")
+	}
+}
+
+func TestFlatBuffersWriterV1WriteManifest(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	// Create a temp directory
+	tmpDir := t.TempDir()
+
+	// Create test ParseResult
+	result := &ParseResult{
+		WorldName:      "TestWorld",
+		MissionName:    "TestMission",
+		FrameCount:     100,
+		ChunkSize:      50,
+		CaptureDelayMs: 1000,
+		Entities: []EntityDef{
+			{
+				ID:         1,
+				Type:       "unit",
+				Name:       "Player1",
+				Side:       "WEST",
+				Group:      "Alpha",
+				Role:       "rifleman",
+				StartFrame: 0,
+				EndFrame:   99,
+				IsPlayer:   true,
+			},
+			{
+				ID:           2,
+				Type:         "vehicle",
+				Name:         "Truck1",
+				Side:         "WEST",
+				VehicleClass: "B_Truck_01_transport_F",
+				StartFrame:   0,
+				EndFrame:     99,
+			},
+		},
+		Events: []Event{
+			{
+				FrameNum: 10,
+				Type:     "hit",
+				SourceID: 1,
+				TargetID: 2,
+				Weapon:   "rifle",
+			},
+		},
+		Markers: []MarkerDef{
+			{
+				Type:       "mil_dot",
+				Text:       "Objective",
+				StartFrame: 0,
+				EndFrame:   100,
+				PlayerID:   -1,
+				Color:      "red",
+				Side:       "WEST",
+				Positions: []MarkerPosition{
+					{FrameNum: 0, PosX: 100.0, PosY: 200.0, PosZ: 0.0},
+				},
+			},
+		},
+		Times: []TimeSample{
+			{
+				FrameNum:       0,
+				SystemTimeUTC:  "2024-01-01T12:00:00Z",
+				Date:           "2024-01-01",
+				TimeMultiplier: 1.0,
+				Time:           43200.0,
+			},
+		},
+	}
+
+	// Write manifest
+	ctx := context.Background()
+	err := w.WriteManifest(ctx, tmpDir, result)
+	if err != nil {
+		t.Fatalf("WriteManifest returned error: %v", err)
+	}
+
+	// Verify file was created
+	manifestPath := tmpDir + "/manifest.fb"
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("failed to read manifest file: %v", err)
+	}
+
+	// Check version prefix (first 4 bytes)
+	if len(data) < 4 {
+		t.Fatalf("manifest file too short: %d bytes", len(data))
+	}
+	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
+	if err != nil {
+		t.Fatalf("ReadVersionPrefix returned error: %v", err)
+	}
+	if version != SchemaVersionV1 {
+		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+	}
+
+	// Verify FlatBuffer data can be parsed (just check it's not empty)
+	fbData := data[4:]
+	if len(fbData) == 0 {
+		t.Fatal("manifest FlatBuffer data is empty")
+	}
+}
+
+func TestFlatBuffersWriterV1WriteChunks(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	// Create a temp directory
+	tmpDir := t.TempDir()
+
+	// Create test ParseResult with position data
+	result := &ParseResult{
+		WorldName:      "TestWorld",
+		MissionName:    "TestMission",
+		FrameCount:     100,
+		ChunkSize:      50,
+		CaptureDelayMs: 1000,
+		EntityPositions: []EntityPositionData{
+			{
+				EntityID: 1,
+				Positions: []EntityPosition{
+					{FrameNum: 0, PosX: 100.0, PosY: 200.0, Direction: 90, Alive: 1},
+					{FrameNum: 1, PosX: 101.0, PosY: 201.0, Direction: 90, Alive: 1},
+				},
+			},
+		},
+	}
+
+	// Write chunks
+	ctx := context.Background()
+	err := w.WriteChunks(ctx, tmpDir, result)
+	if err != nil {
+		t.Fatalf("WriteChunks returned error: %v", err)
+	}
+
+	// Verify chunks directory was created
+	chunksDir := tmpDir + "/chunks"
+	entries, err := os.ReadDir(chunksDir)
+	if err != nil {
+		t.Fatalf("failed to read chunks directory: %v", err)
+	}
+
+	// Should have 2 chunks (100 frames / 50 chunk size = 2)
+	if len(entries) != 2 {
+		t.Errorf("expected 2 chunk files, got %d", len(entries))
+	}
+
+	// Verify first chunk file
+	chunkPath := chunksDir + "/0000.fb"
+	data, err := os.ReadFile(chunkPath)
+	if err != nil {
+		t.Fatalf("failed to read chunk file: %v", err)
+	}
+
+	// Check version prefix
+	if len(data) < 4 {
+		t.Fatalf("chunk file too short: %d bytes", len(data))
+	}
+	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
+	if err != nil {
+		t.Fatalf("ReadVersionPrefix returned error: %v", err)
+	}
+	if version != SchemaVersionV1 {
+		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+	}
+}
+
+func TestFlatBuffersWriterV1WriteChunksCancellation(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	// Create a temp directory
+	tmpDir := t.TempDir()
+
+	// Create test ParseResult with many frames
+	result := &ParseResult{
+		WorldName:      "TestWorld",
+		MissionName:    "TestMission",
+		FrameCount:     1000,
+		ChunkSize:      100,
+		CaptureDelayMs: 1000,
+	}
+
+	// Create a cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	// Write chunks should return context error
+	err := w.WriteChunks(ctx, tmpDir, result)
+	if err == nil {
+		t.Fatal("expected error for cancelled context, got nil")
+	}
+	if err != context.Canceled {
+		t.Errorf("expected context.Canceled error, got: %v", err)
+	}
+}
+
+func TestFlatBuffersWriterV1StringToEntityType(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"unit", "Unit"},
+		{"Unit", "Unit"},
+		{"UNIT", "Unit"},
+		{"vehicle", "Vehicle"},
+		{"Vehicle", "Vehicle"},
+		{"VEHICLE", "Vehicle"},
+		{"unknown", "Unknown"},
+		{"", "Unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := w.stringToFBEntityType(tt.input)
+			if result.String() != tt.expected {
+				t.Errorf("stringToFBEntityType(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFlatBuffersWriterV1StringToSide(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"WEST", "West"},
+		{"west", "West"},
+		{"West", "West"},
+		{"EAST", "East"},
+		{"east", "East"},
+		{"GUER", "Guer"},
+		{"INDEPENDENT", "Guer"},
+		{"CIV", "Civ"},
+		{"CIVILIAN", "Civ"},
+		{"GLOBAL", "Global"},
+		{"unknown", "Unknown"},
+		{"", "Unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := w.stringToFBSide(tt.input)
+			if result.String() != tt.expected {
+				t.Errorf("stringToFBSide(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFlatBuffersWriterV1EmptyResult(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	// Create a temp directory
+	tmpDir := t.TempDir()
+
+	// Create minimal ParseResult
+	result := &ParseResult{
+		WorldName:      "EmptyWorld",
+		MissionName:    "EmptyMission",
+		FrameCount:     0,
+		ChunkSize:      50,
+		CaptureDelayMs: 1000,
+	}
+
+	ctx := context.Background()
+
+	// Write manifest should succeed
+	err := w.WriteManifest(ctx, tmpDir, result)
+	if err != nil {
+		t.Fatalf("WriteManifest returned error: %v", err)
+	}
+
+	// Write chunks should succeed (creates at least 1 chunk)
+	err = w.WriteChunks(ctx, tmpDir, result)
+	if err != nil {
+		t.Fatalf("WriteChunks returned error: %v", err)
+	}
+
+	// Verify chunk was created
+	chunksDir := tmpDir + "/chunks"
+	entries, err := os.ReadDir(chunksDir)
+	if err != nil {
+		t.Fatalf("failed to read chunks directory: %v", err)
+	}
+
+	// Should have at least 1 chunk even with 0 frames
+	if len(entries) < 1 {
+		t.Errorf("expected at least 1 chunk file, got %d", len(entries))
+	}
+}
+
+func TestFlatBuffersWriterV1MarkerWithSize(t *testing.T) {
+	w := &FlatBuffersWriterV1{}
+
+	// Create a temp directory
+	tmpDir := t.TempDir()
+
+	// Create test ParseResult with marker that has size
+	result := &ParseResult{
+		WorldName:      "TestWorld",
+		MissionName:    "TestMission",
+		FrameCount:     100,
+		ChunkSize:      50,
+		CaptureDelayMs: 1000,
+		Markers: []MarkerDef{
+			{
+				Type:       "rectangle",
+				Text:       "Area",
+				StartFrame: 0,
+				EndFrame:   100,
+				PlayerID:   -1,
+				Color:      "blue",
+				Side:       "WEST",
+				Size:       []float32{100.0, 200.0},
+				Shape:      "RECTANGLE",
+				Brush:      "Solid",
+				Positions: []MarkerPosition{
+					{FrameNum: 0, PosX: 100.0, PosY: 200.0, PosZ: 0.0, Direction: 45.0, Alpha: 0.5},
+				},
+			},
+		},
+	}
+
+	// Write manifest
+	ctx := context.Background()
+	err := w.WriteManifest(ctx, tmpDir, result)
+	if err != nil {
+		t.Fatalf("WriteManifest returned error: %v", err)
+	}
+
+	// Verify file was created
+	manifestPath := tmpDir + "/manifest.fb"
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("failed to read manifest file: %v", err)
+	}
+
+	// Check version prefix (first 4 bytes)
+	if len(data) < 4 {
+		t.Fatalf("manifest file too short: %d bytes", len(data))
+	}
+	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
+	if err != nil {
+		t.Fatalf("ReadVersionPrefix returned error: %v", err)
+	}
+	if version != SchemaVersionV1 {
+		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+	}
+}
