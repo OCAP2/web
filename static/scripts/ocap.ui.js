@@ -404,6 +404,11 @@ class UI {
 		for (const event of gameEvents.getEvents().reverse()) {
 			event.update(f);
 		}
+
+		// Update counter display when scrubbing
+		if (typeof updateCounterDisplay === 'function') {
+			updateCounterDisplay(f);
+		}
 	}
 
 	updateCurrentTime (f = playbackFrame) {
