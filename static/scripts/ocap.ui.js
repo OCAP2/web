@@ -522,20 +522,20 @@ class UI {
 		const format = op.storageFormat || 'json';
 		const conversionStatus = op.conversionStatus || 'completed';
 
-		if (format === 'protobuf' || format === 'flatbuffers') {
+		if (conversionStatus === 'pending') {
+			// Conversion in progress
+			return {
+				icon: '⏳',
+				textKey: 'status_converting',
+				tooltip: 'JSON → ' + (format === 'flatbuffers' ? 'FlatBuffers' : 'Protobuf')
+			};
+		} else if (format === 'protobuf' || format === 'flatbuffers') {
 			// Binary format = streaming
 			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
 			return {
 				icon: '🔄',
 				textKey: 'status_streaming',
 				tooltip: formatName
-			};
-		} else if (conversionStatus === 'pending') {
-			// JSON with pending conversion
-			return {
-				icon: '⏳',
-				textKey: 'status_converting',
-				tooltip: 'JSON'
 			};
 		} else {
 			// JSON, completed (no conversion or conversion not enabled)
