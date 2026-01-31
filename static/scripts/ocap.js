@@ -1565,7 +1565,7 @@ function startPlaybackLoop () {
 						}
 					}
 					if (marker.isMagIcon()) {
-						if (ui.nicknameEnable) {
+						if (ui.nameDisplayMode !== "none") {
 							marker.hideMarkerPopup(false);
 						} else {
 							marker.hideMarkerPopup(true);

@@ -150,12 +150,18 @@ class Entity {
 
 		let element = popup.getElement();
 		if (element == null) { return }
+
 		let display = "inherit";
-		if (this.constructor.name == 'Unit' && !this.isPlayer) {
-			display = "none"
-		} else {
-			if (bool || !ui.nicknameEnable) {display = "none"};
-		};
+		if (bool || ui.nameDisplayMode === "none") {
+			// Hide all popups when explicitly hidden or mode is "none"
+			display = "none";
+		} else if (ui.nameDisplayMode === "players") {
+			// Only show player names (hide AI units)
+			if (this.constructor.name === 'Unit' && !this.isPlayer) {
+				display = "none";
+			}
+		}
+		// When mode is "all", display remains "inherit" (show everything)
 
 		if (element.style.display !== display) {
 			element.style.display = display;

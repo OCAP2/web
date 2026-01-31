@@ -118,6 +118,27 @@ let _localizable = {
 		"cs": "Hráčské přezdívky a názvy vozidel",
 		"it": "Nome giocatori e veicoli"
 	},
+	"names_all": {
+		"ru": "Все имена",
+		"en": "All Names",
+		"de": "Alle Namen",
+		"cs": "Všechna jména",
+		"it": "Tutti i nomi"
+	},
+	"names_players": {
+		"ru": "Только игроки",
+		"en": "Players Only",
+		"de": "Nur Spieler",
+		"cs": "Pouze hráči",
+		"it": "Solo giocatori"
+	},
+	"names_none": {
+		"ru": "Скрыть все",
+		"en": "Hide All",
+		"de": "Alle ausblenden",
+		"cs": "Skrýt vše",
+		"it": "Nascondi tutto"
+	},
 	"markers": {
 		"ru": "Маркеры",
 		"en": "Marker names",

@@ -51,9 +51,9 @@ class UI {
 		this.cursorTargetBox = null;
 		this.cursorTooltip = null;
 		this.currentSide = "";
-		this.toggleNickname = null;
+		this.toggleNames = null;
 		this.toggleTime = null;
-		this.nicknameEnable = true;
+		this.nameDisplayMode = "players"; // "all", "players", "none"
 		this.filterTagGameInput = null;
 		this.filterGameInput = null;
 		this.calendar1 = null;
@@ -100,19 +100,17 @@ class UI {
 			this.showModalStats();
 		});
 
-		// Nickname show/hide vehicle && player
-		this.toggleNicknameButton = document.getElementById("toggleNickname");
-		this.toggleNicknameButton.addEventListener("click", () => {
-			this.nicknameEnable = !this.nicknameEnable;
-			var text;
-			if (this.nicknameEnable) {
-				this.toggleNicknameButton.style.opacity = 1;
-				text = getLocalizable("shown");
-			} else {
-				this.toggleNicknameButton.style.opacity = 0.5;
-				text = getLocalizable("hidden");
-			}
-			this.showHint(getLocalizable("nickname") + text);
+		// Unit names display mode dropdown
+		this.toggleNames = document.getElementById("toggleNames");
+		for (const nameValue of ["players", "all", "none"]) {
+			const option = document.createElement("option");
+			option.value = nameValue;
+			localizable(option, `names_${nameValue}`, "", "");
+			this.toggleNames.appendChild(option);
+		}
+		this.toggleNames.addEventListener("change", (event) => {
+			this.nameDisplayMode = event.target.value;
+			this.showHint(getLocalizable(`names_${this.nameDisplayMode}`));
 		});
 
 		// Toggle firelines button

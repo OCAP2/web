@@ -98,7 +98,7 @@ class Vehicle extends Entity {
 
 	setCrew(crew) {
 		let content = "";
-		if (ui.nicknameEnable) {
+		if (ui.nameDisplayMode !== "none") {
 			this._crew = crew;
 			// this._marker.getPopup().setContent(`Test`); // Very slow (no need to recalc layout), use ._content instead
 

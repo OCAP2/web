@@ -288,7 +288,6 @@ body,
 
 #timecodeContainer,
 #toggleFirelines,
-#toggleNickname,
 #toggleMapMarker,
 #versionInfoContainer,
 #playbackSpeedSliderContainer,
@@ -302,7 +301,6 @@ body,
 
 #toggleFirelines,
 #toggleMapMarker,
-#toggleNickname,
 .fullscreenButton {
 	background-image: url("../images/bullets.svg");
 	background-size: auto 20px;
@@ -313,15 +311,16 @@ body,
 	cursor: pointer;
 }
 
-.toggleTime {
+.toggleTime,
+.toggleNames {
 	float: right;
 	height: 26px;
 	width: 200px;
 	margin-top: 2px;
 }
 
-#toggleNickname {
-	background-image: url("../images/player.svg");
+.toggleNames {
+	width: 140px;
 }
 
 #toggleMapMarker {
