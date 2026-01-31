@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -37,9 +38,15 @@ func (e *FlatBuffersEngine) SupportsStreaming() bool {
 // GetManifest reads and decodes the manifest file
 func (e *FlatBuffersEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {
 	path := filepath.Join(e.dataDir, filename, "manifest.fb")
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+	defer f.Close()
+
+	data, err := e.readVersionedData(f)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest data: %w", err)
 	}
 
 	fbManifest := fbv1.GetRootAsManifest(data, 0)
@@ -55,9 +62,15 @@ func (e *FlatBuffersEngine) GetManifestReader(ctx context.Context, filename stri
 // GetChunk reads and decodes a chunk file
 func (e *FlatBuffersEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
 	path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.fb", chunkIndex))
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
+	}
+	defer f.Close()
+
+	data, err := e.readVersionedData(f)
+	if err != nil {
+		return nil, fmt.Errorf("read chunk %d data: %w", chunkIndex, err)
 	}
 
 	fbChunk := fbv1.GetRootAsChunk(data, 0)
@@ -77,6 +90,67 @@ func (e *FlatBuffersEngine) ChunkCount(ctx context.Context, filename string) (in
 		return 0, err
 	}
 	return int(manifest.ChunkCount), nil
+}
+
+// readVersionedData reads file data, handling the optional version prefix.
+// Files may have a 4-byte version prefix (new format) or not (legacy format).
+// This method provides backward compatibility with both formats.
+func (e *FlatBuffersEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) {
+	// Read the entire file
+	allData, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	// If file is too small to have version prefix, return as-is
+	if len(allData) < versionPrefixSize {
+		return allData, nil
+	}
+
+	// Check if this looks like a version prefix.
+	// Version prefix is 4 bytes little-endian. For small version numbers (1-255),
+	// bytes 2, 3, 4 will be zero: [version, 0x00, 0x00, 0x00]
+	//
+	// FlatBuffers files start with a root table offset (4 bytes little-endian).
+	// The minimum offset is typically 16+ bytes (due to file structure).
+	// Version numbers are small (1, 2, etc.), so we use the first byte value
+	// combined with the zero check on bytes 2-4 to distinguish:
+	// - Version prefix: first byte < 16 AND bytes 2-4 are all zero
+	// - Legacy FlatBuffers: first byte >= 16 (typical root offsets)
+	//
+	// This heuristic works because:
+	// - Version 1 = [0x01, 0x00, 0x00, 0x00]
+	// - FlatBuffers root offset = [0x10+, 0x00, 0x00, 0x00] for small files
+
+	// Check if bytes 2-4 are all zero AND first byte is small (< 16)
+	// This distinguishes version prefix from FlatBuffers root offset
+	hasVersionPrefix := allData[0] < 16 && allData[1] == 0 && allData[2] == 0 && allData[3] == 0
+
+	if !hasVersionPrefix {
+		// Legacy file without version prefix (or FlatBuffers root offset >= 16)
+		return allData, nil
+	}
+
+	// Looks like a version prefix, read the version
+	reader := bytes.NewReader(allData[:versionPrefixSize])
+	version, err := ReadVersionPrefix(reader)
+	if err != nil {
+		// Can't read version, treat entire file as data (legacy)
+		return allData, nil
+	}
+
+	// Check if version is supported
+	switch version {
+	case SchemaVersionV1:
+		// Version prefix present and valid, skip it
+		return allData[versionPrefixSize:], nil
+	case SchemaVersionUnknown:
+		// Version 0 with zeros in bytes 2-4 - unusual but treat as legacy
+		return allData, nil
+	default:
+		// Unsupported version
+		return nil, fmt.Errorf("unsupported flatbuffers schema version: %d", version)
+	}
 }
 
 // Convert transforms a JSON recording to FlatBuffers format
