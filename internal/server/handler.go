@@ -20,8 +20,9 @@ import (
 const CacheDuration = 7 * 24 * time.Hour
 
 var (
-	BuildCommit string
-	BuildDate   string
+	BuildVersion string
+	BuildCommit  string
+	BuildDate    string
 )
 
 // ConversionTrigger triggers async conversion of an operation
@@ -207,11 +208,13 @@ func (h *Handler) GetCustomize(c echo.Context) error {
 
 func (h *Handler) GetVersion(c echo.Context) error {
 	return c.JSONPretty(http.StatusOK, struct {
-		BuildCommit string
-		BuildDate   string
+		BuildVersion string
+		BuildCommit  string
+		BuildDate    string
 	}{
-		BuildCommit: BuildCommit,
-		BuildDate:   BuildDate,
+		BuildVersion: BuildVersion,
+		BuildCommit:  BuildCommit,
+		BuildDate:    BuildDate,
 	}, "\t")
 }
 

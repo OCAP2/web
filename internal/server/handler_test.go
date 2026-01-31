@@ -664,11 +664,14 @@ func TestGetCustomize(t *testing.T) {
 
 func TestGetVersion(t *testing.T) {
 	// Set build variables
+	originalVersion := BuildVersion
 	originalCommit := BuildCommit
 	originalDate := BuildDate
+	BuildVersion = "v2.1.0-rc1"
 	BuildCommit = "abc123"
 	BuildDate = "2026-01-30"
 	defer func() {
+		BuildVersion = originalVersion
 		BuildCommit = originalCommit
 		BuildDate = originalDate
 	}()
@@ -685,11 +688,13 @@ func TestGetVersion(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var result struct {
-		BuildCommit string
-		BuildDate   string
+		BuildVersion string
+		BuildCommit  string
+		BuildDate    string
 	}
 	err = json.Unmarshal(rec.Body.Bytes(), &result)
 	assert.NoError(t, err)
+	assert.Equal(t, "v2.1.0-rc1", result.BuildVersion)
 	assert.Equal(t, "abc123", result.BuildCommit)
 	assert.Equal(t, "2026-01-30", result.BuildDate)
 }
