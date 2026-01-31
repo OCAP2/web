@@ -511,3 +511,73 @@ func TestUpdateSchemaVersion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, uint32(2), result.SchemaVersion)
 }
+
+func TestSelectByStatus(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Insert operations with different statuses
+	ops := []*Operation{
+		{WorldName: "altis", MissionName: "Converting 1", Filename: "c1", Date: "2026-01-01", ConversionStatus: "converting"},
+		{WorldName: "altis", MissionName: "Completed 1", Filename: "c2", Date: "2026-01-02", ConversionStatus: "completed"},
+		{WorldName: "altis", MissionName: "Converting 2", Filename: "c3", Date: "2026-01-03", ConversionStatus: "converting"},
+		{WorldName: "altis", MissionName: "Failed 1", Filename: "f1", Date: "2026-01-04", ConversionStatus: "failed"},
+	}
+	for _, op := range ops {
+		err := repo.Store(ctx, op)
+		assert.NoError(t, err)
+	}
+
+	// Select by converting status
+	converting, err := repo.SelectByStatus(ctx, "converting")
+	assert.NoError(t, err)
+	assert.Len(t, converting, 2)
+
+	// Select by failed status
+	failed, err := repo.SelectByStatus(ctx, "failed")
+	assert.NoError(t, err)
+	assert.Len(t, failed, 1)
+}
+
+func TestResetConversionStatus(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Insert operations with converting status
+	ops := []*Operation{
+		{WorldName: "altis", MissionName: "Converting 1", Filename: "c1", Date: "2026-01-01", ConversionStatus: "converting"},
+		{WorldName: "altis", MissionName: "Completed 1", Filename: "c2", Date: "2026-01-02", ConversionStatus: "completed"},
+		{WorldName: "altis", MissionName: "Converting 2", Filename: "c3", Date: "2026-01-03", ConversionStatus: "converting"},
+	}
+	for _, op := range ops {
+		err := repo.Store(ctx, op)
+		assert.NoError(t, err)
+	}
+
+	// Reset converting to pending
+	count, err := repo.ResetConversionStatus(ctx, "converting", "pending")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), count)
+
+	// Verify reset
+	pending, err := repo.SelectPending(ctx, 10)
+	assert.NoError(t, err)
+	assert.Len(t, pending, 2)
+
+	// Verify completed unchanged
+	completed, err := repo.SelectByStatus(ctx, "completed")
+	assert.NoError(t, err)
+	assert.Len(t, completed, 1)
+}
