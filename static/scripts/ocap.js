@@ -1137,7 +1137,7 @@ function processOp (filepath, opRecord) {
 			var arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
 
 			// Loop through entities
-			data.entities.forEach(function (entityJSON) {
+			(data.entities ?? []).forEach(function (entityJSON) {
 				//console.log(entityJSON);
 
 				let type = entityJSON.type;
@@ -1287,7 +1287,7 @@ function processOp (filepath, opRecord) {
 
 			// Loop through events
 			var invalidHitKilledEvents = [];
-			data.events.forEach(function (eventJSON) {
+			(data.events ?? []).forEach(function (eventJSON) {
 				var frameNum = eventJSON[0];
 				var type = eventJSON[1];
 
@@ -1412,10 +1412,10 @@ function processOp (filepath, opRecord) {
 			console.debug("Extension version: " + data.extensionVersion);
 			console.debug("Extension build: " + data.extensionBuild);
 			console.debug("Total frames: " + data.endFrame);
-			console.debug("Total entities: " + data.entities.length);
-			console.debug("Total markers: " + data.Markers.length);
-			console.debug("Total events: " + data.events.length);
-			if (data.Markers.length > 50000) {
+			console.debug("Total entities: " + (data.entities?.length ?? 0));
+			console.debug("Total markers: " + (data.Markers?.length ?? 0));
+			console.debug("Total events: " + (data.events?.length ?? 0));
+			if ((data.Markers?.length ?? 0) > 50000) {
 				console.warn("WARNING: This mission contains more than 50,000 markers. This may cause performance issues and indicate configured or malformed marker exclusion settings in the addon.");
 			}
 			console.log("Initializing map...");
