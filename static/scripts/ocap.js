@@ -1227,7 +1227,28 @@ function processOp (filepath, opRecord) {
 						}
 						var color = markerJSON[5];
 						var side = arrSide[markerJSON[6] + 1];
-						var positions = markerJSON[7];
+						var rawPositions = markerJSON[7];
+
+						// Convert raw JSON positions to expected format: [frameNum, [x, y, z], direction, alpha]
+						// Raw JSON format can be:
+						// - Simple: [[x, y, z], ...] - just coordinates
+						// - Complex: [[[x, y, z], frameNum, direction, alpha], ...] - nested with metadata
+						var positions = (rawPositions || []).map(function(pos, index) {
+							if (!Array.isArray(pos)) return null;
+
+							// Check if first element is an array (complex format) or number (simple format)
+							if (Array.isArray(pos[0])) {
+								// Complex format: [[x, y, z], frameNum, direction, alpha]
+								var coords = pos[0];
+								var frameNum = pos.length > 1 ? pos[1] : startFrame + index;
+								var direction = pos.length > 2 ? pos[2] : 0;
+								var alpha = pos.length > 3 ? pos[3] : 1;
+								return [frameNum, coords, direction, alpha];
+							} else {
+								// Simple format: [x, y, z] - use defaults
+								return [startFrame + index, pos, 0, 1];
+							}
+						}).filter(function(p) { return p !== null; });
 
 						// backwards compatibility for marker expansion
 						let size = "";
