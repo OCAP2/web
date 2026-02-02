@@ -139,29 +139,60 @@ func (p *ParserV1) parseEvent(evtArr []interface{}) *Event {
 	}
 
 	// Parse additional fields based on event type
-	// Common format: [frameNum, "type", sourceId, targetId, ...]
-	if len(evtArr) > 2 {
-		event.SourceID = uint32(toFloat64(evtArr[2]))
-	}
+	// Old extension format for killed/hit: [frameNum, "type", victimId, [killerId, weaponName], distance]
+	// Alternative format: [frameNum, "type", sourceId, targetId, weapon, distance]
+
+	// First, detect format by checking if index 3 is an array
+	isOldExtensionFormat := false
 	if len(evtArr) > 3 {
-		event.TargetID = uint32(toFloat64(evtArr[3]))
+		_, isOldExtensionFormat = evtArr[3].([]interface{})
 	}
-	if len(evtArr) > 4 {
-		// Could be weapon name, message, or distance depending on event type
-		switch v := evtArr[4].(type) {
-		case string:
-			if event.Type == "hit" || event.Type == "killed" {
-				event.Weapon = v
-			} else {
-				event.Message = v
-			}
-		case float64:
-			event.Distance = float32(v)
+
+	if isOldExtensionFormat {
+		// Old extension format: [frameNum, "type", victimId, [killerId, weaponName], distance]
+		if len(evtArr) > 2 {
+			event.TargetID = uint32(toFloat64(evtArr[2])) // victimId
 		}
-	}
-	if len(evtArr) > 5 {
-		if d, ok := evtArr[5].(float64); ok {
-			event.Distance = float32(d)
+		if len(evtArr) > 3 {
+			if killerArr, ok := evtArr[3].([]interface{}); ok {
+				if len(killerArr) > 0 {
+					event.SourceID = uint32(toFloat64(killerArr[0])) // killerId
+				}
+				if len(killerArr) > 1 {
+					event.Weapon = toString(killerArr[1]) // weaponName
+				}
+			}
+		}
+		if len(evtArr) > 4 {
+			if d, ok := evtArr[4].(float64); ok {
+				event.Distance = float32(d)
+			}
+		}
+	} else {
+		// Alternative format: [frameNum, "type", sourceId, targetId, weapon, distance]
+		if len(evtArr) > 2 {
+			event.SourceID = uint32(toFloat64(evtArr[2]))
+		}
+		if len(evtArr) > 3 {
+			event.TargetID = uint32(toFloat64(evtArr[3]))
+		}
+		if len(evtArr) > 4 {
+			// Could be weapon name, message, or distance depending on event type
+			switch v := evtArr[4].(type) {
+			case string:
+				if event.Type == "hit" || event.Type == "killed" {
+					event.Weapon = v
+				} else {
+					event.Message = v
+				}
+			case float64:
+				event.Distance = float32(v)
+			}
+		}
+		if len(evtArr) > 5 {
+			if d, ok := evtArr[5].(float64); ok {
+				event.Distance = float32(d)
+			}
 		}
 	}
 
@@ -221,7 +252,10 @@ func (p *ParserV1) parseMarker(markerArr []interface{}) *MarkerDef {
 
 // parseMarkerPosition converts position data to MarkerPosition
 func (p *ParserV1) parseMarkerPosition(pos interface{}) *MarkerPosition {
-	// Position format can be: [x, y, z] or [[x, y, z], frameNum, direction, alpha]
+	// Position formats:
+	// - Old extension format: [frameNum, [x, y], direction, ?alpha]
+	// - Alternative format: [[x, y, z], frameNum, direction, alpha]
+	// - Simple format: [x, y, z]
 	arr, ok := pos.([]interface{})
 	if !ok || len(arr) == 0 {
 		return nil
@@ -229,7 +263,29 @@ func (p *ParserV1) parseMarkerPosition(pos interface{}) *MarkerPosition {
 
 	mp := &MarkerPosition{}
 
-	// Check if first element is a position array
+	// Check if second element is a position array (old extension format)
+	if len(arr) > 1 {
+		if posArr, ok := arr[1].([]interface{}); ok {
+			// Old extension format: [frameNum, [x, y], direction, ?alpha]
+			mp.FrameNum = uint32(toFloat64(arr[0]))
+			if len(posArr) >= 2 {
+				mp.PosX = float32(toFloat64(posArr[0]))
+				mp.PosY = float32(toFloat64(posArr[1]))
+				if len(posArr) > 2 {
+					mp.PosZ = float32(toFloat64(posArr[2]))
+				}
+			}
+			if len(arr) > 2 {
+				mp.Direction = float32(toFloat64(arr[2]))
+			}
+			if len(arr) > 3 {
+				mp.Alpha = float32(toFloat64(arr[3]))
+			}
+			return mp
+		}
+	}
+
+	// Check if first element is a position array (alternative format)
 	if posArr, ok := arr[0].([]interface{}); ok {
 		// Format: [[x, y, z], frameNum, direction, alpha]
 		if len(posArr) >= 2 {
@@ -337,16 +393,19 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 }
 
 // sideIndexToString converts a side index to side string
+// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
 func sideIndexToString(idx int) string {
 	switch idx {
 	case 0:
-		return "WEST"
-	case 1:
 		return "EAST"
+	case 1:
+		return "WEST"
 	case 2:
 		return "GUER"
 	case 3:
 		return "CIV"
+	case -1:
+		return "GLOBAL"
 	default:
 		return ""
 	}

@@ -521,17 +521,18 @@ func TestConverter_StringToSide(t *testing.T) {
 }
 
 func TestSideIndexToSide(t *testing.T) {
+	// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
 	tests := []struct {
 		name  string
 		input int
 		want  pbv1.Side
 	}{
-		{"WEST index 0", 0, pbv1.Side_SIDE_WEST},
-		{"EAST index 1", 1, pbv1.Side_SIDE_EAST},
+		{"EAST index 0", 0, pbv1.Side_SIDE_EAST},
+		{"WEST index 1", 1, pbv1.Side_SIDE_WEST},
 		{"GUER index 2", 2, pbv1.Side_SIDE_GUER},
 		{"CIV index 3", 3, pbv1.Side_SIDE_CIV},
 		{"UNKNOWN index 4", 4, pbv1.Side_SIDE_UNKNOWN},
-		{"UNKNOWN negative", -1, pbv1.Side_SIDE_UNKNOWN},
+		{"GLOBAL negative", -1, pbv1.Side_SIDE_GLOBAL},
 		{"UNKNOWN large", 100, pbv1.Side_SIDE_UNKNOWN},
 	}
 

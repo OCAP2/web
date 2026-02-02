@@ -307,7 +307,7 @@ func TestParserV1_Parse_Markers(t *testing.T) {
 				10.0,                                              // endFrame
 				0.0,                                               // playerId
 				"ColorBlufor",                                     // color
-				0.0,                                               // sideIndex (0 = WEST)
+				1.0,                                               // sideIndex (1 = WEST per BIS_fnc_sideID)
 				[]interface{}{[]interface{}{100.0, 200.0, 0.0}},   // positions
 				[]interface{}{1.0, 1.0},                           // size
 				"ICON",                                            // shape
@@ -696,16 +696,17 @@ func TestParserV1_calculateEndFrame(t *testing.T) {
 }
 
 func TestSideIndexToString(t *testing.T) {
+	// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
 	tests := []struct {
 		input int
 		want  string
 	}{
-		{0, "WEST"},
-		{1, "EAST"},
+		{0, "EAST"},
+		{1, "WEST"},
 		{2, "GUER"},
 		{3, "CIV"},
 		{4, ""},
-		{-1, ""},
+		{-1, "GLOBAL"},
 		{100, ""},
 	}
 

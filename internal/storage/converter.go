@@ -145,16 +145,20 @@ func stringToSide(s string) pbv1.Side {
 	}
 }
 
+// sideIndexToSide converts a side index to protobuf Side enum
+// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
 func sideIndexToSide(idx int) pbv1.Side {
 	switch idx {
 	case 0:
-		return pbv1.Side_SIDE_WEST
-	case 1:
 		return pbv1.Side_SIDE_EAST
+	case 1:
+		return pbv1.Side_SIDE_WEST
 	case 2:
 		return pbv1.Side_SIDE_GUER
 	case 3:
 		return pbv1.Side_SIDE_CIV
+	case -1:
+		return pbv1.Side_SIDE_GLOBAL
 	default:
 		return pbv1.Side_SIDE_UNKNOWN
 	}
