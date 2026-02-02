@@ -83,6 +83,9 @@ func NewHandler(
 
 	e.Use(hdlr.errorHandler)
 
+	// Healthcheck at root level for Docker/external monitoring
+	e.GET("/healthcheck", hdlr.GetHealthcheck)
+
 	prefixURL := strings.TrimRight(hdlr.setting.PrefixURL, "/")
 	g := e.Group(prefixURL)
 
@@ -216,6 +219,10 @@ func (h *Handler) GetVersion(c echo.Context) error {
 		BuildCommit:  BuildCommit,
 		BuildDate:    BuildDate,
 	}, "\t")
+}
+
+func (*Handler) GetHealthcheck(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *Handler) GetOperationFormat(c echo.Context) error {
