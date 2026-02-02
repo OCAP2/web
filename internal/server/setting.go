@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -84,6 +85,10 @@ func NewSetting() (setting Setting, err error) {
 
 	if err = viper.Unmarshal(&setting); err != nil {
 		return
+	}
+
+	if err = os.MkdirAll(setting.Data, 0755); err != nil {
+		return setting, fmt.Errorf("create data directory: %w", err)
 	}
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {

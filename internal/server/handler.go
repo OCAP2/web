@@ -355,7 +355,7 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		return echo.ErrForbidden
 	}
 
-	filename := filepath.Base(c.FormValue("filename"))
+	filename := strings.TrimSuffix(filepath.Base(c.FormValue("filename")), ".gz")
 
 	op := Operation{
 		WorldName:   c.FormValue("worldName"),
