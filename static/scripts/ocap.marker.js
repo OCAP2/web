@@ -1,186 +1,18 @@
-// OCAP Marker v2 - Grid pattern debug version
-console.log('ocap.marker.js loaded - GridPattern debug version');
-
-// Debug function to find and fix pattern fills - call from console: window.debugPatternFills()
-window.debugPatternFills = function() {
-	console.log('=== Debugging Pattern Fills ===');
-
-	// Check if Leaflet.pattern override is in place
-	if (L.SVG && L.SVG.prototype._superUpdateStyle) {
-		console.log('L.SVG._updateStyle override IS in place');
-	} else {
-		console.log('WARNING: L.SVG._updateStyle override NOT found!');
-	}
-
-	// Find all SVG elements
-	const svgs = document.querySelectorAll('svg');
-	console.log(`Found ${svgs.length} SVG elements`);
-
-	// Find all SVG paths in the map
-	const svgPaths = document.querySelectorAll('.leaflet-overlay-pane path');
-	console.log(`Found ${svgPaths.length} SVG paths in overlay pane`);
-
-	svgPaths.forEach((path, i) => {
-		const fill = path.getAttribute('fill');
-		const parentSvg = path.closest('svg');
-		console.log(`Path ${i}: fill="${fill}", in SVG:`, parentSvg ? parentSvg.className : 'unknown');
-	});
-
-	// Find all pattern definitions
-	const patterns = document.querySelectorAll('pattern');
-	console.log(`Found ${patterns.length} patterns:`);
-	patterns.forEach(p => {
-		const parentSvg = p.closest('svg');
-		console.log(`  Pattern id="${p.id}" in SVG:`, parentSvg ? parentSvg.className : 'unknown');
-	});
-
-	// Check the defs element
-	const defs = document.querySelector('defs');
-	if (defs) {
-		const parentSvg = defs.closest('svg');
-		console.log('Defs in SVG:', parentSvg ? parentSvg.className : 'unknown');
-	} else {
-		console.log('No defs element found!');
-	}
-
-	// Try simple relative URL pattern reference
-	console.log('\n=== Trying relative URL pattern reference ===');
-	if (patterns.length > 0 && svgPaths.length > 0) {
-		const simpleUrl = `url(#${patterns[0].id})`;
-		console.log(`Setting first path fill to: ${simpleUrl}`);
-		svgPaths[0].setAttribute('fill', simpleUrl);
-		console.log(`Path 0 fill is now: ${svgPaths[0].getAttribute('fill')}`);
-	}
-
-	// Investigate actual DOM structure
-	console.log('\n=== DOM Structure Investigation ===');
-	if (svgPaths.length > 0) {
-		let el = svgPaths[0];
-		let depth = 0;
-		console.log('Path ancestry:');
-		while (el && depth < 10) {
-			console.log(`  ${depth}: <${el.tagName.toLowerCase()}> class="${el.className}" id="${el.id}"`);
-			el = el.parentElement;
-			depth++;
-		}
-	}
-
-	// Check for defs ancestry
-	if (defs) {
-		let el = defs;
-		let depth = 0;
-		console.log('Defs ancestry:');
-		while (el && depth < 10) {
-			console.log(`  ${depth}: <${el.tagName.toLowerCase()}> class="${el.className}" id="${el.id}"`);
-			el = el.parentElement;
-			depth++;
-		}
-	}
-
-	// Check if paths and defs share a common SVG ancestor
-	const overlayPane = document.querySelector('.leaflet-overlay-pane');
-	if (overlayPane) {
-		console.log('\nOverlay pane innerHTML (first 1000 chars):');
-		console.log(overlayPane.innerHTML.substring(0, 1000));
-	}
-};
-
-// Function to manually apply pattern fills to all markers that need them
-window.applyPatternFills = function() {
-	console.log('=== Applying Pattern Fills ===');
-	if (typeof markers === 'undefined') {
-		console.log('markers array not found');
-		return;
-	}
-
-	let checked = 0;
-	let applied = 0;
-	markers.forEach((m, i) => {
-		if (m._brushPattern) {
-			checked++;
-			console.log(`Marker ${i} has brushPattern:`, {
-				hasMarker: !!m._marker,
-				hasPath: m._marker ? !!m._marker._path : false,
-				shape: m._shape,
-				brush: m._brush
-			});
-			if (m._marker && m._marker._path) {
-				const patternUrl = L.Pattern._getPatternUrl(L.stamp(m._brushPattern));
-				console.log(`Marker ${i}: applying pattern ${patternUrl}`);
-				m._marker._path.setAttribute('fill', patternUrl);
-				applied++;
-			}
-		}
-	});
-	console.log(`Checked ${checked} markers with patterns, applied to ${applied}`);
-};
-
-// Force find and apply patterns to any polygon in systemMarkersLayerGroup
-window.forceApplyPatterns = function() {
-	console.log('=== Force Applying Patterns ===');
-	if (typeof systemMarkersLayerGroup === 'undefined') {
-		console.log('systemMarkersLayerGroup not found');
-		return;
-	}
-
-	// Get all patterns
-	const patterns = document.querySelectorAll('pattern');
-	console.log(`Found ${patterns.length} patterns`);
-	if (patterns.length === 0) return;
-
-	// Get the first pattern URL to test
-	const testPatternUrl = `url(${window.location.href.split('#')[0]}#${patterns[0].id})`;
-	console.log('Test pattern URL:', testPatternUrl);
-
-	// Find all paths in the overlay pane
-	const paths = document.querySelectorAll('.leaflet-overlay-pane path');
-	console.log(`Found ${paths.length} paths`);
-
-	paths.forEach((path, i) => {
-		const currentFill = path.getAttribute('fill');
-		console.log(`Path ${i}: current fill="${currentFill}"`);
-		// Apply pattern to paths that have fill="none" or a color fill
-		if (currentFill === 'none' || currentFill.startsWith('#') || currentFill.startsWith('rgb')) {
-			// Use alternating patterns for the two ELLIPSE markers
-			const patternId = patterns[i % patterns.length].id;
-			const patternUrl = `url(${window.location.href.split('#')[0]}#${patternId})`;
-			console.log(`  Applying: ${patternUrl}`);
-			path.setAttribute('fill', patternUrl);
-		}
-	});
-};
-
 // Ensure pattern fills are applied after any style update
 // This patches Leaflet's SVG renderer to always check for fillPattern
 (function() {
-	if (!L.SVG) {
-		console.log('L.SVG not found, skipping pattern patch');
-		return;
-	}
+	if (!L.SVG) return;
 
 	const originalUpdateStyle = L.SVG.prototype._updateStyle;
 	L.SVG.prototype._updateStyle = function(layer) {
-		// Log all calls to _updateStyle for layers with fillPattern
-		if (layer.options && layer.options.fillPattern) {
-			console.log('_updateStyle called for layer with fillPattern:', {
-				fill: layer.options.fill,
-				fillPattern: layer.options.fillPattern,
-				hasPath: !!layer._path,
-				pathFillBefore: layer._path ? layer._path.getAttribute('fill') : 'no path'
-			});
-		}
-
 		originalUpdateStyle.call(this, layer);
 
-		// Apply fill pattern if present
+		// Apply fill pattern if present (Canvas doesn't support this, only SVG)
 		if (layer.options && layer.options.fillPattern && layer._path) {
 			const patternUrl = L.Pattern._getPatternUrl(L.stamp(layer.options.fillPattern));
-			console.log('Applying pattern fill:', patternUrl, 'fill option:', layer.options.fill);
 			layer._path.setAttribute('fill', patternUrl);
-			console.log('Path fill after apply:', layer._path.getAttribute('fill'));
 		}
 	};
-	console.log('Patched L.SVG._updateStyle for pattern fills');
 })();
 
 // Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
@@ -198,43 +30,30 @@ L.GridPattern = L.Pattern.extend({
 		var s = this.options.spaceWeight;
 		var size = w + s;
 
-		console.log(`GridPattern._addShapes: weight=${w}, space=${s}, size=${size}, color=${this.options.color}`);
-
 		// Update pattern dimensions before creating shapes
 		this.options.width = size;
 		this.options.height = size;
 
 		// Horizontal line
-		var hLineD = 'M0 ' + (w / 2) + ' H ' + size;
 		this._hLine = new L.PatternPath({
 			stroke: true,
 			weight: this.options.weight,
 			color: this.options.color,
 			opacity: this.options.opacity,
-			d: hLineD
+			d: 'M0 ' + (w / 2) + ' H ' + size
 		});
 
 		// Vertical line
-		var vLineD = 'M' + (w / 2) + ' 0 V ' + size;
 		this._vLine = new L.PatternPath({
 			stroke: true,
 			weight: this.options.weight,
 			color: this.options.color,
 			opacity: this.options.opacity,
-			d: vLineD
+			d: 'M' + (w / 2) + ' 0 V ' + size
 		});
-
-		console.log(`GridPattern paths: hLine.d="${hLineD}", vLine.d="${vLineD}"`);
 
 		this.addShape(this._hLine);
 		this.addShape(this._vLine);
-
-		// After shapes are added, verify DOM
-		setTimeout(() => {
-			if (this._dom) {
-				console.log('GridPattern DOM after addShapes:', this._dom.outerHTML);
-			}
-		}, 100);
 	},
 
 	_update: function () {
@@ -328,7 +147,6 @@ class Marker {
 
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
-			console.log(`Marker created: shape=${shape}, brush=${brush}, color=${this._color}`);
 			this._brushPattern = null;
 			this._brushPatternOptions = null;
 			switch (brush) {
@@ -489,10 +307,8 @@ class Marker {
 			if (this._brushPatternOptions) {
 				if (this._useGridPattern) {
 					this._brushPattern = new L.GridPattern(this._brushPatternOptions);
-					console.log(`GridPattern created for brush=${brush}:`, this._brushPattern);
 				} else {
 					this._brushPattern = new L.StripePattern(this._brushPatternOptions);
-					console.log(`StripePattern created for brush=${brush}:`, this._brushPattern);
 				}
 			}
 		} else {
@@ -846,11 +662,8 @@ class Marker {
 				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
 				polygonOptions.renderer = window.svgRenderer;
 
-				// Initialize SVG renderer's defs if needed
-				if (!window.svgRenderer._container) {
-					console.log('SVG renderer not ready yet');
-				} else {
-					// Add pattern to SVG renderer's defs
+				// Add pattern to SVG renderer's defs
+				if (window.svgRenderer._container) {
 					if (!map._svgDefRoot) {
 						map._svgDefRoot = L.SVG.create('defs');
 						window.svgRenderer._container.appendChild(map._svgDefRoot);
@@ -863,7 +676,6 @@ class Marker {
 					this._brushPattern.redraw();
 				}
 				polygonOptions.fillPattern = this._brushPattern;
-				console.log(`ELLIPSE with SVG renderer and pattern`);
 			}
 
 			marker = L.polygon(latLng, polygonOptions);
