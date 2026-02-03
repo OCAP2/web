@@ -4,7 +4,9 @@ class Marker {
 		this._typeLower = type.toLowerCase();
 		this._text = text;
 		this._player = player; // Entity obj
-		this._color = `#${color}`; // 00FF00 (hex color)
+		// Strip # prefix if present (old extension sends colors with #, new without)
+		const colorHex = color.replace(/^#/, '');
+		this._color = `#${colorHex}`; // hex color for CSS
 		this._startFrame = startFrame; // 22
 		this._endFrame = endFrame; // 35
 		this._side = side; // -1,0,1,2 (int, pairs to global array)
@@ -41,12 +43,12 @@ class Marker {
 		if (this._type.search("magIcons") > -1) {
 			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${this._typeLower}.png` });
 		} else if (!this._shape || !this._size) {
-			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${color}.png` });
+			this._icon = L.icon({ iconSize: [35, 35], iconUrl: `images/markers/${type}/${colorHex}.png` });
 		} else if (this._shape == "ICON") {
 			this._size = this._size.map(value => {
 				return (value * 35);
 			});
-			this._icon = L.icon({ iconSize: this._size, iconUrl: `images/markers/${type}/${color}.png` });
+			this._icon = L.icon({ iconSize: this._size, iconUrl: `images/markers/${type}/${colorHex}.png` });
 		} else {
 			this._icon = null;
 		}
