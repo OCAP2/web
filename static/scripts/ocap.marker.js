@@ -670,17 +670,22 @@ class Marker {
 				const patternUrl = L.Pattern._getPatternUrl(L.stamp(this._brushPattern));
 				console.log(`ELLIPSE expected pattern URL:`, patternUrl);
 				// Check after a short delay when the path should exist
+				const checkMarker = marker;
 				setTimeout(() => {
-					if (marker._path) {
-						console.log(`ELLIPSE marker fill attribute (delayed):`, marker._path.getAttribute('fill'));
-						console.log(`ELLIPSE marker options.fillPattern:`, marker.options.fillPattern);
-						// Force set the fill if it's not the pattern
-						if (marker._path.getAttribute('fill') !== patternUrl) {
-							console.log(`FORCING fill to pattern URL`);
-							marker._path.setAttribute('fill', patternUrl);
-						}
+					console.log(`ELLIPSE delayed check - _path exists:`, !!checkMarker._path);
+					console.log(`ELLIPSE delayed check - options:`, checkMarker.options);
+					if (checkMarker._path) {
+						const currentFill = checkMarker._path.getAttribute('fill');
+						console.log(`ELLIPSE marker fill attribute (delayed):`, currentFill);
+						// Force set the fill to the pattern
+						console.log(`FORCING fill to pattern URL:`, patternUrl);
+						checkMarker._path.setAttribute('fill', patternUrl);
+						console.log(`ELLIPSE marker fill after force:`, checkMarker._path.getAttribute('fill'));
+					} else {
+						console.log(`ELLIPSE _path still null, checking _renderer`);
+						console.log(`ELLIPSE _renderer:`, checkMarker._renderer);
 					}
-				}, 100);
+				}, 500);
 			}
 		} else if (this._shape === "RECTANGLE") {
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
