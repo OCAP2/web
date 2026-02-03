@@ -1,0 +1,2539 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>storage: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/OCAP2/web/internal/storage/converter.go (91.3%)</option>
+				
+				<option value="file1">github.com/OCAP2/web/internal/storage/engine.go (100.0%)</option>
+				
+				<option value="file2">github.com/OCAP2/web/internal/storage/flatbuffers.go (94.7%)</option>
+				
+				<option value="file3">github.com/OCAP2/web/internal/storage/json.go (96.3%)</option>
+				
+				<option value="file4">github.com/OCAP2/web/internal/storage/parser.go (100.0%)</option>
+				
+				<option value="file5">github.com/OCAP2/web/internal/storage/parser_v1.go (97.1%)</option>
+				
+				<option value="file6">github.com/OCAP2/web/internal/storage/protobuf.go (91.4%)</option>
+				
+				<option value="file7">github.com/OCAP2/web/internal/storage/version.go (100.0%)</option>
+				
+				<option value="file8">github.com/OCAP2/web/internal/storage/writer.go (100.0%)</option>
+				
+				<option value="file9">github.com/OCAP2/web/internal/storage/writer_flatbuffers_v1.go (96.5%)</option>
+				
+				<option value="file10">github.com/OCAP2/web/internal/storage/writer_protobuf_v1.go (88.9%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// server/storage/converter.go
+package storage
+
+import (
+        "compress/gzip"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "os"
+
+        pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
+)
+
+// DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)
+const DefaultChunkSize = 300
+
+// Converter transforms JSON recordings to chunked protobuf/flatbuffers format
+type Converter struct {
+        ChunkSize uint32
+}
+
+// NewConverter creates a converter with the given chunk size
+func NewConverter(chunkSize uint32) *Converter <span class="cov8" title="1">{
+        if chunkSize == 0 </span><span class="cov8" title="1">{
+                chunkSize = DefaultChunkSize
+        }</span>
+        <span class="cov8" title="1">return &amp;Converter{ChunkSize: chunkSize}</span>
+}
+
+// Convert reads a JSON recording and writes chunked output files.
+// The format parameter specifies the output format ("protobuf" or "flatbuffers").
+func (c *Converter) Convert(ctx context.Context, jsonPath, outputPath string, format string) error <span class="cov8" title="1">{
+        // 1. Load JSON
+        data, err := c.loadJSON(jsonPath)
+        if err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("load JSON: %w", err)
+        }</span>
+
+        // 2. Detect version and get parser
+        <span class="cov8" title="1">inputVersion := DetectJSONInputVersion(data)
+        if inputVersion == JSONInputVersionUnknown </span><span class="cov8" title="1">{
+                return fmt.Errorf("unknown JSON input version")
+        }</span>
+
+        <span class="cov8" title="1">parser, err := GetParser(inputVersion)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("get parser: %w", err)
+        }</span>
+
+        // 3. Parse to schema-agnostic result
+        <span class="cov8" title="1">result, err := parser.Parse(data, c.ChunkSize)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("parse JSON: %w", err)
+        }</span>
+
+        // 4. Get writer for target format and schema version
+        <span class="cov8" title="1">schemaVersion := MapInputToSchema(inputVersion)
+        writer, err := GetWriter(format, schemaVersion)
+        if err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("get writer: %w", err)
+        }</span>
+
+        // 5. Create output directory structure
+        <span class="cov8" title="1">if err := os.MkdirAll(outputPath, 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create output directory: %w", err)
+        }</span>
+
+        // 6. Write output
+        <span class="cov8" title="1">if err := writer.WriteManifest(ctx, outputPath, result); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write manifest: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if err := writer.WriteChunks(ctx, outputPath, result); err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("write chunks: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// loadJSON reads a JSON file (gzipped or plain)
+func (c *Converter) loadJSON(path string) (map[string]interface{}, error) <span class="cov8" title="1">{
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        var reader io.Reader = f
+
+        // Detect gzip by magic bytes (0x1f 0x8b) instead of file extension
+        // This handles mislabeled files (e.g., plain JSON with .gz extension)
+        magic := make([]byte, 2)
+        if n, err := f.Read(magic); err == nil &amp;&amp; n == 2 </span><span class="cov8" title="1">{
+                // Seek back to start
+                if _, err := f.Seek(0, io.SeekStart); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("seek: %w", err)
+                }</span>
+                // Check gzip magic bytes
+                <span class="cov8" title="1">if magic[0] == 0x1f &amp;&amp; magic[1] == 0x8b </span><span class="cov8" title="1">{
+                        gr, err := gzip.NewReader(f)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("gzip reader: %w", err)
+                        }</span>
+                        <span class="cov8" title="1">defer gr.Close()
+                        reader = gr</span>
+                }
+        }
+
+        <span class="cov8" title="1">var data map[string]interface{}
+        if err := json.NewDecoder(reader).Decode(&amp;data); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("decode JSON: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+// Helper functions for type conversion (used by other files)
+
+func stringToEntityType(s string) pbv1.EntityType <span class="cov8" title="1">{
+        switch s </span>{
+        case "unit":<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_UNIT</span>
+        case "vehicle":<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_VEHICLE</span>
+        default:<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_UNKNOWN</span>
+        }
+}
+
+func stringToSide(s string) pbv1.Side <span class="cov8" title="1">{
+        switch s </span>{
+        case "WEST":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_WEST</span>
+        case "EAST":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_EAST</span>
+        case "GUER", "INDEPENDENT":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GUER</span>
+        case "CIV", "CIVILIAN":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_CIV</span>
+        case "GLOBAL":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GLOBAL</span>
+        default:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_UNKNOWN</span>
+        }
+}
+
+// sideIndexToSide converts a side index to protobuf Side enum
+// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
+func sideIndexToSide(idx int) pbv1.Side <span class="cov8" title="1">{
+        switch idx </span>{
+        case 0:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_EAST</span>
+        case 1:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_WEST</span>
+        case 2:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GUER</span>
+        case 3:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_CIV</span>
+        case -1:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GLOBAL</span>
+        default:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_UNKNOWN</span>
+        }
+}
+
+func toFloat64(v interface{}) float64 <span class="cov8" title="1">{
+        if f, ok := v.(float64); ok </span><span class="cov8" title="1">{
+                return f
+        }</span>
+        <span class="cov8" title="1">return 0</span>
+}
+
+func toString(v interface{}) string <span class="cov8" title="1">{
+        if s, ok := v.(string); ok </span><span class="cov8" title="1">{
+                return s
+        }</span>
+        <span class="cov8" title="1">return ""</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// server/storage/engine.go
+package storage
+
+import (
+        "context"
+        "fmt"
+        "io"
+)
+
+// Manifest contains mission metadata loaded at playback start
+type Manifest struct {
+        Version          uint32      `json:"version"`
+        WorldName        string      `json:"worldName"`
+        MissionName      string      `json:"missionName"`
+        FrameCount       uint32      `json:"frameCount"`
+        ChunkSize        uint32      `json:"chunkSize"`
+        CaptureDelayMs   uint32      `json:"captureDelayMs"`
+        ChunkCount       uint32      `json:"chunkCount"`
+        Entities         []EntityDef `json:"entities"`
+        Events           []Event     `json:"events,omitempty"`
+        ExtensionVersion string      `json:"extensionVersion,omitempty"`
+        AddonVersion     string      `json:"addonVersion,omitempty"`
+}
+
+// Event represents a game event
+type Event struct {
+        FrameNum uint32  `json:"frameNum"`
+        Type     string  `json:"type"`
+        SourceID uint32  `json:"sourceId"`
+        TargetID uint32  `json:"targetId"`
+        Message  string  `json:"message,omitempty"`
+        Distance float32 `json:"distance,omitempty"`
+        Weapon   string  `json:"weapon,omitempty"`
+}
+
+// EntityDef defines an entity's metadata
+type EntityDef struct {
+        ID           uint32 `json:"id"`
+        Type         string `json:"type"` // "unit" or "vehicle"
+        Name         string `json:"name"`
+        Side         string `json:"side"`
+        Group        string `json:"group"`
+        Role         string `json:"role"`
+        StartFrame   uint32 `json:"startFrame"`
+        EndFrame     uint32 `json:"endFrame"`
+        IsPlayer     bool   `json:"isPlayer"`
+        VehicleClass string `json:"vehicleClass,omitempty"`
+}
+
+// Chunk contains position data for a frame range
+type Chunk struct {
+        Index      uint32  `json:"index"`
+        StartFrame uint32  `json:"startFrame"`
+        FrameCount uint32  `json:"frameCount"`
+        Frames     []Frame `json:"frames"`
+}
+
+// Frame contains entity states for a single frame
+type Frame struct {
+        FrameNum uint32        `json:"frameNum"`
+        Entities []EntityState `json:"entities"`
+}
+
+// EntityState is an entity's state at a frame
+type EntityState struct {
+        EntityID    uint32   `json:"entityId"`
+        PosX        float32  `json:"posX"`
+        PosY        float32  `json:"posY"`
+        Direction   uint32   `json:"direction"`
+        Alive       uint32   `json:"alive"`
+        CrewIDs     []uint32 `json:"crewIds,omitempty"`
+        VehicleID   uint32   `json:"vehicleId,omitempty"`
+        IsInVehicle bool     `json:"isInVehicle,omitempty"`
+        Name        string   `json:"name,omitempty"`
+        IsPlayer    bool     `json:"isPlayer,omitempty"`
+}
+
+// Engine defines the storage engine interface
+type Engine interface {
+        // Name returns the engine identifier (e.g., "json", "protobuf")
+        Name() string
+
+        // SupportsStreaming indicates if chunked loading is supported
+        SupportsStreaming() bool
+
+        // GetManifest returns mission metadata and entity definitions
+        GetManifest(ctx context.Context, filename string) (*Manifest, error)
+
+        // GetManifestReader returns a reader for raw manifest data (for streaming to client)
+        // Returns nil if the format doesn't support raw streaming (e.g., JSON)
+        GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error)
+
+        // GetChunk returns position/event data for a frame range
+        GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error)
+
+        // GetChunkReader returns a reader for raw chunk data (for streaming to client)
+        GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error)
+
+        // ChunkCount returns the total number of chunks
+        ChunkCount(ctx context.Context, filename string) (int, error)
+
+        // Convert transforms from JSON to this engine's format
+        Convert(ctx context.Context, jsonPath, outputPath string) error
+}
+
+var engines = make(map[string]Engine)
+
+// RegisterEngine adds an engine to the registry
+func RegisterEngine(e Engine) <span class="cov8" title="1">{
+        engines[e.Name()] = e
+}</span>
+
+// GetEngine returns an engine by name
+func GetEngine(name string) (Engine, error) <span class="cov8" title="1">{
+        if e, ok := engines[name]; ok </span><span class="cov8" title="1">{
+                return e, nil
+        }</span>
+        <span class="cov8" title="1">return nil, fmt.Errorf("unknown storage engine: %s", name)</span>
+}
+
+// ListEngines returns all registered engine names
+func ListEngines() []string <span class="cov8" title="1">{
+        names := make([]string, 0, len(engines))
+        for name := range engines </span><span class="cov8" title="1">{
+                names = append(names, name)
+        }</span>
+        <span class="cov8" title="1">return names</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// server/storage/flatbuffers.go
+package storage
+
+import (
+        "bytes"
+        "context"
+        "fmt"
+        "io"
+        "os"
+        "path/filepath"
+
+        fbv1 "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
+)
+
+// FlatBuffersEngine implements the Engine interface for FlatBuffers format
+// FlatBuffers provides zero-copy read access for maximum performance
+type FlatBuffersEngine struct {
+        dataDir string
+}
+
+// NewFlatBuffersEngine creates a new FlatBuffers storage engine
+func NewFlatBuffersEngine(dataDir string) *FlatBuffersEngine <span class="cov8" title="1">{
+        return &amp;FlatBuffersEngine{dataDir: dataDir}
+}</span>
+
+// Name returns the engine identifier
+func (e *FlatBuffersEngine) Name() string <span class="cov8" title="1">{
+        return "flatbuffers"
+}</span>
+
+// SupportsStreaming returns true as FlatBuffers supports chunked loading
+func (e *FlatBuffersEngine) SupportsStreaming() bool <span class="cov8" title="1">{
+        return true
+}</span>
+
+// GetManifest reads and decodes the manifest file
+func (e *FlatBuffersEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "manifest.fb")
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read manifest: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        data, err := e.readVersionedData(f)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read manifest data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">fbManifest := fbv1.GetRootAsManifest(data, 0)
+        return e.convertManifest(fbManifest), nil</span>
+}
+
+// GetManifestReader returns a reader for raw manifest data
+func (e *FlatBuffersEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "manifest.fb")
+        return os.Open(path)
+}</span>
+
+// GetChunk reads and decodes a chunk file
+func (e *FlatBuffersEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.fb", chunkIndex))
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        data, err := e.readVersionedData(f)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("read chunk %d data: %w", chunkIndex, err)
+        }</span>
+
+        <span class="cov8" title="1">fbChunk := fbv1.GetRootAsChunk(data, 0)
+        return e.convertChunk(fbChunk), nil</span>
+}
+
+// GetChunkReader returns a reader for streaming chunk data
+func (e *FlatBuffersEngine) GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.fb", chunkIndex))
+        return os.Open(path)
+}</span>
+
+// ChunkCount returns the number of chunks by reading manifest
+func (e *FlatBuffersEngine) ChunkCount(ctx context.Context, filename string) (int, error) <span class="cov8" title="1">{
+        manifest, err := e.GetManifest(ctx, filename)
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">return int(manifest.ChunkCount), nil</span>
+}
+
+// readVersionedData reads file data, handling the optional version prefix.
+// Files may have a 4-byte version prefix (new format) or not (legacy format).
+// This method provides backward compatibility with both formats.
+func (e *FlatBuffersEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) <span class="cov8" title="1">{
+        // Read the entire file
+        allData, err := io.ReadAll(f)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // If file is too small to have version prefix, return as-is
+        <span class="cov8" title="1">if len(allData) &lt; versionPrefixSize </span><span class="cov0" title="0">{
+                return allData, nil
+        }</span>
+
+        // Check if this looks like a version prefix.
+        // Version prefix is 4 bytes little-endian. For small version numbers (1-255),
+        // bytes 2, 3, 4 will be zero: [version, 0x00, 0x00, 0x00]
+        //
+        // FlatBuffers files start with a root table offset (4 bytes little-endian).
+        // The minimum offset is typically 16+ bytes (due to file structure).
+        // Version numbers are small (1, 2, etc.), so we use the first byte value
+        // combined with the zero check on bytes 2-4 to distinguish:
+        // - Version prefix: first byte &lt; 16 AND bytes 2-4 are all zero
+        // - Legacy FlatBuffers: first byte &gt;= 16 (typical root offsets)
+        //
+        // This heuristic works because:
+        // - Version 1 = [0x01, 0x00, 0x00, 0x00]
+        // - FlatBuffers root offset = [0x10+, 0x00, 0x00, 0x00] for small files
+
+        // Check if bytes 2-4 are all zero AND first byte is small (&lt; 16)
+        // This distinguishes version prefix from FlatBuffers root offset
+        <span class="cov8" title="1">hasVersionPrefix := allData[0] &lt; 16 &amp;&amp; allData[1] == 0 &amp;&amp; allData[2] == 0 &amp;&amp; allData[3] == 0
+
+        if !hasVersionPrefix </span><span class="cov8" title="1">{
+                // Legacy file without version prefix (or FlatBuffers root offset &gt;= 16)
+                return allData, nil
+        }</span>
+
+        // Looks like a version prefix, read the version
+        <span class="cov8" title="1">reader := bytes.NewReader(allData[:versionPrefixSize])
+        version, err := ReadVersionPrefix(reader)
+        if err != nil </span><span class="cov0" title="0">{
+                // Can't read version, treat entire file as data (legacy)
+                return allData, nil
+        }</span>
+
+        // Check if version is supported
+        <span class="cov8" title="1">switch version </span>{
+        case SchemaVersionV1:<span class="cov8" title="1">
+                // Version prefix present and valid, skip it
+                return allData[versionPrefixSize:], nil</span>
+        case SchemaVersionUnknown:<span class="cov0" title="0">
+                // Version 0 with zeros in bytes 2-4 - unusual but treat as legacy
+                return allData, nil</span>
+        default:<span class="cov8" title="1">
+                // Unsupported version
+                return nil, fmt.Errorf("unsupported flatbuffers schema version: %d", version)</span>
+        }
+}
+
+// Convert transforms a JSON recording to FlatBuffers format
+func (e *FlatBuffersEngine) Convert(ctx context.Context, jsonPath, outputPath string) error <span class="cov8" title="1">{
+        converter := NewConverter(DefaultChunkSize)
+        return converter.Convert(ctx, jsonPath, outputPath, "flatbuffers")
+}</span>
+
+// convertManifest converts FlatBuffers manifest to storage.Manifest
+func (e *FlatBuffersEngine) convertManifest(fbm *fbv1.Manifest) *Manifest <span class="cov8" title="1">{
+        manifest := &amp;Manifest{
+                Version:        fbm.Version(),
+                WorldName:      string(fbm.WorldName()),
+                MissionName:    string(fbm.MissionName()),
+                FrameCount:     fbm.FrameCount(),
+                ChunkSize:      fbm.ChunkSize(),
+                CaptureDelayMs: fbm.CaptureDelayMs(),
+                ChunkCount:     fbm.ChunkCount(),
+        }
+
+        // Convert entities
+        for i := 0; i &lt; fbm.EntitiesLength(); i++ </span><span class="cov8" title="1">{
+                var ent fbv1.EntityDef
+                if fbm.Entities(&amp;ent, i) </span><span class="cov8" title="1">{
+                        manifest.Entities = append(manifest.Entities, EntityDef{
+                                ID:           ent.Id(),
+                                Type:         fbEntityTypeToString(ent.Type()),
+                                Name:         string(ent.Name()),
+                                Side:         fbSideToString(ent.Side()),
+                                Group:        string(ent.GroupName()),
+                                Role:         string(ent.Role()),
+                                StartFrame:   ent.StartFrame(),
+                                EndFrame:     ent.EndFrame(),
+                                IsPlayer:     ent.IsPlayer(),
+                                VehicleClass: string(ent.VehicleClass()),
+                        })
+                }</span>
+        }
+
+        // Convert events
+        <span class="cov8" title="1">for i := 0; i &lt; fbm.EventsLength(); i++ </span><span class="cov8" title="1">{
+                var evt fbv1.Event
+                if fbm.Events(&amp;evt, i) </span><span class="cov8" title="1">{
+                        manifest.Events = append(manifest.Events, Event{
+                                FrameNum: evt.FrameNum(),
+                                Type:     string(evt.Type()),
+                                SourceID: evt.SourceId(),
+                                TargetID: evt.TargetId(),
+                                Message:  string(evt.Message()),
+                                Distance: evt.Distance(),
+                                Weapon:   string(evt.Weapon()),
+                        })
+                }</span>
+        }
+
+        <span class="cov8" title="1">return manifest</span>
+}
+
+// convertChunk converts FlatBuffers chunk to storage.Chunk
+func (e *FlatBuffersEngine) convertChunk(fbc *fbv1.Chunk) *Chunk <span class="cov8" title="1">{
+        chunk := &amp;Chunk{
+                Index:      fbc.Index(),
+                StartFrame: fbc.StartFrame(),
+                FrameCount: fbc.FrameCount(),
+        }
+
+        for i := 0; i &lt; fbc.FramesLength(); i++ </span><span class="cov8" title="1">{
+                var frame fbv1.Frame
+                if fbc.Frames(&amp;frame, i) </span><span class="cov8" title="1">{
+                        f := Frame{
+                                FrameNum: frame.FrameNum(),
+                        }
+
+                        for j := 0; j &lt; frame.EntitiesLength(); j++ </span><span class="cov8" title="1">{
+                                var state fbv1.EntityState
+                                if frame.Entities(&amp;state, j) </span><span class="cov8" title="1">{
+                                        es := EntityState{
+                                                EntityID:    state.EntityId(),
+                                                PosX:        state.PosX(),
+                                                PosY:        state.PosY(),
+                                                Direction:   state.Direction(),
+                                                Alive:       state.Alive(),
+                                                VehicleID:   state.VehicleId(),
+                                                IsInVehicle: state.IsInVehicle(),
+                                                Name:        string(state.Name()),
+                                                IsPlayer:    state.IsPlayer(),
+                                        }
+
+                                        for k := 0; k &lt; state.CrewIdsLength(); k++ </span><span class="cov8" title="1">{
+                                                es.CrewIDs = append(es.CrewIDs, state.CrewIds(k))
+                                        }</span>
+
+                                        <span class="cov8" title="1">f.Entities = append(f.Entities, es)</span>
+                                }
+                        }
+
+                        <span class="cov8" title="1">chunk.Frames = append(chunk.Frames, f)</span>
+                }
+        }
+
+        <span class="cov8" title="1">return chunk</span>
+}
+
+// Helper functions for type conversion
+
+func fbEntityTypeToString(t fbv1.EntityType) string <span class="cov8" title="1">{
+        switch t </span>{
+        case fbv1.EntityTypeUnit:<span class="cov8" title="1">
+                return "unit"</span>
+        case fbv1.EntityTypeVehicle:<span class="cov8" title="1">
+                return "vehicle"</span>
+        default:<span class="cov8" title="1">
+                return "unknown"</span>
+        }
+}
+
+func stringToFBEntityType(s string) fbv1.EntityType <span class="cov8" title="1">{
+        switch s </span>{
+        case "unit":<span class="cov8" title="1">
+                return fbv1.EntityTypeUnit</span>
+        case "vehicle":<span class="cov8" title="1">
+                return fbv1.EntityTypeVehicle</span>
+        default:<span class="cov8" title="1">
+                return fbv1.EntityTypeUnknown</span>
+        }
+}
+
+func fbSideToString(s fbv1.Side) string <span class="cov8" title="1">{
+        switch s </span>{
+        case fbv1.SideWest:<span class="cov8" title="1">
+                return "WEST"</span>
+        case fbv1.SideEast:<span class="cov8" title="1">
+                return "EAST"</span>
+        case fbv1.SideGuer:<span class="cov8" title="1">
+                return "GUER"</span>
+        case fbv1.SideCiv:<span class="cov8" title="1">
+                return "CIV"</span>
+        case fbv1.SideGlobal:<span class="cov8" title="1">
+                return "GLOBAL"</span>
+        default:<span class="cov8" title="1">
+                return "UNKNOWN"</span>
+        }
+}
+
+func stringToFBSide(s string) fbv1.Side <span class="cov8" title="1">{
+        switch s </span>{
+        case "WEST":<span class="cov8" title="1">
+                return fbv1.SideWest</span>
+        case "EAST":<span class="cov8" title="1">
+                return fbv1.SideEast</span>
+        case "GUER", "INDEPENDENT":<span class="cov8" title="1">
+                return fbv1.SideGuer</span>
+        case "CIV", "CIVILIAN":<span class="cov8" title="1">
+                return fbv1.SideCiv</span>
+        case "GLOBAL":<span class="cov8" title="1">
+                return fbv1.SideGlobal</span>
+        default:<span class="cov8" title="1">
+                return fbv1.SideUnknown</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// server/storage/json.go
+package storage
+
+import (
+        "compress/gzip"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "os"
+        "path/filepath"
+)
+
+// JSONEngine reads legacy gzipped JSON recordings
+type JSONEngine struct {
+        dataDir string
+}
+
+// NewJSONEngine creates a JSON engine for the given data directory
+func NewJSONEngine(dataDir string) *JSONEngine <span class="cov8" title="1">{
+        return &amp;JSONEngine{dataDir: dataDir}
+}</span>
+
+func (e *JSONEngine) Name() string            <span class="cov8" title="1">{ return "json" }</span>
+func (e *JSONEngine) SupportsStreaming() bool <span class="cov8" title="1">{ return false }</span>
+
+func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) <span class="cov8" title="1">{
+        data, err := e.loadJSON(filename)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">manifest := &amp;Manifest{
+                Version:        1,
+                WorldName:      getString(data, "worldName"),
+                MissionName:    getString(data, "missionName"),
+                FrameCount:     getUint32(data, "endFrame"),
+                ChunkSize:      300,
+                CaptureDelayMs: uint32(getFloat64(data, "captureDelay") * 1000),
+                ChunkCount:     1, // JSON is single "chunk"
+        }
+
+        // Parse entities
+        if entities, ok := data["entities"].([]interface{}); ok </span><span class="cov8" title="1">{
+                for _, ent := range entities </span><span class="cov8" title="1">{
+                        if em, ok := ent.(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                                def := EntityDef{
+                                        ID:         getUint32(em, "id"),
+                                        Type:       getString(em, "type"),
+                                        Name:       getString(em, "name"),
+                                        Side:       getString(em, "side"),
+                                        Group:      getString(em, "group"),
+                                        Role:       getString(em, "role"),
+                                        StartFrame: getUint32(em, "startFrameNum"),
+                                        IsPlayer:   getFloat64(em, "isPlayer") == 1,
+                                }
+                                if em["class"] != nil </span><span class="cov8" title="1">{
+                                        def.VehicleClass = getString(em, "class")
+                                }</span>
+                                <span class="cov8" title="1">manifest.Entities = append(manifest.Entities, def)</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">return manifest, nil</span>
+}
+
+func (e *JSONEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) <span class="cov8" title="1">{
+        return nil, fmt.Errorf("JSON engine does not support raw manifest streaming")
+}</span>
+
+func (e *JSONEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) <span class="cov8" title="1">{
+        return nil, fmt.Errorf("JSON engine does not support chunked loading")
+}</span>
+
+func (e *JSONEngine) GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error) <span class="cov8" title="1">{
+        return nil, fmt.Errorf("JSON engine does not support chunked loading")
+}</span>
+
+func (e *JSONEngine) ChunkCount(ctx context.Context, filename string) (int, error) <span class="cov8" title="1">{
+        return 1, nil // JSON is always single "chunk"
+}</span>
+
+func (e *JSONEngine) Convert(ctx context.Context, jsonPath, outputPath string) error <span class="cov8" title="1">{
+        return fmt.Errorf("JSON engine does not support conversion")
+}</span>
+
+func (e *JSONEngine) loadJSON(filename string) (map[string]interface{}, error) <span class="cov8" title="1">{
+        // Try gzipped first
+        path := filepath.Join(e.dataDir, filename+".gz")
+        if _, err := os.Stat(path); err == nil </span><span class="cov8" title="1">{
+                return e.loadGzipJSON(path)
+        }</span>
+
+        // Try uncompressed
+        <span class="cov8" title="1">path = filepath.Join(e.dataDir, filename+".json")
+        if _, err := os.Stat(path); err == nil </span><span class="cov8" title="1">{
+                return e.loadPlainJSON(path)
+        }</span>
+
+        <span class="cov8" title="1">return nil, fmt.Errorf("recording not found: %s", filename)</span>
+}
+
+func (e *JSONEngine) loadGzipJSON(path string) (map[string]interface{}, error) <span class="cov8" title="1">{
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        gr, err := gzip.NewReader(f)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer gr.Close()
+
+        var data map[string]interface{}
+        if err := json.NewDecoder(gr).Decode(&amp;data); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+func (e *JSONEngine) loadPlainJSON(path string) (map[string]interface{}, error) <span class="cov8" title="1">{
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        var data map[string]interface{}
+        if err := json.NewDecoder(f).Decode(&amp;data); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return data, nil</span>
+}
+
+// Helper functions for parsing JSON values
+func getString(m map[string]interface{}, key string) string <span class="cov8" title="1">{
+        if v, ok := m[key].(string); ok </span><span class="cov8" title="1">{
+                return v
+        }</span>
+        <span class="cov8" title="1">return ""</span>
+}
+
+func getFloat64(m map[string]interface{}, key string) float64 <span class="cov8" title="1">{
+        if v, ok := m[key].(float64); ok </span><span class="cov8" title="1">{
+                return v
+        }</span>
+        <span class="cov8" title="1">return 0</span>
+}
+
+func getUint32(m map[string]interface{}, key string) uint32 <span class="cov8" title="1">{
+        return uint32(getFloat64(m, key))
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package storage
+
+import "fmt"
+
+// ParseResult contains parsed data in a schema-agnostic format.
+// This is the intermediate representation produced by parsing JSON input,
+// before writing to protobuf/flatbuffers format.
+type ParseResult struct {
+        // Manifest data
+        WorldName        string
+        MissionName      string
+        FrameCount       uint32
+        ChunkSize        uint32
+        CaptureDelayMs   uint32
+        ExtensionVersion string
+        AddonVersion     string
+
+        // Entity definitions (reuses EntityDef from engine.go)
+        Entities []EntityDef
+
+        // Events (reuses Event from engine.go)
+        Events []Event
+
+        // Markers and times (specific to parse result)
+        Markers []MarkerDef
+        Times   []TimeSample
+
+        // Position data for chunk writing
+        EntityPositions []EntityPositionData
+}
+
+// MarkerDef is schema-agnostic marker definition
+type MarkerDef struct {
+        Type       string
+        Text       string
+        StartFrame uint32
+        EndFrame   uint32
+        PlayerID   int32
+        Color      string
+        Side       string
+        Positions  []MarkerPosition
+        Size       []float32
+        Shape      string
+        Brush      string
+}
+
+// MarkerPosition is a marker position at a specific frame
+type MarkerPosition struct {
+        FrameNum  uint32
+        PosX      float32
+        PosY      float32
+        PosZ      float32
+        Direction float32
+        Alpha     float32
+}
+
+// TimeSample is schema-agnostic time sample
+type TimeSample struct {
+        FrameNum       uint32
+        SystemTimeUTC  string
+        Date           string
+        TimeMultiplier float32
+        Time           float32
+}
+
+// EntityPositionData holds position data for an entity across frames
+type EntityPositionData struct {
+        EntityID  uint32
+        Positions []EntityPosition
+}
+
+// EntityPosition is a single frame's position for an entity
+type EntityPosition struct {
+        FrameNum    uint32
+        PosX        float32
+        PosY        float32
+        Direction   uint32
+        Alive       uint32
+        CrewIDs     []uint32
+        VehicleID   uint32
+        IsInVehicle bool
+        Name        string
+        IsPlayer    bool
+}
+
+// Parser converts JSON input to ParseResult
+type Parser interface {
+        Version() JSONInputVersion
+        Parse(data map[string]interface{}, chunkSize uint32) (*ParseResult, error)
+}
+
+// parsers is the registry of parsers by version
+var parsers = make(map[JSONInputVersion]Parser)
+
+// RegisterParser registers a parser for its version
+func RegisterParser(p Parser) <span class="cov8" title="1">{
+        parsers[p.Version()] = p
+}</span>
+
+// GetParser returns the parser for a given version
+func GetParser(v JSONInputVersion) (Parser, error) <span class="cov8" title="1">{
+        if p, ok := parsers[v]; ok </span><span class="cov8" title="1">{
+                return p, nil
+        }</span>
+        <span class="cov8" title="1">return nil, fmt.Errorf("no parser for JSON version %s", v.String())</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Package storage provides versioned parsers for JSON input formats.
+package storage
+
+func init() <span class="cov8" title="1">{
+        RegisterParser(&amp;ParserV1{})
+}</span>
+
+// ParserV1 parses JSON input version 1 (current Arma 3 format)
+type ParserV1 struct{}
+
+// Version returns the JSON input version this parser handles
+func (p *ParserV1) Version() JSONInputVersion <span class="cov8" title="1">{
+        return JSONInputVersionV1
+}</span>
+
+// Parse converts JSON data to schema-agnostic ParseResult
+func (p *ParserV1) Parse(data map[string]interface{}, chunkSize uint32) (*ParseResult, error) <span class="cov8" title="1">{
+        result := &amp;ParseResult{
+                WorldName:        getString(data, "worldName"),
+                MissionName:      getString(data, "missionName"),
+                FrameCount:       getUint32(data, "endFrame"),
+                ChunkSize:        chunkSize,
+                CaptureDelayMs:   uint32(getFloat64(data, "captureDelay") * 1000),
+                ExtensionVersion: getString(data, "extensionVersion"),
+                AddonVersion:     getString(data, "addonVersion"),
+        }
+
+        // Parse entities
+        if entities, ok := data["entities"].([]interface{}); ok </span><span class="cov8" title="1">{
+                for _, ent := range entities </span><span class="cov8" title="1">{
+                        em, ok := ent.(map[string]interface{})
+                        if !ok </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">entityType := getString(em, "type")
+                        startFrame := getUint32(em, "startFrameNum")
+                        endFrame := p.calculateEndFrame(em, startFrame)
+
+                        def := EntityDef{
+                                ID:           getUint32(em, "id"),
+                                Type:         entityType,
+                                Name:         getString(em, "name"),
+                                Side:         getString(em, "side"),
+                                Group:        getString(em, "group"),
+                                Role:         getString(em, "role"),
+                                StartFrame:   startFrame,
+                                EndFrame:     endFrame,
+                                IsPlayer:     getFloat64(em, "isPlayer") == 1,
+                                VehicleClass: getString(em, "class"),
+                        }
+                        result.Entities = append(result.Entities, def)
+
+                        // Collect position data
+                        positionData := p.collectEntityPositions(em, def.ID, startFrame, entityType)
+                        if positionData != nil </span><span class="cov8" title="1">{
+                                result.EntityPositions = append(result.EntityPositions, *positionData)
+                        }</span>
+                }
+        }
+
+        // Parse events
+        <span class="cov8" title="1">if events, ok := data["events"].([]interface{}); ok </span><span class="cov8" title="1">{
+                for _, evt := range events </span><span class="cov8" title="1">{
+                        evtArr, ok := evt.([]interface{})
+                        if !ok || len(evtArr) &lt; 2 </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">event := p.parseEvent(evtArr)
+                        if event != nil </span><span class="cov8" title="1">{
+                                result.Events = append(result.Events, *event)
+                        }</span>
+                }
+        }
+
+        // Parse markers
+        <span class="cov8" title="1">if markers, ok := data["Markers"].([]interface{}); ok </span><span class="cov8" title="1">{
+                for _, m := range markers </span><span class="cov8" title="1">{
+                        markerArr, ok := m.([]interface{})
+                        if !ok </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">marker := p.parseMarker(markerArr)
+                        if marker != nil </span><span class="cov8" title="1">{
+                                result.Markers = append(result.Markers, *marker)
+                        }</span>
+                }
+        }
+
+        // Parse times
+        <span class="cov8" title="1">if times, ok := data["times"].([]interface{}); ok </span><span class="cov8" title="1">{
+                for _, t := range times </span><span class="cov8" title="1">{
+                        tm, ok := t.(map[string]interface{})
+                        if !ok </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov8" title="1">timeSample := TimeSample{
+                                FrameNum:       getUint32(tm, "frameNum"),
+                                SystemTimeUTC:  getString(tm, "systemTimeUTC"),
+                                Date:           getString(tm, "date"),
+                                TimeMultiplier: float32(getFloat64(tm, "timeMultiplier")),
+                                Time:           float32(getFloat64(tm, "time")),
+                        }
+                        result.Times = append(result.Times, timeSample)</span>
+                }
+        }
+
+        <span class="cov8" title="1">return result, nil</span>
+}
+
+// calculateEndFrame determines the end frame from positions array length
+func (p *ParserV1) calculateEndFrame(em map[string]interface{}, startFrame uint32) uint32 <span class="cov8" title="1">{
+        if positions, ok := em["positions"].([]interface{}); ok </span><span class="cov8" title="1">{
+                return startFrame + uint32(len(positions)) - 1
+        }</span>
+        <span class="cov8" title="1">return startFrame</span>
+}
+
+// parseEvent converts a JSON event array to schema-agnostic Event
+func (p *ParserV1) parseEvent(evtArr []interface{}) *Event <span class="cov8" title="1">{
+        if len(evtArr) &lt; 2 </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">event := &amp;Event{
+                FrameNum: uint32(toFloat64(evtArr[0])),
+                Type:     toString(evtArr[1]),
+        }
+
+        // Connect/disconnect events: [frameNum, "type", "playerName"]
+        if event.Type == "connected" || event.Type == "disconnected" </span><span class="cov8" title="1">{
+                if len(evtArr) &gt; 2 </span><span class="cov8" title="1">{
+                        event.Message = toString(evtArr[2])
+                }</span>
+                <span class="cov8" title="1">return event</span>
+        }
+
+        // Parse additional fields based on event type
+        // Old extension format for killed/hit: [frameNum, "type", victimId, [killerId, weaponName], distance]
+        // Alternative format: [frameNum, "type", sourceId, targetId, weapon, distance]
+
+        // First, detect format by checking if index 3 is an array
+        <span class="cov8" title="1">isOldExtensionFormat := false
+        if len(evtArr) &gt; 3 </span><span class="cov8" title="1">{
+                _, isOldExtensionFormat = evtArr[3].([]interface{})
+        }</span>
+
+        <span class="cov8" title="1">if isOldExtensionFormat </span><span class="cov8" title="1">{
+                // Old extension format: [frameNum, "type", victimId, [killerId, weaponName], distance]
+                if len(evtArr) &gt; 2 </span><span class="cov8" title="1">{
+                        event.TargetID = uint32(toFloat64(evtArr[2])) // victimId
+                }</span>
+                <span class="cov8" title="1">if len(evtArr) &gt; 3 </span><span class="cov8" title="1">{
+                        if killerArr, ok := evtArr[3].([]interface{}); ok </span><span class="cov8" title="1">{
+                                if len(killerArr) &gt; 0 </span><span class="cov8" title="1">{
+                                        event.SourceID = uint32(toFloat64(killerArr[0])) // killerId
+                                }</span>
+                                <span class="cov8" title="1">if len(killerArr) &gt; 1 </span><span class="cov8" title="1">{
+                                        event.Weapon = toString(killerArr[1]) // weaponName
+                                }</span>
+                        }
+                }
+                <span class="cov8" title="1">if len(evtArr) &gt; 4 </span><span class="cov8" title="1">{
+                        if d, ok := evtArr[4].(float64); ok </span><span class="cov8" title="1">{
+                                event.Distance = float32(d)
+                        }</span>
+                }
+        } else<span class="cov8" title="1"> {
+                // Alternative format: [frameNum, "type", sourceId, targetId, weapon, distance]
+                if len(evtArr) &gt; 2 </span><span class="cov8" title="1">{
+                        event.SourceID = uint32(toFloat64(evtArr[2]))
+                }</span>
+                <span class="cov8" title="1">if len(evtArr) &gt; 3 </span><span class="cov8" title="1">{
+                        event.TargetID = uint32(toFloat64(evtArr[3]))
+                }</span>
+                <span class="cov8" title="1">if len(evtArr) &gt; 4 </span><span class="cov8" title="1">{
+                        // Could be weapon name, message, or distance depending on event type
+                        switch v := evtArr[4].(type) </span>{
+                        case string:<span class="cov8" title="1">
+                                if event.Type == "hit" || event.Type == "killed" </span><span class="cov8" title="1">{
+                                        event.Weapon = v
+                                }</span> else<span class="cov8" title="1"> {
+                                        event.Message = v
+                                }</span>
+                        case float64:<span class="cov0" title="0">
+                                event.Distance = float32(v)</span>
+                        }
+                }
+                <span class="cov8" title="1">if len(evtArr) &gt; 5 </span><span class="cov8" title="1">{
+                        if d, ok := evtArr[5].(float64); ok </span><span class="cov8" title="1">{
+                                event.Distance = float32(d)
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return event</span>
+}
+
+// parseMarker converts a JSON marker array to schema-agnostic MarkerDef
+func (p *ParserV1) parseMarker(markerArr []interface{}) *MarkerDef <span class="cov8" title="1">{
+        // Format: ["type", "text", startFrame, endFrame, playerId, "color", sideIndex, positions, size, "shape", "brush"]
+        if len(markerArr) &lt; 7 </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">marker := &amp;MarkerDef{
+                Type:       toString(markerArr[0]),
+                Text:       toString(markerArr[1]),
+                StartFrame: uint32(toFloat64(markerArr[2])),
+                EndFrame:   uint32(toFloat64(markerArr[3])),
+                PlayerID:   int32(toFloat64(markerArr[4])),
+                Color:      toString(markerArr[5]),
+                Side:       sideIndexToString(int(toFloat64(markerArr[6]))),
+        }
+
+        // Parse positions (index 7)
+        if len(markerArr) &gt; 7 </span><span class="cov8" title="1">{
+                if positions, ok := markerArr[7].([]interface{}); ok </span><span class="cov8" title="1">{
+                        for _, pos := range positions </span><span class="cov8" title="1">{
+                                mp := p.parseMarkerPosition(pos)
+                                if mp != nil </span><span class="cov8" title="1">{
+                                        marker.Positions = append(marker.Positions, *mp)
+                                }</span>
+                        }
+                }
+        }
+
+        // Parse size (index 8)
+        <span class="cov8" title="1">if len(markerArr) &gt; 8 </span><span class="cov8" title="1">{
+                if sizeArr, ok := markerArr[8].([]interface{}); ok </span><span class="cov8" title="1">{
+                        for _, s := range sizeArr </span><span class="cov8" title="1">{
+                                marker.Size = append(marker.Size, float32(toFloat64(s)))
+                        }</span>
+                }
+        }
+
+        // Parse shape (index 9)
+        <span class="cov8" title="1">if len(markerArr) &gt; 9 </span><span class="cov8" title="1">{
+                marker.Shape = toString(markerArr[9])
+        }</span>
+
+        // Parse brush (index 10)
+        <span class="cov8" title="1">if len(markerArr) &gt; 10 </span><span class="cov8" title="1">{
+                marker.Brush = toString(markerArr[10])
+        }</span>
+
+        <span class="cov8" title="1">return marker</span>
+}
+
+// parseMarkerPosition converts position data to MarkerPosition
+func (p *ParserV1) parseMarkerPosition(pos interface{}) *MarkerPosition <span class="cov8" title="1">{
+        // Position formats:
+        // - Old extension format: [frameNum, [x, y], direction, ?alpha]
+        // - Alternative format: [[x, y, z], frameNum, direction, alpha]
+        // - Simple format: [x, y, z]
+        arr, ok := pos.([]interface{})
+        if !ok || len(arr) == 0 </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">mp := &amp;MarkerPosition{}
+
+        // Check if second element is a position array (old extension format)
+        if len(arr) &gt; 1 </span><span class="cov8" title="1">{
+                if posArr, ok := arr[1].([]interface{}); ok </span><span class="cov8" title="1">{
+                        // Old extension format: [frameNum, [x, y], direction, ?alpha]
+                        mp.FrameNum = uint32(toFloat64(arr[0]))
+                        if len(posArr) &gt;= 2 </span><span class="cov8" title="1">{
+                                mp.PosX = float32(toFloat64(posArr[0]))
+                                mp.PosY = float32(toFloat64(posArr[1]))
+                                if len(posArr) &gt; 2 </span><span class="cov8" title="1">{
+                                        mp.PosZ = float32(toFloat64(posArr[2]))
+                                }</span>
+                        }
+                        <span class="cov8" title="1">if len(arr) &gt; 2 </span><span class="cov8" title="1">{
+                                mp.Direction = float32(toFloat64(arr[2]))
+                        }</span>
+                        <span class="cov8" title="1">if len(arr) &gt; 3 </span><span class="cov8" title="1">{
+                                mp.Alpha = float32(toFloat64(arr[3]))
+                        }</span>
+                        <span class="cov8" title="1">return mp</span>
+                }
+        }
+
+        // Check if first element is a position array (alternative format)
+        <span class="cov8" title="1">if posArr, ok := arr[0].([]interface{}); ok </span><span class="cov8" title="1">{
+                // Format: [[x, y, z], frameNum, direction, alpha]
+                if len(posArr) &gt;= 2 </span><span class="cov8" title="1">{
+                        mp.PosX = float32(toFloat64(posArr[0]))
+                        mp.PosY = float32(toFloat64(posArr[1]))
+                        if len(posArr) &gt; 2 </span><span class="cov8" title="1">{
+                                mp.PosZ = float32(toFloat64(posArr[2]))
+                        }</span>
+                }
+                <span class="cov8" title="1">if len(arr) &gt; 1 </span><span class="cov8" title="1">{
+                        mp.FrameNum = uint32(toFloat64(arr[1]))
+                }</span>
+                <span class="cov8" title="1">if len(arr) &gt; 2 </span><span class="cov8" title="1">{
+                        mp.Direction = float32(toFloat64(arr[2]))
+                }</span>
+                <span class="cov8" title="1">if len(arr) &gt; 3 </span><span class="cov8" title="1">{
+                        mp.Alpha = float32(toFloat64(arr[3]))
+                }</span>
+        } else<span class="cov8" title="1"> {
+                // Simple format: [x, y, z]
+                if len(arr) &gt;= 2 </span><span class="cov8" title="1">{
+                        mp.PosX = float32(toFloat64(arr[0]))
+                        mp.PosY = float32(toFloat64(arr[1]))
+                        if len(arr) &gt; 2 </span><span class="cov8" title="1">{
+                                mp.PosZ = float32(toFloat64(arr[2]))
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return mp</span>
+}
+
+// collectEntityPositions extracts position data for an entity
+func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID uint32, startFrame uint32, entityType string) *EntityPositionData <span class="cov8" title="1">{
+        positions, ok := em["positions"].([]interface{})
+        if !ok </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">data := &amp;EntityPositionData{
+                EntityID:  entityID,
+                Positions: make([]EntityPosition, 0, len(positions)),
+        }
+
+        for i, posData := range positions </span><span class="cov8" title="1">{
+                posArr, ok := posData.([]interface{})
+                if !ok || len(posArr) &lt; 3 </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">pos := EntityPosition{
+                        FrameNum: startFrame + uint32(i),
+                }
+
+                // Parse position [x, y, z] or [x, y]
+                if coords, ok := posArr[0].([]interface{}); ok &amp;&amp; len(coords) &gt;= 2 </span><span class="cov8" title="1">{
+                        pos.PosX = float32(toFloat64(coords[0]))
+                        pos.PosY = float32(toFloat64(coords[1]))
+                }</span>
+
+                // Direction (index 1)
+                <span class="cov8" title="1">if len(posArr) &gt; 1 </span><span class="cov8" title="1">{
+                        pos.Direction = uint32(toFloat64(posArr[1]))
+                }</span>
+
+                // Alive status (index 2)
+                <span class="cov8" title="1">if len(posArr) &gt; 2 </span><span class="cov8" title="1">{
+                        pos.Alive = uint32(toFloat64(posArr[2]))
+                }</span>
+
+                // Parse type-specific fields
+                <span class="cov8" title="1">if entityType == "unit" </span><span class="cov8" title="1">{
+                        // Unit format: [[x, y, z], direction, alive, isInVehicle, "name", isPlayer]
+                        if len(posArr) &gt; 3 </span><span class="cov8" title="1">{
+                                // isInVehicle can be: 0, 1, or vehicleId
+                                v := toFloat64(posArr[3])
+                                if v &gt; 1 </span><span class="cov8" title="1">{
+                                        pos.VehicleID = uint32(v)
+                                        pos.IsInVehicle = true
+                                }</span> else<span class="cov8" title="1"> if v == 1 </span><span class="cov8" title="1">{
+                                        pos.IsInVehicle = true
+                                }</span>
+                        }
+                        <span class="cov8" title="1">if len(posArr) &gt; 4 </span><span class="cov8" title="1">{
+                                pos.Name = toString(posArr[4])
+                        }</span>
+                        <span class="cov8" title="1">if len(posArr) &gt; 5 </span><span class="cov8" title="1">{
+                                pos.IsPlayer = toFloat64(posArr[5]) == 1
+                        }</span>
+                } else<span class="cov8" title="1"> if entityType == "vehicle" </span><span class="cov8" title="1">{
+                        // Vehicle format: [[x, y, z], direction, alive, [crew_ids], [startFrame, endFrame]]
+                        if len(posArr) &gt; 3 </span><span class="cov8" title="1">{
+                                if crewArr, ok := posArr[3].([]interface{}); ok </span><span class="cov8" title="1">{
+                                        for _, crew := range crewArr </span><span class="cov8" title="1">{
+                                                pos.CrewIDs = append(pos.CrewIDs, uint32(toFloat64(crew)))
+                                        }</span>
+                                }
+                        }
+                }
+
+                <span class="cov8" title="1">data.Positions = append(data.Positions, pos)</span>
+        }
+
+        <span class="cov8" title="1">return data</span>
+}
+
+// sideIndexToString converts a side index to side string
+// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
+func sideIndexToString(idx int) string <span class="cov8" title="1">{
+        switch idx </span>{
+        case 0:<span class="cov8" title="1">
+                return "EAST"</span>
+        case 1:<span class="cov8" title="1">
+                return "WEST"</span>
+        case 2:<span class="cov8" title="1">
+                return "GUER"</span>
+        case 3:<span class="cov8" title="1">
+                return "CIV"</span>
+        case -1:<span class="cov8" title="1">
+                return "GLOBAL"</span>
+        default:<span class="cov8" title="1">
+                return ""</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">// server/storage/protobuf.go
+package storage
+
+import (
+        "bytes"
+        "context"
+        "fmt"
+        "io"
+        "os"
+        "path/filepath"
+
+        "google.golang.org/protobuf/proto"
+
+        pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
+)
+
+// versionPrefixSize is the size of the version prefix in bytes
+const versionPrefixSize = 4
+
+// ProtobufEngine reads chunked protobuf recordings
+type ProtobufEngine struct {
+        dataDir string
+}
+
+// NewProtobufEngine creates a protobuf engine for the given data directory
+func NewProtobufEngine(dataDir string) *ProtobufEngine <span class="cov8" title="1">{
+        return &amp;ProtobufEngine{dataDir: dataDir}
+}</span>
+
+func (e *ProtobufEngine) Name() string            <span class="cov8" title="1">{ return "protobuf" }</span>
+func (e *ProtobufEngine) SupportsStreaming() bool <span class="cov8" title="1">{ return true }</span>
+
+func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "manifest.pb")
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read manifest: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        data, err := e.readVersionedData(f)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read manifest data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var pbManifest pbv1.Manifest
+        if err := proto.Unmarshal(data, &amp;pbManifest); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("unmarshal manifest: %w", err)
+        }</span>
+
+        // Convert protobuf to storage types
+        <span class="cov8" title="1">manifest := &amp;Manifest{
+                Version:        pbManifest.Version,
+                WorldName:      pbManifest.WorldName,
+                MissionName:    pbManifest.MissionName,
+                FrameCount:     pbManifest.FrameCount,
+                ChunkSize:      pbManifest.ChunkSize,
+                CaptureDelayMs: pbManifest.CaptureDelayMs,
+                ChunkCount:     pbManifest.ChunkCount,
+        }
+
+        for _, ent := range pbManifest.Entities </span><span class="cov8" title="1">{
+                manifest.Entities = append(manifest.Entities, EntityDef{
+                        ID:           ent.Id,
+                        Type:         entityTypeToString(ent.Type),
+                        Name:         ent.Name,
+                        Side:         sideToString(ent.Side),
+                        Group:        ent.GroupName,
+                        Role:         ent.Role,
+                        StartFrame:   ent.StartFrame,
+                        EndFrame:     ent.EndFrame,
+                        IsPlayer:     ent.IsPlayer,
+                        VehicleClass: ent.VehicleClass,
+                })
+        }</span>
+
+        <span class="cov8" title="1">return manifest, nil</span>
+}
+
+func (e *ProtobufEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "manifest.pb")
+        return os.Open(path)
+}</span>
+
+func (e *ProtobufEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.pb", chunkIndex))
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("read chunk %d: %w", chunkIndex, err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        data, err := e.readVersionedData(f)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("read chunk %d data: %w", chunkIndex, err)
+        }</span>
+
+        <span class="cov8" title="1">var pbChunk pbv1.Chunk
+        if err := proto.Unmarshal(data, &amp;pbChunk); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unmarshal chunk: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">chunk := &amp;Chunk{
+                Index:      pbChunk.Index,
+                StartFrame: pbChunk.StartFrame,
+                FrameCount: pbChunk.FrameCount,
+        }
+
+        for _, f := range pbChunk.Frames </span><span class="cov8" title="1">{
+                frame := Frame{FrameNum: f.FrameNum}
+                for _, es := range f.Entities </span><span class="cov8" title="1">{
+                        frame.Entities = append(frame.Entities, EntityState{
+                                EntityID:    es.EntityId,
+                                PosX:        es.PosX,
+                                PosY:        es.PosY,
+                                Direction:   es.Direction,
+                                Alive:       es.Alive,
+                                CrewIDs:     es.CrewIds,
+                                VehicleID:   es.VehicleId,
+                                IsInVehicle: es.IsInVehicle,
+                                Name:        es.Name,
+                                IsPlayer:    es.IsPlayer,
+                        })
+                }</span>
+                <span class="cov8" title="1">chunk.Frames = append(chunk.Frames, frame)</span>
+        }
+
+        <span class="cov8" title="1">return chunk, nil</span>
+}
+
+func (e *ProtobufEngine) GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "chunks", fmt.Sprintf("%04d.pb", chunkIndex))
+        return os.Open(path)
+}</span>
+
+func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, error) <span class="cov8" title="1">{
+        path := filepath.Join(e.dataDir, filename, "manifest.pb")
+        f, err := os.Open(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        data, err := e.readVersionedData(f)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov8" title="1">var manifest pbv1.Manifest
+        if err := proto.Unmarshal(data, &amp;manifest); err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+
+        <span class="cov8" title="1">return int(manifest.ChunkCount), nil</span>
+}
+
+// readVersionedData reads file data, handling the optional version prefix.
+// Files may have a 4-byte version prefix (new format) or not (legacy format).
+// This method provides backward compatibility with both formats.
+func (e *ProtobufEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) <span class="cov8" title="1">{
+        // Read the entire file
+        allData, err := io.ReadAll(f)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // If file is too small to have version prefix, return as-is
+        <span class="cov8" title="1">if len(allData) &lt; versionPrefixSize </span><span class="cov8" title="1">{
+                return allData, nil
+        }</span>
+
+        // Check if this looks like a version prefix.
+        // Version prefix is 4 bytes little-endian. For small version numbers (1-255),
+        // bytes 2, 3, 4 will be zero: [version, 0x00, 0x00, 0x00]
+        //
+        // Legacy protobuf files start with a field tag. Common first bytes:
+        // - 0x08 (field 1, varint)
+        // - 0x0A (field 1, length-delimited)
+        // - 0x10 (field 2, varint)
+        // - 0x12 (field 2, length-delimited)
+        //
+        // These are followed by actual data, not zeros.
+        // So we can distinguish by checking if bytes 2-4 are all zero.
+
+        // Check if bytes 2-4 are all zero (indicates version prefix)
+        <span class="cov8" title="1">hasVersionPrefix := allData[1] == 0 &amp;&amp; allData[2] == 0 &amp;&amp; allData[3] == 0
+
+        if !hasVersionPrefix </span><span class="cov8" title="1">{
+                // Legacy file without version prefix
+                return allData, nil
+        }</span>
+
+        // Looks like a version prefix, read the version
+        <span class="cov8" title="1">reader := bytes.NewReader(allData[:versionPrefixSize])
+        version, err := ReadVersionPrefix(reader)
+        if err != nil </span><span class="cov0" title="0">{
+                // Can't read version, treat entire file as data (legacy)
+                return allData, nil
+        }</span>
+
+        // Check if version is supported
+        <span class="cov8" title="1">switch version </span>{
+        case SchemaVersionV1:<span class="cov8" title="1">
+                // Version prefix present and valid, skip it
+                return allData[versionPrefixSize:], nil</span>
+        case SchemaVersionUnknown:<span class="cov0" title="0">
+                // Version 0 with zeros in bytes 2-4 - unusual but treat as legacy
+                return allData, nil</span>
+        default:<span class="cov8" title="1">
+                // Unsupported version
+                return nil, fmt.Errorf("unsupported protobuf schema version: %d", version)</span>
+        }
+}
+
+func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error <span class="cov8" title="1">{
+        converter := NewConverter(DefaultChunkSize)
+        return converter.Convert(ctx, jsonPath, outputPath, "protobuf")
+}</span>
+
+func entityTypeToString(t pbv1.EntityType) string <span class="cov8" title="1">{
+        switch t </span>{
+        case pbv1.EntityType_ENTITY_TYPE_UNIT:<span class="cov8" title="1">
+                return "unit"</span>
+        case pbv1.EntityType_ENTITY_TYPE_VEHICLE:<span class="cov8" title="1">
+                return "vehicle"</span>
+        default:<span class="cov8" title="1">
+                return "unknown"</span>
+        }
+}
+
+func sideToString(s pbv1.Side) string <span class="cov8" title="1">{
+        switch s </span>{
+        case pbv1.Side_SIDE_WEST:<span class="cov8" title="1">
+                return "WEST"</span>
+        case pbv1.Side_SIDE_EAST:<span class="cov8" title="1">
+                return "EAST"</span>
+        case pbv1.Side_SIDE_GUER:<span class="cov8" title="1">
+                return "GUER"</span>
+        case pbv1.Side_SIDE_CIV:<span class="cov8" title="1">
+                return "CIV"</span>
+        case pbv1.Side_SIDE_GLOBAL:<span class="cov8" title="1">
+                return "GLOBAL"</span>
+        default:<span class="cov8" title="1">
+                return "UNKNOWN"</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package storage
+
+import "fmt"
+
+// SchemaVersion represents the protobuf/flatbuffers schema version
+type SchemaVersion uint32
+
+const (
+        SchemaVersionUnknown SchemaVersion = 0
+        SchemaVersionV1      SchemaVersion = 1
+        CurrentSchemaVersion               = SchemaVersionV1
+)
+
+func (v SchemaVersion) String() string <span class="cov8" title="1">{
+        if v == SchemaVersionUnknown </span><span class="cov8" title="1">{
+                return "unknown"
+        }</span>
+        <span class="cov8" title="1">return fmt.Sprintf("v%d", v)</span>
+}
+
+// JSONInputVersion represents the input JSON format version
+type JSONInputVersion uint32
+
+const (
+        JSONInputVersionUnknown JSONInputVersion = 0
+        JSONInputVersionV1      JSONInputVersion = 1
+        CurrentJSONInputVersion                  = JSONInputVersionV1
+)
+
+func (v JSONInputVersion) String() string <span class="cov8" title="1">{
+        if v == JSONInputVersionUnknown </span><span class="cov8" title="1">{
+                return "unknown"
+        }</span>
+        <span class="cov8" title="1">return fmt.Sprintf("v%d", v)</span>
+}
+
+// DetectJSONInputVersion analyzes JSON data to determine its format version
+func DetectJSONInputVersion(data map[string]interface{}) JSONInputVersion <span class="cov8" title="1">{
+        requiredV1 := []string{"worldName", "missionName", "endFrame", "captureDelay", "entities"}
+        for _, key := range requiredV1 </span><span class="cov8" title="1">{
+                if _, ok := data[key]; !ok </span><span class="cov8" title="1">{
+                        return JSONInputVersionUnknown
+                }</span>
+        }
+        <span class="cov8" title="1">return JSONInputVersionV1</span>
+}
+
+// MapInputToSchema returns the schema version to use for a given input version
+func MapInputToSchema(input JSONInputVersion) SchemaVersion <span class="cov8" title="1">{
+        switch input </span>{
+        case JSONInputVersionV1:<span class="cov8" title="1">
+                return SchemaVersionV1</span>
+        default:<span class="cov8" title="1">
+                return CurrentSchemaVersion</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package storage
+
+import (
+        "context"
+        "encoding/binary"
+        "fmt"
+        "io"
+)
+
+// Writer writes ParseResult to a specific schema version
+type Writer interface {
+        Version() SchemaVersion
+        Format() string // "protobuf" or "flatbuffers"
+        WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error
+        WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error
+}
+
+// writers is the registry of writers by format and version
+var writers = make(map[string]Writer) // key: "protobuf_v1", "flatbuffers_v1"
+
+// RegisterWriter registers a writer for its format and version
+func RegisterWriter(w Writer) <span class="cov8" title="1">{
+        key := fmt.Sprintf("%s_v%d", w.Format(), w.Version())
+        writers[key] = w
+}</span>
+
+// GetWriter returns the writer for a given format and version
+func GetWriter(format string, version SchemaVersion) (Writer, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("%s_v%d", format, version)
+        if w, ok := writers[key]; ok </span><span class="cov8" title="1">{
+                return w, nil
+        }</span>
+        <span class="cov8" title="1">return nil, fmt.Errorf("no writer for %s version %d", format, version)</span>
+}
+
+// WriteVersionPrefix writes the version as a 4-byte little-endian prefix
+func WriteVersionPrefix(f io.Writer, version SchemaVersion) error <span class="cov8" title="1">{
+        return binary.Write(f, binary.LittleEndian, uint32(version))
+}</span>
+
+// ReadVersionPrefix reads the version prefix from a file
+func ReadVersionPrefix(f io.Reader) (SchemaVersion, error) <span class="cov8" title="1">{
+        var version uint32
+        err := binary.Read(f, binary.LittleEndian, &amp;version)
+        return SchemaVersion(version), err
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package storage
+
+import (
+        "context"
+        "fmt"
+        "os"
+        "path/filepath"
+        "strings"
+
+        fbv1 "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
+        flatbuffers "github.com/google/flatbuffers/go"
+)
+
+func init() <span class="cov8" title="1">{
+        RegisterWriter(&amp;FlatBuffersWriterV1{})
+}</span>
+
+// FlatBuffersWriterV1 writes ParseResult to FlatBuffers v1 format
+type FlatBuffersWriterV1 struct{}
+
+// Version returns the schema version
+func (w *FlatBuffersWriterV1) Version() SchemaVersion <span class="cov8" title="1">{ return SchemaVersionV1 }</span>
+
+// Format returns the format name
+func (w *FlatBuffersWriterV1) Format() string <span class="cov8" title="1">{ return "flatbuffers" }</span>
+
+// WriteManifest writes the manifest to a FlatBuffers file with version prefix
+func (w *FlatBuffersWriterV1) WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error <span class="cov8" title="1">{
+        builder := flatbuffers.NewBuilder(1024 * 1024)
+
+        // Build manifest
+        manifestOff := w.toFBManifest(builder, result)
+        builder.Finish(manifestOff)
+
+        // Create file
+        f, err := os.Create(filepath.Join(outputPath, "manifest.fb"))
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create manifest file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        // Write version prefix (4 bytes, little-endian)
+        if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write version prefix: %w", err)
+        }</span>
+
+        // Write FlatBuffer data
+        <span class="cov8" title="1">if _, err := f.Write(builder.FinishedBytes()); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write manifest data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// WriteChunks writes all chunks to FlatBuffers files with version prefix
+func (w *FlatBuffersWriterV1) WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error <span class="cov8" title="1">{
+        // Create chunks directory
+        chunksDir := filepath.Join(outputPath, "chunks")
+        if err := os.MkdirAll(chunksDir, 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create chunks directory: %w", err)
+        }</span>
+
+        // Calculate chunk count
+        <span class="cov8" title="1">chunkCount := (result.FrameCount + result.ChunkSize - 1) / result.ChunkSize
+        if chunkCount == 0 </span><span class="cov8" title="1">{
+                chunkCount = 1
+        }</span>
+
+        // Write each chunk
+        <span class="cov8" title="1">for chunkIdx := uint32(0); chunkIdx &lt; chunkCount; chunkIdx++ </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov8" title="1">
+                        return ctx.Err()</span>
+                default:<span class="cov8" title="1"></span>
+                }
+
+                <span class="cov8" title="1">if err := w.writeChunk(chunksDir, chunkIdx, result); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("write chunk %d: %w", chunkIdx, err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// toFBManifest builds a FlatBuffers Manifest from ParseResult
+func (w *FlatBuffersWriterV1) toFBManifest(builder *flatbuffers.Builder, result *ParseResult) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        // Calculate chunk count
+        chunkCount := (result.FrameCount + result.ChunkSize - 1) / result.ChunkSize
+        if chunkCount == 0 </span><span class="cov8" title="1">{
+                chunkCount = 1
+        }</span>
+
+        // Build entity definitions
+        <span class="cov8" title="1">entityOffsets := make([]flatbuffers.UOffsetT, len(result.Entities))
+        for i, ent := range result.Entities </span><span class="cov8" title="1">{
+                entityOffsets[i] = w.toFBEntityDef(builder, ent)
+        }</span>
+
+        // Build entities vector (must build in reverse order)
+        <span class="cov8" title="1">fbv1.ManifestStartEntitiesVector(builder, len(entityOffsets))
+        for i := len(entityOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(entityOffsets[i])
+        }</span>
+        <span class="cov8" title="1">entitiesVec := builder.EndVector(len(entityOffsets))
+
+        // Build events
+        eventOffsets := make([]flatbuffers.UOffsetT, len(result.Events))
+        for i, evt := range result.Events </span><span class="cov8" title="1">{
+                eventOffsets[i] = w.toFBEvent(builder, evt)
+        }</span>
+
+        // Build events vector
+        <span class="cov8" title="1">fbv1.ManifestStartEventsVector(builder, len(eventOffsets))
+        for i := len(eventOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(eventOffsets[i])
+        }</span>
+        <span class="cov8" title="1">eventsVec := builder.EndVector(len(eventOffsets))
+
+        // Build markers
+        markerOffsets := make([]flatbuffers.UOffsetT, len(result.Markers))
+        for i, marker := range result.Markers </span><span class="cov8" title="1">{
+                markerOffsets[i] = w.toFBMarker(builder, marker)
+        }</span>
+
+        // Build markers vector
+        <span class="cov8" title="1">fbv1.ManifestStartMarkersVector(builder, len(markerOffsets))
+        for i := len(markerOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(markerOffsets[i])
+        }</span>
+        <span class="cov8" title="1">markersVec := builder.EndVector(len(markerOffsets))
+
+        // Build times
+        timeOffsets := make([]flatbuffers.UOffsetT, len(result.Times))
+        for i, t := range result.Times </span><span class="cov8" title="1">{
+                timeOffsets[i] = w.toFBTimeSample(builder, t)
+        }</span>
+
+        // Build times vector
+        <span class="cov8" title="1">fbv1.ManifestStartTimesVector(builder, len(timeOffsets))
+        for i := len(timeOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(timeOffsets[i])
+        }</span>
+        <span class="cov8" title="1">timesVec := builder.EndVector(len(timeOffsets))
+
+        // Build strings
+        worldNameOff := builder.CreateString(result.WorldName)
+        missionNameOff := builder.CreateString(result.MissionName)
+        extensionVersionOff := builder.CreateString(result.ExtensionVersion)
+        addonVersionOff := builder.CreateString(result.AddonVersion)
+
+        // Build manifest
+        fbv1.ManifestStart(builder)
+        fbv1.ManifestAddVersion(builder, uint32(SchemaVersionV1))
+        fbv1.ManifestAddWorldName(builder, worldNameOff)
+        fbv1.ManifestAddMissionName(builder, missionNameOff)
+        fbv1.ManifestAddFrameCount(builder, result.FrameCount)
+        fbv1.ManifestAddChunkSize(builder, result.ChunkSize)
+        fbv1.ManifestAddCaptureDelayMs(builder, result.CaptureDelayMs)
+        fbv1.ManifestAddChunkCount(builder, chunkCount)
+        fbv1.ManifestAddEntities(builder, entitiesVec)
+        fbv1.ManifestAddEvents(builder, eventsVec)
+        fbv1.ManifestAddMarkers(builder, markersVec)
+        fbv1.ManifestAddTimes(builder, timesVec)
+        fbv1.ManifestAddExtensionVersion(builder, extensionVersionOff)
+        fbv1.ManifestAddAddonVersion(builder, addonVersionOff)
+
+        return fbv1.ManifestEnd(builder)</span>
+}
+
+// toFBEntityDef builds a FlatBuffers EntityDef
+func (w *FlatBuffersWriterV1) toFBEntityDef(builder *flatbuffers.Builder, e EntityDef) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        nameOff := builder.CreateString(e.Name)
+        groupOff := builder.CreateString(e.Group)
+        roleOff := builder.CreateString(e.Role)
+        classOff := builder.CreateString(e.VehicleClass)
+
+        fbv1.EntityDefStart(builder)
+        fbv1.EntityDefAddId(builder, e.ID)
+        fbv1.EntityDefAddType(builder, w.stringToFBEntityType(e.Type))
+        fbv1.EntityDefAddName(builder, nameOff)
+        fbv1.EntityDefAddSide(builder, w.stringToFBSide(e.Side))
+        fbv1.EntityDefAddGroupName(builder, groupOff)
+        fbv1.EntityDefAddRole(builder, roleOff)
+        fbv1.EntityDefAddStartFrame(builder, e.StartFrame)
+        fbv1.EntityDefAddEndFrame(builder, e.EndFrame)
+        fbv1.EntityDefAddIsPlayer(builder, e.IsPlayer)
+        fbv1.EntityDefAddVehicleClass(builder, classOff)
+
+        return fbv1.EntityDefEnd(builder)
+}</span>
+
+// toFBEvent builds a FlatBuffers Event
+func (w *FlatBuffersWriterV1) toFBEvent(builder *flatbuffers.Builder, e Event) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        typeOff := builder.CreateString(e.Type)
+        msgOff := builder.CreateString(e.Message)
+        weaponOff := builder.CreateString(e.Weapon)
+
+        fbv1.EventStart(builder)
+        fbv1.EventAddFrameNum(builder, e.FrameNum)
+        fbv1.EventAddType(builder, typeOff)
+        fbv1.EventAddSourceId(builder, e.SourceID)
+        fbv1.EventAddTargetId(builder, e.TargetID)
+        fbv1.EventAddMessage(builder, msgOff)
+        fbv1.EventAddDistance(builder, e.Distance)
+        fbv1.EventAddWeapon(builder, weaponOff)
+
+        return fbv1.EventEnd(builder)
+}</span>
+
+// toFBMarker builds a FlatBuffers MarkerDef
+func (w *FlatBuffersWriterV1) toFBMarker(builder *flatbuffers.Builder, m MarkerDef) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        typeOff := builder.CreateString(m.Type)
+        textOff := builder.CreateString(m.Text)
+        colorOff := builder.CreateString(m.Color)
+        shapeOff := builder.CreateString(m.Shape)
+        brushOff := builder.CreateString(m.Brush)
+
+        // Build positions
+        posOffsets := make([]flatbuffers.UOffsetT, len(m.Positions))
+        for i, p := range m.Positions </span><span class="cov8" title="1">{
+                fbv1.MarkerPositionStart(builder)
+                fbv1.MarkerPositionAddFrameNum(builder, p.FrameNum)
+                fbv1.MarkerPositionAddPosX(builder, p.PosX)
+                fbv1.MarkerPositionAddPosY(builder, p.PosY)
+                fbv1.MarkerPositionAddPosZ(builder, p.PosZ)
+                fbv1.MarkerPositionAddDirection(builder, p.Direction)
+                fbv1.MarkerPositionAddAlpha(builder, p.Alpha)
+                posOffsets[i] = fbv1.MarkerPositionEnd(builder)
+        }</span>
+
+        // Build positions vector
+        <span class="cov8" title="1">fbv1.MarkerDefStartPositionsVector(builder, len(posOffsets))
+        for i := len(posOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(posOffsets[i])
+        }</span>
+        <span class="cov8" title="1">positionsVec := builder.EndVector(len(posOffsets))
+
+        // Build size vector
+        fbv1.MarkerDefStartSizeVector(builder, len(m.Size))
+        for i := len(m.Size) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependFloat32(m.Size[i])
+        }</span>
+        <span class="cov8" title="1">sizeVec := builder.EndVector(len(m.Size))
+
+        fbv1.MarkerDefStart(builder)
+        fbv1.MarkerDefAddType(builder, typeOff)
+        fbv1.MarkerDefAddText(builder, textOff)
+        fbv1.MarkerDefAddStartFrame(builder, m.StartFrame)
+        fbv1.MarkerDefAddEndFrame(builder, m.EndFrame)
+        fbv1.MarkerDefAddPlayerId(builder, m.PlayerID)
+        fbv1.MarkerDefAddColor(builder, colorOff)
+        fbv1.MarkerDefAddSide(builder, w.stringToFBSide(m.Side))
+        fbv1.MarkerDefAddSize(builder, sizeVec)
+        fbv1.MarkerDefAddShape(builder, shapeOff)
+        fbv1.MarkerDefAddBrush(builder, brushOff)
+        fbv1.MarkerDefAddPositions(builder, positionsVec)
+
+        return fbv1.MarkerDefEnd(builder)</span>
+}
+
+// toFBTimeSample builds a FlatBuffers TimeSample
+func (w *FlatBuffersWriterV1) toFBTimeSample(builder *flatbuffers.Builder, t TimeSample) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        systemTimeOff := builder.CreateString(t.SystemTimeUTC)
+        dateOff := builder.CreateString(t.Date)
+
+        fbv1.TimeSampleStart(builder)
+        fbv1.TimeSampleAddFrameNum(builder, t.FrameNum)
+        fbv1.TimeSampleAddSystemTimeUtc(builder, systemTimeOff)
+        fbv1.TimeSampleAddDate(builder, dateOff)
+        fbv1.TimeSampleAddTimeMultiplier(builder, t.TimeMultiplier)
+        fbv1.TimeSampleAddTime(builder, t.Time)
+
+        return fbv1.TimeSampleEnd(builder)
+}</span>
+
+// writeChunk writes a single chunk file with version prefix
+func (w *FlatBuffersWriterV1) writeChunk(chunksDir string, chunkIdx uint32, result *ParseResult) error <span class="cov8" title="1">{
+        builder := flatbuffers.NewBuilder(1024 * 1024)
+
+        // Build chunk
+        chunkOff := w.buildFBChunk(builder, result, chunkIdx)
+        builder.Finish(chunkOff)
+
+        // Create file
+        path := filepath.Join(chunksDir, fmt.Sprintf("%04d.fb", chunkIdx))
+        f, err := os.Create(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create chunk file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        // Write version prefix (4 bytes, little-endian)
+        if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write version prefix: %w", err)
+        }</span>
+
+        // Write FlatBuffer data
+        <span class="cov8" title="1">if _, err := f.Write(builder.FinishedBytes()); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write chunk data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// buildFBChunk builds a FlatBuffers Chunk from ParseResult
+func (w *FlatBuffersWriterV1) buildFBChunk(builder *flatbuffers.Builder, result *ParseResult, chunkIdx uint32) flatbuffers.UOffsetT <span class="cov8" title="1">{
+        startFrame := chunkIdx * result.ChunkSize
+        endFrame := startFrame + result.ChunkSize
+        if endFrame &gt; result.FrameCount </span><span class="cov8" title="1">{
+                endFrame = result.FrameCount
+        }</span>
+
+        // Build frames
+        <span class="cov8" title="1">frameOffsets := make([]flatbuffers.UOffsetT, 0, endFrame-startFrame)
+        for frameNum := startFrame; frameNum &lt; endFrame; frameNum++ </span><span class="cov8" title="1">{
+                // Build entity states for this frame
+                var stateOffsets []flatbuffers.UOffsetT
+                for _, ep := range result.EntityPositions </span><span class="cov8" title="1">{
+                        state := w.getEntityStateAtFrame(ep, frameNum)
+                        if state == nil </span><span class="cov8" title="1">{
+                                continue</span>
+                        }
+
+                        // Build crew IDs vector if present
+                        <span class="cov8" title="1">var crewVec flatbuffers.UOffsetT
+                        if len(state.CrewIDs) &gt; 0 </span><span class="cov8" title="1">{
+                                fbv1.EntityStateStartCrewIdsVector(builder, len(state.CrewIDs))
+                                for i := len(state.CrewIDs) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                                        builder.PrependUint32(state.CrewIDs[i])
+                                }</span>
+                                <span class="cov8" title="1">crewVec = builder.EndVector(len(state.CrewIDs))</span>
+                        }
+
+                        <span class="cov8" title="1">nameOff := builder.CreateString(state.Name)
+
+                        fbv1.EntityStateStart(builder)
+                        fbv1.EntityStateAddEntityId(builder, state.EntityID)
+                        fbv1.EntityStateAddPosX(builder, state.PosX)
+                        fbv1.EntityStateAddPosY(builder, state.PosY)
+                        fbv1.EntityStateAddDirection(builder, state.Direction)
+                        fbv1.EntityStateAddAlive(builder, state.Alive)
+                        if len(state.CrewIDs) &gt; 0 </span><span class="cov8" title="1">{
+                                fbv1.EntityStateAddCrewIds(builder, crewVec)
+                        }</span>
+                        <span class="cov8" title="1">fbv1.EntityStateAddVehicleId(builder, state.VehicleID)
+                        fbv1.EntityStateAddIsInVehicle(builder, state.IsInVehicle)
+                        fbv1.EntityStateAddName(builder, nameOff)
+                        fbv1.EntityStateAddIsPlayer(builder, state.IsPlayer)
+                        stateOffsets = append(stateOffsets, fbv1.EntityStateEnd(builder))</span>
+                }
+
+                // Build entities vector
+                <span class="cov8" title="1">fbv1.FrameStartEntitiesVector(builder, len(stateOffsets))
+                for i := len(stateOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                        builder.PrependUOffsetT(stateOffsets[i])
+                }</span>
+                <span class="cov8" title="1">entitiesVec := builder.EndVector(len(stateOffsets))
+
+                // Build frame
+                fbv1.FrameStart(builder)
+                fbv1.FrameAddFrameNum(builder, frameNum)
+                fbv1.FrameAddEntities(builder, entitiesVec)
+                frameOffsets = append(frameOffsets, fbv1.FrameEnd(builder))</span>
+        }
+
+        // Build frames vector
+        <span class="cov8" title="1">fbv1.ChunkStartFramesVector(builder, len(frameOffsets))
+        for i := len(frameOffsets) - 1; i &gt;= 0; i-- </span><span class="cov8" title="1">{
+                builder.PrependUOffsetT(frameOffsets[i])
+        }</span>
+        <span class="cov8" title="1">framesVec := builder.EndVector(len(frameOffsets))
+
+        // Build chunk
+        fbv1.ChunkStart(builder)
+        fbv1.ChunkAddIndex(builder, chunkIdx)
+        fbv1.ChunkAddStartFrame(builder, startFrame)
+        fbv1.ChunkAddFrameCount(builder, endFrame-startFrame)
+        fbv1.ChunkAddFrames(builder, framesVec)
+
+        return fbv1.ChunkEnd(builder)</span>
+}
+
+// getEntityStateAtFrame extracts entity state at a specific frame
+func (w *FlatBuffersWriterV1) getEntityStateAtFrame(ep EntityPositionData, frameNum uint32) *entityStateData <span class="cov8" title="1">{
+        for _, pos := range ep.Positions </span><span class="cov8" title="1">{
+                if pos.FrameNum == frameNum </span><span class="cov8" title="1">{
+                        return &amp;entityStateData{
+                                EntityID:    ep.EntityID,
+                                PosX:        pos.PosX,
+                                PosY:        pos.PosY,
+                                Direction:   pos.Direction,
+                                Alive:       pos.Alive,
+                                CrewIDs:     pos.CrewIDs,
+                                VehicleID:   pos.VehicleID,
+                                IsInVehicle: pos.IsInVehicle,
+                                Name:        pos.Name,
+                                IsPlayer:    pos.IsPlayer,
+                        }
+                }</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// entityStateData is an internal struct for entity state data
+type entityStateData struct {
+        EntityID    uint32
+        PosX        float32
+        PosY        float32
+        Direction   uint32
+        Alive       uint32
+        CrewIDs     []uint32
+        VehicleID   uint32
+        IsInVehicle bool
+        Name        string
+        IsPlayer    bool
+}
+
+// stringToFBEntityType converts a string to fbv1.EntityType
+func (w *FlatBuffersWriterV1) stringToFBEntityType(s string) fbv1.EntityType <span class="cov8" title="1">{
+        switch strings.ToLower(s) </span>{
+        case "unit":<span class="cov8" title="1">
+                return fbv1.EntityTypeUnit</span>
+        case "vehicle":<span class="cov8" title="1">
+                return fbv1.EntityTypeVehicle</span>
+        default:<span class="cov8" title="1">
+                return fbv1.EntityTypeUnknown</span>
+        }
+}
+
+// stringToFBSide converts a string to fbv1.Side
+func (w *FlatBuffersWriterV1) stringToFBSide(s string) fbv1.Side <span class="cov8" title="1">{
+        switch strings.ToUpper(s) </span>{
+        case "WEST":<span class="cov8" title="1">
+                return fbv1.SideWest</span>
+        case "EAST":<span class="cov8" title="1">
+                return fbv1.SideEast</span>
+        case "GUER", "INDEPENDENT":<span class="cov8" title="1">
+                return fbv1.SideGuer</span>
+        case "CIV", "CIVILIAN":<span class="cov8" title="1">
+                return fbv1.SideCiv</span>
+        case "GLOBAL":<span class="cov8" title="1">
+                return fbv1.SideGlobal</span>
+        default:<span class="cov8" title="1">
+                return fbv1.SideUnknown</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package storage
+
+import (
+        "context"
+        "fmt"
+        "os"
+        "path/filepath"
+        "strings"
+
+        "google.golang.org/protobuf/proto"
+
+        pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
+)
+
+func init() <span class="cov8" title="1">{
+        RegisterWriter(&amp;ProtobufWriterV1{})
+}</span>
+
+// ProtobufWriterV1 writes ParseResult to protobuf v1 format
+type ProtobufWriterV1 struct{}
+
+// Version returns the schema version
+func (w *ProtobufWriterV1) Version() SchemaVersion <span class="cov8" title="1">{ return SchemaVersionV1 }</span>
+
+// Format returns the format name
+func (w *ProtobufWriterV1) Format() string <span class="cov8" title="1">{ return "protobuf" }</span>
+
+// WriteManifest writes the manifest to a protobuf file with version prefix
+func (w *ProtobufWriterV1) WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error <span class="cov8" title="1">{
+        // Convert ParseResult to pbv1.Manifest
+        manifest := w.toProtoManifest(result)
+
+        // Create file
+        f, err := os.Create(filepath.Join(outputPath, "manifest.pb"))
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create manifest file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        // Write version prefix (4 bytes, little-endian)
+        if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write version prefix: %w", err)
+        }</span>
+
+        // Write protobuf data
+        <span class="cov8" title="1">data, err := proto.Marshal(manifest)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("marshal manifest: %w", err)
+        }</span>
+        <span class="cov8" title="1">if _, err := f.Write(data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write manifest data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// WriteChunks writes all chunks to protobuf files with version prefix
+func (w *ProtobufWriterV1) WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error <span class="cov8" title="1">{
+        // Create chunks directory
+        chunksDir := filepath.Join(outputPath, "chunks")
+        if err := os.MkdirAll(chunksDir, 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create chunks directory: %w", err)
+        }</span>
+
+        // Calculate chunk count
+        <span class="cov8" title="1">chunkCount := (result.FrameCount + result.ChunkSize - 1) / result.ChunkSize
+        if chunkCount == 0 </span><span class="cov8" title="1">{
+                chunkCount = 1
+        }</span>
+
+        // Write each chunk
+        <span class="cov8" title="1">for chunkIdx := uint32(0); chunkIdx &lt; chunkCount; chunkIdx++ </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov8" title="1">
+                        return ctx.Err()</span>
+                default:<span class="cov8" title="1"></span>
+                }
+
+                <span class="cov8" title="1">chunk := w.buildChunk(result, chunkIdx)
+                if err := w.writeChunk(chunksDir, chunkIdx, chunk); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("write chunk %d: %w", chunkIdx, err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// toProtoManifest converts ParseResult to pbv1.Manifest
+func (w *ProtobufWriterV1) toProtoManifest(result *ParseResult) *pbv1.Manifest <span class="cov8" title="1">{
+        // Calculate chunk count
+        chunkCount := (result.FrameCount + result.ChunkSize - 1) / result.ChunkSize
+        if chunkCount == 0 </span><span class="cov8" title="1">{
+                chunkCount = 1
+        }</span>
+
+        <span class="cov8" title="1">manifest := &amp;pbv1.Manifest{
+                Version:          uint32(SchemaVersionV1),
+                WorldName:        result.WorldName,
+                MissionName:      result.MissionName,
+                FrameCount:       result.FrameCount,
+                ChunkSize:        result.ChunkSize,
+                CaptureDelayMs:   result.CaptureDelayMs,
+                ChunkCount:       chunkCount,
+                ExtensionVersion: result.ExtensionVersion,
+                AddonVersion:     result.AddonVersion,
+        }
+
+        // Convert entities
+        for _, e := range result.Entities </span><span class="cov8" title="1">{
+                manifest.Entities = append(manifest.Entities, w.toProtoEntityDef(e))
+        }</span>
+
+        // Convert events
+        <span class="cov8" title="1">for _, e := range result.Events </span><span class="cov8" title="1">{
+                manifest.Events = append(manifest.Events, w.toProtoEvent(e))
+        }</span>
+
+        // Convert markers
+        <span class="cov8" title="1">for _, m := range result.Markers </span><span class="cov8" title="1">{
+                manifest.Markers = append(manifest.Markers, w.toProtoMarker(m))
+        }</span>
+
+        // Convert times
+        <span class="cov8" title="1">for _, t := range result.Times </span><span class="cov8" title="1">{
+                manifest.Times = append(manifest.Times, w.toProtoTimeSample(t))
+        }</span>
+
+        <span class="cov8" title="1">return manifest</span>
+}
+
+// toProtoEntityDef converts schema-agnostic EntityDef to pbv1.EntityDef
+func (w *ProtobufWriterV1) toProtoEntityDef(e EntityDef) *pbv1.EntityDef <span class="cov8" title="1">{
+        return &amp;pbv1.EntityDef{
+                Id:           e.ID,
+                Type:         w.stringToEntityType(e.Type),
+                Name:         e.Name,
+                Side:         w.stringToSide(e.Side),
+                GroupName:    e.Group,
+                Role:         e.Role,
+                StartFrame:   e.StartFrame,
+                EndFrame:     e.EndFrame,
+                IsPlayer:     e.IsPlayer,
+                VehicleClass: e.VehicleClass,
+        }
+}</span>
+
+// toProtoEvent converts schema-agnostic Event to pbv1.Event
+func (w *ProtobufWriterV1) toProtoEvent(e Event) *pbv1.Event <span class="cov8" title="1">{
+        return &amp;pbv1.Event{
+                FrameNum: e.FrameNum,
+                Type:     e.Type,
+                SourceId: e.SourceID,
+                TargetId: e.TargetID,
+                Message:  e.Message,
+                Distance: e.Distance,
+                Weapon:   e.Weapon,
+        }
+}</span>
+
+// toProtoMarker converts schema-agnostic MarkerDef to pbv1.MarkerDef
+func (w *ProtobufWriterV1) toProtoMarker(m MarkerDef) *pbv1.MarkerDef <span class="cov8" title="1">{
+        marker := &amp;pbv1.MarkerDef{
+                Type:       m.Type,
+                Text:       m.Text,
+                StartFrame: m.StartFrame,
+                EndFrame:   m.EndFrame,
+                PlayerId:   m.PlayerID,
+                Color:      m.Color,
+                Side:       w.stringToSide(m.Side),
+                Size:       m.Size,
+                Shape:      m.Shape,
+                Brush:      m.Brush,
+        }
+
+        // Convert positions
+        for _, p := range m.Positions </span><span class="cov8" title="1">{
+                marker.Positions = append(marker.Positions, &amp;pbv1.MarkerPosition{
+                        FrameNum:  p.FrameNum,
+                        PosX:      p.PosX,
+                        PosY:      p.PosY,
+                        PosZ:      p.PosZ,
+                        Direction: p.Direction,
+                        Alpha:     p.Alpha,
+                })
+        }</span>
+
+        <span class="cov8" title="1">return marker</span>
+}
+
+// toProtoTimeSample converts schema-agnostic TimeSample to pbv1.TimeSample
+func (w *ProtobufWriterV1) toProtoTimeSample(t TimeSample) *pbv1.TimeSample <span class="cov8" title="1">{
+        return &amp;pbv1.TimeSample{
+                FrameNum:       t.FrameNum,
+                SystemTimeUtc:  t.SystemTimeUTC,
+                Date:           t.Date,
+                TimeMultiplier: t.TimeMultiplier,
+                Time:           t.Time,
+        }
+}</span>
+
+// buildChunk builds a protobuf Chunk from EntityPositions for the given chunk index
+func (w *ProtobufWriterV1) buildChunk(result *ParseResult, chunkIdx uint32) *pbv1.Chunk <span class="cov8" title="1">{
+        startFrame := chunkIdx * result.ChunkSize
+        endFrame := startFrame + result.ChunkSize
+        if endFrame &gt; result.FrameCount </span><span class="cov8" title="1">{
+                endFrame = result.FrameCount
+        }</span>
+
+        <span class="cov8" title="1">chunk := &amp;pbv1.Chunk{
+                Index:      chunkIdx,
+                StartFrame: startFrame,
+                FrameCount: endFrame - startFrame,
+        }
+
+        // Build frames for this chunk
+        for frameNum := startFrame; frameNum &lt; endFrame; frameNum++ </span><span class="cov8" title="1">{
+                frame := &amp;pbv1.Frame{
+                        FrameNum: frameNum,
+                }
+
+                // Collect entity states for this frame
+                for _, ep := range result.EntityPositions </span><span class="cov8" title="1">{
+                        state := w.getEntityStateAtFrame(ep, frameNum)
+                        if state != nil </span><span class="cov8" title="1">{
+                                frame.Entities = append(frame.Entities, state)
+                        }</span>
+                }
+
+                <span class="cov8" title="1">chunk.Frames = append(chunk.Frames, frame)</span>
+        }
+
+        <span class="cov8" title="1">return chunk</span>
+}
+
+// getEntityStateAtFrame extracts entity state at a specific frame
+func (w *ProtobufWriterV1) getEntityStateAtFrame(ep EntityPositionData, frameNum uint32) *pbv1.EntityState <span class="cov8" title="1">{
+        // Find position for this frame
+        for _, pos := range ep.Positions </span><span class="cov8" title="1">{
+                if pos.FrameNum == frameNum </span><span class="cov8" title="1">{
+                        return &amp;pbv1.EntityState{
+                                EntityId:    ep.EntityID,
+                                PosX:        pos.PosX,
+                                PosY:        pos.PosY,
+                                Direction:   pos.Direction,
+                                Alive:       pos.Alive,
+                                CrewIds:     pos.CrewIDs,
+                                VehicleId:   pos.VehicleID,
+                                IsInVehicle: pos.IsInVehicle,
+                                Name:        pos.Name,
+                                IsPlayer:    pos.IsPlayer,
+                        }
+                }</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// writeChunk writes a single chunk file with version prefix
+func (w *ProtobufWriterV1) writeChunk(chunksDir string, index uint32, chunk *pbv1.Chunk) error <span class="cov8" title="1">{
+        path := filepath.Join(chunksDir, fmt.Sprintf("%04d.pb", index))
+        f, err := os.Create(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create chunk file: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+
+        // Write version prefix (4 bytes, little-endian)
+        if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write version prefix: %w", err)
+        }</span>
+
+        // Write protobuf data
+        <span class="cov8" title="1">data, err := proto.Marshal(chunk)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("marshal chunk: %w", err)
+        }</span>
+        <span class="cov8" title="1">if _, err := f.Write(data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("write chunk data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// stringToEntityType converts a string to pbv1.EntityType
+func (w *ProtobufWriterV1) stringToEntityType(s string) pbv1.EntityType <span class="cov8" title="1">{
+        switch strings.ToLower(s) </span>{
+        case "unit":<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_UNIT</span>
+        case "vehicle":<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_VEHICLE</span>
+        default:<span class="cov8" title="1">
+                return pbv1.EntityType_ENTITY_TYPE_UNKNOWN</span>
+        }
+}
+
+// stringToSide converts a string to pbv1.Side
+func (w *ProtobufWriterV1) stringToSide(s string) pbv1.Side <span class="cov8" title="1">{
+        switch strings.ToUpper(s) </span>{
+        case "WEST":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_WEST</span>
+        case "EAST":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_EAST</span>
+        case "GUER", "INDEPENDENT":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GUER</span>
+        case "CIV", "CIVILIAN":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_CIV</span>
+        case "GLOBAL":<span class="cov8" title="1">
+                return pbv1.Side_SIDE_GLOBAL</span>
+        default:<span class="cov8" title="1">
+                return pbv1.Side_SIDE_UNKNOWN</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

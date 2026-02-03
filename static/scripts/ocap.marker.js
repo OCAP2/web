@@ -1,3 +1,6 @@
+// OCAP Marker v2 - Grid pattern debug version
+console.log('ocap.marker.js loaded - GridPattern debug version');
+
 // Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
 L.GridPattern = L.Pattern.extend({
 	options: {
@@ -13,7 +16,7 @@ L.GridPattern = L.Pattern.extend({
 		var s = this.options.spaceWeight;
 		var size = w + s;
 
-		console.debug(`GridPattern._addShapes: weight=${w}, space=${s}, size=${size}, color=${this.options.color}`);
+		console.log(`GridPattern._addShapes: weight=${w}, space=${s}, size=${size}, color=${this.options.color}`);
 
 		// Update pattern dimensions before creating shapes
 		this.options.width = size;
@@ -39,7 +42,7 @@ L.GridPattern = L.Pattern.extend({
 			d: vLineD
 		});
 
-		console.debug(`GridPattern paths: hLine.d="${hLineD}", vLine.d="${vLineD}"`);
+		console.log(`GridPattern paths: hLine.d="${hLineD}", vLine.d="${vLineD}"`);
 
 		this.addShape(this._hLine);
 		this.addShape(this._vLine);
@@ -47,7 +50,7 @@ L.GridPattern = L.Pattern.extend({
 		// After shapes are added, verify DOM
 		setTimeout(() => {
 			if (this._dom) {
-				console.debug('GridPattern DOM after addShapes:', this._dom.outerHTML);
+				console.log('GridPattern DOM after addShapes:', this._dom.outerHTML);
 			}
 		}, 100);
 	},
@@ -143,7 +146,7 @@ class Marker {
 
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
-			console.debug(`Marker created: shape=${shape}, brush=${brush}, color=${this._color}`);
+			console.log(`Marker created: shape=${shape}, brush=${brush}, color=${this._color}`);
 			this._brushPattern = null;
 			this._brushPatternOptions = null;
 			switch (brush) {
@@ -304,10 +307,10 @@ class Marker {
 			if (this._brushPatternOptions) {
 				if (this._useGridPattern) {
 					this._brushPattern = new L.GridPattern(this._brushPatternOptions);
-					console.debug(`GridPattern created for brush=${brush}:`, this._brushPattern);
+					console.log(`GridPattern created for brush=${brush}:`, this._brushPattern);
 				} else {
 					this._brushPattern = new L.StripePattern(this._brushPatternOptions);
-					console.debug(`StripePattern created for brush=${brush}:`, this._brushPattern);
+					console.log(`StripePattern created for brush=${brush}:`, this._brushPattern);
 				}
 			}
 		} else {
@@ -360,14 +363,14 @@ class Marker {
 		let alpha = frameData[3];
 
 		if (this._shape === "RECTANGLE" && Array.isArray(pos[0])) {
-			console.debug("wrong RECTANGLE positions, converting to POLYLINE");
+			console.log("wrong RECTANGLE positions, converting to POLYLINE");
 			this._shape = "POLYLINE";
 		}
 
 		let latLng;
 		let points;
 		if (this._marker == null) {
-			// console.debug(`UPDATE AT FRAME: attempting to create marker ${this._name}`)
+			// console.log(`UPDATE AT FRAME: attempting to create marker ${this._name}`)
 
 			if (this._shape === "ICON") {
 				latLng = armaToLatLng(pos);
@@ -427,7 +430,7 @@ class Marker {
 				this._createMarker(points, dir, alpha);
 			}
 		} else {
-			// console.debug(`UPDATE AT FRAME: attempting to update marker ${this._name}`)
+			// console.log(`UPDATE AT FRAME: attempting to update marker ${this._name}`)
 
 			if (this._shape === "ICON") {
 				latLng = armaToLatLng(pos);
@@ -659,12 +662,25 @@ class Marker {
 			if (this._brushPattern) {
 				this._brushPattern.addTo(map);
 				polygonOptions.fillPattern = this._brushPattern;
-				console.debug(`ELLIPSE with pattern - options:`, polygonOptions, 'pattern stamp:', L.stamp(this._brushPattern));
+				console.log(`ELLIPSE with pattern - options:`, polygonOptions, 'pattern stamp:', L.stamp(this._brushPattern));
 			}
 			marker = L.polygon(latLng, polygonOptions);
 			marker.addTo(systemMarkersLayerGroup);
 			if (this._brushPattern) {
-				console.debug(`ELLIPSE marker fill attribute:`, marker._path ? marker._path.getAttribute('fill') : 'no path yet');
+				const patternUrl = L.Pattern._getPatternUrl(L.stamp(this._brushPattern));
+				console.log(`ELLIPSE expected pattern URL:`, patternUrl);
+				// Check after a short delay when the path should exist
+				setTimeout(() => {
+					if (marker._path) {
+						console.log(`ELLIPSE marker fill attribute (delayed):`, marker._path.getAttribute('fill'));
+						console.log(`ELLIPSE marker options.fillPattern:`, marker.options.fillPattern);
+						// Force set the fill if it's not the pattern
+						if (marker._path.getAttribute('fill') !== patternUrl) {
+							console.log(`FORCING fill to pattern URL`);
+							marker._path.setAttribute('fill', patternUrl);
+						}
+					}
+				}, 100);
 			}
 		} else if (this._shape === "RECTANGLE") {
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
