@@ -1038,7 +1038,7 @@ async function loadOperation(op) {
 		// Get schema version from operation or default to 1
 		const schemaVersion = op.schemaVersion || 1;
 		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat}, schema v${schemaVersion})`);
-		return processOpStreaming(op.id, op.storageFormat, schemaVersion);
+		return processOpStreaming(op.id, op.storageFormat, schemaVersion, op.filename);
 	}
 	// Fall back to legacy JSON loading
 	console.log(`Loading operation using legacy JSON mode`);
@@ -1075,7 +1075,8 @@ async function loadOperationByFilename(filename) {
 function processOp (filepath, opRecord) {
 	console.log("Processing operation: (" + filepath + ")...");
 	const time = new Date();
-	fileName = filepath.substr(5, filepath.length);
+	// Strip "data/" prefix and .json extension since /file/:name endpoint adds .json.gz
+	fileName = filepath.substr(5, filepath.length).replace(/\.json$/, '');
 
 	let data;
 	return fetch(filepath)
@@ -1772,9 +1773,13 @@ async function getOperationFormat(operationId) {
  * @param {number} schemaVersion - Schema version (default: 1)
  * @returns {Promise<void>}
  */
-async function processOpStreaming(operationId, format = 'protobuf', schemaVersion = 1) {
+async function processOpStreaming(operationId, format = 'protobuf', schemaVersion = 1, operationFilename = null) {
 	console.log(`Processing operation (streaming mode): ${operationId} (format: ${format}, schema: v${schemaVersion})`);
 	const time = new Date();
+
+	// Set global fileName for download functionality
+	// Strip .json extension since /file/:name endpoint adds .json.gz
+	fileName = (operationFilename || operationId).replace(/\.json$/, '');
 
 	// Get versioned loader from registry
 	const loader = LoaderRegistry.getLoader(schemaVersion);
