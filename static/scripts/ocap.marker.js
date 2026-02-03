@@ -841,65 +841,33 @@ class Marker {
 		if (this._shape === "ELLIPSE") {
 			// latLng now contains polygon points (calculated in _updateAtFrame)
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
-			let patternUrl = null;
+
 			if (this._brushPattern) {
+				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
+				if (window.svgRenderer) {
+					polygonOptions.renderer = window.svgRenderer;
+				}
 				this._brushPattern.addTo(map);
 				polygonOptions.fillPattern = this._brushPattern;
-				patternUrl = L.Pattern._getPatternUrl(L.stamp(this._brushPattern));
-				console.log(`ELLIPSE with pattern - patternUrl:`, patternUrl);
+				console.log(`ELLIPSE with SVG renderer and pattern`);
 			}
+
 			marker = L.polygon(latLng, polygonOptions);
-
-			// Apply pattern fill by hooking into the layer's rendering
-			if (patternUrl) {
-				marker._customPatternUrl = patternUrl;
-				// Set up 'add' listener BEFORE calling addTo
-				marker.on('add', function() {
-					console.log('ELLIPSE add event fired, _path:', !!this._path);
-					// The path might not exist yet, use a small delay
-					setTimeout(() => {
-						if (this._path) {
-							console.log('Applying pattern fill (from add event):', this._customPatternUrl);
-							this._path.setAttribute('fill', this._customPatternUrl);
-						}
-					}, 10);
-				});
-			}
-
 			marker.addTo(systemMarkersLayerGroup);
-
-			// Also try applying immediately after addTo
-			if (patternUrl && marker._path) {
-				console.log('Applying pattern fill (immediate):', patternUrl);
-				marker._path.setAttribute('fill', patternUrl);
-			}
 		} else if (this._shape === "RECTANGLE") {
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
-			let patternUrl = null;
+
 			if (this._brushPattern) {
+				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
+				if (window.svgRenderer) {
+					polygonOptions.renderer = window.svgRenderer;
+				}
 				this._brushPattern.addTo(map);
 				polygonOptions.fillPattern = this._brushPattern;
-				patternUrl = L.Pattern._getPatternUrl(L.stamp(this._brushPattern));
 			}
+
 			marker = L.polygon(latLng, polygonOptions);
-
-			// Apply pattern fill by hooking into the layer's rendering
-			if (patternUrl) {
-				marker._customPatternUrl = patternUrl;
-				marker.on('add', function() {
-					setTimeout(() => {
-						if (this._path) {
-							this._path.setAttribute('fill', this._customPatternUrl);
-						}
-					}, 10);
-				});
-			}
-
 			marker.addTo(systemMarkersLayerGroup);
-
-			if (patternUrl && marker._path) {
-				marker._path.setAttribute('fill', patternUrl);
-			}
 		} else if (this._shape === "POLYLINE") {
 			marker = L.polyline(latLng, { color: this._color, opacity: 1, noClip: true, lineCap: 'butt', lineJoin: 'round', interactive: false })
 

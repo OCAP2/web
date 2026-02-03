@@ -488,6 +488,10 @@ function initMap (world) {
 		preferCanvas: true
 	});
 
+	// Create SVG renderer for shapes that need pattern fills (Canvas doesn't support SVG patterns)
+	window.svgRenderer = L.svg();
+	window.svgRenderer.addTo(map);
+
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
