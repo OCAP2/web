@@ -239,7 +239,7 @@ class Marker {
 	}
 
 	updateRender (f) {
-		if (this._shape === "RECTANGLE") {
+		if (this._shape === "RECTANGLE" || this._shape === "ELLIPSE") {
 			const frameIndex = this._markerOnFrame(f);
 			if (frameIndex >= 0 && (this._side === ui.currentSide || this._side === "GLOBAL")) {
 				this._updateAtFrame(frameIndex);
@@ -289,8 +289,9 @@ class Marker {
 			} else if (this._shape === "ELLIPSE") {
 				let centerX = pos[0];
 				let centerY = pos[1];
-				let radiusX = this._size[0];  // Arma markerSize is radius in meters
-				let radiusY = this._size[1];
+				// Ensure size is valid array, fallback to [100, 100] if not
+				let radiusX = (Array.isArray(this._size) && this._size[0]) ? this._size[0] : 100;
+				let radiusY = (Array.isArray(this._size) && this._size[1]) ? this._size[1] : 100;
 
 				// Calculate ellipse perimeter points in Arma coordinates
 				let pointsRaw = this._calculateEllipsePoints(centerX, centerY, radiusX, radiusY);
@@ -351,8 +352,9 @@ class Marker {
 				latLng = armaToLatLng(pos);
 				let centerX = pos[0];
 				let centerY = pos[1];
-				let radiusX = this._size[0];
-				let radiusY = this._size[1];
+				// Ensure size is valid array, fallback to [100, 100] if not
+				let radiusX = (Array.isArray(this._size) && this._size[0]) ? this._size[0] : 100;
+				let radiusY = (Array.isArray(this._size) && this._size[1]) ? this._size[1] : 100;
 				if (alpha === undefined || alpha === null) { alpha = 0.3 }
 
 				// Calculate ellipse perimeter points in Arma coordinates
