@@ -205,7 +205,8 @@ const ProtobufDecoder = (function() {
             startFrame: 0,
             endFrame: 0,
             isPlayer: false,
-            vehicleClass: ''
+            vehicleClass: '',
+            framesFired: []
         };
 
         while (reader.pos < endPos) {
@@ -223,11 +224,43 @@ const ProtobufDecoder = (function() {
                 case 8: entity.endFrame = reader.readVarint(); break;
                 case 9: entity.isPlayer = reader.readVarint() !== 0; break;
                 case 10: entity.vehicleClass = reader.readString(); break;
+                case 11:
+                    const ffLen = reader.readVarint();
+                    const ffEnd = reader.pos + ffLen;
+                    entity.framesFired.push(decodeFiredFrame(reader, ffEnd));
+                    break;
                 default: reader.skip(tag.wireType);
             }
         }
 
         return entity;
+    }
+
+    /**
+     * Decode FiredFrame message
+     */
+    function decodeFiredFrame(reader, endPos) {
+        const frame = {
+            frameNum: 0,
+            posX: 0,
+            posY: 0,
+            posZ: 0
+        };
+
+        while (reader.pos < endPos) {
+            const tag = reader.readTag();
+            if (!tag || reader.pos > endPos) break;
+
+            switch (tag.fieldNumber) {
+                case 1: frame.frameNum = reader.readVarint(); break;
+                case 2: frame.posX = reader.readFloat(); break;
+                case 3: frame.posY = reader.readFloat(); break;
+                case 4: frame.posZ = reader.readFloat(); break;
+                default: reader.skip(tag.wireType);
+            }
+        }
+
+        return frame;
     }
 
     /**

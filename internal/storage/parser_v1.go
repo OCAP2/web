@@ -48,6 +48,7 @@ func (p *ParserV1) Parse(data map[string]interface{}, chunkSize uint32) (*ParseR
 				EndFrame:     endFrame,
 				IsPlayer:     getFloat64(em, "isPlayer") == 1,
 				VehicleClass: getString(em, "class"),
+				FramesFired:  p.parseFramesFired(em),
 			}
 			result.Entities = append(result.Entities, def)
 
@@ -432,4 +433,38 @@ func sideIndexToString(idx int) string {
 	default:
 		return ""
 	}
+}
+
+// parseFramesFired extracts fired frame data from an entity
+// Format: [[frameNum, [x, y, z]], ...]
+func (p *ParserV1) parseFramesFired(em map[string]interface{}) []FiredFrame {
+	framesFired, ok := em["framesFired"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	result := make([]FiredFrame, 0, len(framesFired))
+	for _, ff := range framesFired {
+		arr, ok := ff.([]interface{})
+		if !ok || len(arr) < 2 {
+			continue
+		}
+
+		frame := FiredFrame{
+			FrameNum: uint32(toFloat64(arr[0])),
+		}
+
+		// Parse position [x, y, z]
+		if posArr, ok := arr[1].([]interface{}); ok && len(posArr) >= 2 {
+			frame.PosX = float32(toFloat64(posArr[0]))
+			frame.PosY = float32(toFloat64(posArr[1]))
+			if len(posArr) > 2 {
+				frame.PosZ = float32(toFloat64(posArr[2]))
+			}
+		}
+
+		result = append(result, frame)
+	}
+
+	return result
 }

@@ -49,6 +49,10 @@ class Entity {
 
 	// Get LatLng at current frame
 	getLatLng() {
+		// In streaming mode, positions array is empty - get from marker directly
+		if (this._streamingMode && this._marker) {
+			return this._marker.getLatLng();
+		}
 		return this.getLatLngAtFrame(playbackFrame);
 	}
 

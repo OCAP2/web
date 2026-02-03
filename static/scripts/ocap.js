@@ -1514,7 +1514,6 @@ function startPlaybackLoop () {
 						if (projectilePos != null && ui.firelinesEnabled) {
 							const entityPos = entity.getLatLng();
 							if (entityPos) {
-								// console.log(`Shooter pos: ${entity.getLatLng()}\nFired event: ${projectilePos} (is null: ${projectilePos == null})`);
 								const line = L.polyline([entity.getLatLng(), armaToLatLng(projectilePos)], {
 									color: entity.getSideColour(),
 									weight: 2,
@@ -1876,6 +1875,14 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 				groups.addGroup(group);
 			}
 
+			// Convert framesFired from protobuf format to expected format
+			// Protobuf: [{frameNum, posX, posY, posZ}, ...]
+			// Expected: [[frameNum, [x, y, z]], ...]
+			const framesFired = (entDef.framesFired || []).map(ff => [
+				ff.frameNum,
+				[ff.posX, ff.posY, ff.posZ]
+			]);
+
 			// Create unit with empty positions (will be filled from chunks)
 			const unit = new Unit(
 				entDef.startFrame,
@@ -1885,7 +1892,7 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 				entDef.side,
 				entDef.isPlayer,
 				[], // Empty positions - will use chunks
-				[], // Empty framesFired
+				framesFired,
 				entDef.role
 			);
 			unit._streamingMode = true;
@@ -2091,6 +2098,21 @@ function startStreamingPlaybackLoop() {
 								case 'EAST': countEast++; break;
 								case 'GUER': countGuer++; break;
 								case 'CIV': countCiv++; break;
+							}
+						}
+
+						// Draw fire line (if enabled)
+						var projectilePos = entity.firedOnFrame(playbackFrame);
+						if (projectilePos != null && ui.firelinesEnabled) {
+							const entityPos = entity.getLatLng();
+							if (entityPos) {
+								const line = L.polyline([entityPos, armaToLatLng(projectilePos)], {
+									color: entity.getSideColour(),
+									weight: 2,
+									opacity: 0.4
+								});
+								line.addTo(map);
+								firelines.push(line);
 							}
 						}
 					}

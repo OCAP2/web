@@ -31,6 +31,15 @@ message EntityDef {
   uint32 end_frame = 8;
   bool is_player = 9;
   string vehicle_class = 10;
+  repeated FiredFrame frames_fired = 11;
+}
+
+// FiredFrame represents a projectile fired at a specific frame
+message FiredFrame {
+  uint32 frame_num = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  float pos_z = 4;
 }
 
 enum EntityType {

@@ -130,7 +130,7 @@ func (w *ProtobufWriterV1) toProtoManifest(result *ParseResult) *pbv1.Manifest {
 
 // toProtoEntityDef converts schema-agnostic EntityDef to pbv1.EntityDef
 func (w *ProtobufWriterV1) toProtoEntityDef(e EntityDef) *pbv1.EntityDef {
-	return &pbv1.EntityDef{
+	def := &pbv1.EntityDef{
 		Id:           e.ID,
 		Type:         w.stringToEntityType(e.Type),
 		Name:         e.Name,
@@ -142,6 +142,18 @@ func (w *ProtobufWriterV1) toProtoEntityDef(e EntityDef) *pbv1.EntityDef {
 		IsPlayer:     e.IsPlayer,
 		VehicleClass: e.VehicleClass,
 	}
+
+	// Convert frames fired
+	for _, ff := range e.FramesFired {
+		def.FramesFired = append(def.FramesFired, &pbv1.FiredFrame{
+			FrameNum: ff.FrameNum,
+			PosX:     ff.PosX,
+			PosY:     ff.PosY,
+			PosZ:     ff.PosZ,
+		})
+	}
+
+	return def
 }
 
 // toProtoEvent converts schema-agnostic Event to pbv1.Event

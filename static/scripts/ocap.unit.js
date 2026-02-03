@@ -154,10 +154,11 @@ class Unit extends Entity {
 	// Check if unit fired on given frame
 	// If true, return position of projectile impact
 	firedOnFrame (f) {
-		for (let i = 0; i < (this._framesFired.length - 1); i++) {
+		if (!this._framesFired || this._framesFired.length === 0) { return; }
+		for (let i = 0; i < this._framesFired.length; i++) {
 			let frameNum = this._framesFired[i][0];
 			let projectilePos = this._framesFired[i][1];
-			if (frameNum === f) { return projectilePos }
+			if (frameNum === f) { return projectilePos; }
 		}
 		return;
 	}

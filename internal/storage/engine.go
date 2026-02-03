@@ -35,16 +35,25 @@ type Event struct {
 
 // EntityDef defines an entity's metadata
 type EntityDef struct {
-	ID           uint32 `json:"id"`
-	Type         string `json:"type"` // "unit" or "vehicle"
-	Name         string `json:"name"`
-	Side         string `json:"side"`
-	Group        string `json:"group"`
-	Role         string `json:"role"`
-	StartFrame   uint32 `json:"startFrame"`
-	EndFrame     uint32 `json:"endFrame"`
-	IsPlayer     bool   `json:"isPlayer"`
-	VehicleClass string `json:"vehicleClass,omitempty"`
+	ID           uint32       `json:"id"`
+	Type         string       `json:"type"` // "unit" or "vehicle"
+	Name         string       `json:"name"`
+	Side         string       `json:"side"`
+	Group        string       `json:"group"`
+	Role         string       `json:"role"`
+	StartFrame   uint32       `json:"startFrame"`
+	EndFrame     uint32       `json:"endFrame"`
+	IsPlayer     bool         `json:"isPlayer"`
+	VehicleClass string       `json:"vehicleClass,omitempty"`
+	FramesFired  []FiredFrame `json:"framesFired,omitempty"`
+}
+
+// FiredFrame represents a projectile fired at a specific frame
+type FiredFrame struct {
+	FrameNum uint32  `json:"frameNum"`
+	PosX     float32 `json:"posX"`
+	PosY     float32 `json:"posY"`
+	PosZ     float32 `json:"posZ"`
 }
 
 // Chunk contains position data for a frame range
