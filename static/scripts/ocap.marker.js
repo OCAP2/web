@@ -20,8 +20,10 @@ L.GridPattern = L.Pattern.extend({
 	options: {
 		weight: 2,
 		spaceWeight: 4,
-		color: '#000000',
-		opacity: 1.0
+		color: '#ffffff',        // Grid line color (default white)
+		backgroundColor: null,   // Background color (if set, fills behind grid)
+		opacity: 1.0,
+		backgroundOpacity: 0.5
 	},
 
 	_addShapes: function () {
@@ -33,6 +35,21 @@ L.GridPattern = L.Pattern.extend({
 		// Update pattern dimensions before creating shapes
 		this.options.width = size;
 		this.options.height = size;
+
+		// Add background rectangle if backgroundColor is set
+		if (this.options.backgroundColor) {
+			this._bg = new L.PatternRect({
+				x: 0,
+				y: 0,
+				width: size,
+				height: size,
+				fill: true,
+				fillColor: this.options.backgroundColor,
+				fillOpacity: this.options.backgroundOpacity,
+				stroke: false
+			});
+			this.addShape(this._bg);
+		}
 
 		// Horizontal line
 		this._hLine = new L.PatternPath({
@@ -202,8 +219,10 @@ class Marker {
 				case "Grid":
 				case "GRID":
 					this._brushPatternOptions = {
-						color: this._color,
-						opacity: 1.0,
+						color: '#ffffff',           // White grid lines
+						backgroundColor: this._color, // Marker color as background
+						backgroundOpacity: 0.5,
+						opacity: 0.8,
 						weight: 2,
 						spaceWeight: 6
 					};
@@ -212,7 +231,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 0.5
+						fillOpacity: 1.0  // Full opacity since pattern handles transparency
 					};
 					break;
 				case "fdiagonal":
@@ -268,8 +287,10 @@ class Marker {
 				case "Cross":
 				case "CROSS":
 					this._brushPatternOptions = {
-						color: this._color,
-						opacity: 1.0,
+						color: '#ffffff',           // White cross lines
+						backgroundColor: this._color, // Marker color as background
+						backgroundOpacity: 0.5,
+						opacity: 0.8,
 						weight: 2,
 						spaceWeight: 6
 					};
@@ -278,7 +299,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 0.5
+						fillOpacity: 1.0
 					};
 					break;
 				case "border":
