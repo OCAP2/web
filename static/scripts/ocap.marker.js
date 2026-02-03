@@ -219,7 +219,7 @@ class Marker {
 				case "Grid":
 				case "GRID":
 					this._brushPatternOptions = {
-						color: '#ffffff',           // White grid lines
+						color: '#666666',           // Grey grid lines
 						backgroundColor: this._color, // Marker color as background
 						backgroundOpacity: 0.5,
 						opacity: 0.8,
@@ -287,7 +287,7 @@ class Marker {
 				case "Cross":
 				case "CROSS":
 					this._brushPatternOptions = {
-						color: '#ffffff',           // White cross lines
+						color: '#666666',           // Grey cross lines
 						backgroundColor: this._color, // Marker color as background
 						backgroundOpacity: 0.5,
 						opacity: 0.8,
