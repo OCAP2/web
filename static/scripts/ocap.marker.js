@@ -67,12 +67,24 @@ window.applyPatternFills = function() {
 
 	const originalUpdateStyle = L.SVG.prototype._updateStyle;
 	L.SVG.prototype._updateStyle = function(layer) {
+		// Log all calls to _updateStyle for layers with fillPattern
+		if (layer.options && layer.options.fillPattern) {
+			console.log('_updateStyle called for layer with fillPattern:', {
+				fill: layer.options.fill,
+				fillPattern: layer.options.fillPattern,
+				hasPath: !!layer._path,
+				pathFillBefore: layer._path ? layer._path.getAttribute('fill') : 'no path'
+			});
+		}
+
 		originalUpdateStyle.call(this, layer);
 
 		// Apply fill pattern if present
-		if (layer.options && layer.options.fill && layer.options.fillPattern && layer._path) {
+		if (layer.options && layer.options.fillPattern && layer._path) {
 			const patternUrl = L.Pattern._getPatternUrl(L.stamp(layer.options.fillPattern));
+			console.log('Applying pattern fill:', patternUrl, 'fill option:', layer.options.fill);
 			layer._path.setAttribute('fill', patternUrl);
+			console.log('Path fill after apply:', layer._path.getAttribute('fill'));
 		}
 	};
 	console.log('Patched L.SVG._updateStyle for pattern fills');
