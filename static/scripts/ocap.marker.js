@@ -1,6 +1,35 @@
 // OCAP Marker v2 - Grid pattern debug version
 console.log('ocap.marker.js loaded - GridPattern debug version');
 
+// Debug function to find and fix pattern fills - call from console: window.debugPatternFills()
+window.debugPatternFills = function() {
+	console.log('=== Debugging Pattern Fills ===');
+
+	// Find all SVG paths in the map
+	const svgPaths = document.querySelectorAll('.leaflet-overlay-pane path');
+	console.log(`Found ${svgPaths.length} SVG paths`);
+
+	svgPaths.forEach((path, i) => {
+		const fill = path.getAttribute('fill');
+		console.log(`Path ${i}: fill="${fill}"`);
+	});
+
+	// Find all pattern definitions
+	const patterns = document.querySelectorAll('pattern');
+	console.log(`Found ${patterns.length} patterns:`);
+	patterns.forEach(p => {
+		console.log(`  Pattern id="${p.id}":`, p.outerHTML.substring(0, 200));
+	});
+
+	// Check the defs element
+	const defs = document.querySelector('defs');
+	if (defs) {
+		console.log('Defs element found:', defs.outerHTML.substring(0, 500));
+	} else {
+		console.log('No defs element found!');
+	}
+};
+
 // Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
 L.GridPattern = L.Pattern.extend({
 	options: {
@@ -669,23 +698,19 @@ class Marker {
 			if (this._brushPattern) {
 				const patternUrl = L.Pattern._getPatternUrl(L.stamp(this._brushPattern));
 				console.log(`ELLIPSE expected pattern URL:`, patternUrl);
-				// Check after a short delay when the path should exist
-				const checkMarker = marker;
-				setTimeout(() => {
-					console.log(`ELLIPSE delayed check - _path exists:`, !!checkMarker._path);
-					console.log(`ELLIPSE delayed check - options:`, checkMarker.options);
-					if (checkMarker._path) {
-						const currentFill = checkMarker._path.getAttribute('fill');
-						console.log(`ELLIPSE marker fill attribute (delayed):`, currentFill);
-						// Force set the fill to the pattern
-						console.log(`FORCING fill to pattern URL:`, patternUrl);
-						checkMarker._path.setAttribute('fill', patternUrl);
-						console.log(`ELLIPSE marker fill after force:`, checkMarker._path.getAttribute('fill'));
-					} else {
-						console.log(`ELLIPSE _path still null, checking _renderer`);
-						console.log(`ELLIPSE _renderer:`, checkMarker._renderer);
+				// Listen for when the path is actually created and apply the pattern
+				marker.on('add', function() {
+					console.log('ELLIPSE marker added to map, _path:', this._path);
+					if (this._path) {
+						console.log('Applying pattern fill:', patternUrl);
+						this._path.setAttribute('fill', patternUrl);
 					}
-				}, 500);
+				});
+				// Also try to apply immediately if path exists
+				if (marker._path) {
+					console.log('Path exists immediately, applying pattern');
+					marker._path.setAttribute('fill', patternUrl);
+				}
 			}
 		} else if (this._shape === "RECTANGLE") {
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
