@@ -232,7 +232,7 @@ func TestGetOperationManifest(t *testing.T) {
 		"times": [],
 		"Ede": []
 	}`
-	testDataPath := filepath.Join(dataDir, "test_mission.gz")
+	testDataPath := filepath.Join(dataDir, "test_mission.json.gz")
 	err = writeGzipped(testDataPath, []byte(testData))
 	assert.NoError(t, err)
 
@@ -731,7 +731,7 @@ func TestStoreOperation(t *testing.T) {
 		writer.WriteField("tag", "coop")
 
 		// Create file part
-		fileWriter, err := writer.CreateFormFile("file", "test_upload.gz")
+		fileWriter, err := writer.CreateFormFile("file", "test_upload.json.gz")
 		require.NoError(t, err)
 
 		// Write gzipped JSON data
@@ -752,7 +752,7 @@ func TestStoreOperation(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		// Verify file was created
-		_, err = os.Stat(filepath.Join(dataDir, "test_upload.gz"))
+		_, err = os.Stat(filepath.Join(dataDir, "test_upload.json.gz"))
 		assert.NoError(t, err)
 	})
 
@@ -798,7 +798,7 @@ func TestGetCapture(t *testing.T) {
 
 	// Create test gzipped file
 	testData := `{"test": "capture data"}`
-	testPath := filepath.Join(dataDir, "test_capture.gz")
+	testPath := filepath.Join(dataDir, "test_capture.json.gz")
 	err = writeGzipped(testPath, []byte(testData))
 	require.NoError(t, err)
 
@@ -841,7 +841,7 @@ func TestGetCaptureFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create test gzipped file
-	testPath := filepath.Join(dataDir, "download_test.gz")
+	testPath := filepath.Join(dataDir, "download_test.json.gz")
 	err = writeGzipped(testPath, []byte(`{"download": "test"}`))
 	require.NoError(t, err)
 
@@ -859,7 +859,7 @@ func TestGetCaptureFile(t *testing.T) {
 	err = hdlr.GetCaptureFile(c)
 	assert.NoError(t, err)
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
-	assert.Contains(t, rec.Header().Get("Content-Disposition"), "download_test.gz")
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "download_test.json.gz")
 }
 
 func TestGetMapTitle(t *testing.T) {
@@ -1107,7 +1107,7 @@ func TestStoreOperationWithConversionTrigger(t *testing.T) {
 	writer.WriteField("filename", "trigger_test")
 	writer.WriteField("tag", "coop")
 
-	fileWriter, _ := writer.CreateFormFile("file", "trigger_test.gz")
+	fileWriter, _ := writer.CreateFormFile("file", "trigger_test.json.gz")
 	gw := gzip.NewWriter(fileWriter)
 	gw.Write([]byte(`{"test": "trigger"}`))
 	gw.Close()
@@ -1415,7 +1415,7 @@ func TestGetOperationManifest_JSONFormat(t *testing.T) {
 		"entities": [],
 		"events": []
 	}`
-	err = writeGzipped(filepath.Join(dataDir, "json_manifest_test.gz"), []byte(testJSON))
+	err = writeGzipped(filepath.Join(dataDir, "json_manifest_test.json.gz"), []byte(testJSON))
 	require.NoError(t, err)
 
 	// Register JSON engine
@@ -1680,7 +1680,7 @@ func TestStoreOperation_InvalidMissionDuration(t *testing.T) {
 	writer.WriteField("filename", "invalid_duration_test")
 	writer.WriteField("tag", "coop")
 
-	fileWriter, _ := writer.CreateFormFile("file", "test.gz")
+	fileWriter, _ := writer.CreateFormFile("file", "test.json.gz")
 	gw := gzip.NewWriter(fileWriter)
 	gw.Write([]byte(`{"test": "data"}`))
 	gw.Close()
@@ -1725,7 +1725,7 @@ func TestStoreOperation_WrongSecret(t *testing.T) {
 	writer.WriteField("filename", "wrong_secret_test")
 	writer.WriteField("tag", "coop")
 
-	fileWriter, _ := writer.CreateFormFile("file", "test.gz")
+	fileWriter, _ := writer.CreateFormFile("file", "test.json.gz")
 	gw := gzip.NewWriter(fileWriter)
 	gw.Write([]byte(`{"test": "data"}`))
 	gw.Close()

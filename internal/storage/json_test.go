@@ -80,7 +80,7 @@ func TestJSONEngineGetManifestGzipped(t *testing.T) {
 		]
 	}`
 
-	gzPath := filepath.Join(dir, "gztest.gz")
+	gzPath := filepath.Join(dir, "gztest.json.gz")
 	f, err := os.Create(gzPath)
 	require.NoError(t, err)
 
@@ -191,7 +191,7 @@ func TestJSONEngineInvalidGzip(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a file with .gz extension but invalid gzip data
-	invalidGzPath := filepath.Join(dir, "invalid.gz")
+	invalidGzPath := filepath.Join(dir, "invalid.json.gz")
 	err := os.WriteFile(invalidGzPath, []byte("not valid gzip data"), 0644)
 	require.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestJSONEngineInvalidJSONInGzip(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create gzipped file with invalid JSON content
-	gzPath := filepath.Join(dir, "badjson.gz")
+	gzPath := filepath.Join(dir, "badjson.json.gz")
 	f, err := os.Create(gzPath)
 	require.NoError(t, err)
 

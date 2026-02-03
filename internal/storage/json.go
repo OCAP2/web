@@ -87,7 +87,7 @@ func (e *JSONEngine) Convert(ctx context.Context, jsonPath, outputPath string) e
 
 func (e *JSONEngine) loadJSON(filename string) (map[string]interface{}, error) {
 	// Try gzipped first
-	path := filepath.Join(e.dataDir, filename+".gz")
+	path := filepath.Join(e.dataDir, filename+".json.gz")
 	if _, err := os.Stat(path); err == nil {
 		return e.loadGzipJSON(path)
 	}

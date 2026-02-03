@@ -281,8 +281,8 @@ func TestConvertSingleFile(t *testing.T) {
 	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300, "protobuf")
 	require.NoError(t, err)
 
-	// Verify output was created (keeps .json suffix to match database filename)
-	outputDir := filepath.Join(dataDir, "test_mission.json")
+	// Verify output was created
+	outputDir := filepath.Join(dataDir, "test_mission")
 	_, err = os.Stat(filepath.Join(outputDir, "manifest.pb"))
 	require.NoError(t, err)
 }
@@ -359,7 +359,7 @@ func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
 		WorldName:        "Stratis",
 		MissionName:      "Test Op",
 		MissionDuration:  10,
-		Filename:         "db_test.json",
+		Filename:         "db_test",
 		Date:             "2024-01-01",
 		StorageFormat:    "json",
 		ConversionStatus: "pending",
@@ -375,12 +375,12 @@ func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify output was created
-	outputDir := filepath.Join(dataDir, "db_test.json")
+	outputDir := filepath.Join(dataDir, "db_test")
 	_, err = os.Stat(filepath.Join(outputDir, "manifest.pb"))
 	require.NoError(t, err)
 
 	// Verify database was updated
-	result, err := repo.GetByFilename(ctx, "db_test.json")
+	result, err := repo.GetByFilename(ctx, "db_test")
 	require.NoError(t, err)
 	assert.Equal(t, "completed", result.ConversionStatus)
 	assert.Equal(t, "protobuf", result.StorageFormat)
@@ -449,7 +449,7 @@ func TestConvertAll_WithOperations(t *testing.T) {
 	}`
 
 	// Write gzipped JSON
-	jsonPath := filepath.Join(dataDir, "test_op.gz")
+	jsonPath := filepath.Join(dataDir, "test_op.json.gz")
 	f, err := os.Create(jsonPath)
 	require.NoError(t, err)
 	gw := gzip.NewWriter(f)

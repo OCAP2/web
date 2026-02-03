@@ -97,7 +97,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 	}
 
 	// Write gzipped JSON file
-	jsonPath := filepath.Join(dataDir, "test_integration.gz")
+	jsonPath := filepath.Join(dataDir, "test_integration.json.gz")
 	writeTestGzippedJSON(t, jsonPath, testRecording)
 
 	// Store operation in database

@@ -362,7 +362,9 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		return echo.ErrForbidden
 	}
 
-	filename := strings.TrimSuffix(filepath.Base(c.FormValue("filename")), ".gz")
+	filename := filepath.Base(c.FormValue("filename"))
+	filename = strings.TrimSuffix(filename, ".gz")
+	filename = strings.TrimSuffix(filename, ".json")
 
 	op := Operation{
 		WorldName:   c.FormValue("worldName"),
@@ -391,7 +393,7 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	}
 	defer file.Close()
 
-	writer, err := os.Create(filepath.Join(h.setting.Data, filename+".gz"))
+	writer, err := os.Create(filepath.Join(h.setting.Data, filename+".json.gz"))
 	if err != nil {
 		return err
 	}
@@ -414,7 +416,7 @@ func (h *Handler) GetCapture(c echo.Context) error {
 		return err
 	}
 
-	upath := filepath.Join(h.setting.Data, filepath.Base(name+".gz"))
+	upath := filepath.Join(h.setting.Data, filepath.Base(name+".json.gz"))
 
 	c.Response().Header().Set("Content-Encoding", "gzip")
 	c.Response().Header().Set("Content-Type", "application/json")
@@ -428,7 +430,7 @@ func (h *Handler) GetCaptureFile(c echo.Context) error {
 		return err
 	}
 
-	filename := filepath.Base(name + ".gz")
+	filename := filepath.Base(name + ".json.gz")
 
 	c.Response().Header().Set("Content-Disposition", "attachment;filename=\""+filename+"\"")
 

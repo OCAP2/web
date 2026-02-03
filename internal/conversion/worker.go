@@ -174,7 +174,7 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 	}
 
 	// Determine paths
-	jsonPath := filepath.Join(w.dataDir, op.Filename+".gz")
+	jsonPath := filepath.Join(w.dataDir, op.Filename+".json.gz")
 	outputPath := filepath.Join(w.dataDir, op.Filename)
 
 	// Check if JSON file exists

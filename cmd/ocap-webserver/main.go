@@ -123,9 +123,12 @@ func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error
 }
 
 func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFile, dataDir string, chunkSize uint32, format string) error {
-	// Determine filename - only strip .gz to match database filename format
+	// Determine filename - strip .gz and .json to get base name
 	baseName := filepath.Base(inputFile)
 	if ext := filepath.Ext(baseName); ext == ".gz" {
+		baseName = baseName[:len(baseName)-len(ext)]
+	}
+	if ext := filepath.Ext(baseName); ext == ".json" {
 		baseName = baseName[:len(baseName)-len(ext)]
 	}
 

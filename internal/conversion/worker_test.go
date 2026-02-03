@@ -112,7 +112,7 @@ func TestWorker_ConvertOne(t *testing.T) {
 	}`
 
 	// Write gzipped JSON file
-	jsonPath := filepath.Join(dir, "test_mission.gz")
+	jsonPath := filepath.Join(dir, "test_mission.json.gz")
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
@@ -161,7 +161,7 @@ func TestWorker_ProcessOnce(t *testing.T) {
 
 	// Write gzipped JSON files
 	for _, name := range []string{"mission1", "mission2"} {
-		jsonPath := filepath.Join(dir, name+".gz")
+		jsonPath := filepath.Join(dir, name+".json.gz")
 		f, _ := os.Create(jsonPath)
 		gw := gzip.NewWriter(f)
 		gw.Write([]byte(testData))
@@ -303,7 +303,7 @@ func TestTriggerConversion(t *testing.T) {
 	}`
 
 	// Write gzipped JSON file
-	jsonPath := filepath.Join(dir, "trigger_mission.gz")
+	jsonPath := filepath.Join(dir, "trigger_mission.json.gz")
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
@@ -397,7 +397,7 @@ func TestWorker_FlatBuffersFormat(t *testing.T) {
 	}`
 
 	// Write gzipped JSON file
-	jsonPath := filepath.Join(dir, "fb_test.gz")
+	jsonPath := filepath.Join(dir, "fb_test.json.gz")
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
@@ -442,7 +442,7 @@ func TestWorker_ContextCancellation(t *testing.T) {
 
 	// Write multiple gzipped JSON files
 	for i := 1; i <= 3; i++ {
-		jsonPath := filepath.Join(dir, fmt.Sprintf("cancel_%d.gz", i))
+		jsonPath := filepath.Join(dir, fmt.Sprintf("cancel_%d.json.gz", i))
 		f, _ := os.Create(jsonPath)
 		gw := gzip.NewWriter(f)
 		gw.Write([]byte(testData))
@@ -613,7 +613,7 @@ func TestConvertOperation_UpdateConvertingStatusError(t *testing.T) {
 
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.gz")
+	jsonPath := filepath.Join(dir, "test.json.gz")
 	f, _ := os.Create(jsonPath)
 	gw := gzip.NewWriter(f)
 	gw.Write([]byte(testData))
@@ -640,7 +640,7 @@ func TestConvertOperation_UpdateStorageFormatError(t *testing.T) {
 
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.gz")
+	jsonPath := filepath.Join(dir, "test.json.gz")
 	f, _ := os.Create(jsonPath)
 	gw := gzip.NewWriter(f)
 	gw.Write([]byte(testData))
@@ -666,7 +666,7 @@ func TestConvertOperation_UpdateCompletedStatusError(t *testing.T) {
 
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.gz")
+	jsonPath := filepath.Join(dir, "test.json.gz")
 	f, _ := os.Create(jsonPath)
 	gw := gzip.NewWriter(f)
 	gw.Write([]byte(testData))
@@ -693,7 +693,7 @@ func TestConvertOperation_UpdateDurationError(t *testing.T) {
 
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.gz")
+	jsonPath := filepath.Join(dir, "test.json.gz")
 	f, _ := os.Create(jsonPath)
 	gw := gzip.NewWriter(f)
 	gw.Write([]byte(testData))
@@ -720,7 +720,7 @@ func TestConvertOperation_InvalidStorageFormat(t *testing.T) {
 
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.gz")
+	jsonPath := filepath.Join(dir, "test.json.gz")
 	f, _ := os.Create(jsonPath)
 	gw := gzip.NewWriter(f)
 	gw.Write([]byte(testData))
