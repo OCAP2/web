@@ -8,29 +8,53 @@ L.GridPattern = L.Pattern.extend({
 	},
 
 	_addShapes: function () {
+		// Calculate size first
+		var w = this.options.weight;
+		var s = this.options.spaceWeight;
+		var size = w + s;
+
+		console.debug(`GridPattern._addShapes: weight=${w}, space=${s}, size=${size}, color=${this.options.color}`);
+
+		// Update pattern dimensions before creating shapes
+		this.options.width = size;
+		this.options.height = size;
+
 		// Horizontal line
+		var hLineD = 'M0 ' + (w / 2) + ' H ' + size;
 		this._hLine = new L.PatternPath({
 			stroke: true,
 			weight: this.options.weight,
 			color: this.options.color,
-			opacity: this.options.opacity
+			opacity: this.options.opacity,
+			d: hLineD
 		});
 
 		// Vertical line
+		var vLineD = 'M' + (w / 2) + ' 0 V ' + size;
 		this._vLine = new L.PatternPath({
 			stroke: true,
 			weight: this.options.weight,
 			color: this.options.color,
-			opacity: this.options.opacity
+			opacity: this.options.opacity,
+			d: vLineD
 		});
+
+		console.debug(`GridPattern paths: hLine.d="${hLineD}", vLine.d="${vLineD}"`);
 
 		this.addShape(this._hLine);
 		this.addShape(this._vLine);
 
-		this._update();
+		// After shapes are added, verify DOM
+		setTimeout(() => {
+			if (this._dom) {
+				console.debug('GridPattern DOM after addShapes:', this._dom.outerHTML);
+			}
+		}, 100);
 	},
 
 	_update: function () {
+		if (!this._hLine || !this._vLine) return;
+
 		var w = this.options.weight;
 		var s = this.options.spaceWeight;
 		var size = w + s;
@@ -119,6 +143,7 @@ class Marker {
 
 		if (!(undefined === brush && undefined === shape)) {
 			this._brush = brush;
+			console.debug(`Marker created: shape=${shape}, brush=${brush}, color=${this._color}`);
 			this._brushPattern = null;
 			this._brushPatternOptions = null;
 			switch (brush) {
@@ -172,9 +197,10 @@ class Marker {
 					break;
 				case "grid":
 				case "Grid":
+				case "GRID":
 					this._brushPatternOptions = {
 						color: this._color,
-						opacity: 0.8,
+						opacity: 1.0,
 						weight: 2,
 						spaceWeight: 6
 					};
@@ -183,7 +209,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 0.2
+						fillOpacity: 0.5
 					};
 					break;
 				case "fdiagonal":
@@ -237,9 +263,10 @@ class Marker {
 					break;
 				case "cross":
 				case "Cross":
+				case "CROSS":
 					this._brushPatternOptions = {
 						color: this._color,
-						opacity: 0.8,
+						opacity: 1.0,
 						weight: 2,
 						spaceWeight: 6
 					};
@@ -248,7 +275,7 @@ class Marker {
 						color: this._color,
 						stroke: false,
 						fill: true,
-						fillOpacity: 0.2
+						fillOpacity: 0.5
 					};
 					break;
 				case "border":
@@ -277,8 +304,10 @@ class Marker {
 			if (this._brushPatternOptions) {
 				if (this._useGridPattern) {
 					this._brushPattern = new L.GridPattern(this._brushPatternOptions);
+					console.debug(`GridPattern created for brush=${brush}:`, this._brushPattern);
 				} else {
 					this._brushPattern = new L.StripePattern(this._brushPatternOptions);
+					console.debug(`StripePattern created for brush=${brush}:`, this._brushPattern);
 				}
 			}
 		} else {
@@ -626,24 +655,24 @@ class Marker {
 
 		if (this._shape === "ELLIPSE") {
 			// latLng now contains polygon points (calculated in _updateAtFrame)
+			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
 			if (this._brushPattern) {
 				this._brushPattern.addTo(map);
-				marker = L.polygon(latLng, { noClip: false, interactive: false, fillPattern: this._brushPattern });
-				L.Util.setOptions(marker, this._shapeOptions);
-			} else {
-				marker = L.polygon(latLng, { noClip: false, interactive: false });
-				L.Util.setOptions(marker, this._shapeOptions);
+				polygonOptions.fillPattern = this._brushPattern;
+				console.debug(`ELLIPSE with pattern - options:`, polygonOptions, 'pattern stamp:', L.stamp(this._brushPattern));
 			}
+			marker = L.polygon(latLng, polygonOptions);
 			marker.addTo(systemMarkersLayerGroup);
+			if (this._brushPattern) {
+				console.debug(`ELLIPSE marker fill attribute:`, marker._path ? marker._path.getAttribute('fill') : 'no path yet');
+			}
 		} else if (this._shape === "RECTANGLE") {
+			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
 			if (this._brushPattern) {
 				this._brushPattern.addTo(map);
-				marker = L.polygon(latLng, { noClip: false, interactive: false, fillPattern: this._brushPattern });
-				L.Util.setOptions(marker, this._shapeOptions);
-			} else {
-				marker = L.polygon(latLng, { noClip: false, interactive: false });
-				L.Util.setOptions(marker, this._shapeOptions);
+				polygonOptions.fillPattern = this._brushPattern;
 			}
+			marker = L.polygon(latLng, polygonOptions);
 
 			marker.addTo(systemMarkersLayerGroup);
 		} else if (this._shape === "POLYLINE") {
