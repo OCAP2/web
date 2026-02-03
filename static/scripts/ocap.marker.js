@@ -57,6 +57,27 @@ window.applyPatternFills = function() {
 	console.log(`Applied patterns to ${applied} markers`);
 };
 
+// Ensure pattern fills are applied after any style update
+// This patches Leaflet's SVG renderer to always check for fillPattern
+(function() {
+	if (!L.SVG) {
+		console.log('L.SVG not found, skipping pattern patch');
+		return;
+	}
+
+	const originalUpdateStyle = L.SVG.prototype._updateStyle;
+	L.SVG.prototype._updateStyle = function(layer) {
+		originalUpdateStyle.call(this, layer);
+
+		// Apply fill pattern if present
+		if (layer.options && layer.options.fill && layer.options.fillPattern && layer._path) {
+			const patternUrl = L.Pattern._getPatternUrl(L.stamp(layer.options.fillPattern));
+			layer._path.setAttribute('fill', patternUrl);
+		}
+	};
+	console.log('Patched L.SVG._updateStyle for pattern fills');
+})();
+
 // Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
 L.GridPattern = L.Pattern.extend({
 	options: {
