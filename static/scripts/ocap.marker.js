@@ -842,12 +842,26 @@ class Marker {
 			// latLng now contains polygon points (calculated in _updateAtFrame)
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
 
-			if (this._brushPattern) {
+			if (this._brushPattern && window.svgRenderer) {
 				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
-				if (window.svgRenderer) {
-					polygonOptions.renderer = window.svgRenderer;
+				polygonOptions.renderer = window.svgRenderer;
+
+				// Initialize SVG renderer's defs if needed
+				if (!window.svgRenderer._container) {
+					console.log('SVG renderer not ready yet');
+				} else {
+					// Add pattern to SVG renderer's defs
+					if (!map._svgDefRoot) {
+						map._svgDefRoot = L.SVG.create('defs');
+						window.svgRenderer._container.appendChild(map._svgDefRoot);
+					}
+					// Manually add pattern to SVG defs
+					this._brushPattern._map = map;
+					this._brushPattern._initDom();
+					map._svgDefRoot.appendChild(this._brushPattern._dom);
+					this._brushPattern._addShapes();
+					this._brushPattern.redraw();
 				}
-				this._brushPattern.addTo(map);
 				polygonOptions.fillPattern = this._brushPattern;
 				console.log(`ELLIPSE with SVG renderer and pattern`);
 			}
@@ -857,12 +871,22 @@ class Marker {
 		} else if (this._shape === "RECTANGLE") {
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
 
-			if (this._brushPattern) {
+			if (this._brushPattern && window.svgRenderer) {
 				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
-				if (window.svgRenderer) {
-					polygonOptions.renderer = window.svgRenderer;
+				polygonOptions.renderer = window.svgRenderer;
+
+				// Initialize SVG renderer's defs if needed
+				if (window.svgRenderer._container) {
+					if (!map._svgDefRoot) {
+						map._svgDefRoot = L.SVG.create('defs');
+						window.svgRenderer._container.appendChild(map._svgDefRoot);
+					}
+					this._brushPattern._map = map;
+					this._brushPattern._initDom();
+					map._svgDefRoot.appendChild(this._brushPattern._dom);
+					this._brushPattern._addShapes();
+					this._brushPattern.redraw();
 				}
-				this._brushPattern.addTo(map);
 				polygonOptions.fillPattern = this._brushPattern;
 			}
 
