@@ -19,3 +19,8 @@ static/images/maps
 
 # Plans
 docs/plans/
+
+# Test coverage
+cover.out
+coverage.out
+coverage.html
