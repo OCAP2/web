@@ -45,16 +45,61 @@ window.applyPatternFills = function() {
 		return;
 	}
 
+	let checked = 0;
 	let applied = 0;
 	markers.forEach((m, i) => {
-		if (m._brushPattern && m._marker && m._marker._path) {
-			const patternUrl = L.Pattern._getPatternUrl(L.stamp(m._brushPattern));
-			console.log(`Marker ${i}: applying pattern ${patternUrl}`);
-			m._marker._path.setAttribute('fill', patternUrl);
-			applied++;
+		if (m._brushPattern) {
+			checked++;
+			console.log(`Marker ${i} has brushPattern:`, {
+				hasMarker: !!m._marker,
+				hasPath: m._marker ? !!m._marker._path : false,
+				shape: m._shape,
+				brush: m._brush
+			});
+			if (m._marker && m._marker._path) {
+				const patternUrl = L.Pattern._getPatternUrl(L.stamp(m._brushPattern));
+				console.log(`Marker ${i}: applying pattern ${patternUrl}`);
+				m._marker._path.setAttribute('fill', patternUrl);
+				applied++;
+			}
 		}
 	});
-	console.log(`Applied patterns to ${applied} markers`);
+	console.log(`Checked ${checked} markers with patterns, applied to ${applied}`);
+};
+
+// Force find and apply patterns to any polygon in systemMarkersLayerGroup
+window.forceApplyPatterns = function() {
+	console.log('=== Force Applying Patterns ===');
+	if (typeof systemMarkersLayerGroup === 'undefined') {
+		console.log('systemMarkersLayerGroup not found');
+		return;
+	}
+
+	// Get all patterns
+	const patterns = document.querySelectorAll('pattern');
+	console.log(`Found ${patterns.length} patterns`);
+	if (patterns.length === 0) return;
+
+	// Get the first pattern URL to test
+	const testPatternUrl = `url(${window.location.href.split('#')[0]}#${patterns[0].id})`;
+	console.log('Test pattern URL:', testPatternUrl);
+
+	// Find all paths in the overlay pane
+	const paths = document.querySelectorAll('.leaflet-overlay-pane path');
+	console.log(`Found ${paths.length} paths`);
+
+	paths.forEach((path, i) => {
+		const currentFill = path.getAttribute('fill');
+		console.log(`Path ${i}: current fill="${currentFill}"`);
+		// Apply pattern to paths that have fill="none" or a color fill
+		if (currentFill === 'none' || currentFill.startsWith('#') || currentFill.startsWith('rgb')) {
+			// Use alternating patterns for the two ELLIPSE markers
+			const patternId = patterns[i % patterns.length].id;
+			const patternUrl = `url(${window.location.href.split('#')[0]}#${patternId})`;
+			console.log(`  Applying: ${patternUrl}`);
+			path.setAttribute('fill', patternUrl);
+		}
+	});
 };
 
 // Ensure pattern fills are applied after any style update
