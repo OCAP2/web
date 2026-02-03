@@ -51,6 +51,38 @@ window.debugPatternFills = function() {
 		svgPaths[0].setAttribute('fill', simpleUrl);
 		console.log(`Path 0 fill is now: ${svgPaths[0].getAttribute('fill')}`);
 	}
+
+	// Investigate actual DOM structure
+	console.log('\n=== DOM Structure Investigation ===');
+	if (svgPaths.length > 0) {
+		let el = svgPaths[0];
+		let depth = 0;
+		console.log('Path ancestry:');
+		while (el && depth < 10) {
+			console.log(`  ${depth}: <${el.tagName.toLowerCase()}> class="${el.className}" id="${el.id}"`);
+			el = el.parentElement;
+			depth++;
+		}
+	}
+
+	// Check for defs ancestry
+	if (defs) {
+		let el = defs;
+		let depth = 0;
+		console.log('Defs ancestry:');
+		while (el && depth < 10) {
+			console.log(`  ${depth}: <${el.tagName.toLowerCase()}> class="${el.className}" id="${el.id}"`);
+			el = el.parentElement;
+			depth++;
+		}
+	}
+
+	// Check if paths and defs share a common SVG ancestor
+	const overlayPane = document.querySelector('.leaflet-overlay-pane');
+	if (overlayPane) {
+		console.log('\nOverlay pane innerHTML (first 1000 chars):');
+		console.log(overlayPane.innerHTML.substring(0, 1000));
+	}
 };
 
 // Function to manually apply pattern fills to all markers that need them
