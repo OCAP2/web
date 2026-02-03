@@ -12,28 +12,44 @@ window.debugPatternFills = function() {
 		console.log('WARNING: L.SVG._updateStyle override NOT found!');
 	}
 
+	// Find all SVG elements
+	const svgs = document.querySelectorAll('svg');
+	console.log(`Found ${svgs.length} SVG elements`);
+
 	// Find all SVG paths in the map
 	const svgPaths = document.querySelectorAll('.leaflet-overlay-pane path');
-	console.log(`Found ${svgPaths.length} SVG paths`);
+	console.log(`Found ${svgPaths.length} SVG paths in overlay pane`);
 
 	svgPaths.forEach((path, i) => {
 		const fill = path.getAttribute('fill');
-		console.log(`Path ${i}: fill="${fill}"`);
+		const parentSvg = path.closest('svg');
+		console.log(`Path ${i}: fill="${fill}", in SVG:`, parentSvg ? parentSvg.className : 'unknown');
 	});
 
 	// Find all pattern definitions
 	const patterns = document.querySelectorAll('pattern');
 	console.log(`Found ${patterns.length} patterns:`);
 	patterns.forEach(p => {
-		console.log(`  Pattern id="${p.id}":`, p.outerHTML.substring(0, 200));
+		const parentSvg = p.closest('svg');
+		console.log(`  Pattern id="${p.id}" in SVG:`, parentSvg ? parentSvg.className : 'unknown');
 	});
 
 	// Check the defs element
 	const defs = document.querySelector('defs');
 	if (defs) {
-		console.log('Defs element found:', defs.outerHTML.substring(0, 500));
+		const parentSvg = defs.closest('svg');
+		console.log('Defs in SVG:', parentSvg ? parentSvg.className : 'unknown');
 	} else {
 		console.log('No defs element found!');
+	}
+
+	// Try simple relative URL pattern reference
+	console.log('\n=== Trying relative URL pattern reference ===');
+	if (patterns.length > 0 && svgPaths.length > 0) {
+		const simpleUrl = `url(#${patterns[0].id})`;
+		console.log(`Setting first path fill to: ${simpleUrl}`);
+		svgPaths[0].setAttribute('fill', simpleUrl);
+		console.log(`Path 0 fill is now: ${svgPaths[0].getAttribute('fill')}`);
 	}
 };
 
