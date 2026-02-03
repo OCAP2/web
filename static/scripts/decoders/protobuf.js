@@ -461,7 +461,7 @@ const ProtobufDecoder = (function() {
             posX: 0,
             posY: 0,
             direction: 0,
-            alive: 1,
+            alive: 0,
             crewIds: [],
             vehicleId: 0,
             isInVehicle: false,
