@@ -5,6 +5,13 @@ console.log('ocap.marker.js loaded - GridPattern debug version');
 window.debugPatternFills = function() {
 	console.log('=== Debugging Pattern Fills ===');
 
+	// Check if Leaflet.pattern override is in place
+	if (L.SVG && L.SVG.prototype._superUpdateStyle) {
+		console.log('L.SVG._updateStyle override IS in place');
+	} else {
+		console.log('WARNING: L.SVG._updateStyle override NOT found!');
+	}
+
 	// Find all SVG paths in the map
 	const svgPaths = document.querySelectorAll('.leaflet-overlay-pane path');
 	console.log(`Found ${svgPaths.length} SVG paths`);
@@ -28,6 +35,26 @@ window.debugPatternFills = function() {
 	} else {
 		console.log('No defs element found!');
 	}
+};
+
+// Function to manually apply pattern fills to all markers that need them
+window.applyPatternFills = function() {
+	console.log('=== Applying Pattern Fills ===');
+	if (typeof markers === 'undefined') {
+		console.log('markers array not found');
+		return;
+	}
+
+	let applied = 0;
+	markers.forEach((m, i) => {
+		if (m._brushPattern && m._marker && m._marker._path) {
+			const patternUrl = L.Pattern._getPatternUrl(L.stamp(m._brushPattern));
+			console.log(`Marker ${i}: applying pattern ${patternUrl}`);
+			m._marker._path.setAttribute('fill', patternUrl);
+			applied++;
+		}
+	});
+	console.log(`Applied patterns to ${applied} markers`);
 };
 
 // Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
