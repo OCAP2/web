@@ -219,10 +219,10 @@ class Marker {
 				case "Grid":
 				case "GRID":
 					this._brushPatternOptions = {
-						color: this._color,           // Dark grid lines (marker color, full opacity)
+						color: this._color,           // Grid lines (marker color)
 						backgroundColor: this._color, // Light background (marker color, low opacity)
 						backgroundOpacity: 0.3,
-						opacity: 1.0,
+						opacity: 0.5,                 // Reduced intensity for grid lines
 						weight: 2,
 						spaceWeight: 6
 					};
@@ -287,10 +287,10 @@ class Marker {
 				case "Cross":
 				case "CROSS":
 					this._brushPatternOptions = {
-						color: this._color,           // Dark cross lines (marker color, full opacity)
+						color: this._color,           // Cross lines (marker color)
 						backgroundColor: this._color, // Light background (marker color, low opacity)
 						backgroundOpacity: 0.3,
-						opacity: 1.0,
+						opacity: 0.5,                 // Reduced intensity for cross lines
 						weight: 2,
 						spaceWeight: 6
 					};
