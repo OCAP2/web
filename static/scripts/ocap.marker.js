@@ -1,3 +1,57 @@
+// Custom GridPattern for true grid/cross patterns (horizontal + vertical lines)
+L.GridPattern = L.Pattern.extend({
+	options: {
+		weight: 2,
+		spaceWeight: 4,
+		color: '#000000',
+		opacity: 1.0
+	},
+
+	_addShapes: function () {
+		// Horizontal line
+		this._hLine = new L.PatternPath({
+			stroke: true,
+			weight: this.options.weight,
+			color: this.options.color,
+			opacity: this.options.opacity
+		});
+
+		// Vertical line
+		this._vLine = new L.PatternPath({
+			stroke: true,
+			weight: this.options.weight,
+			color: this.options.color,
+			opacity: this.options.opacity
+		});
+
+		this.addShape(this._hLine);
+		this.addShape(this._vLine);
+
+		this._update();
+	},
+
+	_update: function () {
+		var w = this.options.weight;
+		var s = this.options.spaceWeight;
+		var size = w + s;
+
+		// Update pattern size to fit the grid cell
+		this.options.width = size;
+		this.options.height = size;
+
+		// Horizontal line at top of cell
+		this._hLine.options.d = 'M0 ' + (w / 2) + ' H ' + size;
+		// Vertical line at left of cell
+		this._vLine.options.d = 'M' + (w / 2) + ' 0 V ' + size;
+	},
+
+	setStyle: L.Pattern.prototype.setStyle
+});
+
+L.gridPattern = function (options) {
+	return new L.GridPattern(options);
+};
+
 class Marker {
 	constructor(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush) {
 		this._type = type;
@@ -121,10 +175,10 @@ class Marker {
 					this._brushPatternOptions = {
 						color: this._color,
 						opacity: 0.8,
-						angle: 90,
-						weight: 1,
-						spaceWeight: 1
+						weight: 2,
+						spaceWeight: 6
 					};
+					this._useGridPattern = true; // Use L.GridPattern for true grid
 					this._shapeOptions = {
 						color: this._color,
 						stroke: false,
@@ -186,10 +240,10 @@ class Marker {
 					this._brushPatternOptions = {
 						color: this._color,
 						opacity: 0.8,
-						angle: 90,
-						weight: 1,
-						spaceWeight: 1
+						weight: 2,
+						spaceWeight: 6
 					};
+					this._useGridPattern = true; // Use L.GridPattern for cross pattern
 					this._shapeOptions = {
 						color: this._color,
 						stroke: false,
@@ -219,9 +273,13 @@ class Marker {
 					break;
 			}
 
-			// Create stripe pattern if brush options were set
+			// Create pattern if brush options were set
 			if (this._brushPatternOptions) {
-				this._brushPattern = new L.StripePattern(this._brushPatternOptions);
+				if (this._useGridPattern) {
+					this._brushPattern = new L.GridPattern(this._brushPatternOptions);
+				} else {
+					this._brushPattern = new L.StripePattern(this._brushPatternOptions);
+				}
 			}
 		} else {
 			this._shapeOptions = {
