@@ -73,29 +73,8 @@ L.GridPattern = L.Pattern.extend({
 		this.addShape(this._vLine);
 	},
 
-	_update: function () {
-		if (!this._hLine || !this._vLine) return;
-
-		var w = this.options.weight;
-		var s = this.options.spaceWeight;
-		var size = w + s;
-
-		// Update pattern size to fit the grid cell
-		this.options.width = size;
-		this.options.height = size;
-
-		// Horizontal line at top of cell
-		this._hLine.options.d = 'M0 ' + (w / 2) + ' H ' + size;
-		// Vertical line at left of cell
-		this._vLine.options.d = 'M' + (w / 2) + ' 0 V ' + size;
-	},
-
 	setStyle: L.Pattern.prototype.setStyle
 });
-
-L.gridPattern = function (options) {
-	return new L.GridPattern(options);
-};
 
 class Marker {
 	constructor(type, text, player, color, startFrame, endFrame, side, positions, size, shape, brush) {
@@ -382,7 +361,6 @@ class Marker {
 		let alpha = frameData[3];
 
 		if (this._shape === "RECTANGLE" && Array.isArray(pos[0])) {
-			console.log("wrong RECTANGLE positions, converting to POLYLINE");
 			this._shape = "POLYLINE";
 		}
 
@@ -584,15 +562,7 @@ class Marker {
 
 	show (alpha) {
 		this._isShow = true;
-		if (this._shape == "ICON") {
-			this.setMarkerOpacity(alpha);
-		} else if (this._shape == "ELLIPSE") {
-			this.setMarkerOpacity(alpha);
-		} else if (this._shape == "RECTANGLE") {
-			this.setMarkerOpacity(alpha);
-		} else if (this._shape == "POLYLINE") {
-			this.setMarkerOpacity(alpha);
-		}
+		this.setMarkerOpacity(alpha);
 	}
 
 	_createMarker (latLng, dir, alpha) {
@@ -675,8 +645,8 @@ class Marker {
 			marker.setRotationAngle(dir);
 		}
 
-		if (this._shape === "ELLIPSE") {
-			// latLng now contains polygon points (calculated in _updateAtFrame)
+		if (this._shape === "ELLIPSE" || this._shape === "RECTANGLE") {
+			// latLng contains polygon points (calculated in _updateAtFrame)
 			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
 
 			if (this._brushPattern && window.svgRenderer) {
@@ -684,31 +654,6 @@ class Marker {
 				polygonOptions.renderer = window.svgRenderer;
 
 				// Add pattern to SVG renderer's defs
-				if (window.svgRenderer._container) {
-					if (!map._svgDefRoot) {
-						map._svgDefRoot = L.SVG.create('defs');
-						window.svgRenderer._container.appendChild(map._svgDefRoot);
-					}
-					// Manually add pattern to SVG defs
-					this._brushPattern._map = map;
-					this._brushPattern._initDom();
-					map._svgDefRoot.appendChild(this._brushPattern._dom);
-					this._brushPattern._addShapes();
-					this._brushPattern.redraw();
-				}
-				polygonOptions.fillPattern = this._brushPattern;
-			}
-
-			marker = L.polygon(latLng, polygonOptions);
-			marker.addTo(systemMarkersLayerGroup);
-		} else if (this._shape === "RECTANGLE") {
-			let polygonOptions = Object.assign({}, this._shapeOptions, { noClip: false, interactive: false });
-
-			if (this._brushPattern && window.svgRenderer) {
-				// Use SVG renderer for pattern fills (Canvas doesn't support SVG patterns)
-				polygonOptions.renderer = window.svgRenderer;
-
-				// Initialize SVG renderer's defs if needed
 				if (window.svgRenderer._container) {
 					if (!map._svgDefRoot) {
 						map._svgDefRoot = L.SVG.create('defs');
