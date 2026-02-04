@@ -913,6 +913,13 @@ func TestGetStatic(t *testing.T) {
 	err = os.WriteFile(indexPath, []byte("<html>test</html>"), 0644)
 	require.NoError(t, err)
 
+	// Create nested directory with file
+	scriptsDir := filepath.Join(staticDir, "scripts")
+	err = os.MkdirAll(scriptsDir, 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(scriptsDir, "ocap.js"), []byte("// test"), 0644)
+	require.NoError(t, err)
+
 	hdlr := Handler{
 		setting: Setting{Static: staticDir},
 	}
@@ -929,6 +936,32 @@ func TestGetStatic(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("root path serves index.html", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("") // Empty param for root path
+
+		err := hdlr.GetStatic(c)
+		assert.NoError(t, err)
+		assert.Contains(t, rec.Body.String(), "<html>test</html>")
+	})
+
+	t.Run("nested path with forward slashes", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/scripts/ocap.js", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("scripts/ocap.js") // Forward slashes in path
+
+		err := hdlr.GetStatic(c)
+		assert.NoError(t, err)
+		assert.Contains(t, rec.Body.String(), "// test")
+	})
+
 	t.Run("path traversal blocked", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/../../../etc/passwd", nil)
@@ -940,6 +973,78 @@ func TestGetStatic(t *testing.T) {
 		err := hdlr.GetStatic(c)
 		assert.Error(t, err)
 	})
+}
+
+func TestParamPath(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     string
+		wantPath  string
+		wantError bool
+	}{
+		{
+			name:      "empty path returns root",
+			param:     "",
+			wantPath:  "/",
+			wantError: false,
+		},
+		{
+			name:      "simple filename",
+			param:     "index.html",
+			wantPath:  "/index.html",
+			wantError: false,
+		},
+		{
+			name:      "nested path with forward slashes",
+			param:     "scripts/ocap.js",
+			wantPath:  "/scripts/ocap.js",
+			wantError: false,
+		},
+		{
+			name:      "deeply nested path",
+			param:     "assets/images/logo.png",
+			wantPath:  "/assets/images/logo.png",
+			wantError: false,
+		},
+		{
+			name:      "path traversal blocked",
+			param:     "../../../etc/passwd",
+			wantPath:  "",
+			wantError: true,
+		},
+		{
+			name:      "double slash blocked",
+			param:     "foo//bar",
+			wantPath:  "",
+			wantError: true,
+		},
+		{
+			name:      "dot segment blocked",
+			param:     "foo/../bar",
+			wantPath:  "",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/"+tt.param, nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("*")
+			c.SetParamValues(tt.param)
+
+			got, err := paramPath(c, "*")
+
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantPath, got)
+			}
+		})
+	}
 }
 
 func TestCacheControl(t *testing.T) {
