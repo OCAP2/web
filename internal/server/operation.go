@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -135,6 +134,22 @@ func (r *RepoOperation) migration() (err error) {
 		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (4)`)
 		if err != nil {
 			return fmt.Errorf("failed to increase version 4: %w", err)
+		}
+	}
+
+	if version < 5 {
+		// Strip legacy .json.gz and .json suffixes from filenames
+		_, err = r.db.Exec(`
+			UPDATE operations SET filename = REPLACE(filename, '.json.gz', '') WHERE filename LIKE '%.json.gz';
+			UPDATE operations SET filename = REPLACE(filename, '.json', '') WHERE filename LIKE '%.json';
+		`)
+		if err != nil {
+			return fmt.Errorf("merge db to v5 failed (normalize filenames): %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (5)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 5: %w", err)
 		}
 	}
 
@@ -271,7 +286,6 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 		if err != nil {
 			return nil, err
 		}
-		o.Filename = normalizeFilename(o.Filename)
 		ops = append(ops, o)
 	}
 	return ops, nil
@@ -289,7 +303,6 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 	if err != nil {
 		return nil, err
 	}
-	op.Filename = normalizeFilename(op.Filename)
 	return &op, nil
 }
 
@@ -305,7 +318,6 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 	if err != nil {
 		return nil, err
 	}
-	op.Filename = normalizeFilename(op.Filename)
 	return &op, nil
 }
 
@@ -392,9 +404,3 @@ func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, dur
 	return err
 }
 
-// normalizeFilename strips legacy .json and .gz suffixes from filenames
-func normalizeFilename(name string) string {
-	name = strings.TrimSuffix(name, ".gz")
-	name = strings.TrimSuffix(name, ".json")
-	return name
-}

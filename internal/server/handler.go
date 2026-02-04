@@ -416,8 +416,6 @@ func (h *Handler) GetCapture(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	name = strings.TrimSuffix(name, ".gz")
-	name = strings.TrimSuffix(name, ".json")
 
 	upath := filepath.Join(h.setting.Data, filepath.Base(name+".json.gz"))
 
@@ -432,8 +430,6 @@ func (h *Handler) GetCaptureFile(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	name = strings.TrimSuffix(name, ".gz")
-	name = strings.TrimSuffix(name, ".json")
 
 	filename := filepath.Base(name + ".json.gz")
 
