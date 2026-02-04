@@ -188,10 +188,10 @@ jobs:
 
       - name: Create release archive
         run: |
-          mkdir -p release
+          mkdir -p release/assets
           cp ${{ matrix.binary }} release/
-          cp -r assets/markers release/
-          cp -r assets/ammo release/
+          cp -r assets/markers release/assets/
+          cp -r assets/ammo release/assets/
           cp -r static release/
           cp setting.json.example release/
           cd release && ${{ matrix.archiver }} ../${{ matrix.archive }} .
