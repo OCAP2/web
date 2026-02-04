@@ -70,6 +70,8 @@ var projectileMarkersLayerGroup = L.layerGroup([]);
 var gridLayer = null;
 var map = null;
 var mapDiv = null;
+var useMapLibreMode = false; // true when map has MapLibre style data
+var mapLibreLayer = null;    // reference to MapLibre basemap layer
 var mapBounds = null;
 var worldObject = null;
 var mapAvailable = false;
@@ -358,6 +360,7 @@ async function getWorldByName (worldName) {
 		"hasTopoRelief": false,
 		"hasTopoDark": false,
 		"hasColorRelief": false,
+		"maplibreStyle": null,
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
@@ -432,61 +435,87 @@ function initMap (world) {
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
 
-	var factorx = multiplier;
-	var factory = multiplier;
-	// var factorx = 1;
-	// var factory = 1;
+	useMapLibreMode = Boolean(world.maplibreStyle);
 
-	L.CRS.OCAP = L.extend({}, L.CRS.Simple, {
-		projection: L.Projection.LonLat,
-		transformation: new L.Transformation(factorx, 0, -factory, 0),
-		// Changing the transformation is the key part, everything else is the same.
-		// By specifying a factor, you specify what distance in meters one pixel occupies (as it still is CRS.Simple in all other regards).
-		// In this case, I have a tile layer with 256px pieces, so Leaflet thinks it's only 256 meters wide.
-		// I know the map is supposed to be 2048x2048 meters, so I specify a factor of 0.125 to multiply in both directions.
-		// In the actual project, I compute all that from the gdal2tiles tilemapresources.xml, 
-		// which gives the necessary information about tilesizes, total bounds and units-per-pixel at different levels.
+	var mapOptions;
+
+	if (useMapLibreMode) {
+		// EPSG:3857 mode for MapLibre GL basemap
+		var worldSizeDeg = world.worldSize / 111320;
+		mapOptions = {
+			center: [worldSizeDeg / 2, worldSizeDeg / 2],
+			zoom: 12,
+			maxZoom: 20,
+			minZoom: 10,
+			zoomControl: false,
+			scrollWheelZoom: true,
+			zoomAnimation: true,
+			fadeAnimation: true,
+			crs: L.CRS.EPSG3857,
+			attributionControl: true,
+			zoomSnap: 1,
+			zoomDelta: 1,
+			closePopupOnClick: false,
+			preferCanvas: true
+		};
+	} else {
+		// Legacy mode: custom OCAP CRS for raster tiles
+		var factorx = multiplier;
+		var factory = multiplier;
+
+		L.CRS.OCAP = L.extend({}, L.CRS.Simple, {
+			projection: L.Projection.LonLat,
+			transformation: new L.Transformation(factorx, 0, -factory, 0),
+			// Changing the transformation is the key part, everything else is the same.
+			// By specifying a factor, you specify what distance in meters one pixel occupies (as it still is CRS.Simple in all other regards).
+			// In this case, I have a tile layer with 256px pieces, so Leaflet thinks it's only 256 meters wide.
+			// I know the map is supposed to be 2048x2048 meters, so I specify a factor of 0.125 to multiply in both directions.
+			// In the actual project, I compute all that from the gdal2tiles tilemapresources.xml,
+			// which gives the necessary information about tilesizes, total bounds and units-per-pixel at different levels.
 
 
-		// Scale, zoom and distance are entirely unchanged from CRS.Simple
-		scale: function (zoom) {
-			return Math.pow(2, zoom);
-		},
+			// Scale, zoom and distance are entirely unchanged from CRS.Simple
+			scale: function (zoom) {
+				return Math.pow(2, zoom);
+			},
 
-		zoom: function (scale) {
-			return Math.log(scale) / Math.LN2;
-		},
+			zoom: function (scale) {
+				return Math.log(scale) / Math.LN2;
+			},
 
-		distance: function (latlng1, latlng2) {
-			var dx = latlng2.lng - latlng1.lng,
-				dy = latlng2.lat - latlng1.lat;
+			distance: function (latlng1, latlng2) {
+				var dx = latlng2.lng - latlng1.lng,
+					dy = latlng2.lat - latlng1.lat;
 
-			// Multiply by 2^mapMaxNativeZoom to convert from CRS units to meters
-			return Math.sqrt(dx * dx + dy * dy) * Math.pow(2, mapMaxNativeZoom);
-		},
-		infinite: true
-	});
+				// Multiply by 2^mapMaxNativeZoom to convert from CRS units to meters
+				return Math.sqrt(dx * dx + dy * dy) * Math.pow(2, mapMaxNativeZoom);
+			},
+			infinite: true
+		});
+
+		mapOptions = {
+			center: [0, 0],
+			zoom: 0,
+			maxNativeZoom: mapMaxNativeZoom,
+			maxZoom: mapMaxZoom,
+			minNativeZoom: 0,
+			minZoom: 0,
+			// zoominfoControl: true, // moved for custom position
+			zoomControl: false,
+			scrollWheelZoom: true,
+			zoomAnimation: true,
+			fadeAnimation: true,
+			crs: L.CRS.OCAP,
+			attributionControl: true,
+			zoomSnap: 1,
+			zoomDelta: 1,
+			closePopupOnClick: false,
+			preferCanvas: true
+		};
+	}
 
 	// Create map
-	map = L.map('map', {
-		center: [0, 0],
-		zoom: 0,
-		maxNativeZoom: mapMaxNativeZoom,
-		maxZoom: mapMaxZoom,
-		minNativeZoom: 0,
-		minZoom: 0,
-		// zoominfoControl: true, // moved for custom position
-		zoomControl: false,
-		scrollWheelZoom: true,
-		zoomAnimation: true,
-		fadeAnimation: true,
-		crs: L.CRS.OCAP,
-		attributionControl: true,
-		zoomSnap: 1,
-		zoomDelta: 1,
-		closePopupOnClick: false,
-		preferCanvas: true
-	});
+	map = L.map('map', mapOptions);
 
 	// Create SVG renderer for shapes that need pattern fills (Canvas doesn't support SVG patterns)
 	window.svgRenderer = L.svg();
