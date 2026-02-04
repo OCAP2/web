@@ -871,6 +871,15 @@ function createInitialMarkers () {
 }
 
 function getMapImageBounds () {
+	if (useMapLibreMode) {
+		var worldSizeDeg = worldObject.worldSize / 111320;
+		mapBounds = L.latLngBounds(
+			L.latLng(0, 0),
+			L.latLng(worldSizeDeg, worldSizeDeg)
+		);
+		return mapBounds;
+	}
+	// Legacy mode (existing code unchanged)
 	console.debug("Calculating map bounds from map image size");
 	mapBounds = new L.LatLngBounds(
 		map.unproject([0, worldObject.imageSize], mapMaxNativeZoom),
@@ -997,6 +1006,12 @@ function goFullscreen () {
 // http://127.0.0.1:5000/?file=2021_08_20__21_24_FNF_TheMountain_Youre_A_Towel_V2_Destroy_EU.json&frame=87&zoom=1&x=-134.6690319189602&y=78.0822715759277
 // Converts Arma coordinates [x,y] to LatLng
 function armaToLatLng (coords) {
+	if (useMapLibreMode) {
+		// EPSG:3857 mode: convert meters to degrees (near equator, 1° ≈ 111320m)
+		// Arma Y axis is north, X axis is east — maps to lat/lng directly
+		return L.latLng(coords[1] / 111320, coords[0] / 111320);
+	}
+	// Legacy mode: pixel-based projection
 	var pixelCoords;
 	pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 	return map.unproject(pixelCoords, mapMaxNativeZoom);
