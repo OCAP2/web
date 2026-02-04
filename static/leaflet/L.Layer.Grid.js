@@ -59,7 +59,7 @@ L.Layer.Grid = L.LayerGroup.extend({
 	 */
 	_latLngToArma: function (latlng) {
 		if (useMapLibreMode) {
-			return [latlng.lng * 111320, latlng.lat * 111320];
+			return [latlng.lng * METERS_PER_DEGREE, latlng.lat * METERS_PER_DEGREE];
 		}
 		var pixelCoords = this._map.project(latlng, mapMaxNativeZoom);
 		var x = (pixelCoords.x - trim) / multiplier;
@@ -73,7 +73,7 @@ L.Layer.Grid = L.LayerGroup.extend({
 	 */
 	_armaToLatLng: function (coords) {
 		if (useMapLibreMode) {
-			return L.latLng(coords[1] / 111320, coords[0] / 111320);
+			return L.latLng(coords[1] / METERS_PER_DEGREE, coords[0] / METERS_PER_DEGREE);
 		}
 		var pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 		return this._map.unproject(pixelCoords, mapMaxNativeZoom);

@@ -70,6 +70,7 @@ var projectileMarkersLayerGroup = L.layerGroup([]);
 var gridLayer = null;
 var map = null;
 var mapDiv = null;
+var METERS_PER_DEGREE = 111320; // Meters per degree of longitude at the equator
 var useMapLibreMode = false; // true when map has MapLibre style data
 var mapLibreLayer = null;    // reference to MapLibre basemap layer
 var mapBounds = null;
@@ -441,7 +442,7 @@ function initMap (world) {
 
 	if (useMapLibreMode) {
 		// EPSG:3857 mode for MapLibre GL basemap
-		var worldSizeDeg = world.worldSize / 111320;
+		var worldSizeDeg = world.worldSize / METERS_PER_DEGREE;
 		mapOptions = {
 			center: [worldSizeDeg / 2, worldSizeDeg / 2],
 			zoom: 12,
@@ -524,7 +525,8 @@ function initMap (world) {
 
 	// Hide marker popups once below a certain zoom level
 	map.on("zoom", function () {
-		ui.hideMarkerPopups = map.getZoom() <= 4;
+		var hideThreshold = useMapLibreMode ? 14 : 4;
+		ui.hideMarkerPopups = map.getZoom() <= hideThreshold;
 		// if (map.getZoom() <= 5 && geoJsonHouses != null) {
 		// 	geoJsonHouses.setStyle(function (geoJsonFeature) {
 		// 		return {
@@ -587,9 +589,12 @@ function initMap (world) {
 	projectileMarkersLayerGroup.addTo(map);
 
 	if (useMapLibreMode) {
-		// Register PMTiles protocol for MapLibre
-		let pmtilesProtocol = new pmtiles.Protocol();
-		maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
+		// Register PMTiles protocol for MapLibre (once)
+		if (!window._pmtilesRegistered) {
+			let pmtilesProtocol = new pmtiles.Protocol();
+			maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
+			window._pmtilesRegistered = true;
+		}
 
 		// Add MapLibre basemap layer
 		mapLibreLayer = L.maplibreGL({
@@ -600,7 +605,7 @@ function initMap (world) {
 		mapLibreLayer.addTo(map);
 
 		// Fit map to world bounds
-		var worldSizeDeg = world.worldSize / 111320;
+		var worldSizeDeg = world.worldSize / METERS_PER_DEGREE;
 		map.fitBounds(L.latLngBounds(
 			L.latLng(0, 0),
 			L.latLng(worldSizeDeg, worldSizeDeg)
@@ -896,7 +901,7 @@ function createInitialMarkers () {
 
 function getMapImageBounds () {
 	if (useMapLibreMode) {
-		var worldSizeDeg = worldObject.worldSize / 111320;
+		var worldSizeDeg = worldObject.worldSize / METERS_PER_DEGREE;
 		mapBounds = L.latLngBounds(
 			L.latLng(0, 0),
 			L.latLng(worldSizeDeg, worldSizeDeg)
@@ -1033,7 +1038,7 @@ function armaToLatLng (coords) {
 	if (useMapLibreMode) {
 		// EPSG:3857 mode: convert meters to degrees (near equator, 1° ≈ 111320m)
 		// Arma Y axis is north, X axis is east — maps to lat/lng directly
-		return L.latLng(coords[1] / 111320, coords[0] / 111320);
+		return L.latLng(coords[1] / METERS_PER_DEGREE, coords[0] / METERS_PER_DEGREE);
 	}
 	// Legacy mode: pixel-based projection
 	var pixelCoords;
