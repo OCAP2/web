@@ -580,111 +580,134 @@ function initMap (world) {
 	});
 
 
-	// Setup tile layers
-	var baseLayers = [];
-
+	// Setup layer groups
 	entitiesLayerGroup.addTo(map);
 	markersLayerGroup.addTo(map);
 	systemMarkersLayerGroup.addTo(map);
 	projectileMarkersLayerGroup.addTo(map);
 
+	if (useMapLibreMode) {
+		// Register PMTiles protocol for MapLibre
+		let pmtilesProtocol = new pmtiles.Protocol();
+		maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
+
+		// Add MapLibre basemap layer
+		mapLibreLayer = L.maplibreGL({
+			style: world.maplibreStyle,
+			interactive: false,
+			renderWorldCopies: false
+		});
+		mapLibreLayer.addTo(map);
+
+		// Fit map to world bounds
+		var worldSizeDeg = world.worldSize / 111320;
+		map.fitBounds(L.latLngBounds(
+			L.latLng(0, 0),
+			L.latLng(worldSizeDeg, worldSizeDeg)
+		));
+	}
+
 
 	// worldName = world.worldName;
 
+	if (!useMapLibreMode) {
+		// Setup raster tile layers
+		var baseLayers = [];
 
-	let topoLayerUrl = "";
-	let topoDarkLayerUrl = "";
-	let topoReliefLayerUrl = "";
-	let colorReliefLayerUrl = "";
+		let topoLayerUrl = "";
+		let topoDarkLayerUrl = "";
+		let topoReliefLayerUrl = "";
+		let colorReliefLayerUrl = "";
 
 
-	if (worldName === "") {
-		console.log("World name missing or not rendered. Using default map.")
-		// if default map is used as placeholder, use custom topo layer url
-		topoLayerUrl = 'https://maps.ocap2.com/missing_tiles.png';
-	} else if (Boolean(world._useCloudTiles)) {
-		console.log("Streaming map tiles from the cloud (maps.ocap2.com).")
-		topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
-		topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
-		topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
-		colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
-	} else {
-		console.log("Streaming map tiles from the local OCAP2 installation.")
-		topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
-		topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
-		topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
-		colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
-	}
+		if (worldName === "") {
+			console.log("World name missing or not rendered. Using default map.")
+			// if default map is used as placeholder, use custom topo layer url
+			topoLayerUrl = 'https://maps.ocap2.com/missing_tiles.png';
+		} else if (Boolean(world._useCloudTiles)) {
+			console.log("Streaming map tiles from the cloud (maps.ocap2.com).")
+			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
+		} else {
+			console.log("Streaming map tiles from the local OCAP2 installation.")
+			topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
+			topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
+			topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
+			colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
+		}
 
-	console.log("Getting bounds for layers...")
-	mapBounds = getMapImageBounds()
+		console.log("Getting bounds for layers...")
+		mapBounds = getMapImageBounds()
 
-	if (world.hasTopo) {
-		topoLayer = L.tileLayer(topoLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.7,
-			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoLayer);
-	}
+		if (world.hasTopo) {
+			topoLayer = L.tileLayer(topoLayerUrl, {
+				maxNativeZoom: world.maxZoom,
+				// maxZoom: mapMaxZoom,
+				minNativeZoom: world.minZoom,
+				bounds: mapBounds,
+				label: "Topographic",
+				attribution: "Map Data &copy; " + world.attribution,
+				noWrap: true,
+				tms: false,
+				keepBuffer: 4,
+				// opacity: 0.7,
+				errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
+			});
+			baseLayers.push(topoLayer);
+		}
 
-	if (world.hasTopoDark) {
-		topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic Dark",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.8,
-			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoDarkLayer);
-	}
+		if (world.hasTopoDark) {
+			topoDarkLayer = L.tileLayer(topoDarkLayerUrl, {
+				maxNativeZoom: world.maxZoom,
+				// maxZoom: mapMaxZoom,
+				minNativeZoom: world.minZoom,
+				bounds: mapBounds,
+				label: "Topographic Dark",
+				attribution: "Map Data &copy; " + world.attribution,
+				noWrap: true,
+				tms: false,
+				keepBuffer: 4,
+				// opacity: 0.8,
+				errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
+			});
+			baseLayers.push(topoDarkLayer);
+		}
 
-	if (world.hasTopoRelief) {
-		topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			label: "Topographic Relief",
-			attribution: "Map Data &copy; " + world.attribution,
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 0.9,
-			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(topoReliefLayer);
-	}
+		if (world.hasTopoRelief) {
+			topoReliefLayer = L.tileLayer(topoReliefLayerUrl, {
+				maxNativeZoom: world.maxZoom,
+				// maxZoom: mapMaxZoom,
+				minNativeZoom: world.minZoom,
+				bounds: mapBounds,
+				label: "Topographic Relief",
+				attribution: "Map Data &copy; " + world.attribution,
+				noWrap: true,
+				tms: false,
+				keepBuffer: 4,
+				// opacity: 0.9,
+				errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
+			});
+			baseLayers.push(topoReliefLayer);
+		}
 
-	if (world.hasColorRelief) {
-		colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
-			maxNativeZoom: world.maxZoom,
-			// maxZoom: mapMaxZoom,
-			minNativeZoom: world.minZoom,
-			bounds: mapBounds,
-			attribution: "Map Data &copy; " + world.attribution,
-			label: "Colored Relief",
-			noWrap: true,
-			tms: false,
-			keepBuffer: 4,
-			// opacity: 1,
-			errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
-		});
-		baseLayers.push(colorReliefLayer);
+		if (world.hasColorRelief) {
+			colorReliefLayer = L.tileLayer(colorReliefLayerUrl, {
+				maxNativeZoom: world.maxZoom,
+				// maxZoom: mapMaxZoom,
+				minNativeZoom: world.minZoom,
+				bounds: mapBounds,
+				attribution: "Map Data &copy; " + world.attribution,
+				label: "Colored Relief",
+				noWrap: true,
+				tms: false,
+				keepBuffer: 4,
+				// opacity: 1,
+				errorTileUrl: 'https://maps.ocap2.com/missing_tiles.png'
+			});
+			baseLayers.push(colorReliefLayer);
+		}
 	}
 
 
@@ -706,16 +729,17 @@ function initMap (world) {
 	});
 	overlayLayerControl.addTo(map);
 
-
-	baseLayerControl = L.control.basemaps({
-		basemaps: baseLayers,
-		tileX: 2,  // tile X coordinate
-		tileY: 6,  // tile Y coordinate
-		tileZ: 4   // tile zoom level
-	}, {
-		position: 'bottomright',
-	});
-	baseLayerControl.addTo(map);
+	if (!useMapLibreMode) {
+		baseLayerControl = L.control.basemaps({
+			basemaps: baseLayers,
+			tileX: 2,  // tile X coordinate
+			tileY: 6,  // tile Y coordinate
+			tileZ: 4   // tile zoom level
+		}, {
+			position: 'bottomright',
+		});
+		baseLayerControl.addTo(map);
+	}
 
 
 	// Add zoom control
