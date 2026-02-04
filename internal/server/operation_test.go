@@ -462,7 +462,7 @@ func TestGetByFilename(t *testing.T) {
 	result, err := repo.GetByFilename(ctx, "test_file.json")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, "test_file.json", result.Filename)
+	assert.Equal(t, "test_file", result.Filename)
 	assert.Equal(t, "altis", result.WorldName)
 }
 

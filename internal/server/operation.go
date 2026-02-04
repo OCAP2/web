@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -270,6 +271,7 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 		if err != nil {
 			return nil, err
 		}
+		o.Filename = normalizeFilename(o.Filename)
 		ops = append(ops, o)
 	}
 	return ops, nil
@@ -287,6 +289,7 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 	if err != nil {
 		return nil, err
 	}
+	op.Filename = normalizeFilename(op.Filename)
 	return &op, nil
 }
 
@@ -302,6 +305,7 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 	if err != nil {
 		return nil, err
 	}
+	op.Filename = normalizeFilename(op.Filename)
 	return &op, nil
 }
 
@@ -386,4 +390,11 @@ func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, dur
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE operations SET mission_duration = ? WHERE id = ?`, duration, id)
 	return err
+}
+
+// normalizeFilename strips legacy .json and .gz suffixes from filenames
+func normalizeFilename(name string) string {
+	name = strings.TrimSuffix(name, ".gz")
+	name = strings.TrimSuffix(name, ".json")
+	return name
 }
