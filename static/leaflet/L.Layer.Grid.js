@@ -58,6 +58,9 @@ L.Layer.Grid = L.LayerGroup.extend({
 	 * Inverse of armaToLatLng() from ocap.js
 	 */
 	_latLngToArma: function (latlng) {
+		if (useMapLibreMode) {
+			return [latlng.lng * 111320, latlng.lat * 111320];
+		}
 		var pixelCoords = this._map.project(latlng, mapMaxNativeZoom);
 		var x = (pixelCoords.x - trim) / multiplier;
 		var y = (imageSize - (pixelCoords.y - trim)) / multiplier;
@@ -69,6 +72,9 @@ L.Layer.Grid = L.LayerGroup.extend({
 	 * Same as armaToLatLng() from ocap.js
 	 */
 	_armaToLatLng: function (coords) {
+		if (useMapLibreMode) {
+			return L.latLng(coords[1] / 111320, coords[0] / 111320);
+		}
 		var pixelCoords = [(coords[0] * multiplier) + trim, (imageSize - (coords[1] * multiplier)) + trim];
 		return this._map.unproject(pixelCoords, mapMaxNativeZoom);
 	},
@@ -79,6 +85,20 @@ L.Layer.Grid = L.LayerGroup.extend({
 	_getGridInterval: function () {
 		var zoom = this._map.getZoom();
 
+		if (useMapLibreMode) {
+			// EPSG:3857 mode uses zoom levels ~10-20
+			if (zoom <= 12) {
+				return 5000; // 5km grid
+			} else if (zoom <= 14) {
+				return 1000; // 1km grid
+			} else if (zoom <= 16) {
+				return 500;  // 500m grid
+			} else {
+				return 100;  // 100m grid
+			}
+		}
+
+		// Legacy mode uses zoom levels ~0-8
 		if (zoom <= 2) {
 			return 5000; // 5km grid
 		} else if (zoom <= 4) {
