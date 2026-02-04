@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -481,6 +482,11 @@ func (h *Handler) GetStatic(c echo.Context) error {
 
 	absolutePath := filepath.Join(h.setting.Static, relativePath)
 
+	// Serve index.html for directory requests
+	if info, statErr := os.Stat(absolutePath); statErr == nil && info.IsDir() {
+		absolutePath = filepath.Join(absolutePath, "index.html")
+	}
+
 	return c.File(absolutePath)
 }
 
@@ -519,7 +525,8 @@ func paramPath(c echo.Context, param string) (string, error) {
 		return "", fmt.Errorf("path unescape: %w", err)
 	}
 
-	cleanPath := filepath.Clean("/" + urlPath)
+	// Use path.Clean (not filepath.Clean) for URL paths - URLs always use forward slashes
+	cleanPath := path.Clean("/" + urlPath)
 	if cleanPath != "/"+urlPath {
 		return "", ErrInvalidPath
 	}
