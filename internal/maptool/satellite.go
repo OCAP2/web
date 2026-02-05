@@ -345,17 +345,12 @@ func NewProcessSatelliteStage(tools ToolSet) Stage {
 			log.Printf("Decoded %d satellite tiles to PNG", len(tiles))
 
 			// 6. Build VRT
-			maxX, maxY := 0, 0
-			for _, t := range tiles {
-				if t.X > maxX {
-					maxX = t.X
-				}
-				if t.Y > maxY {
-					maxY = t.Y
-				}
-			}
-			imageWidth := (maxX + 1) * tileEffective
-			imageHeight := (maxY + 1) * tileEffective
+			// Use worldSize as canvas dimensions (1 pixel = 1 meter).
+			// The satellite grid may be sparse (missing ocean tiles),
+			// so (maxTile+1)*tileEffective < worldSize. Using worldSize
+			// ensures tiles are placed at correct geographic positions.
+			imageWidth := job.WorldSize
+			imageHeight := job.WorldSize
 
 			vrtPath := filepath.Join(job.TempDir, "satellite.vrt")
 			if err := BuildVRT(vrtPath, tiles, imageWidth, imageHeight, job.WorldSize); err != nil {
@@ -364,7 +359,7 @@ func NewProcessSatelliteStage(tools ToolSet) Stage {
 
 			job.SatImage = vrtPath
 			job.ImageSize = imageWidth
-			log.Printf("Built VRT: %dx%d pixels (%dx%d grid)", imageWidth, imageHeight, maxX+1, maxY+1)
+			log.Printf("Built VRT: %dx%d pixels, %d tiles", imageWidth, imageHeight, len(tiles))
 
 			return nil
 		},
