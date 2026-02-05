@@ -12,7 +12,8 @@ import (
 )
 
 // TilesToMBTiles packs a TMS tile directory (z/x/y.png) into an MBTiles file.
-// Both gdal2tiles (mercator profile) and MBTiles use TMS convention (Y=0 at south).
+// Both gdal2tiles --profile=mercator and MBTiles use TMS convention (Y=0 at south),
+// so tiles are stored with Y as-is — no flip needed.
 func TilesToMBTiles(tilesDir, mbtilesPath string) error {
 	db, err := sql.Open("sqlite3", mbtilesPath)
 	if err != nil {
@@ -82,7 +83,6 @@ func TilesToMBTiles(tilesDir, mbtilesPath string) error {
 			return err
 		}
 
-		// gdal2tiles --profile=mercator outputs TMS convention, same as MBTiles — no flip needed.
 		if _, err := stmt.Exec(z, x, y, data); err != nil {
 			return fmt.Errorf("insert tile z=%d x=%d y=%d: %w", z, x, y, err)
 		}

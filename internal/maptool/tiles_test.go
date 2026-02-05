@@ -13,8 +13,8 @@ func TestMercatorZoomForWorld(t *testing.T) {
 		wantMin   int
 		wantMax   int
 	}{
-		{30720, 30720, 10, 17},  // Altis: 0.276° → min z10, native z17
-		{8192, 4096, 12, 16},    // Stratis: 0.074° → min z12, native z16
+		{30720, 30720, 10, 18},  // Altis: 0.276° → min z10, native z18
+		{8192, 4096, 12, 17},    // Stratis: 0.074° → min z12, native z17
 	}
 	for _, tt := range tests {
 		minZ, maxZ := MercatorZoomForWorld(tt.worldSize, tt.imageSize)
@@ -24,10 +24,10 @@ func TestMercatorZoomForWorld(t *testing.T) {
 }
 
 func TestBuildGdal2tilesArgs(t *testing.T) {
-	args := buildGdal2tilesArgs("/tmp/sat.tiff", "/tmp/tiles", 10, 16)
+	args := buildGdal2tilesArgs("/tmp/sat.tiff", "/tmp/tiles", 10, 18)
 	assert.Contains(t, args, "--profile=mercator")
 	assert.Contains(t, args, "-z")
-	assert.Contains(t, args, "10-16")
+	assert.Contains(t, args, "10-18")
 	assert.Contains(t, args, "-r")
 	assert.Contains(t, args, "average")
 	assert.Contains(t, args, "/tmp/sat.tiff")

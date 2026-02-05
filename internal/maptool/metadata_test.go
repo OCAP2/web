@@ -50,7 +50,7 @@ func TestGenerateMapJSON_DefaultZoom(t *testing.T) {
 
 func TestGenerateStyleJSON(t *testing.T) {
 	dir := t.TempDir()
-	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 16}
+	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18}
 
 	err := GenerateStyleJSON(dir, meta)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestGenerateStyleJSON(t *testing.T) {
 	topo := sources["topo"].(map[string]interface{})
 	assert.Contains(t, topo["url"], "topo.pmtiles")
 	assert.Equal(t, float64(10), topo["minzoom"])
-	assert.Equal(t, float64(16), topo["maxzoom"])
+	assert.Equal(t, float64(18), topo["maxzoom"])
 }
 
 func TestGenerateStyleJSON_DefaultZoom(t *testing.T) {
