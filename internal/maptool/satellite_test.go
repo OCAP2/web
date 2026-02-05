@@ -16,12 +16,12 @@ func TestFindDataLayerPBOs(t *testing.T) {
 	// Create fake PBO files
 	for _, name := range []string{
 		"map_altis.pbo",
+		"map_altis_data_layers.pbo",         // base data_layers (no grid suffix)
 		"map_altis_data_layers_00_00.pbo",
 		"map_altis_data_layers_00_01.pbo",
 		"map_altis_data_layers_01_00.pbo",
 		"map_altis_data_layers_01_01.pbo",
-		"map_altis_data.pbo",           // NOT a data_layers PBO
-		"map_altis_data_layers.pbo",    // NOT matching _NN_MM pattern
+		"map_altis_data.pbo",                // NOT a data_layers PBO
 		"map_stratis_data_layers_00_00.pbo", // Different map
 	} {
 		os.WriteFile(filepath.Join(dir, name), []byte("fake"), 0644)
@@ -29,12 +29,30 @@ func TestFindDataLayerPBOs(t *testing.T) {
 
 	pbos, err := FindDataLayerPBOs(filepath.Join(dir, "map_altis.pbo"))
 	require.NoError(t, err)
-	assert.Len(t, pbos, 4)
+	assert.Len(t, pbos, 5)
 
 	// Verify all are altis data_layers
 	for _, p := range pbos {
-		assert.True(t, strings.Contains(filepath.Base(p), "map_altis_data_layers_"))
+		assert.True(t, strings.Contains(filepath.Base(p), "map_altis_data_layers"))
 	}
+}
+
+func TestFindDataLayerPBOs_SingleFile(t *testing.T) {
+	dir := t.TempDir()
+
+	// Small maps like Stratis have a single data_layers PBO without grid suffix
+	for _, name := range []string{
+		"map_stratis.pbo",
+		"map_stratis_data.pbo",
+		"map_stratis_data_layers.pbo",
+	} {
+		os.WriteFile(filepath.Join(dir, name), []byte("fake"), 0644)
+	}
+
+	pbos, err := FindDataLayerPBOs(filepath.Join(dir, "map_stratis.pbo"))
+	require.NoError(t, err)
+	assert.Len(t, pbos, 1)
+	assert.Contains(t, filepath.Base(pbos[0]), "map_stratis_data_layers")
 }
 
 func TestFindDataLayerPBOs_NoMatches(t *testing.T) {

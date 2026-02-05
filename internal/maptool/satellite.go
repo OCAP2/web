@@ -24,13 +24,14 @@ type SatTile struct {
 }
 
 // FindDataLayerPBOs finds data_layers PBOs that belong to the same map as mapPBOPath.
-// For example, given "map_altis.pbo", it finds "map_altis_data_layers_*.pbo" in the same directory.
+// Matches both the base file (map_stratis_data_layers.pbo) and grid-split files
+// (map_altis_data_layers_00_00.pbo).
 func FindDataLayerPBOs(mapPBOPath string) ([]string, error) {
 	dir := filepath.Dir(mapPBOPath)
 	base := filepath.Base(mapPBOPath)
 	name := strings.TrimSuffix(base, filepath.Ext(base))
 
-	pattern := filepath.Join(dir, name+"_data_layers_*_*.pbo")
+	pattern := filepath.Join(dir, name+"_data_layers*.pbo")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("glob data layers: %w", err)

@@ -118,7 +118,7 @@ func (h *handler) importPBO(c echo.Context) error {
 		dst.Close()
 		src.Close()
 
-		if !strings.Contains(strings.ToLower(name), "_data_layers_") {
+		if !strings.Contains(strings.ToLower(name), "_data_layers") {
 			path := filepath.Join(uploadDir, name)
 			if mainPBO == "" || len(name) < len(filepath.Base(mainPBO)) {
 				mainPBO = path
