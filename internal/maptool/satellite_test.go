@@ -104,17 +104,18 @@ func TestBuildVRT(t *testing.T) {
 		{X: 1, Y: 1, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_001_001_lco.png")},
 	}
 
+	// Canvas = worldSize (1m/px), not tile-derived dimensions
 	vrtPath := filepath.Join(dir, "test.vrt")
-	err := BuildVRT(vrtPath, tiles, 960, 960, 30720)
+	err := BuildVRT(vrtPath, tiles, 30720, 30720, 30720)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(vrtPath)
 	require.NoError(t, err)
 	content := string(data)
 
-	// Check XML structure — 2 tiles × 480 effective = 960
-	assert.Contains(t, content, `rasterXSize="960"`)
-	assert.Contains(t, content, `rasterYSize="960"`)
+	// Canvas matches worldSize
+	assert.Contains(t, content, `rasterXSize="30720"`)
+	assert.Contains(t, content, `rasterYSize="30720"`)
 	assert.Contains(t, content, `<ColorInterp>Red</ColorInterp>`)
 	assert.Contains(t, content, `<ColorInterp>Green</ColorInterp>`)
 	assert.Contains(t, content, `<ColorInterp>Blue</ColorInterp>`)
@@ -155,7 +156,7 @@ func TestBuildVRT_TilePlacement(t *testing.T) {
 	}
 
 	vrtPath := filepath.Join(dir, "placement.vrt")
-	err := BuildVRT(vrtPath, tiles, 480, 1440, 8192)
+	err := BuildVRT(vrtPath, tiles, 8192, 8192, 8192)
 	require.NoError(t, err)
 
 	data, _ := os.ReadFile(vrtPath)
@@ -176,7 +177,7 @@ func TestBuildVRT_OverlapCrop(t *testing.T) {
 	}
 
 	vrtPath := filepath.Join(dir, "fixed.vrt")
-	err := BuildVRT(vrtPath, tiles, 960, 480, 8192)
+	err := BuildVRT(vrtPath, tiles, 8192, 8192, 8192)
 	require.NoError(t, err)
 
 	data, _ := os.ReadFile(vrtPath)
