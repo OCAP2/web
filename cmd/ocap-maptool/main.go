@@ -61,8 +61,17 @@ func serve() error {
 
 	e := echo.New()
 	e.HideBanner = true
-	e.Use(middleware.Logger())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURI:    true,
+		LogMethod: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			log.Printf("%s %s %d", v.Method, v.URI, v.Status)
+			return nil
+		},
+	}))
 
+	e.Use(middleware.BodyLimit("2G"))
 	newHandler(e, tools, jm, mapsDir)
 
 	go func() {

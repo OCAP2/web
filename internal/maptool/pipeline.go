@@ -3,6 +3,7 @@ package maptool
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,26 @@ const (
 
 // Job represents a single PBO import job.
 type Job struct {
+	mu        sync.RWMutex `json:"-"`
+	ID        string       `json:"id"`
+	WorldName string       `json:"worldName"`
+	InputPath string       `json:"inputPath"`
+	OutputDir string       `json:"outputDir"`
+	TempDir   string       `json:"tempDir"`
+	Status    string       `json:"status"`
+	Error     string       `json:"error,omitempty"`
+	StartedAt time.Time    `json:"startedAt"`
+
+	// Populated by stages (internal, not exposed via JSON)
+	WRPPath   string `json:"-"`
+	WorldSize int    `json:"-"`
+	ImageSize int    `json:"-"`
+	TilesDir  string `json:"-"`
+	SatImage  string `json:"-"`
+}
+
+// JobInfo is a read-only snapshot of a Job, safe for concurrent access and serialization.
+type JobInfo struct {
 	ID        string    `json:"id"`
 	WorldName string    `json:"worldName"`
 	InputPath string    `json:"inputPath"`
@@ -25,13 +46,29 @@ type Job struct {
 	Status    string    `json:"status"`
 	Error     string    `json:"error,omitempty"`
 	StartedAt time.Time `json:"startedAt"`
+}
 
-	// Populated by stages
-	WRPPath   string `json:"-"`
-	WorldSize int    `json:"-"`
-	ImageSize int    `json:"-"`
-	TilesDir  string `json:"-"`
-	SatImage  string `json:"-"`
+// Snapshot returns a read-only copy of the job safe for concurrent access.
+func (j *Job) Snapshot() JobInfo {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return JobInfo{
+		ID:        j.ID,
+		WorldName: j.WorldName,
+		InputPath: j.InputPath,
+		OutputDir: j.OutputDir,
+		TempDir:   j.TempDir,
+		Status:    j.Status,
+		Error:     j.Error,
+		StartedAt: j.StartedAt,
+	}
+}
+
+func (j *Job) setStatus(status, errMsg string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.Status = status
+	j.Error = errMsg
 }
 
 // Progress represents the current pipeline progress.
@@ -63,12 +100,14 @@ func NewPipeline(stages []Stage) *Pipeline {
 
 // Run executes all stages sequentially for the given job.
 func (p *Pipeline) Run(ctx context.Context, job *Job) error {
-	job.Status = StatusRunning
+	job.setStatus(StatusRunning, "")
+	job.mu.Lock()
 	job.StartedAt = time.Now()
+	job.mu.Unlock()
 
 	for i, stage := range p.stages {
 		if err := ctx.Err(); err != nil {
-			job.Status = StatusCancelled
+			job.setStatus(StatusCancelled, "")
 			return fmt.Errorf("cancelled before stage %s: %w", stage.Name, err)
 		}
 
@@ -91,13 +130,12 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 				})
 				continue
 			}
-			job.Status = StatusFailed
-			job.Error = fmt.Sprintf("stage %s: %v", stage.Name, err)
+			job.setStatus(StatusFailed, fmt.Sprintf("stage %s: %v", stage.Name, err))
 			return fmt.Errorf("stage %s: %w", stage.Name, err)
 		}
 	}
 
-	job.Status = StatusDone
+	job.setStatus(StatusDone, "")
 	return nil
 }
 

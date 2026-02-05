@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// JobManager manages import jobs — one active, rest queued.
 type JobManager struct {
 	mapsDir     string
 	newPipeline func() *Pipeline
@@ -19,6 +20,7 @@ type JobManager struct {
 	onProgress  func(Progress)
 }
 
+// NewJobManager creates a job manager.
 func NewJobManager(mapsDir string, newPipeline func() *Pipeline) *JobManager {
 	return &JobManager{
 		mapsDir:     mapsDir,
@@ -28,14 +30,20 @@ func NewJobManager(mapsDir string, newPipeline func() *Pipeline) *JobManager {
 	}
 }
 
+// OnProgress sets a callback for job progress updates.
 func (jm *JobManager) OnProgress(fn func(Progress)) {
 	jm.mu.Lock()
 	defer jm.mu.Unlock()
 	jm.onProgress = fn
 }
 
+// Start begins processing queued jobs. Blocks until context is cancelled.
 func (jm *JobManager) Start(ctx context.Context) {
-	ctx, jm.cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	jm.mu.Lock()
+	jm.cancel = cancel
+	jm.mu.Unlock()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -46,13 +54,18 @@ func (jm *JobManager) Start(ctx context.Context) {
 	}
 }
 
+// Stop cancels the job manager.
 func (jm *JobManager) Stop() {
-	if jm.cancel != nil {
-		jm.cancel()
+	jm.mu.RLock()
+	cancel := jm.cancel
+	jm.mu.RUnlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
-func (jm *JobManager) Submit(pboPath, worldName string) (*Job, error) {
+// Submit adds a new import job to the queue. Returns a snapshot of the job.
+func (jm *JobManager) Submit(pboPath, worldName string) (JobInfo, error) {
 	id := fmt.Sprintf("%s-%d", worldName, time.Now().UnixMilli())
 	outputDir := filepath.Join(jm.mapsDir, worldName)
 	tempDir := filepath.Join(os.TempDir(), "ocap-maptool", id)
@@ -70,35 +83,41 @@ func (jm *JobManager) Submit(pboPath, worldName string) (*Job, error) {
 	jm.jobs[job.ID] = job
 	jm.mu.Unlock()
 
+	snap := job.Snapshot()
 	jm.queue <- job
-	return job, nil
+	return snap, nil
 }
 
-func (jm *JobManager) GetJob(id string) *Job {
+// GetJob returns a snapshot of a job by ID, or nil if not found.
+func (jm *JobManager) GetJob(id string) *JobInfo {
 	jm.mu.RLock()
-	defer jm.mu.RUnlock()
-	return jm.jobs[id]
+	job := jm.jobs[id]
+	jm.mu.RUnlock()
+	if job == nil {
+		return nil
+	}
+	snap := job.Snapshot()
+	return &snap
 }
 
-func (jm *JobManager) ListJobs() []*Job {
+// ListJobs returns snapshots of all jobs.
+func (jm *JobManager) ListJobs() []JobInfo {
 	jm.mu.RLock()
 	defer jm.mu.RUnlock()
-	result := make([]*Job, 0, len(jm.jobs))
+	result := make([]JobInfo, 0, len(jm.jobs))
 	for _, j := range jm.jobs {
-		result = append(result, j)
+		result = append(result, j.Snapshot())
 	}
 	return result
 }
 
 func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	if err := os.MkdirAll(job.OutputDir, 0755); err != nil {
-		job.Status = StatusFailed
-		job.Error = err.Error()
+		job.setStatus(StatusFailed, err.Error())
 		return
 	}
 	if err := os.MkdirAll(job.TempDir, 0755); err != nil {
-		job.Status = StatusFailed
-		job.Error = err.Error()
+		job.setStatus(StatusFailed, err.Error())
 		return
 	}
 
@@ -113,5 +132,7 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
+	// Clean up temp directory and uploaded PBO on success
 	os.RemoveAll(job.TempDir)
+	os.Remove(job.InputPath)
 }

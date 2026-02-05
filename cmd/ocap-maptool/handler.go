@@ -4,10 +4,12 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/labstack/echo/v4"
@@ -35,8 +37,10 @@ func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, map
 	api.GET("/jobs/:id", h.getJob)
 	api.GET("/jobs/:id/sse", h.jobSSE)
 
-	// Static files (embedded)
-	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(staticFiles))))
+	// Static files (embedded) — strip "static/" prefix so files are served from root
+	staticSub, _ := fs.Sub(staticFiles, "static")
+	fileServer := http.FileServer(http.FS(staticSub))
+	e.GET("/*", echo.WrapHandler(fileServer))
 }
 
 func (h *handler) getTools(c echo.Context) error {
@@ -53,10 +57,15 @@ func (h *handler) getMaps(c echo.Context) error {
 
 func (h *handler) deleteMap(c echo.Context) error {
 	name := c.Param("name")
-	if name == "" || name == "." || name == ".." {
+	if name == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
 	}
 	dir := filepath.Join(h.mapsDir, filepath.Clean(name))
+	absDir, _ := filepath.Abs(dir)
+	absMaps, _ := filepath.Abs(h.mapsDir)
+	if !strings.HasPrefix(absDir, absMaps+string(filepath.Separator)) {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
+	}
 	if err := os.RemoveAll(dir); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -93,12 +102,12 @@ func (h *handler) importPBO(c echo.Context) error {
 	dst.Close()
 
 	worldName := maptool.WorldNameFromPBO(file.Filename)
-	job, err := h.jm.Submit(tmpFile, worldName)
+	snap, err := h.jm.Submit(tmpFile, worldName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusAccepted, job)
+	return c.JSON(http.StatusAccepted, snap)
 }
 
 func (h *handler) getJobs(c echo.Context) error {
@@ -115,8 +124,8 @@ func (h *handler) getJob(c echo.Context) error {
 
 func (h *handler) jobSSE(c echo.Context) error {
 	jobID := c.Param("id")
-	job := h.jm.GetJob(jobID)
-	if job == nil {
+	snap := h.jm.GetJob(jobID)
+	if snap == nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "job not found"})
 	}
 
@@ -124,9 +133,9 @@ func (h *handler) jobSSE(c echo.Context) error {
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
 
-	fmt.Fprintf(c.Response(), "data: {\"status\":%q,\"error\":%q}\n\n", job.Status, job.Error)
+	fmt.Fprintf(c.Response(), "data: {\"status\":%q,\"error\":%q}\n\n", snap.Status, snap.Error)
 	c.Response().Flush()
 
-	log.Printf("SSE connection for job %s (status: %s)", jobID, job.Status)
+	log.Printf("SSE connection for job %s (status: %s)", jobID, snap.Status)
 	return nil
 }

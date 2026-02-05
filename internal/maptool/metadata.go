@@ -58,6 +58,9 @@ func GenerateMapJSON(outputDir string, meta MapMeta) error {
 
 // GenerateStyleJSON writes a style.json MapLibre style document.
 func GenerateStyleJSON(outputDir string, meta MapMeta) error {
+	if meta.WorldName == "" {
+		return fmt.Errorf("world name is required")
+	}
 	displayName := strings.ToUpper(meta.WorldName[:1]) + meta.WorldName[1:]
 
 	doc := styleJSON{
