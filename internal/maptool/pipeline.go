@@ -38,6 +38,8 @@ type Job struct {
 	WRPPath   string `json:"-"`
 	WorldSize int    `json:"-"`
 	ImageSize int    `json:"-"`
+	MinZoom   int    `json:"-"`
+	MaxZoom   int    `json:"-"`
 	TilesDir  string `json:"-"`
 	SatImage  string `json:"-"`
 }

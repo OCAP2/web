@@ -105,7 +105,7 @@ func TestBuildVRT(t *testing.T) {
 	}
 
 	vrtPath := filepath.Join(dir, "test.vrt")
-	err := BuildVRT(vrtPath, tiles, 1024, 1024)
+	err := BuildVRT(vrtPath, tiles, 1024, 1024, 30720)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(vrtPath)
@@ -119,34 +119,38 @@ func TestBuildVRT(t *testing.T) {
 	assert.Contains(t, content, `<ColorInterp>Green</ColorInterp>`)
 	assert.Contains(t, content, `<ColorInterp>Blue</ColorInterp>`)
 
-	// Check Y-flip: tile (0,1) should have DstRect yOff=0 (top), tile (0,0) should have yOff=512 (bottom)
-	// maxY=1, so yOff for Y=1 is (1-1)*512=0, yOff for Y=0 is (1-0)*512=512
+	// Check georeferencing
+	assert.Contains(t, content, `<SRS>EPSG:4326</SRS>`)
+	assert.Contains(t, content, `<GeoTransform>`)
+
+	// No Y-flip: tile Y maps directly to image row. Y=0 → yOff=0 (top), Y=1 → yOff=512.
+	// GeoTransform maps top→lat=0, bottom→lat=worldSizeDeg (south-up raster).
 	assert.Contains(t, content, `s_000_001_lco.png`)
 	assert.Contains(t, content, `s_000_000_lco.png`)
 }
 
 func TestBuildVRT_NoTiles(t *testing.T) {
 	dir := t.TempDir()
-	err := BuildVRT(filepath.Join(dir, "empty.vrt"), nil, 512, 512)
+	err := BuildVRT(filepath.Join(dir, "empty.vrt"), nil, 512, 512, 8192)
 	assert.Error(t, err)
 }
 
-func TestBuildVRT_YFlip(t *testing.T) {
+func TestBuildVRT_YDirect(t *testing.T) {
 	dir := t.TempDir()
 
-	// Single tile at (0,2) — maxY=2, so yOff = (2-2)*512 = 0 (top of image)
+	// Single tile at (0,2) — yOff = 2*512 = 1024
 	tiles := []SatTile{
 		{X: 0, Y: 2, PNGPath: filepath.Join(dir, "s_000_002_lco.png")},
 	}
 
-	vrtPath := filepath.Join(dir, "yflip.vrt")
-	err := BuildVRT(vrtPath, tiles, 512, 1536)
+	vrtPath := filepath.Join(dir, "direct.vrt")
+	err := BuildVRT(vrtPath, tiles, 512, 1536, 8192)
 	require.NoError(t, err)
 
 	data, _ := os.ReadFile(vrtPath)
 	content := string(data)
 
-	// Y=2, maxY=2 → yOff = (2-2)*512 = 0
-	assert.Contains(t, content, `yOff="0"`)
+	// Y=2 → yOff = 2*512 = 1024
+	assert.Contains(t, content, `yOff="1024"`)
 	assert.Contains(t, content, `xOff="0"`)
 }
