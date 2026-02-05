@@ -98,35 +98,46 @@ func TestBuildVRT(t *testing.T) {
 	dir := t.TempDir()
 
 	tiles := []SatTile{
-		{X: 0, Y: 0, PNGPath: filepath.Join(dir, "s_000_000_lco.png")},
-		{X: 1, Y: 0, PNGPath: filepath.Join(dir, "s_001_000_lco.png")},
-		{X: 0, Y: 1, PNGPath: filepath.Join(dir, "s_000_001_lco.png")},
-		{X: 1, Y: 1, PNGPath: filepath.Join(dir, "s_001_001_lco.png")},
+		{X: 0, Y: 0, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_000_000_lco.png")},
+		{X: 1, Y: 0, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_001_000_lco.png")},
+		{X: 0, Y: 1, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_000_001_lco.png")},
+		{X: 1, Y: 1, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_001_001_lco.png")},
 	}
 
 	vrtPath := filepath.Join(dir, "test.vrt")
-	err := BuildVRT(vrtPath, tiles, 1024, 1024, 30720)
+	err := BuildVRT(vrtPath, tiles, 960, 960, 30720)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(vrtPath)
 	require.NoError(t, err)
 	content := string(data)
 
-	// Check XML structure
-	assert.Contains(t, content, `rasterXSize="1024"`)
-	assert.Contains(t, content, `rasterYSize="1024"`)
+	// Check XML structure — 2 tiles × 480 effective = 960
+	assert.Contains(t, content, `rasterXSize="960"`)
+	assert.Contains(t, content, `rasterYSize="960"`)
 	assert.Contains(t, content, `<ColorInterp>Red</ColorInterp>`)
 	assert.Contains(t, content, `<ColorInterp>Green</ColorInterp>`)
 	assert.Contains(t, content, `<ColorInterp>Blue</ColorInterp>`)
 
-	// Check georeferencing
+	// Check georeferencing — north-up: origin at worldSizeDeg, negative pixelSizeY
 	assert.Contains(t, content, `<SRS>EPSG:4326</SRS>`)
 	assert.Contains(t, content, `<GeoTransform>`)
+	assert.Contains(t, content, ", -")
 
-	// No Y-flip: tile Y maps directly to image row. Y=0 → yOff=0 (top), Y=1 → yOff=512.
-	// GeoTransform maps top→lat=0, bottom→lat=worldSizeDeg (south-up raster).
-	assert.Contains(t, content, `s_000_001_lco.png`)
+	// All tiles referenced
 	assert.Contains(t, content, `s_000_000_lco.png`)
+	assert.Contains(t, content, `s_000_001_lco.png`)
+	assert.Contains(t, content, `s_001_000_lco.png`)
+	assert.Contains(t, content, `s_001_001_lco.png`)
+
+	// SrcRect crops to tileEffective (480), excluding 32px overlap
+	assert.Contains(t, content, `<SrcRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
+
+	// Tile placement: stride = 480
+	assert.Contains(t, content, `xOff="0" yOff="0" xSize="480"`)
+	assert.Contains(t, content, `xOff="480" yOff="0" xSize="480"`)
+	assert.Contains(t, content, `xOff="0" yOff="480" xSize="480"`)
+	assert.Contains(t, content, `xOff="480" yOff="480" xSize="480"`)
 }
 
 func TestBuildVRT_NoTiles(t *testing.T) {
@@ -135,22 +146,45 @@ func TestBuildVRT_NoTiles(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestBuildVRT_YDirect(t *testing.T) {
+func TestBuildVRT_TilePlacement(t *testing.T) {
 	dir := t.TempDir()
 
-	// Single tile at (0,2) — yOff = 2*512 = 1024
+	// Single tile at (0,2) — yOff = 2*480 = 960
 	tiles := []SatTile{
-		{X: 0, Y: 2, PNGPath: filepath.Join(dir, "s_000_002_lco.png")},
+		{X: 0, Y: 2, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_000_002_lco.png")},
 	}
 
-	vrtPath := filepath.Join(dir, "direct.vrt")
-	err := BuildVRT(vrtPath, tiles, 512, 1536, 8192)
+	vrtPath := filepath.Join(dir, "placement.vrt")
+	err := BuildVRT(vrtPath, tiles, 480, 1440, 8192)
 	require.NoError(t, err)
 
 	data, _ := os.ReadFile(vrtPath)
 	content := string(data)
 
-	// Y=2 → yOff = 2*512 = 1024
-	assert.Contains(t, content, `yOff="1024"`)
+	// Y=2 → yOff = 2*480 = 960
+	assert.Contains(t, content, `yOff="960"`)
 	assert.Contains(t, content, `xOff="0"`)
+}
+
+func TestBuildVRT_OverlapCrop(t *testing.T) {
+	dir := t.TempDir()
+
+	// SrcRect/DstRect use tileEffective (480) to crop the 32px overlap.
+	tiles := []SatTile{
+		{X: 0, Y: 0, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_000_000_lco.png")},
+		{X: 1, Y: 0, Width: 512, Height: 512, PNGPath: filepath.Join(dir, "s_001_000_lco.png")},
+	}
+
+	vrtPath := filepath.Join(dir, "fixed.vrt")
+	err := BuildVRT(vrtPath, tiles, 960, 480, 8192)
+	require.NoError(t, err)
+
+	data, _ := os.ReadFile(vrtPath)
+	content := string(data)
+
+	// SrcRect crops to 480×480 (excluding 32px overlap)
+	assert.Contains(t, content, `<SrcRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
+	// DstRect uses 480px stride
+	assert.Contains(t, content, `<DstRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
+	assert.Contains(t, content, `<DstRect xOff="480" yOff="0" xSize="480" ySize="480" />`)
 }

@@ -51,7 +51,7 @@ func GenerateMapJSON(outputDir string, meta MapMeta) error {
 		ImageSize:     meta.ImageSize,
 		Multiplier:    1,
 		MaxZoom:       maxZoom,
-		MinZoom:       0,
+		MinZoom:       meta.MinZoom,
 		MaplibreStyle: assetPath(meta.URLPrefix, "style.json"),
 	}
 
