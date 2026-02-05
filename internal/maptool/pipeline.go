@@ -28,6 +28,12 @@ type Job struct {
 	Error     string       `json:"error,omitempty"`
 	StartedAt time.Time    `json:"startedAt"`
 
+	// Progress tracking
+	Stage       string `json:"stage,omitempty"`
+	StageNum    int    `json:"stageNum,omitempty"`
+	TotalStages int    `json:"totalStages,omitempty"`
+	Message     string `json:"message,omitempty"`
+
 	// Populated by stages (internal, not exposed via JSON)
 	WRPPath   string `json:"-"`
 	WorldSize int    `json:"-"`
@@ -38,14 +44,18 @@ type Job struct {
 
 // JobInfo is a read-only snapshot of a Job, safe for concurrent access and serialization.
 type JobInfo struct {
-	ID        string    `json:"id"`
-	WorldName string    `json:"worldName"`
-	InputPath string    `json:"inputPath"`
-	OutputDir string    `json:"outputDir"`
-	TempDir   string    `json:"tempDir"`
-	Status    string    `json:"status"`
-	Error     string    `json:"error,omitempty"`
-	StartedAt time.Time `json:"startedAt"`
+	ID          string    `json:"id"`
+	WorldName   string    `json:"worldName"`
+	InputPath   string    `json:"inputPath"`
+	OutputDir   string    `json:"outputDir"`
+	TempDir     string    `json:"tempDir"`
+	Status      string    `json:"status"`
+	Error       string    `json:"error,omitempty"`
+	StartedAt   time.Time `json:"startedAt"`
+	Stage       string    `json:"stage,omitempty"`
+	StageNum    int       `json:"stageNum,omitempty"`
+	TotalStages int       `json:"totalStages,omitempty"`
+	Message     string    `json:"message,omitempty"`
 }
 
 // Snapshot returns a read-only copy of the job safe for concurrent access.
@@ -53,14 +63,18 @@ func (j *Job) Snapshot() JobInfo {
 	j.mu.RLock()
 	defer j.mu.RUnlock()
 	return JobInfo{
-		ID:        j.ID,
-		WorldName: j.WorldName,
-		InputPath: j.InputPath,
-		OutputDir: j.OutputDir,
-		TempDir:   j.TempDir,
-		Status:    j.Status,
-		Error:     j.Error,
-		StartedAt: j.StartedAt,
+		ID:          j.ID,
+		WorldName:   j.WorldName,
+		InputPath:   j.InputPath,
+		OutputDir:   j.OutputDir,
+		TempDir:     j.TempDir,
+		Status:      j.Status,
+		Error:       j.Error,
+		StartedAt:   j.StartedAt,
+		Stage:       j.Stage,
+		StageNum:    j.StageNum,
+		TotalStages: j.TotalStages,
+		Message:     j.Message,
 	}
 }
 
@@ -111,7 +125,7 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 			return fmt.Errorf("cancelled before stage %s: %w", stage.Name, err)
 		}
 
-		p.reportProgress(Progress{
+		p.reportProgress(job, Progress{
 			JobID:       job.ID,
 			Stage:       stage.Name,
 			StageNum:    i + 1,
@@ -121,7 +135,7 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 
 		if err := stage.Run(ctx, job); err != nil {
 			if stage.Optional {
-				p.reportProgress(Progress{
+				p.reportProgress(job, Progress{
 					JobID:       job.ID,
 					Stage:       stage.Name,
 					StageNum:    i + 1,
@@ -139,7 +153,14 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 	return nil
 }
 
-func (p *Pipeline) reportProgress(prog Progress) {
+func (p *Pipeline) reportProgress(job *Job, prog Progress) {
+	job.mu.Lock()
+	job.Stage = prog.Stage
+	job.StageNum = prog.StageNum
+	job.TotalStages = prog.TotalStages
+	job.Message = prog.Message
+	job.mu.Unlock()
+
 	if p.OnProgress != nil {
 		p.OnProgress(prog)
 	}

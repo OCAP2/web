@@ -16,18 +16,24 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
     });
-    fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFile(fileInput.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFiles(fileInput.files); });
 
-    async function uploadFile(file) {
-        if (!file.name.endsWith('.pbo')) {
-            alert('Please upload a .pbo file');
+    async function uploadFiles(fileList) {
+        const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.pbo'));
+        if (files.length === 0) {
+            alert('Please upload at least one .pbo file');
             return;
         }
         const form = new FormData();
-        form.append('pbo', file);
-        dropZone.querySelector('p').textContent = 'Uploading ' + file.name + '...';
+        for (const file of files) {
+            form.append('pbo', file);
+        }
+        const label = files.length === 1
+            ? 'Uploading ' + files[0].name + '...'
+            : 'Uploading ' + files.length + ' files...';
+        dropZone.querySelector('p').textContent = label;
 
         try {
             const res = await fetch('/api/maps/import', { method: 'POST', body: form });
@@ -40,7 +46,7 @@
         } catch (err) {
             alert('Upload failed: ' + err.message);
         }
-        dropZone.querySelector('p').innerHTML = 'Drop PBO here or <label for="file-input">click to upload</label>';
+        dropZone.querySelector('p').innerHTML = 'Drop PBO files here or <label for="file-input">click to upload</label>';
     }
 
     function pollJob(jobId) {
@@ -49,8 +55,14 @@
             try {
                 const res = await fetch('/api/jobs/' + jobId);
                 const job = await res.json();
-                activeJobDiv.innerHTML = '<strong>' + job.worldName + '</strong> — ' + job.status +
-                    (job.error ? ' (' + job.error + ')' : '');
+                let text = '<strong>' + esc(job.worldName) + '</strong> — ' + esc(job.status);
+                if (job.stage) {
+                    text += ' — stage ' + job.stageNum + '/' + job.totalStages + ': ' + esc(job.stage);
+                }
+                if (job.error) {
+                    text += ' (' + esc(job.error) + ')';
+                }
+                activeJobDiv.innerHTML = text;
                 if (job.status === 'done' || job.status === 'failed') {
                     clearInterval(interval);
                     loadMaps();
@@ -111,6 +123,12 @@
         await fetch('/api/maps/' + name, { method: 'DELETE' });
         loadMaps();
     };
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
 
     // Initial load
     loadTools();

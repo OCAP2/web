@@ -247,33 +247,41 @@ func NewProcessSatelliteStage(tools ToolSet) Stage {
 			job.WorldSize = wrpHdr.WorldSize()
 			log.Printf("World size: %d meters", job.WorldSize)
 
-			// 2. Find data_layers PBOs
-			dataLayerPBOs, err := FindDataLayerPBOs(job.InputPath)
+			// 2. Look for satellite tiles in the already-extracted main PBO first
+			//    (small maps like Stratis bundle them directly)
+			paaPaths, err := findSatTiles(job.TempDir)
 			if err != nil {
-				return fmt.Errorf("find data layers: %w", err)
-			}
-			if len(dataLayerPBOs) == 0 {
-				return fmt.Errorf("no data_layers PBOs found near %s", job.InputPath)
-			}
-			log.Printf("Found %d data_layers PBOs", len(dataLayerPBOs))
-
-			// 3. Extract each data_layers PBO
-			extractDir := filepath.Join(job.TempDir, "data_layers")
-			for i, pboPath := range dataLayerPBOs {
-				log.Printf("Extracting data layers PBO %d/%d: %s", i+1, len(dataLayerPBOs), filepath.Base(pboPath))
-				subDir := filepath.Join(extractDir, fmt.Sprintf("dl_%02d", i))
-				if err := ExtractPBO(ctx, tools, pboPath, subDir); err != nil {
-					return fmt.Errorf("extract %s: %w", filepath.Base(pboPath), err)
-				}
+				return fmt.Errorf("find satellite tiles in main PBO: %w", err)
 			}
 
-			// 4. Find all satellite PAA tiles
-			paaPaths, err := findSatTiles(extractDir)
-			if err != nil {
-				return fmt.Errorf("find satellite tiles: %w", err)
-			}
+			// 3. If none found, try data_layers PBOs (large maps split them out)
 			if len(paaPaths) == 0 {
-				return fmt.Errorf("no satellite tiles (s_*_lco.paa) found in extracted data layers")
+				dataLayerPBOs, err := FindDataLayerPBOs(job.InputPath)
+				if err != nil {
+					return fmt.Errorf("find data layers: %w", err)
+				}
+				if len(dataLayerPBOs) == 0 {
+					stem := strings.TrimSuffix(filepath.Base(job.InputPath), filepath.Ext(job.InputPath))
+					return fmt.Errorf("no satellite tiles found in main PBO and no data_layers PBOs found — upload %s_data_layers_*.pbo files alongside the main map PBO", stem)
+				}
+				log.Printf("Found %d data_layers PBOs", len(dataLayerPBOs))
+
+				extractDir := filepath.Join(job.TempDir, "data_layers")
+				for i, pboPath := range dataLayerPBOs {
+					log.Printf("Extracting data layers PBO %d/%d: %s", i+1, len(dataLayerPBOs), filepath.Base(pboPath))
+					subDir := filepath.Join(extractDir, fmt.Sprintf("dl_%02d", i))
+					if err := ExtractPBO(ctx, tools, pboPath, subDir); err != nil {
+						return fmt.Errorf("extract %s: %w", filepath.Base(pboPath), err)
+					}
+				}
+
+				paaPaths, err = findSatTiles(extractDir)
+				if err != nil {
+					return fmt.Errorf("find satellite tiles: %w", err)
+				}
+				if len(paaPaths) == 0 {
+					return fmt.Errorf("no satellite tiles (s_*_lco.paa) found in extracted data layers")
+				}
 			}
 			log.Printf("Found %d satellite tiles", len(paaPaths))
 

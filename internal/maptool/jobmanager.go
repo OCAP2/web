@@ -132,7 +132,7 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
-	// Clean up temp directory and uploaded PBO on success
+	// Clean up temp directory and uploaded PBOs on success
 	os.RemoveAll(job.TempDir)
-	os.Remove(job.InputPath)
+	os.RemoveAll(filepath.Dir(job.InputPath))
 }
