@@ -92,8 +92,14 @@ func NewPackagePMTilesStage(tools ToolSet) Stage {
 	return Stage{
 		Name: "package_pmtiles",
 		Run: func(ctx context.Context, job *Job) error {
+			// Convert tile directory to MBTiles first (pmtiles convert requires MBTiles input)
+			mbtilesPath := filepath.Join(job.TempDir, "tiles.mbtiles")
+			if err := TilesToMBTiles(job.TilesDir, mbtilesPath); err != nil {
+				return fmt.Errorf("create mbtiles: %w", err)
+			}
+
 			outputPath := filepath.Join(job.OutputDir, "topo.pmtiles")
-			return PackagePMTiles(ctx, tools, job.TilesDir, outputPath)
+			return PackagePMTiles(ctx, tools, mbtilesPath, outputPath)
 		},
 	}
 }

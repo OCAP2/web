@@ -132,6 +132,7 @@ func importAll(ctx context.Context, tools maptool.ToolSet, dir, mapsDir string) 
 func buildPipeline(tools maptool.ToolSet) *maptool.Pipeline {
 	stages := []maptool.Stage{
 		maptool.NewExtractPBOStage(tools),
+		maptool.NewProcessSatelliteStage(tools),
 		maptool.NewGenerateTilesStage(tools),
 		maptool.NewPackagePMTilesStage(tools),
 		maptool.NewGenerateMetadataStage(),
