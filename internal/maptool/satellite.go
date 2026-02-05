@@ -175,11 +175,17 @@ type vrtData struct {
 }
 
 func (v vrtData) DstXOff(x int) int { return x * 512 }
-func (v vrtData) DstYOff(y int) int { return (v.MaxY - y) * 512 }
+func (v vrtData) DstYOff(y int) int { return y * 512 }
 
-// BuildVRT creates a GDAL VRT file referencing the given tiles.
-// The VRT uses relative paths and applies Y-flip so tile (0,0) is at the bottom.
-func BuildVRT(vrtPath string, tiles []SatTile, imageWidth, imageHeight int) error {
+// metersPerDegree is the number of meters per degree of longitude at the equator.
+// Must match METERS_PER_DEGREE in static/scripts/ocap.js.
+const metersPerDegree = 111320
+
+// BuildVRT creates a georeferenced GDAL VRT file referencing the given tiles.
+// The VRT is georeferenced in EPSG:4326 at the equator so that Arma meters
+// map to degrees via metersPerDegree, matching the frontend armaToLatLng().
+// worldSize is the Arma world size in meters.
+func BuildVRT(vrtPath string, tiles []SatTile, imageWidth, imageHeight, worldSize int) error {
 	if len(tiles) == 0 {
 		return fmt.Errorf("no tiles to build VRT from")
 	}
@@ -209,6 +215,18 @@ func BuildVRT(vrtPath string, tiles []SatTile, imageWidth, imageHeight int) erro
 	defer f.Close()
 
 	fmt.Fprintf(f, "<VRTDataset rasterXSize=\"%d\" rasterYSize=\"%d\">\n", v.Width, v.Height)
+
+	// Georeference: place the image at the equator in EPSG:4326.
+	// Satellite tile Y=0 is the southern edge of the Arma world. Without DstYOff flip,
+	// Y=0 tiles are at the top of the image (row 0). So the top of the image = south = lat 0.
+	// Latitude increases going down the image (south-up raster). GDAL handles this correctly
+	// during mercator reprojection.
+	worldSizeDeg := float64(worldSize) / float64(metersPerDegree)
+	pixelSizeX := worldSizeDeg / float64(v.Width)
+	pixelSizeY := worldSizeDeg / float64(v.Height)
+	fmt.Fprintf(f, "  <SRS>EPSG:4326</SRS>\n")
+	fmt.Fprintf(f, "  <GeoTransform>%.15e, %.15e, 0, %.15e, 0, %.15e</GeoTransform>\n",
+		0.0, pixelSizeX, 0.0, pixelSizeY)
 
 	bands := []struct {
 		num   int
@@ -309,7 +327,7 @@ func NewProcessSatelliteStage(tools ToolSet) Stage {
 			imageHeight := (maxY + 1) * 512
 
 			vrtPath := filepath.Join(job.TempDir, "satellite.vrt")
-			if err := BuildVRT(vrtPath, tiles, imageWidth, imageHeight); err != nil {
+			if err := BuildVRT(vrtPath, tiles, imageWidth, imageHeight, job.WorldSize); err != nil {
 				return fmt.Errorf("build VRT: %w", err)
 			}
 
