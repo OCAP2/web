@@ -125,8 +125,21 @@ func GenerateStyleJSON(outputDir string, meta MapMeta) error {
 				"source-layer": "roads",
 				"type":         "line",
 				"paint": map[string]interface{}{
-					"line-color": "#d4a017",
-					"line-width": 1.5,
+					"line-color": []interface{}{
+						"match", []interface{}{"get", "type"},
+						"main road", "#e8e8e8",
+						"road", "#d4c4a0",
+						"track", "#c4a060",
+						"#b0a080",
+					},
+					"line-width": []interface{}{
+						"match", []interface{}{"get", "type"},
+						"main road", 2.5,
+						"road", 1.8,
+						"track", 1.0,
+						1.5,
+					},
+					"line-opacity": 0.8,
 				},
 			},
 			map[string]interface{}{
