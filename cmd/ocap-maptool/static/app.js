@@ -1,0 +1,136 @@
+(function() {
+    'use strict';
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const toolsList = document.getElementById('tools-list');
+    const mapsBody = document.getElementById('maps-body');
+    const noMaps = document.getElementById('no-maps');
+    const jobsSection = document.getElementById('jobs-section');
+    const activeJobDiv = document.getElementById('active-job');
+
+    // Drag and drop
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFiles(fileInput.files); });
+
+    async function uploadFiles(fileList) {
+        const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.pbo'));
+        if (files.length === 0) {
+            alert('Please upload at least one .pbo file');
+            return;
+        }
+        const form = new FormData();
+        for (const file of files) {
+            form.append('pbo', file);
+        }
+        const label = files.length === 1
+            ? 'Uploading ' + files[0].name + '...'
+            : 'Uploading ' + files.length + ' files...';
+        dropZone.querySelector('p').textContent = label;
+
+        try {
+            const res = await fetch('/api/maps/import', { method: 'POST', body: form });
+            const job = await res.json();
+            if (res.ok) {
+                pollJob(job.id);
+            } else {
+                alert('Upload failed: ' + (job.error || 'unknown error'));
+            }
+        } catch (err) {
+            alert('Upload failed: ' + err.message);
+        }
+        dropZone.querySelector('p').innerHTML = 'Drop PBO files here or <label for="file-input">click to upload</label>';
+    }
+
+    function pollJob(jobId) {
+        jobsSection.hidden = false;
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/jobs/' + jobId);
+                const job = await res.json();
+                let text = '<strong>' + esc(job.worldName) + '</strong> — ' + esc(job.status);
+                if (job.stage) {
+                    text += ' — stage ' + job.stageNum + '/' + job.totalStages + ': ' + esc(job.stage);
+                }
+                if (job.error) {
+                    text += ' (' + esc(job.error) + ')';
+                }
+                activeJobDiv.innerHTML = text;
+                if (job.status === 'done' || job.status === 'failed') {
+                    clearInterval(interval);
+                    loadMaps();
+                    if (job.status === 'done') {
+                        setTimeout(() => { jobsSection.hidden = true; }, 3000);
+                    }
+                }
+            } catch (e) {
+                clearInterval(interval);
+            }
+        }, 1000);
+    }
+
+    async function loadTools() {
+        try {
+            const res = await fetch('/api/tools');
+            const tools = await res.json();
+            toolsList.innerHTML = tools.map(t => {
+                let cls = t.found ? 'found' : (t.required ? 'missing' : 'optional');
+                let icon = t.found ? '\u2713' : (t.required ? '\u2717' : '?');
+                let suffix = !t.required ? ' (optional)' : '';
+                return '<span class="tool ' + cls + '">' + icon + ' ' + t.name + suffix + '</span>';
+            }).join('');
+        } catch (e) {
+            toolsList.textContent = 'Failed to load tools';
+        }
+    }
+
+    async function loadMaps() {
+        try {
+            const res = await fetch('/api/maps');
+            const maps = await res.json();
+            if (!maps || maps.length === 0) {
+                mapsBody.innerHTML = '';
+                noMaps.hidden = false;
+                return;
+            }
+            noMaps.hidden = true;
+            mapsBody.innerHTML = maps.map(m =>
+                '<tr>' +
+                '<td>' + m.name + '</td>' +
+                '<td>' + (m.worldSize ? m.worldSize + 'm' : '-') + '</td>' +
+                '<td>' + (m.hasPmtiles ? '\u2713' : '-') + '</td>' +
+                '<td>' + (m.hasStyle ? '\u2713' : '-') + '</td>' +
+                '<td><button class="btn btn-danger" onclick="deleteMap(\'' + m.name + '\')">' +
+                'Delete</button></td>' +
+                '</tr>'
+            ).join('');
+        } catch (e) {
+            mapsBody.innerHTML = '';
+            noMaps.textContent = 'Failed to load maps';
+            noMaps.hidden = false;
+        }
+    }
+
+    window.deleteMap = async function(name) {
+        if (!confirm('Delete map "' + name + '"? This cannot be undone.')) return;
+        await fetch('/api/maps/' + name, { method: 'DELETE' });
+        loadMaps();
+    };
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    // Initial load
+    loadTools();
+    loadMaps();
+})();

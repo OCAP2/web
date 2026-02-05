@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMigration(t *testing.T) {
@@ -33,6 +34,54 @@ func TestMigrationV3StorageFormat(t *testing.T) {
 	err = repo.db.QueryRow("SELECT storage_format, conversion_status FROM operations LIMIT 1").Scan(&storageFormat, &conversionStatus)
 	// Should get no rows error, not missing column error
 	assert.ErrorIs(t, err, sql.ErrNoRows)
+}
+
+func TestMigrationV5NormalizeFilenames(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	// Create DB manually with legacy filenames (pre-v5)
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		CREATE TABLE version (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, db INTEGER);
+		CREATE TABLE operations (
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			world_name TEXT NOT NULL, mission_name TEXT NOT NULL, mission_duration INTEGER NOT NULL,
+			filename TEXT NOT NULL, date TEXT NOT NULL, tag TEXT NOT NULL DEFAULT '',
+			storage_format TEXT DEFAULT 'json', conversion_status TEXT DEFAULT 'completed',
+			schema_version INTEGER DEFAULT 1
+		);
+		INSERT INTO version (db) VALUES (4);
+		INSERT INTO operations (world_name, mission_name, mission_duration, filename, date)
+			VALUES ('altis', 'M1', 3600, 'mission_one.json', '2026-01-01');
+		INSERT INTO operations (world_name, mission_name, mission_duration, filename, date)
+			VALUES ('altis', 'M2', 3600, 'mission_two.json.gz', '2026-01-02');
+		INSERT INTO operations (world_name, mission_name, mission_duration, filename, date)
+			VALUES ('altis', 'M3', 3600, 'mission_clean', '2026-01-03');
+	`)
+	require.NoError(t, err)
+	db.Close()
+
+	// Open via NewRepoOperation which runs migrations
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	require.Len(t, ops, 3)
+
+	// All filenames should be normalized (newest first by default)
+	filenames := map[string]bool{}
+	for _, op := range ops {
+		filenames[op.Filename] = true
+	}
+	assert.True(t, filenames["mission_one"])
+	assert.True(t, filenames["mission_two"])
+	assert.True(t, filenames["mission_clean"])
 }
 
 func TestOperationStorageFormat(t *testing.T) {
@@ -387,7 +436,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 4, version)
+	assert.Equal(t, 5, version)
 }
 
 func TestGetTypesEmpty(t *testing.T) {

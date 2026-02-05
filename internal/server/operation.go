@@ -137,6 +137,22 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 5 {
+		// Strip legacy .json.gz and .json suffixes from filenames
+		_, err = r.db.Exec(`
+			UPDATE operations SET filename = REPLACE(filename, '.json.gz', '') WHERE filename LIKE '%.json.gz';
+			UPDATE operations SET filename = REPLACE(filename, '.json', '') WHERE filename LIKE '%.json';
+		`)
+		if err != nil {
+			return fmt.Errorf("merge db to v5 failed (normalize filenames): %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (5)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 5: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -387,3 +403,4 @@ func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, dur
 		`UPDATE operations SET mission_duration = ? WHERE id = ?`, duration, id)
 	return err
 }
+

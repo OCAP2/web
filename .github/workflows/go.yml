@@ -29,7 +29,12 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -coverprofile=cover.out -coverpkg=./cmd/...,./internal/... ./...
+        run: |
+          mkdir -p "$GOTMPDIR"
+          go test -coverprofile=cover.out -coverpkg=./cmd/...,./internal/... ./...
+        env:
+          GOTMPDIR: ${{ runner.temp }}/go-work
+          TMPDIR: ${{ runner.temp }}
 
       - name: Build
         run: go build -o ocap-webserver ./cmd/ocap-webserver
