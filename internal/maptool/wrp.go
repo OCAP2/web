@@ -601,6 +601,13 @@ func readRoadNetAt(data []byte, offset int, layerSizeX, layerSizeY, version uint
 				if offset+48 > len(data) {
 					return parts, fmt.Errorf("truncated road transform at offset %d", offset)
 				}
+				// For parts with no position vertices, extract center from transform row 3
+				if len(positions) == 0 {
+					cx := math.Float32frombits(binary.LittleEndian.Uint32(data[offset+9*4:]))
+					cy := math.Float32frombits(binary.LittleEndian.Uint32(data[offset+10*4:]))
+					cz := math.Float32frombits(binary.LittleEndian.Uint32(data[offset+11*4:]))
+					positions = [][3]float32{{cx, cy, cz}}
+				}
 				offset += 48
 			}
 

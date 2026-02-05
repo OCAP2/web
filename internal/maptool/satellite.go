@@ -206,11 +206,11 @@ const metersPerDegree = 111320
 // tileRawSize is the decoded pixel size of Arma satellite PAA tiles.
 const tileRawSize = 512
 
-// tileOverlap is the number of pixels each Arma satellite tile overlaps
-// with its adjacent neighbors. Arma Terrain Builder adds overlap so that
-// in-engine texture sampling can blend across tile boundaries. For web map
-// tiles this overlap must be removed to avoid visible duplication.
-// Measured empirically: 32px for Altis (512px tiles, 30720m world).
+// tileOverlap is the total overlap pixels per Arma satellite tile (symmetric:
+// half on each edge). Arma Terrain Builder adds overlap so that in-engine
+// texture sampling can blend across tile boundaries in all directions. The
+// unique content is the center 480×480 starting at offset (16,16).
+// Measured empirically: 32px total (16 per edge) for Altis (512px tiles).
 const tileOverlap = 32
 
 // tileEffective is the unique (non-overlapping) pixel size per tile.
@@ -272,7 +272,7 @@ func BuildVRT(vrtPath string, tiles []SatTile, imageWidth, imageHeight, worldSiz
 			fmt.Fprintf(f, "    <SimpleSource>\n")
 			fmt.Fprintf(f, "      <SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n", t.PNGPath)
 			fmt.Fprintf(f, "      <SourceBand>%d</SourceBand>\n", band.num)
-			fmt.Fprintf(f, "      <SrcRect xOff=\"0\" yOff=\"0\" xSize=\"%d\" ySize=\"%d\" />\n", tileEffective, tileEffective)
+			fmt.Fprintf(f, "      <SrcRect xOff=\"%d\" yOff=\"%d\" xSize=\"%d\" ySize=\"%d\" />\n", tileOverlap/2, tileOverlap/2, tileEffective, tileEffective)
 			fmt.Fprintf(f, "      <DstRect xOff=\"%d\" yOff=\"%d\" xSize=\"%d\" ySize=\"%d\" />\n",
 				t.X*tileEffective, t.Y*tileEffective, tileEffective, tileEffective)
 			fmt.Fprintf(f, "    </SimpleSource>\n")

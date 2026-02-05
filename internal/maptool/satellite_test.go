@@ -131,8 +131,8 @@ func TestBuildVRT(t *testing.T) {
 	assert.Contains(t, content, `s_001_000_lco.png`)
 	assert.Contains(t, content, `s_001_001_lco.png`)
 
-	// SrcRect crops to tileEffective (480), excluding 32px overlap
-	assert.Contains(t, content, `<SrcRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
+	// SrcRect skips 16px left/top overlap, crops to tileEffective (480)
+	assert.Contains(t, content, `<SrcRect xOff="16" yOff="16" xSize="480" ySize="480" />`)
 
 	// Tile placement: stride = 480
 	assert.Contains(t, content, `xOff="0" yOff="0" xSize="480"`)
@@ -183,8 +183,8 @@ func TestBuildVRT_OverlapCrop(t *testing.T) {
 	data, _ := os.ReadFile(vrtPath)
 	content := string(data)
 
-	// SrcRect crops to 480×480 (excluding 32px overlap)
-	assert.Contains(t, content, `<SrcRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
+	// SrcRect skips 16px left/top overlap, crops to 480×480
+	assert.Contains(t, content, `<SrcRect xOff="16" yOff="16" xSize="480" ySize="480" />`)
 	// DstRect uses 480px stride
 	assert.Contains(t, content, `<DstRect xOff="0" yOff="0" xSize="480" ySize="480" />`)
 	assert.Contains(t, content, `<DstRect xOff="480" yOff="0" xSize="480" ySize="480" />`)
