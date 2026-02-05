@@ -11,10 +11,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// TileMeta provides geographic metadata for the MBTiles file.
+type TileMeta struct {
+	WorldSize int // terrain extent in meters
+	MinZoom   int
+	MaxZoom   int
+}
+
 // TilesToMBTiles packs a TMS tile directory (z/x/y.png) into an MBTiles file.
 // Both gdal2tiles --profile=mercator and MBTiles use TMS convention (Y=0 at south),
 // so tiles are stored with Y as-is — no flip needed.
-func TilesToMBTiles(tilesDir, mbtilesPath string) error {
+func TilesToMBTiles(tilesDir, mbtilesPath string, meta TileMeta) error {
 	// Remove any leftover file from a previous run
 	os.Remove(mbtilesPath)
 
@@ -34,10 +41,18 @@ func TilesToMBTiles(tilesDir, mbtilesPath string) error {
 		}
 	}
 
+	worldSizeDeg := float64(meta.WorldSize) / float64(metersPerDegree)
+	bounds := fmt.Sprintf("0,0,%.6f,%.6f", worldSizeDeg, worldSizeDeg)
+	center := fmt.Sprintf("%.6f,%.6f,%d", worldSizeDeg/2, worldSizeDeg/2, (meta.MinZoom+meta.MaxZoom)/2)
+
 	for _, kv := range [][2]string{
 		{"name", "topo"},
 		{"format", "png"},
 		{"type", "overlay"},
+		{"bounds", bounds},
+		{"minzoom", strconv.Itoa(meta.MinZoom)},
+		{"maxzoom", strconv.Itoa(meta.MaxZoom)},
+		{"center", center},
 	} {
 		if _, err := db.Exec("INSERT INTO metadata VALUES (?, ?)", kv[0], kv[1]); err != nil {
 			return fmt.Errorf("write metadata: %w", err)

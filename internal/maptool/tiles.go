@@ -114,7 +114,8 @@ func NewPackagePMTilesStage(tools ToolSet) Stage {
 		Run: func(ctx context.Context, job *Job) error {
 			// Convert tile directory to MBTiles first (pmtiles convert requires MBTiles input)
 			mbtilesPath := filepath.Join(job.TempDir, "tiles.mbtiles")
-			if err := TilesToMBTiles(job.TilesDir, mbtilesPath); err != nil {
+			meta := TileMeta{WorldSize: job.WorldSize, MinZoom: job.MinZoom, MaxZoom: job.MaxZoom}
+			if err := TilesToMBTiles(job.TilesDir, mbtilesPath, meta); err != nil {
 				return fmt.Errorf("create mbtiles: %w", err)
 			}
 
