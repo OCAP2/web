@@ -437,6 +437,7 @@ function initMap (world) {
 	multiplier = world.multiplier;
 
 	useMapLibreMode = Boolean(world.maplibreStyle);
+	console.log("[OCAP] Map mode:", useMapLibreMode ? "MapLibre + PMTiles" : "Legacy raster tiles");
 
 	var mapOptions;
 
@@ -594,9 +595,11 @@ function initMap (world) {
 			let pmtilesProtocol = new pmtiles.Protocol();
 			maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
 			window._pmtilesRegistered = true;
+			console.log("[OCAP] PMTiles protocol registered");
 		}
 
 		// Add MapLibre basemap layer
+		console.log("[OCAP] Loading MapLibre style:", world.maplibreStyle);
 		mapLibreLayer = L.maplibreGL({
 			style: world.maplibreStyle,
 			interactive: false,
