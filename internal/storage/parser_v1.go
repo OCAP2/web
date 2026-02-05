@@ -112,12 +112,22 @@ func (p *ParserV1) Parse(data map[string]interface{}, chunkSize uint32) (*ParseR
 	return result, nil
 }
 
-// calculateEndFrame determines the end frame from positions array length
+// calculateEndFrame determines the end frame from positions array length.
+// For sparse vehicle positions with [startFrame, endFrame] ranges, uses the last range's end.
 func (p *ParserV1) calculateEndFrame(em map[string]interface{}, startFrame uint32) uint32 {
-	if positions, ok := em["positions"].([]interface{}); ok {
-		return startFrame + uint32(len(positions)) - 1
+	positions, ok := em["positions"].([]interface{})
+	if !ok || len(positions) == 0 {
+		return startFrame
 	}
-	return startFrame
+
+	// Check if the last position has a sparse frame range at index 4
+	if lastPos, ok := positions[len(positions)-1].([]interface{}); ok && len(lastPos) >= 5 {
+		if framesArr, ok := lastPos[4].([]interface{}); ok && len(framesArr) >= 2 {
+			return uint32(toFloat64(framesArr[1]))
+		}
+	}
+
+	return startFrame + uint32(len(positions)) - 1
 }
 
 // parseEvent converts a JSON event array to schema-agnostic Event
@@ -342,7 +352,9 @@ func (p *ParserV1) parseMarkerPosition(pos interface{}) *MarkerPosition {
 	return mp
 }
 
-// collectEntityPositions extracts position data for an entity
+// collectEntityPositions extracts position data for an entity.
+// For vehicles with sparse frame ranges ([startFrame, endFrame] at index 4),
+// expands each sparse entry into one EntityPosition per frame in the range.
 func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID uint32, startFrame uint32, entityType string) *EntityPositionData {
 	positions, ok := em["positions"].([]interface{})
 	if !ok {
@@ -360,9 +372,7 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 			continue
 		}
 
-		pos := EntityPosition{
-			FrameNum: startFrame + uint32(i),
-		}
+		pos := EntityPosition{}
 
 		// Parse position [x, y, z] or [x, y]
 		if coords, ok := posArr[0].([]interface{}); ok && len(coords) >= 2 {
@@ -410,6 +420,27 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 			}
 		}
 
+		// Check for sparse frame range (vehicle format with [startFrame, endFrame] at index 4)
+		if entityType == "vehicle" && len(posArr) >= 5 {
+			if framesArr, ok := posArr[4].([]interface{}); ok && len(framesArr) >= 2 {
+				rangeStart := uint32(toFloat64(framesArr[0]))
+				rangeEnd := uint32(toFloat64(framesArr[1]))
+				// Expand: create one position entry per frame in the range
+				for f := rangeStart; f <= rangeEnd; f++ {
+					expanded := pos
+					expanded.FrameNum = f
+					if len(pos.CrewIDs) > 0 {
+						expanded.CrewIDs = make([]uint32, len(pos.CrewIDs))
+						copy(expanded.CrewIDs, pos.CrewIDs)
+					}
+					data.Positions = append(data.Positions, expanded)
+				}
+				continue
+			}
+		}
+
+		// Dense format: one position per frame
+		pos.FrameNum = startFrame + uint32(i)
 		data.Positions = append(data.Positions, pos)
 	}
 
