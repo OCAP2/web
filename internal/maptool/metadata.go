@@ -15,6 +15,7 @@ type MapMeta struct {
 	WorldSize int
 	ImageSize int
 	MaxZoom   int
+	URLPrefix string // e.g. "images/maps/altis" — prepended to asset paths in JSON
 }
 
 // mapJSON is the structure written to map.json.
@@ -50,7 +51,7 @@ func GenerateMapJSON(outputDir string, meta MapMeta) error {
 		Multiplier:    1,
 		MaxZoom:       maxZoom,
 		MinZoom:       0,
-		MaplibreStyle: "style.json",
+		MaplibreStyle: assetPath(meta.URLPrefix, "style.json"),
 	}
 
 	return writeJSON(filepath.Join(outputDir, "map.json"), doc)
@@ -69,7 +70,7 @@ func GenerateStyleJSON(outputDir string, meta MapMeta) error {
 		Sources: map[string]interface{}{
 			"topo": map[string]interface{}{
 				"type":     "raster",
-				"url":      "pmtiles://topo.pmtiles",
+				"url":      "pmtiles://" + assetPath(meta.URLPrefix, "topo.pmtiles"),
 				"tileSize": 256,
 			},
 		},
@@ -83,6 +84,14 @@ func GenerateStyleJSON(outputDir string, meta MapMeta) error {
 	}
 
 	return writeJSON(filepath.Join(outputDir, "style.json"), doc)
+}
+
+// assetPath joins a URL prefix with a filename. If prefix is empty, returns filename as-is.
+func assetPath(prefix, filename string) string {
+	if prefix == "" {
+		return filename
+	}
+	return prefix + "/" + filename
 }
 
 func writeJSON(path string, v interface{}) error {
@@ -105,6 +114,7 @@ func NewGenerateMetadataStage() Stage {
 				WorldName: job.WorldName,
 				WorldSize: job.WorldSize,
 				ImageSize: job.ImageSize,
+				URLPrefix: "images/maps/" + job.WorldName,
 			}
 			if err := GenerateMapJSON(job.OutputDir, meta); err != nil {
 				return err
