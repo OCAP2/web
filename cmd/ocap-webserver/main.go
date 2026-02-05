@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,7 +28,7 @@ func main() {
 	}
 
 	if err := app(); err != nil {
-		log.Panicln(err)
+		log.Fatalf("fatal: %v", err)
 	}
 }
 
@@ -117,8 +119,7 @@ func app() error {
 		e.Shutdown(context.Background())
 	}()
 
-	err = e.Start(setting.Listen)
-	if err != nil {
+	if err = e.Start(setting.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("start server: %w", err)
 	}
 
