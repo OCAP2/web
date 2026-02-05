@@ -130,7 +130,6 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 			Stage:       stage.Name,
 			StageNum:    i + 1,
 			TotalStages: len(p.stages),
-			Message:     fmt.Sprintf("Running stage: %s", stage.Name),
 		})
 
 		if err := stage.Run(ctx, job); err != nil {
@@ -144,7 +143,7 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 				})
 				continue
 			}
-			job.setStatus(StatusFailed, fmt.Sprintf("stage %s: %v", stage.Name, err))
+			job.setStatus(StatusFailed, err.Error())
 			return fmt.Errorf("stage %s: %w", stage.Name, err)
 		}
 	}
