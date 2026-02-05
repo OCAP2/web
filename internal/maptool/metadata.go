@@ -17,6 +17,7 @@ type MapMeta struct {
 	MinZoom   int
 	MaxZoom   int
 	URLPrefix string // e.g. "images/maps/altis" — prepended to asset paths in JSON
+	HasVector bool   // true when vector.pmtiles exists
 }
 
 // mapJSON is the structure written to map.json.
@@ -71,25 +72,82 @@ func GenerateStyleJSON(outputDir string, meta MapMeta) error {
 		maxZoom = 6
 	}
 
+	sources := map[string]interface{}{
+		"topo": map[string]interface{}{
+			"type":     "raster",
+			"url":      "pmtiles://" + assetPath(meta.URLPrefix, "topo.pmtiles"),
+			"tileSize": 256,
+			"minzoom":  minZoom,
+			"maxzoom":  maxZoom,
+		},
+	}
+
+	layers := []interface{}{
+		map[string]interface{}{
+			"id":     "basemap",
+			"type":   "raster",
+			"source": "topo",
+		},
+	}
+
+	if meta.HasVector {
+		sources["vectors"] = map[string]interface{}{
+			"type": "vector",
+			"url":  "pmtiles://" + assetPath(meta.URLPrefix, "vector.pmtiles"),
+		}
+		layers = append(layers,
+			map[string]interface{}{
+				"id":           "contours",
+				"source":       "vectors",
+				"source-layer": "contours",
+				"type":         "line",
+				"paint": map[string]interface{}{
+					"line-color":   "#8B6914",
+					"line-opacity": 0.4,
+					"line-width":   0.5,
+				},
+			},
+			map[string]interface{}{
+				"id":           "contours-major",
+				"source":       "vectors",
+				"source-layer": "contours",
+				"type":         "line",
+				"filter":       []interface{}{"==", "type", "major"},
+				"paint": map[string]interface{}{
+					"line-color":   "#8B6914",
+					"line-opacity": 0.7,
+					"line-width":   1,
+				},
+			},
+			map[string]interface{}{
+				"id":           "roads",
+				"source":       "vectors",
+				"source-layer": "roads",
+				"type":         "line",
+				"paint": map[string]interface{}{
+					"line-color": "#d4a017",
+					"line-width": 1.5,
+				},
+			},
+			map[string]interface{}{
+				"id":           "buildings",
+				"source":       "vectors",
+				"source-layer": "buildings",
+				"type":         "circle",
+				"paint": map[string]interface{}{
+					"circle-radius":  2,
+					"circle-color":   "#888",
+					"circle-opacity": 0.6,
+				},
+			},
+		)
+	}
+
 	doc := styleJSON{
 		Version: 8,
 		Name:    displayName,
-		Sources: map[string]interface{}{
-			"topo": map[string]interface{}{
-				"type":     "raster",
-				"url":      "pmtiles://" + assetPath(meta.URLPrefix, "topo.pmtiles"),
-				"tileSize": 256,
-				"minzoom":  minZoom,
-				"maxzoom":  maxZoom,
-			},
-		},
-		Layers: []interface{}{
-			map[string]interface{}{
-				"id":     "basemap",
-				"type":   "raster",
-				"source": "topo",
-			},
-		},
+		Sources: sources,
+		Layers:  layers,
 	}
 
 	return writeJSON(filepath.Join(outputDir, "style.json"), doc)
@@ -126,6 +184,7 @@ func NewGenerateMetadataStage() Stage {
 				MinZoom:   job.MinZoom,
 				MaxZoom:   job.MaxZoom,
 				URLPrefix: "images/maps/" + job.WorldName,
+				HasVector: job.HasVector,
 			}
 			if err := GenerateMapJSON(job.OutputDir, meta); err != nil {
 				return err

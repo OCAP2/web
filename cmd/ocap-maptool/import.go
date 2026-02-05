@@ -135,6 +135,7 @@ func buildPipeline(tools maptool.ToolSet) *maptool.Pipeline {
 		maptool.NewProcessSatelliteStage(tools),
 		maptool.NewGenerateTilesStage(tools),
 		maptool.NewPackagePMTilesStage(tools),
+		maptool.NewGenerateVectorTilesStage(tools),
 		maptool.NewGenerateMetadataStage(),
 	}
 	return maptool.NewPipeline(stages)
