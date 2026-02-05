@@ -1278,6 +1278,262 @@ func TestSideIndexToString(t *testing.T) {
 	}
 }
 
+func TestParserV1_Parse_VehicleSparsePositions(t *testing.T) {
+	p := &ParserV1{}
+
+	// Simulate a static DShK that doesn't move for 10 frames, then moves.
+	// The Arma extension uses sparse format: each position entry has
+	// [startFrame, endFrame] at index 4, covering a range of frames.
+	data := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test Sparse",
+		"endFrame":     15.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id":            5.0,
+				"type":          "vehicle",
+				"name":          "DShK",
+				"class":         "O_HMG_01_high_F",
+				"side":          "EAST",
+				"startFrameNum": 0.0,
+				"positions": []interface{}{
+					// Static for frames 0-9: same position, no crew
+					[]interface{}{
+						[]interface{}{5000.0, 6000.0, 0.0}, // position
+						45.0,                                // direction
+						1.0,                                 // alive
+						[]interface{}{},                     // crew (empty)
+						[]interface{}{0.0, 9.0},             // [startFrame, endFrame] sparse range
+					},
+					// Moves for frames 10-14: different position, with crew
+					[]interface{}{
+						[]interface{}{5010.0, 6010.0, 0.0},
+						90.0,
+						1.0,
+						[]interface{}{3.0},              // crew member ID 3
+						[]interface{}{10.0, 14.0},       // frames 10-14
+					},
+				},
+			},
+		},
+	}
+
+	result, err := p.Parse(data, 300)
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	// Verify entity definition
+	if len(result.Entities) != 1 {
+		t.Fatalf("len(Entities) = %d, want 1", len(result.Entities))
+	}
+	ent := result.Entities[0]
+	if ent.EndFrame != 14 {
+		t.Errorf("Entity EndFrame = %d, want 14 (last sparse range end)", ent.EndFrame)
+	}
+
+	// Verify positions were expanded from 2 sparse entries to 15 dense entries
+	if len(result.EntityPositions) != 1 {
+		t.Fatalf("len(EntityPositions) = %d, want 1", len(result.EntityPositions))
+	}
+	ep := result.EntityPositions[0]
+
+	if len(ep.Positions) != 15 {
+		t.Fatalf("len(Positions) = %d, want 15 (frames 0-14 expanded from sparse)", len(ep.Positions))
+	}
+
+	// Verify frame 0 (first sparse range)
+	pos := ep.Positions[0]
+	if pos.FrameNum != 0 {
+		t.Errorf("Positions[0].FrameNum = %d, want 0", pos.FrameNum)
+	}
+	if pos.PosX != 5000.0 || pos.PosY != 6000.0 {
+		t.Errorf("Positions[0] pos = (%v, %v), want (5000, 6000)", pos.PosX, pos.PosY)
+	}
+	if pos.Direction != 45 {
+		t.Errorf("Positions[0].Direction = %d, want 45", pos.Direction)
+	}
+	if pos.Alive != 1 {
+		t.Errorf("Positions[0].Alive = %d, want 1", pos.Alive)
+	}
+
+	// Verify frame 5 (middle of first sparse range - should have same data)
+	pos = ep.Positions[5]
+	if pos.FrameNum != 5 {
+		t.Errorf("Positions[5].FrameNum = %d, want 5", pos.FrameNum)
+	}
+	if pos.PosX != 5000.0 || pos.PosY != 6000.0 {
+		t.Errorf("Positions[5] pos = (%v, %v), want (5000, 6000)", pos.PosX, pos.PosY)
+	}
+
+	// Verify frame 9 (end of first sparse range)
+	pos = ep.Positions[9]
+	if pos.FrameNum != 9 {
+		t.Errorf("Positions[9].FrameNum = %d, want 9", pos.FrameNum)
+	}
+	if pos.PosX != 5000.0 {
+		t.Errorf("Positions[9].PosX = %v, want 5000", pos.PosX)
+	}
+
+	// Verify frame 10 (start of second sparse range - different position)
+	pos = ep.Positions[10]
+	if pos.FrameNum != 10 {
+		t.Errorf("Positions[10].FrameNum = %d, want 10", pos.FrameNum)
+	}
+	if pos.PosX != 5010.0 || pos.PosY != 6010.0 {
+		t.Errorf("Positions[10] pos = (%v, %v), want (5010, 6010)", pos.PosX, pos.PosY)
+	}
+	if pos.Direction != 90 {
+		t.Errorf("Positions[10].Direction = %d, want 90", pos.Direction)
+	}
+	if len(pos.CrewIDs) != 1 || pos.CrewIDs[0] != 3 {
+		t.Errorf("Positions[10].CrewIDs = %v, want [3]", pos.CrewIDs)
+	}
+
+	// Verify frame 14 (end of second sparse range)
+	pos = ep.Positions[14]
+	if pos.FrameNum != 14 {
+		t.Errorf("Positions[14].FrameNum = %d, want 14", pos.FrameNum)
+	}
+	if pos.PosX != 5010.0 {
+		t.Errorf("Positions[14].PosX = %v, want 5010", pos.PosX)
+	}
+}
+
+func TestParserV1_Parse_VehicleSparsePositions_ChunkBuild(t *testing.T) {
+	// Verify that sparse vehicle positions produce correct chunk data
+	// (entity appears in every frame, not just first frame)
+	p := &ParserV1{}
+	w := &ProtobufWriterV1{}
+
+	data := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test",
+		"endFrame":     10.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id":            2.0,
+				"type":          "vehicle",
+				"name":          "Static Gun",
+				"class":         "O_HMG_01_high_F",
+				"side":          "EAST",
+				"startFrameNum": 0.0,
+				"positions": []interface{}{
+					[]interface{}{
+						[]interface{}{1000.0, 2000.0, 0.0},
+						180.0,
+						1.0,
+						[]interface{}{},
+						[]interface{}{0.0, 9.0}, // Covers all 10 frames
+					},
+				},
+			},
+		},
+	}
+
+	result, err := p.Parse(data, 300)
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	// Build a chunk and verify entity is present in EVERY frame
+	chunk := w.buildChunk(result, 0)
+	if len(chunk.Frames) != 10 {
+		t.Fatalf("len(Frames) = %d, want 10", len(chunk.Frames))
+	}
+
+	for i, frame := range chunk.Frames {
+		if len(frame.Entities) != 1 {
+			t.Errorf("Frame %d: len(Entities) = %d, want 1 (static vehicle should be present in every frame)", i, len(frame.Entities))
+			continue
+		}
+		ent := frame.Entities[0]
+		if ent.EntityId != 2 {
+			t.Errorf("Frame %d: EntityId = %d, want 2", i, ent.EntityId)
+		}
+		if ent.PosX != 1000.0 || ent.PosY != 2000.0 {
+			t.Errorf("Frame %d: pos = (%v, %v), want (1000, 2000)", i, ent.PosX, ent.PosY)
+		}
+	}
+}
+
+func TestParserV1_Parse_VehicleDensePositions_Unaffected(t *testing.T) {
+	// Verify that dense vehicle positions (without frame ranges) still work correctly
+	p := &ParserV1{}
+
+	data := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test Dense",
+		"endFrame":     3.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id":            1.0,
+				"type":          "vehicle",
+				"name":          "Truck",
+				"class":         "B_Truck_01",
+				"startFrameNum": 0.0,
+				"positions": []interface{}{
+					// Dense format (no entry[4] frame range)
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, []interface{}{}},
+					[]interface{}{[]interface{}{110.0, 210.0, 0.0}, 95.0, 1.0, []interface{}{0.0}},
+					[]interface{}{[]interface{}{120.0, 220.0, 0.0}, 100.0, 1.0, []interface{}{}},
+				},
+			},
+		},
+	}
+
+	result, err := p.Parse(data, 300)
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	ep := result.EntityPositions[0]
+	if len(ep.Positions) != 3 {
+		t.Fatalf("len(Positions) = %d, want 3 (dense, unchanged)", len(ep.Positions))
+	}
+
+	// Verify sequential frame numbers
+	for i, pos := range ep.Positions {
+		if pos.FrameNum != uint32(i) {
+			t.Errorf("Positions[%d].FrameNum = %d, want %d", i, pos.FrameNum, i)
+		}
+	}
+
+	// Verify end frame uses dense calculation
+	ent := result.Entities[0]
+	if ent.EndFrame != 2 { // 0 + 3 - 1
+		t.Errorf("EndFrame = %d, want 2", ent.EndFrame)
+	}
+}
+
+func TestParserV1_calculateEndFrame_SparseVehicle(t *testing.T) {
+	p := &ParserV1{}
+
+	t.Run("sparse vehicle positions", func(t *testing.T) {
+		em := map[string]interface{}{
+			"positions": []interface{}{
+				[]interface{}{
+					[]interface{}{100.0, 200.0, 0.0},
+					45.0, 1.0, []interface{}{},
+					[]interface{}{0.0, 499.0},
+				},
+				[]interface{}{
+					[]interface{}{150.0, 250.0, 0.0},
+					90.0, 1.0, []interface{}{},
+					[]interface{}{500.0, 999.0},
+				},
+			},
+		}
+		endFrame := p.calculateEndFrame(em, 0)
+		if endFrame != 999 {
+			t.Errorf("endFrame = %d, want 999 (from last sparse range)", endFrame)
+		}
+	})
+}
+
 func TestParserV1_collectEntityPositions_EdgeCases(t *testing.T) {
 	p := &ParserV1{}
 
