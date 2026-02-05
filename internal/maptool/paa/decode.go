@@ -1,10 +1,13 @@
 package paa
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"image"
 	"io"
+
+	lzo "github.com/rasky/go-lzo"
 )
 
 // Type tags for PAA texture formats.
@@ -173,7 +176,11 @@ func readMipmap(r io.ReadSeeker) ([]byte, int, int, error) {
 
 	if compressed {
 		expectedSize := (width / 4) * (height / 4) * 8 // DXT1: 8 bytes per 4x4 block
-		data = decompressLZSS(data, expectedSize)
+		decompressed, err := lzo.Decompress1X(bytes.NewReader(data), len(data), expectedSize)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("LZO decompress: %w", err)
+		}
+		data = decompressed
 	}
 
 	return data, width, height, nil

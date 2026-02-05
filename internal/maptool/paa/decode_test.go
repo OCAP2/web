@@ -127,21 +127,3 @@ func TestDecode_TruncatedFile(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDecompressLZSS_Literal(t *testing.T) {
-	// Flag byte 0xFF = all 8 bits set = 8 literal bytes
-	src := []byte{0xFF, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48}
-	out := decompressLZSS(src, 8)
-	assert.Equal(t, []byte("ABCDEFGH"), out)
-}
-
-func TestDecompressLZSS_BackRef(t *testing.T) {
-	// First: 8 literal bytes "ABCDABCD"
-	// Then: back-reference to copy from buffer
-	src := make([]byte, 0, 32)
-	// Flag 1: all literals
-	src = append(src, 0xFF)
-	src = append(src, 'A', 'B', 'C', 'D', 'A', 'B', 'C', 'D')
-
-	out := decompressLZSS(src, 8)
-	assert.Equal(t, []byte("ABCDABCD"), out)
-}
