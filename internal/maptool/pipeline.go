@@ -42,6 +42,7 @@ type Job struct {
 	MaxZoom   int    `json:"-"`
 	TilesDir  string `json:"-"`
 	SatImage  string `json:"-"`
+	HasVector bool   `json:"-"`
 }
 
 // JobInfo is a read-only snapshot of a Job, safe for concurrent access and serialization.

@@ -15,6 +15,9 @@ import (
 // Both gdal2tiles --profile=mercator and MBTiles use TMS convention (Y=0 at south),
 // so tiles are stored with Y as-is — no flip needed.
 func TilesToMBTiles(tilesDir, mbtilesPath string) error {
+	// Remove any leftover file from a previous run
+	os.Remove(mbtilesPath)
+
 	db, err := sql.Open("sqlite3", mbtilesPath)
 	if err != nil {
 		return fmt.Errorf("create mbtiles: %w", err)

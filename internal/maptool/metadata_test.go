@@ -71,6 +71,62 @@ func TestGenerateStyleJSON(t *testing.T) {
 	assert.Equal(t, float64(18), topo["maxzoom"])
 }
 
+func TestGenerateStyleJSON_WithVector(t *testing.T) {
+	dir := t.TempDir()
+	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18, HasVector: true}
+
+	err := GenerateStyleJSON(dir, meta)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	sources := result["sources"].(map[string]interface{})
+	assert.Contains(t, sources, "topo")
+	assert.Contains(t, sources, "vectors")
+
+	vectors := sources["vectors"].(map[string]interface{})
+	assert.Equal(t, "vector", vectors["type"])
+	assert.Contains(t, vectors["url"], "vector.pmtiles")
+
+	layers := result["layers"].([]interface{})
+	assert.Greater(t, len(layers), 1, "should have vector layers in addition to basemap")
+
+	// Check for expected layer IDs
+	layerIDs := make([]string, len(layers))
+	for i, l := range layers {
+		layerIDs[i] = l.(map[string]interface{})["id"].(string)
+	}
+	assert.Contains(t, layerIDs, "basemap")
+	assert.Contains(t, layerIDs, "contours")
+	assert.Contains(t, layerIDs, "contours-major")
+	assert.Contains(t, layerIDs, "roads")
+	assert.Contains(t, layerIDs, "buildings")
+}
+
+func TestGenerateStyleJSON_WithoutVector(t *testing.T) {
+	dir := t.TempDir()
+	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18, HasVector: false}
+
+	err := GenerateStyleJSON(dir, meta)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &result))
+
+	sources := result["sources"].(map[string]interface{})
+	assert.NotContains(t, sources, "vectors")
+
+	layers := result["layers"].([]interface{})
+	assert.Len(t, layers, 1, "should only have basemap layer")
+}
+
 func TestGenerateStyleJSON_DefaultZoom(t *testing.T) {
 	dir := t.TempDir()
 	meta := MapMeta{WorldName: "test"}

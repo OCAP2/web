@@ -11,6 +11,7 @@ type MapInfo struct {
 	Name       string `json:"name"`
 	WorldSize  int    `json:"worldSize,omitempty"`
 	HasPMTiles bool   `json:"hasPmtiles"`
+	HasVector  bool   `json:"hasVector"`
 	HasStyle   bool   `json:"hasStyle"`
 	HasMapJSON bool   `json:"hasMapJson"`
 }
@@ -34,6 +35,9 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 
 		if _, err := os.Stat(filepath.Join(worldDir, "topo.pmtiles")); err == nil {
 			info.HasPMTiles = true
+		}
+		if _, err := os.Stat(filepath.Join(worldDir, "vector.pmtiles")); err == nil {
+			info.HasVector = true
 		}
 		if _, err := os.Stat(filepath.Join(worldDir, "style.json")); err == nil {
 			info.HasStyle = true
