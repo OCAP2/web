@@ -52,7 +52,7 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 
 		hasSatellite := fileExistsIn(worldDir, "tiles", "satellite.pmtiles")
 		hasFeatures := fileExistsIn(worldDir, "tiles", "features.pmtiles")
-		hasStyle := fileExistsIn(worldDir, "styles", "standard.json")
+		hasStyle := fileExistsIn(worldDir, "styles", "color-relief.json")
 		hasMapJSON := false
 
 		mapJSONPath := filepath.Join(worldDir, "map.json")

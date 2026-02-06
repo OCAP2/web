@@ -484,9 +484,10 @@ func makeVegetationStyle(name, iconImage string, iconSize float64) LayerStyle {
 type StyleVariant string
 
 const (
-	StyleStandard  StyleVariant = "standard"
-	StyleSatellite StyleVariant = "satellite"
-	StyleHybrid    StyleVariant = "hybrid"
+	StyleColorRelief StyleVariant = "color-relief"
+	StyleTopo        StyleVariant = "topo"
+	StyleSatellite   StyleVariant = "satellite"
+	StyleHybrid      StyleVariant = "hybrid"
 )
 
 // StyleConfig holds the parameters for generating a style document.
@@ -509,16 +510,23 @@ const (
 func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]interface{} {
 	sources := buildSources(cfg)
 
+	bgColor := "#000000"
+	if variant == StyleTopo {
+		bgColor = "#DFDFDF"
+	}
+
 	var layers []interface{}
 	layers = append(layers, map[string]interface{}{
 		"id":    "background",
 		"type":  "background",
-		"paint": map[string]interface{}{"background-color": "#000000"},
+		"paint": map[string]interface{}{"background-color": bgColor},
 	})
 
 	switch variant {
-	case StyleStandard:
-		layers = append(layers, buildStandardLayers(cfg)...)
+	case StyleColorRelief:
+		layers = append(layers, buildColorReliefLayers(cfg)...)
+	case StyleTopo:
+		layers = append(layers, buildTopoLayers(cfg)...)
 	case StyleSatellite:
 		layers = append(layers, buildSatelliteLayers(cfg)...)
 	case StyleHybrid:
@@ -580,9 +588,9 @@ func buildSources(cfg StyleConfig) map[string]interface{} {
 	return sources
 }
 
-// --- Standard style layers ---
+// --- Color Relief style layers ---
 
-func buildStandardLayers(cfg StyleConfig) []interface{} {
+func buildColorReliefLayers(cfg StyleConfig) []interface{} {
 	var layers []interface{}
 
 	// Color relief
@@ -609,6 +617,41 @@ func buildStandardLayers(cfg StyleConfig) []interface{} {
 	}
 
 	// Vector feature layers
+	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisStandard)...)
+
+	return layers
+}
+
+// --- Topo style layers (color relief hidden) ---
+
+func buildTopoLayers(cfg StyleConfig) []interface{} {
+	var layers []interface{}
+
+	// Color relief present but hidden
+	if cfg.HasColorRelief {
+		layers = append(layers, map[string]interface{}{
+			"id": "color-relief", "type": "raster", "source": "color-relief",
+			"layout": map[string]interface{}{"visibility": "none"},
+		})
+	}
+
+	// Hillshade (raster) at 50% opacity
+	if cfg.HasHillshade {
+		layers = append(layers, map[string]interface{}{
+			"id": "hillshade-raster", "type": "raster", "source": "hillshade",
+			"paint": map[string]interface{}{"raster-opacity": 0.5},
+		})
+	}
+
+	// Satellite (hidden by default)
+	if cfg.HasSatellite {
+		layers = append(layers, map[string]interface{}{
+			"id": "satellite", "type": "raster", "source": "satellite",
+			"layout": map[string]interface{}{"visibility": "none"},
+		})
+	}
+
+	// Vector feature layers (same as color relief)
 	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisStandard)...)
 
 	return layers

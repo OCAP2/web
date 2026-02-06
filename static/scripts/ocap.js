@@ -361,7 +361,7 @@ async function getWorldByName (worldName) {
 		"hasTopoRelief": false,
 		"hasTopoDark": false,
 		"hasColorRelief": false,
-		"maplibreStyle": null,
+		"maplibreStyles": null,
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
@@ -436,7 +436,7 @@ function initMap (world) {
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
 
-	useMapLibreMode = Boolean(world.maplibreStyle);
+	useMapLibreMode = (world.maplibreStyles && world.maplibreStyles.length > 0) || Boolean(world.maplibreStyle);
 	console.log("[OCAP] Map mode:", useMapLibreMode ? "MapLibre + PMTiles" : "Legacy raster tiles");
 
 	var mapOptions;
@@ -598,12 +598,25 @@ function initMap (world) {
 			console.log("[OCAP] PMTiles protocol registered");
 		}
 
+		// Build styles array from map.json (new format) or derive from legacy single URL
+		var maplibreStyles;
+		if (world.maplibreStyles && world.maplibreStyles.length > 0) {
+			maplibreStyles = world.maplibreStyles;
+		} else if (world.maplibreStyle) {
+			var styleBase = world.maplibreStyle.replace(/\/[^/]+$/, '/');
+			maplibreStyles = [
+				{ label: 'Color Relief', url: styleBase + 'color-relief.json' },
+				{ label: 'Satellite',    url: styleBase + 'satellite.json' },
+				{ label: 'Hybrid',       url: styleBase + 'hybrid.json' }
+			];
+		} else {
+			maplibreStyles = [];
+		}
+
 		// Resolve saved style preference so we load the correct style directly
-		var styleBase = world.maplibreStyle.replace(/\/[^/]+$/, '/');
-		var styleVariants = ['standard.json', 'satellite.json', 'hybrid.json'];
 		var savedStyleIdx = parseInt(localStorage.getItem('ocap-maplibre-style'), 10) || 0;
-		if (savedStyleIdx < 0 || savedStyleIdx >= styleVariants.length) savedStyleIdx = 0;
-		var initialStyle = styleBase + styleVariants[savedStyleIdx];
+		if (savedStyleIdx < 0 || savedStyleIdx >= maplibreStyles.length) savedStyleIdx = 0;
+		var initialStyle = maplibreStyles[savedStyleIdx].url;
 
 		// Add MapLibre basemap layer
 		console.log("[OCAP] Loading MapLibre style:", initialStyle);
@@ -745,7 +758,7 @@ function initMap (world) {
 	overlayLayerControl.addTo(map);
 
 	if (useMapLibreMode) {
-		L.control.maplibreStyles(mapLibreLayer, world.maplibreStyle).addTo(map);
+		L.control.maplibreStyles(mapLibreLayer, maplibreStyles).addTo(map);
 	} else {
 		baseLayerControl = L.control.basemaps({
 			basemaps: baseLayers,

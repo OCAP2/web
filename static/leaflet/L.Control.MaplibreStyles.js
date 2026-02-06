@@ -5,17 +5,10 @@ L.Control.MaplibreStyles = L.Control.extend({
 
 	_storageKey: 'ocap-maplibre-style',
 
-	initialize: function (maplibreLayer, styleUrl, opts) {
+	initialize: function (maplibreLayer, styles, opts) {
 		L.setOptions(this, opts);
 		this._mlLayer = maplibreLayer;
-
-		// Derive variant URLs from the standard.json path
-		var base = styleUrl.replace(/\/[^/]+$/, '/');
-		this._styles = [
-			{ label: 'Topo',      url: base + 'standard.json' },
-			{ label: 'Satellite', url: base + 'satellite.json' },
-			{ label: 'Hybrid',    url: base + 'hybrid.json' }
-		];
+		this._styles = styles; // Array of {label, url}
 
 		// Restore saved preference
 		var saved = this._loadPreference();
@@ -42,29 +35,13 @@ L.Control.MaplibreStyles = L.Control.extend({
 			self._buttons.push(btn);
 		});
 
-		// Probe variant availability — hide buttons for missing styles
-		this._styles.forEach(function (style, i) {
-			if (i === 0) return; // standard.json already loaded, always exists
-			fetch(style.url, { method: 'HEAD' }).then(function (resp) {
-				if (!resp.ok) self._hideButton(i);
-			}).catch(function () {
-				self._hideButton(i);
-			});
-		});
+		// Hide entire control if only one style available
+		if (this._styles.length <= 1) {
+			container.style.display = 'none';
+		}
 
 		this._container = container;
 		return container;
-	},
-
-	_hideButton: function (index) {
-		this._buttons[index].style.display = 'none';
-		// If only one button remains visible, hide the entire control
-		var visible = this._buttons.filter(function (btn) {
-			return btn.style.display !== 'none';
-		});
-		if (visible.length <= 1) {
-			this._container.style.display = 'none';
-		}
 	},
 
 	_setStyle: function (index) {
@@ -95,6 +72,6 @@ L.Control.MaplibreStyles = L.Control.extend({
 	}
 });
 
-L.control.maplibreStyles = function (maplibreLayer, styleUrl, opts) {
-	return new L.Control.MaplibreStyles(maplibreLayer, styleUrl, opts);
+L.control.maplibreStyles = function (maplibreLayer, styles, opts) {
+	return new L.Control.MaplibreStyles(maplibreLayer, styles, opts);
 };
