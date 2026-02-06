@@ -37,8 +37,29 @@ L.Control.MaplibreStyles = L.Control.extend({
 			self._buttons.push(btn);
 		});
 
+		// Probe variant availability — hide buttons for missing styles
+		this._styles.forEach(function (style, i) {
+			if (i === 0) return; // standard.json already loaded, always exists
+			fetch(style.url, { method: 'HEAD' }).then(function (resp) {
+				if (!resp.ok) self._hideButton(i);
+			}).catch(function () {
+				self._hideButton(i);
+			});
+		});
+
 		this._container = container;
 		return container;
+	},
+
+	_hideButton: function (index) {
+		this._buttons[index].style.display = 'none';
+		// If only one button remains visible, hide the entire control
+		var visible = this._buttons.filter(function (btn) {
+			return btn.style.display !== 'none';
+		});
+		if (visible.length <= 1) {
+			this._container.style.display = 'none';
+		}
 	},
 
 	_setStyle: function (index) {
