@@ -112,7 +112,7 @@ func imageDimensions(path string) (int, int, error) {
 
 // BuildGradMehVRT creates a georeferenced GDAL VRT from grad_meh satellite tiles.
 //
-// Unlike PBO tiles, grad_meh tiles have no overlap, so each tile occupies
+// grad_meh tiles have no overlap, so each tile occupies
 // tileSize × tileSize pixels at position (X*tileSize, Y*tileSize).
 // The VRT canvas is worldSize×worldSize pixels (1 pixel = 1 meter),
 // georeferenced at the equator in EPSG:4326.

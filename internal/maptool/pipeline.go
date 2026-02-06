@@ -17,7 +17,7 @@ const (
 	StatusCancelled = "cancelled"
 )
 
-// Job represents a single PBO import job.
+// Job represents a single map import job.
 type Job struct {
 	mu        sync.RWMutex `json:"-"`
 	ID        string       `json:"id"`
