@@ -11,18 +11,13 @@ import (
 
 // mapJSON is the structure written to map.json.
 type mapJSON struct {
-	Name           string          `json:"name"`
-	WorldSize      int             `json:"worldSize"`
-	ImageSize      int             `json:"imageSize"`
-	Multiplier     int             `json:"multiplier"`
-	MaxZoom        int             `json:"maxZoom"`
-	MinZoom        int             `json:"minZoom"`
-	MaplibreStyles []mapStyleEntry `json:"maplibreStyles,omitempty"`
-}
-
-type mapStyleEntry struct {
-	Label string `json:"label"`
-	URL   string `json:"url"`
+	Name       string `json:"name"`
+	WorldSize  int    `json:"worldSize"`
+	ImageSize  int    `json:"imageSize"`
+	Multiplier int    `json:"multiplier"`
+	MaxZoom    int    `json:"maxZoom"`
+	MinZoom    int    `json:"minZoom"`
+	Maplibre   bool   `json:"maplibre,omitempty"`
 }
 
 // assetPath joins a URL prefix with a filename. If prefix is empty, returns filename as-is.
@@ -130,26 +125,20 @@ func NewGenerateStylesStage() Stage {
 			variants := []struct {
 				variant  StyleVariant
 				filename string
-				label    string
 			}{
-				{StyleTopo, "topo.json", "Topo"},
-				{StyleSatellite, "satellite.json", "Satellite"},
-				{StyleHybrid, "hybrid.json", "Hybrid"},
-				{StyleColorRelief, "color-relief.json", "Color Relief"},
+				{StyleTopo, "topo.json"},
+				{StyleSatellite, "satellite.json"},
+				{StyleHybrid, "hybrid.json"},
+				{StyleColorRelief, "color-relief.json"},
 			}
 
-			var styles []mapStyleEntry
 			for _, v := range variants {
 				styleDoc := GenerateStyleDocument(styleCfg, v.variant)
 				if err := writeJSON(filepath.Join(stylesDir, v.filename), styleDoc); err != nil {
 					return fmt.Errorf("write %s: %w", v.filename, err)
 				}
-				styles = append(styles, mapStyleEntry{
-					Label: v.label,
-					URL:   assetPath(job.stylesPrefix(), v.filename),
-				})
 			}
-			job.MaplibreStyles = styles
+			job.HasMaplibre = true
 
 			return nil
 		},
@@ -173,13 +162,13 @@ func NewGenerateGradMehMetadataStage() Stage {
 			}
 
 			doc := mapJSON{
-				Name:           worldName,
-				WorldSize:      job.WorldSize,
-				ImageSize:      job.ImageSize,
-				Multiplier:     1,
-				MaxZoom:        maxZoom,
-				MinZoom:        job.MinZoom,
-				MaplibreStyles: job.MaplibreStyles,
+				Name:       worldName,
+				WorldSize:  job.WorldSize,
+				ImageSize:  job.ImageSize,
+				Multiplier: 1,
+				MaxZoom:    maxZoom,
+				MinZoom:    job.MinZoom,
+				Maplibre:   job.HasMaplibre,
 			}
 			if err := writeJSON(filepath.Join(job.OutputDir, "map.json"), doc); err != nil {
 				return fmt.Errorf("write map.json: %w", err)

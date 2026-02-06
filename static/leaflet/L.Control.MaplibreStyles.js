@@ -5,42 +5,83 @@ L.Control.MaplibreStyles = L.Control.extend({
 
 	_storageKey: 'ocap-maplibre-style',
 
-	initialize: function (maplibreLayer, styles, opts) {
+	initialize: function (maplibreLayer, candidates, opts) {
 		L.setOptions(this, opts);
 		this._mlLayer = maplibreLayer;
-		this._styles = styles; // Array of {label, url}
-
-		// Restore saved preference
-		var saved = this._loadPreference();
-		this._active = saved !== null ? saved : 0;
+		this._candidates = candidates; // Array of {label, url}
+		this._active = -1;
 	},
 
 	onAdd: function () {
 		var container = L.DomUtil.create('div', 'maplibre-styles leaflet-control');
 		L.DomEvent.disableClickPropagation(container);
 
-		var self = this;
+		// Start hidden until probing completes
+		container.style.display = 'none';
+		this._container = container;
 		this._buttons = [];
 
-		this._styles.forEach(function (style, i) {
-			var btn = L.DomUtil.create('button', '', container);
-			btn.textContent = style.label;
-			if (i === self._active) {
-				L.DomUtil.addClass(btn, 'active');
-			}
-			L.DomEvent.on(btn, 'click', function () {
-				if (i === self._active) return;
-				self._setStyle(i);
-			});
-			self._buttons.push(btn);
+		var self = this;
+
+		// Probe each candidate — use GET with an AbortController to avoid
+		// browser-console 404 noise from HEAD/fetch (network-level 404 logs
+		// cannot be suppressed, but aborting early keeps them minimal).
+		console.log('[OCAP] Probing', this._candidates.length, 'style candidates...');
+		var probes = this._candidates.map(function (candidate, i) {
+			var ctrl = new AbortController();
+			return fetch(candidate.url, { method: 'HEAD', signal: ctrl.signal })
+				.then(function (res) {
+					ctrl.abort(); // we only needed the status
+					return { index: i, ok: res.ok };
+				})
+				.catch(function () { return { index: i, ok: false }; });
 		});
 
-		// Hide entire control if only one style available
-		if (this._styles.length <= 1) {
-			container.style.display = 'none';
-		}
+		Promise.all(probes).then(function (results) {
+			var availableIndices = [];
 
-		this._container = container;
+			results.forEach(function (result) {
+				var candidate = self._candidates[result.index];
+				var btn = L.DomUtil.create('button', '', container);
+				btn.textContent = candidate.label;
+
+				if (result.ok) {
+					availableIndices.push(result.index);
+					console.log('[OCAP] Style "' + candidate.label + '" available');
+					L.DomEvent.on(btn, 'click', function () {
+						if (result.index === self._active) return;
+						self._setStyle(result.index);
+					});
+				} else {
+					console.log('[OCAP] Style "' + candidate.label + '" not found, hiding button');
+					btn.style.display = 'none';
+				}
+
+				self._buttons[result.index] = btn;
+			});
+
+			// Hide entire control if 1 or fewer styles available
+			if (availableIndices.length <= 1) {
+				console.log('[OCAP] Style switcher hidden (' + availableIndices.length + ' style available)');
+				return;
+			}
+
+			container.style.display = '';
+
+			// Resolve saved preference — must be an available index
+			var saved = self._loadPreference(availableIndices);
+			var activeIdx = saved !== null ? saved : availableIndices[0];
+
+			self._active = activeIdx;
+			L.DomUtil.addClass(self._buttons[activeIdx], 'active');
+
+			// Switch to the preferred style if it differs from the initially loaded one
+			var glMap = self._mlLayer.getMaplibreMap();
+			if (glMap) {
+				glMap.setStyle(self._candidates[activeIdx].url);
+			}
+		});
+
 		return container;
 	},
 
@@ -48,11 +89,13 @@ L.Control.MaplibreStyles = L.Control.extend({
 		var glMap = this._mlLayer.getMaplibreMap();
 		if (!glMap) return;
 
-		L.DomUtil.removeClass(this._buttons[this._active], 'active');
+		if (this._active >= 0 && this._buttons[this._active]) {
+			L.DomUtil.removeClass(this._buttons[this._active], 'active');
+		}
 		this._active = index;
 		L.DomUtil.addClass(this._buttons[this._active], 'active');
 
-		glMap.setStyle(this._styles[index].url);
+		glMap.setStyle(this._candidates[index].url);
 		this._savePreference(index);
 	},
 
@@ -60,18 +103,18 @@ L.Control.MaplibreStyles = L.Control.extend({
 		try { localStorage.setItem(this._storageKey, index); } catch (e) {}
 	},
 
-	_loadPreference: function () {
+	_loadPreference: function (availableIndices) {
 		try {
 			var val = localStorage.getItem(this._storageKey);
 			if (val !== null) {
 				var idx = parseInt(val, 10);
-				if (idx >= 0 && idx < this._styles.length) return idx;
+				if (availableIndices.indexOf(idx) !== -1) return idx;
 			}
 		} catch (e) {}
 		return null;
 	}
 });
 
-L.control.maplibreStyles = function (maplibreLayer, styles, opts) {
-	return new L.Control.MaplibreStyles(maplibreLayer, styles, opts);
+L.control.maplibreStyles = function (maplibreLayer, candidates, opts) {
+	return new L.Control.MaplibreStyles(maplibreLayer, candidates, opts);
 };
