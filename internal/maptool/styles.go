@@ -315,7 +315,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
 			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
-			"text-font":        []interface{}{"Roboto Condensed Regular"},
+			"text-font":        []interface{}{"OpenSans-Regular"},
 			"text-size":        10,
 			"text-max-angle":   30,
 		},
@@ -374,7 +374,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"icon-size":               0.25,
 			"icon-anchor":             "center",
 			"text-field":              []interface{}{"get", "name"},
-			"text-font":               []interface{}{"Roboto Condensed Regular"},
+			"text-font":               []interface{}{"OpenSans-Regular"},
 			"text-anchor":             "left",
 			"text-size":               []interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(12), float64(16), float64(32)},
 			"text-offset":             []interface{}{float64(1), float64(0)},
@@ -389,7 +389,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"namemarine": {{
 		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MinZoom: 8,
-		Layout: textLayout("Roboto Condensed Regular",
+		Layout: textLayout("OpenSans-Regular",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
 		Paint: map[string]interface{}{
 			"text-color": "#0D66CC", "text-opacity": float64(1),
@@ -398,7 +398,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"namelocal": {{
 		ID: "namelocal", Type: "symbol", SourceLayer: "namelocal", MinZoom: 8,
-		Layout: textLayout("Roboto Condensed Bold",
+		Layout: textLayout("OpenSans-Bold",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
 		Paint: map[string]interface{}{
 			"text-color": "#70614D", "text-opacity": float64(1),
@@ -407,7 +407,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"namevillage": {{
 		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MinZoom: 8,
-		Layout: textLayout("Roboto Condensed Regular",
+		Layout: textLayout("OpenSans-Regular",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
 		Paint: map[string]interface{}{
 			"text-color": "#FFFFFF", "text-opacity": float64(1),
@@ -416,7 +416,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"namecity": {{
 		ID: "namecity", Type: "symbol", SourceLayer: "namecity", MinZoom: 8,
-		Layout: textLayout("Roboto Condensed Regular",
+		Layout: textLayout("OpenSans-Regular",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(18), float64(16), float64(46)}),
 		Paint: map[string]interface{}{
 			"text-color": "#FFFFFF", "text-opacity": float64(1),
@@ -425,7 +425,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"namecitycapital": {{
 		ID: "namecitycapital", Type: "symbol", SourceLayer: "namecitycapital", MinZoom: 8,
-		Layout: textLayout("Roboto Condensed Regular",
+		Layout: textLayout("OpenSans-Regular",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(24), float64(16), float64(54)}),
 		Paint: map[string]interface{}{
 			"text-color": "#FFFFFF", "text-opacity": float64(1),
@@ -436,7 +436,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "citycenter", Type: "symbol", SourceLayer: "citycenter", MinZoom: 12,
 		Layout: map[string]interface{}{
 			"text-field":  []interface{}{"get", "name"},
-			"text-font":   []interface{}{"Roboto Condensed Regular"},
+			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
 			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
 			"text-justify": "auto",
@@ -471,7 +471,7 @@ func makeVegetationStyle(name, iconImage string, iconSize float64) LayerStyle {
 			"icon-size":   iconSize,
 			"icon-anchor": "center",
 			"text-field":  []interface{}{"get", "name"},
-			"text-font":   []interface{}{"Roboto Condensed Regular"},
+			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
 			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
 			"text-offset": []interface{}{float64(1), float64(0)},
@@ -498,11 +498,11 @@ type StyleConfig struct {
 	HasHeightmap   bool
 	HasHillshade   bool
 	HasColorRelief bool
+	GlyphsURL      string // template for font glyphs, e.g. "../../fonts/{fontstack}/{range}.pbf"
 }
 
 const (
 	spriteURL = "https://styles.ocap2.com/sprites/sprite"
-	glyphsURL = "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=TyliLk8pnPbcLwptyzJS"
 )
 
 // GenerateStyleDocument creates a full MapLibre style JSON document for the given variant.
@@ -531,7 +531,7 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		"sources": sources,
 		"layers":  layers,
 		"sprite":  spriteURL,
-		"glyphs":  glyphsURL,
+		"glyphs":  cfg.GlyphsURL,
 	}
 	return doc
 }

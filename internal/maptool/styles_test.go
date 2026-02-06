@@ -216,6 +216,7 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 		URLPrefix:    "images/maps/altis",
 		VectorLayers: []string{"sea", "road", "namecity"},
 		HasSatellite: true,
+		GlyphsURL:    "../../fonts/{fontstack}/{range}.pbf",
 	}
 
 	doc := GenerateStyleDocument(cfg, StyleStandard)
@@ -225,7 +226,7 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 	assert.NotNil(t, doc["sources"])
 	assert.NotNil(t, doc["layers"])
 	assert.NotEmpty(t, doc["sprite"])
-	assert.NotEmpty(t, doc["glyphs"])
+	assert.Equal(t, "../../fonts/{fontstack}/{range}.pbf", doc["glyphs"])
 }
 
 func TestGenerateStyleDocument_Variants(t *testing.T) {
