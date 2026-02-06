@@ -71,15 +71,22 @@ func NewPrepareDEMStage(tools ToolSet) Stage {
 			fillNodata, hasFill := tools.FindTool("gdal_fillnodata.py")
 			if hasFill {
 				log.Printf("Filling DEM nodata holes")
+				demFilled := filepath.Join(job.TempDir, "dem-filled.tif")
 				fillArgs := []string{
 					"-md", "25",
 					demTif,
+					demFilled,
 				}
 				fillCmd := exec.CommandContext(ctx, fillNodata.Path, fillArgs...)
 				fillCmd.Stdout = os.Stdout
 				fillCmd.Stderr = os.Stderr
 				if err := fillCmd.Run(); err != nil {
 					log.Printf("WARNING: gdal_fillnodata failed: %v", err)
+				} else {
+					// Replace original with filled version
+					if err := os.Rename(demFilled, demTif); err != nil {
+						log.Printf("WARNING: rename filled DEM: %v", err)
+					}
 				}
 			}
 
