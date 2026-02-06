@@ -113,6 +113,19 @@ func makeTopoDarkLabel(name, color string) LayerStyle {
 	}
 }
 
+// makeTopoSymbol creates a symbol layer style shared by topo and topo-dark variants.
+func makeTopoSymbol(name, iconImage string, iconSize float64, allowOverlap bool) LayerStyle {
+	return LayerStyle{
+		ID: name, Type: "symbol", SourceLayer: name,
+		Layout: map[string]interface{}{
+			"icon-image": iconImage, "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), iconSize, float64(16), iconSize * 4},
+			"icon-allow-overlap":    allowOverlap,
+			"icon-ignore-placement": allowOverlap,
+		},
+	}
+}
+
 // iconLayout returns a standard symbol layout for an icon layer.
 func iconLayout(iconImage string) map[string]interface{} {
 	return map[string]interface{}{
@@ -635,60 +648,12 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"line-color": "#808080", "line-opacity": float64(1), "line-width": float64(1),
 		},
 	}},
-	"bush": {{
-		ID: "bush", Type: "symbol", SourceLayer: "bush",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/bush", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"rock": {{
-		ID: "rock", Type: "symbol", SourceLayer: "rock",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/rock", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"tree": {{
-		ID: "tree", Type: "symbol", SourceLayer: "tree",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/tree", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.25, float64(16), 1.0},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"fuelstation": {{
-		ID: "fuelstation", Type: "symbol", SourceLayer: "fuelstation",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/fuelstation", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
-	"transmitter": {{
-		ID: "transmitter", Type: "symbol", SourceLayer: "transmitter",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/transmitter", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
-	"stack": {{
-		ID: "stack", Type: "symbol", SourceLayer: "stack",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/stack", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
+	"bush":        {makeTopoSymbol("bush", "objects/bush", 0.125, true)},
+	"rock":        {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
+	"tree":        {makeTopoSymbol("tree", "objects/tree", 0.25, true)},
+	"fuelstation": {makeTopoSymbol("fuelstation", "objects/fuelstation", 0.125, false)},
+	"transmitter": {makeTopoSymbol("transmitter", "objects/transmitter", 0.125, false)},
+	"stack":       {makeTopoSymbol("stack", "objects/stack", 0.125, false)},
 	"strongpointarea":   {makeTopoLabel("strongpointarea", "#406633")},
 	"flatarea":          {makeTopoLabel("flatarea", "#406633")},
 	"flatareacitysmall": {makeTopoLabel("flatareacitysmall", "#406633")},
@@ -801,60 +766,12 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"line-color": "#555555", "line-opacity": float64(1), "line-width": float64(1),
 		},
 	}},
-	"bush": {{
-		ID: "bush", Type: "symbol", SourceLayer: "bush",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/bush", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"rock": {{
-		ID: "rock", Type: "symbol", SourceLayer: "rock",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/rock", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"tree": {{
-		ID: "tree", Type: "symbol", SourceLayer: "tree",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/tree", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.25, float64(16), 1.0},
-			"icon-allow-overlap":    true,
-			"icon-ignore-placement": true,
-		},
-	}},
-	"fuelstation": {{
-		ID: "fuelstation", Type: "symbol", SourceLayer: "fuelstation",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/fuelstation", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
-	"transmitter": {{
-		ID: "transmitter", Type: "symbol", SourceLayer: "transmitter",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/transmitter", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
-	"stack": {{
-		ID: "stack", Type: "symbol", SourceLayer: "stack",
-		Layout: map[string]interface{}{
-			"icon-image": "objects/stack", "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
-			"icon-allow-overlap":    false,
-			"icon-ignore-placement": false,
-		},
-	}},
+	"bush":        {makeTopoSymbol("bush", "objects/bush", 0.125, true)},
+	"rock":        {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
+	"tree":        {makeTopoSymbol("tree", "objects/tree", 0.25, true)},
+	"fuelstation": {makeTopoSymbol("fuelstation", "objects/fuelstation", 0.125, false)},
+	"transmitter": {makeTopoSymbol("transmitter", "objects/transmitter", 0.125, false)},
+	"stack":       {makeTopoSymbol("stack", "objects/stack", 0.125, false)},
 	"strongpointarea":   {makeTopoDarkLabel("strongpointarea", "#8a9a7a")},
 	"flatarea":          {makeTopoDarkLabel("flatarea", "#8a9a7a")},
 	"flatareacitysmall": {makeTopoDarkLabel("flatareacitysmall", "#8a9a7a")},
@@ -1054,6 +971,19 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 // buildTopoVectorFeatureLayers generates topo-styled MapLibre layers from available
 // vector layer names, using topo-specific styles and render order.
 func buildTopoVectorFeatureLayers(layerNames []string) []interface{} {
+	return buildOrderedVectorLayers(layerNames, knownTopoLayerStyles)
+}
+
+// buildTopoDarkVectorFeatureLayers generates dark-themed topo MapLibre layers,
+// reusing topoLayerOrder for render order.
+func buildTopoDarkVectorFeatureLayers(layerNames []string) []interface{} {
+	return buildOrderedVectorLayers(layerNames, knownTopoDarkLayerStyles)
+}
+
+// buildOrderedVectorLayers generates MapLibre layers from available vector layer
+// names using the given style map and topoLayerOrder for render order. Layers not
+// in the style map fall back to standard styles.
+func buildOrderedVectorLayers(layerNames []string, styleMap map[string][]LayerStyle) []interface{} {
 	available := make(map[string]bool, len(layerNames))
 	for _, n := range layerNames {
 		available[n] = true
@@ -1068,33 +998,12 @@ func buildTopoVectorFeatureLayers(layerNames []string) []interface{} {
 			continue
 		}
 		emitted[name] = true
-		styles, ok := knownTopoLayerStyles[name]
+		styles, ok := styleMap[name]
 		if !ok {
 			continue
 		}
 		for _, style := range styles {
-			layer := map[string]interface{}{
-				"id":           style.ID,
-				"type":         style.Type,
-				"source":       "features",
-				"source-layer": style.SourceLayer,
-			}
-			if style.MinZoom > 0 {
-				layer["minzoom"] = style.MinZoom
-			}
-			if style.MaxZoom > 0 {
-				layer["maxzoom"] = style.MaxZoom
-			}
-			if style.Paint != nil {
-				layer["paint"] = style.Paint
-			}
-			if style.Layout != nil {
-				layer["layout"] = style.Layout
-			}
-			if style.Filter != nil {
-				layer["filter"] = style.Filter
-			}
-			result = append(result, layer)
+			result = append(result, layerStyleToMap(style))
 		}
 	}
 
@@ -1104,32 +1013,37 @@ func buildTopoVectorFeatureLayers(layerNames []string) []interface{} {
 			continue
 		}
 		for _, style := range GetLayerStyles(name) {
-			layer := map[string]interface{}{
-				"id":           style.ID,
-				"type":         style.Type,
-				"source":       "features",
-				"source-layer": style.SourceLayer,
-			}
-			if style.MinZoom > 0 {
-				layer["minzoom"] = style.MinZoom
-			}
-			if style.MaxZoom > 0 {
-				layer["maxzoom"] = style.MaxZoom
-			}
-			if style.Paint != nil {
-				layer["paint"] = style.Paint
-			}
-			if style.Layout != nil {
-				layer["layout"] = style.Layout
-			}
-			if style.Filter != nil {
-				layer["filter"] = style.Filter
-			}
-			result = append(result, layer)
+			result = append(result, layerStyleToMap(style))
 		}
 	}
 
 	return result
+}
+
+// layerStyleToMap converts a LayerStyle to a MapLibre layer map.
+func layerStyleToMap(style LayerStyle) map[string]interface{} {
+	layer := map[string]interface{}{
+		"id":           style.ID,
+		"type":         style.Type,
+		"source":       "features",
+		"source-layer": style.SourceLayer,
+	}
+	if style.MinZoom > 0 {
+		layer["minzoom"] = style.MinZoom
+	}
+	if style.MaxZoom > 0 {
+		layer["maxzoom"] = style.MaxZoom
+	}
+	if style.Paint != nil {
+		layer["paint"] = style.Paint
+	}
+	if style.Layout != nil {
+		layer["layout"] = style.Layout
+	}
+	if style.Filter != nil {
+		layer["filter"] = style.Filter
+	}
+	return layer
 }
 
 // --- Topo Dark style layers ---
@@ -1167,87 +1081,6 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 	layers = append(layers, buildTopoDarkVectorFeatureLayers(cfg.VectorLayers)...)
 
 	return layers
-}
-
-// buildTopoDarkVectorFeatureLayers generates dark-themed topo MapLibre layers,
-// reusing topoLayerOrder for render order.
-func buildTopoDarkVectorFeatureLayers(layerNames []string) []interface{} {
-	available := make(map[string]bool, len(layerNames))
-	for _, n := range layerNames {
-		available[n] = true
-	}
-
-	emitted := make(map[string]bool)
-	var result []interface{}
-
-	// Emit layers in topo render order
-	for _, name := range topoLayerOrder {
-		if !available[name] {
-			continue
-		}
-		emitted[name] = true
-		styles, ok := knownTopoDarkLayerStyles[name]
-		if !ok {
-			continue
-		}
-		for _, style := range styles {
-			layer := map[string]interface{}{
-				"id":           style.ID,
-				"type":         style.Type,
-				"source":       "features",
-				"source-layer": style.SourceLayer,
-			}
-			if style.MinZoom > 0 {
-				layer["minzoom"] = style.MinZoom
-			}
-			if style.MaxZoom > 0 {
-				layer["maxzoom"] = style.MaxZoom
-			}
-			if style.Paint != nil {
-				layer["paint"] = style.Paint
-			}
-			if style.Layout != nil {
-				layer["layout"] = style.Layout
-			}
-			if style.Filter != nil {
-				layer["filter"] = style.Filter
-			}
-			result = append(result, layer)
-		}
-	}
-
-	// Fallback: remaining layers not in topo order use standard styles
-	for _, name := range layerNames {
-		if emitted[name] {
-			continue
-		}
-		for _, style := range GetLayerStyles(name) {
-			layer := map[string]interface{}{
-				"id":           style.ID,
-				"type":         style.Type,
-				"source":       "features",
-				"source-layer": style.SourceLayer,
-			}
-			if style.MinZoom > 0 {
-				layer["minzoom"] = style.MinZoom
-			}
-			if style.MaxZoom > 0 {
-				layer["maxzoom"] = style.MaxZoom
-			}
-			if style.Paint != nil {
-				layer["paint"] = style.Paint
-			}
-			if style.Layout != nil {
-				layer["layout"] = style.Layout
-			}
-			if style.Filter != nil {
-				layer["filter"] = style.Filter
-			}
-			result = append(result, layer)
-		}
-	}
-
-	return result
 }
 
 // --- Satellite style layers ---
