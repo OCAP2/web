@@ -737,7 +737,9 @@ function initMap (world) {
 	});
 	overlayLayerControl.addTo(map);
 
-	if (!useMapLibreMode) {
+	if (useMapLibreMode) {
+		L.control.maplibreStyles(mapLibreLayer, world.maplibreStyle).addTo(map);
+	} else {
 		baseLayerControl = L.control.basemaps({
 			basemaps: baseLayers,
 			tileX: 2,  // tile X coordinate
