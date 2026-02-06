@@ -34,6 +34,7 @@ func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, map
 	api.GET("/maps", h.getMaps)
 	api.DELETE("/maps/:name", h.deleteMap)
 	api.POST("/maps/import", h.importPBO)
+	api.POST("/maps/import-dir", h.importDir)
 	api.GET("/jobs", h.getJobs)
 	api.GET("/jobs/:id", h.getJob)
 	api.GET("/jobs/:id/sse", h.jobSSE)
@@ -134,6 +135,33 @@ func (h *handler) importPBO(c echo.Context) error {
 
 	worldName := maptool.WorldNameFromPBO(filepath.Base(mainPBO))
 	snap, err := h.jm.Submit(mainPBO, worldName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusAccepted, snap)
+}
+
+func (h *handler) importDir(c echo.Context) error {
+	var req struct {
+		Path string `json:"path"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+	if req.Path == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "path is required"})
+	}
+
+	// Validate it's a grad_meh directory
+	if err := maptool.ValidateGradMehDir(req.Path); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": fmt.Sprintf("not a valid grad_meh export: %v", err),
+		})
+	}
+
+	worldName := maptool.WorldNameFromDir(req.Path)
+	snap, err := h.jm.Submit(req.Path, worldName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

@@ -52,7 +52,7 @@ func serve() error {
 		log.Printf("  %s: %s%s", t.Name, status, req)
 	}
 
-	newPipeline := func() *maptool.Pipeline { return buildPipeline(tools) }
+	newPipeline := func() *maptool.Pipeline { return buildGradMehPipeline(tools) }
 	jm := maptool.NewJobManager(mapsDir, newPipeline)
 
 	ctx, cancel := context.WithCancel(context.Background())

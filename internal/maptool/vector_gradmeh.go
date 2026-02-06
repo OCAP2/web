@@ -1,0 +1,395 @@
+package maptool
+
+import (
+	"compress/gzip"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// geoJSONSource represents a discovered geojson.gz file with its layer name.
+type geoJSONSource struct {
+	Name string // layer name (filename without .geojson.gz)
+	Path string // full path to .geojson.gz file
+}
+
+// DiscoverGeoJSONLayers scans a grad_meh export directory for GeoJSON layers.
+// Looks for geojson/**/*.geojson.gz files recursively (layers may be in subdirectories
+// like geojson/locations/ or geojson/roads/).
+func DiscoverGeoJSONLayers(inputDir string) ([]geoJSONSource, error) {
+	geojsonDir := filepath.Join(inputDir, "geojson")
+	if _, err := os.Stat(geojsonDir); err != nil {
+		return nil, nil // no geojson dir is OK
+	}
+
+	var sources []geoJSONSource
+	err := filepath.Walk(geojsonDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(info.Name(), ".geojson.gz") {
+			name := strings.TrimSuffix(info.Name(), ".geojson.gz")
+			sources = append(sources, geoJSONSource{Name: name, Path: path})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walk geojson dir: %w", err)
+	}
+	return sources, nil
+}
+
+// ProcessGeoJSONGz reads a gzipped GeoJSON file from grad_meh, transforms coordinates
+// from Arma meters to degrees, converts color arrays to hex strings, and writes a
+// proper FeatureCollection to outputPath.
+func ProcessGeoJSONGz(inputPath, outputPath string) error {
+	f, err := os.Open(inputPath)
+	if err != nil {
+		return fmt.Errorf("open: %w", err)
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return fmt.Errorf("gzip: %w", err)
+	}
+	defer gz.Close()
+
+	// grad_meh exports a bare JSON array of features, not a FeatureCollection
+	var rawFeatures []json.RawMessage
+	if err := json.NewDecoder(gz).Decode(&rawFeatures); err != nil {
+		return fmt.Errorf("decode features: %w", err)
+	}
+
+	var features []interface{}
+	for _, raw := range rawFeatures {
+		var feature map[string]interface{}
+		if err := json.Unmarshal(raw, &feature); err != nil {
+			continue
+		}
+
+		// Transform coordinates: divide by metersPerDegree
+		if geom, ok := feature["geometry"].(map[string]interface{}); ok {
+			if coords, ok := geom["coordinates"]; ok {
+				geom["coordinates"] = transformCoords(coords)
+			}
+		}
+
+		// Transform properties
+		if props, ok := feature["properties"].(map[string]interface{}); ok {
+			// Convert color array [r,g,b] (0-1 floats) to hex string
+			if color, ok := props["color"]; ok {
+				if colorArr, ok := color.([]interface{}); ok {
+					props["color"] = colorArrayToHex(colorArr)
+				}
+			}
+			// Extract zpos from 3D position
+			if pos, ok := props["position"].([]interface{}); ok && len(pos) >= 3 {
+				if z, ok := toFloat64(pos[2]); ok {
+					props["zpos"] = z
+				}
+			}
+		}
+
+		features = append(features, feature)
+	}
+
+	fc := map[string]interface{}{
+		"type":     "FeatureCollection",
+		"features": features,
+	}
+
+	out, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("create output: %w", err)
+	}
+	defer out.Close()
+
+	enc := json.NewEncoder(out)
+	if err := enc.Encode(fc); err != nil {
+		return fmt.Errorf("encode: %w", err)
+	}
+	return nil
+}
+
+// transformCoords recursively divides coordinate values by metersPerDegree.
+// Handles single coordinate pairs [x,y], arrays of pairs, and nested arrays.
+func transformCoords(coords interface{}) interface{} {
+	switch c := coords.(type) {
+	case []interface{}:
+		if len(c) == 0 {
+			return c
+		}
+		// Check if this is a coordinate pair (first element is a number)
+		if _, ok := toFloat64(c[0]); ok {
+			// This is a coordinate: [lon, lat] or [lon, lat, alt]
+			result := make([]interface{}, len(c))
+			for i, v := range c {
+				if f, ok := toFloat64(v); ok && i < 2 {
+					result[i] = f / float64(metersPerDegree)
+				} else {
+					result[i] = v
+				}
+			}
+			return result
+		}
+		// This is an array of coordinates or nested arrays
+		result := make([]interface{}, len(c))
+		for i, v := range c {
+			result[i] = transformCoords(v)
+		}
+		return result
+	default:
+		return coords
+	}
+}
+
+// colorArrayToHex converts a color array [r, g, b] with 0-1 float values to "rrggbb" hex string.
+func colorArrayToHex(arr []interface{}) string {
+	if len(arr) < 3 {
+		return "888888"
+	}
+	r, _ := toFloat64(arr[0])
+	g, _ := toFloat64(arr[1])
+	b, _ := toFloat64(arr[2])
+	return fmt.Sprintf("%02x%02x%02x", clamp255(r), clamp255(g), clamp255(b))
+}
+
+func clamp255(v float64) int {
+	n := int(v * 255)
+	if n < 0 {
+		return 0
+	}
+	if n > 255 {
+		return 255
+	}
+	return n
+}
+
+func toFloat64(v interface{}) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case int:
+		return float64(n), true
+	case json.Number:
+		f, err := n.Float64()
+		return f, err == nil
+	default:
+		return 0, false
+	}
+}
+
+// NewProcessGeoJSONStage creates a pipeline stage that discovers and transforms
+// grad_meh GeoJSON layers, adds contour files, and stores them on the job
+// for the subsequent generate_vector_tiles stage.
+func NewProcessGeoJSONStage() Stage {
+	return Stage{
+		Name: "process_geojson",
+		Run: func(ctx context.Context, job *Job) error {
+			tmpDir := filepath.Join(job.TempDir, "vector")
+			if err := os.MkdirAll(tmpDir, 0755); err != nil {
+				return fmt.Errorf("create vector temp dir: %w", err)
+			}
+
+			var layerFiles []LayerFile
+			var layerNames []string
+
+			// Process GeoJSON layers from grad_meh export
+			layers, err := DiscoverGeoJSONLayers(job.InputPath)
+			if err != nil {
+				return fmt.Errorf("discover layers: %w", err)
+			}
+			log.Printf("Found %d GeoJSON layers", len(layers))
+
+			for _, src := range layers {
+				// Skip bush layer (too dense, Python skips it too)
+				if src.Name == "bush" {
+					log.Printf("Skipping bush layer (too dense for vector tiles)")
+					continue
+				}
+				outPath := filepath.Join(tmpDir, src.Name+".geojson")
+				if err := ProcessGeoJSONGz(src.Path, outPath); err != nil {
+					log.Printf("WARNING: skipping layer %s: %v", src.Name, err)
+					continue
+				}
+				layerFiles = append(layerFiles, LayerFile{Name: src.Name, Path: outPath})
+				layerNames = append(layerNames, src.Name)
+			}
+
+			// Add GDAL contour files if available (from generate_contours stage)
+			if len(job.ContourFiles) > 0 {
+				for _, ci := range contourIntervals {
+					if path, ok := job.ContourFiles[ci.suffix]; ok {
+						name := "contours" + ci.suffix
+						layerFiles = append(layerFiles, LayerFile{Name: name, Path: path})
+						layerNames = append(layerNames, name)
+					}
+				}
+			} else {
+				// Fallback: generate contours from DEM using Go marching squares
+				demPath := filepath.Join(job.InputPath, "dem.asc.gz")
+				if _, err := os.Stat(demPath); err == nil {
+					log.Printf("Parsing DEM for contours (Go fallback): %s", demPath)
+					grid, err := ParseASCGridGz(demPath)
+					if err != nil {
+						log.Printf("WARNING: failed to parse DEM: %v", err)
+					} else {
+						contours := GenerateContours(
+							grid.Data, grid.Cols, grid.Rows, grid.CellSize,
+							50, 10,
+						)
+						if len(contours) > 0 {
+							path := filepath.Join(tmpDir, "contours.geojson")
+							if err := WriteGeoJSON(path, FeatureCollection{Type: "FeatureCollection", Features: contours}); err != nil {
+								return fmt.Errorf("write contours: %w", err)
+							}
+							log.Printf("Generated %d contour features (Go fallback)", len(contours))
+							layerFiles = append(layerFiles, LayerFile{Name: "contours", Path: path})
+							layerNames = append(layerNames, "contours")
+						}
+					}
+				}
+			}
+
+			if len(layerFiles) == 0 {
+				return fmt.Errorf("no vector features found")
+			}
+
+			job.LayerFiles = layerFiles
+			job.VectorLayers = layerNames
+			log.Printf("Prepared %d vector layers for tiling", len(layerFiles))
+			return nil
+		},
+	}
+}
+
+// NewGradMehVectorTilesStage creates a pipeline stage that runs tippecanoe
+// on the GeoJSON files prepared by process_geojson to produce vector PMTiles.
+func NewGradMehVectorTilesStage(tools ToolSet) Stage {
+	return Stage{
+		Name: "generate_vector_tiles",
+		Run: func(ctx context.Context, job *Job) error {
+			if len(job.LayerFiles) == 0 {
+				return fmt.Errorf("no layer files prepared (run process_geojson first)")
+			}
+
+			tippeTool, ok := tools.FindTool("tippecanoe")
+			if !ok {
+				return fmt.Errorf("tippecanoe not found")
+			}
+			pmtilesBin, ok := tools.FindTool("pmtiles")
+			if !ok {
+				return fmt.Errorf("pmtiles not found")
+			}
+			tileJoin, hasTileJoin := tools.FindTool("tile-join")
+
+			tmpDir := filepath.Join(job.TempDir, "vector")
+			mbtilesDir := filepath.Join(tmpDir, "mbtiles")
+			if err := os.MkdirAll(mbtilesDir, 0755); err != nil {
+				return fmt.Errorf("create mbtiles dir: %w", err)
+			}
+
+			// Per-layer tippecanoe + tile-join approach (matching Python arma3-maptiler)
+			if hasTileJoin {
+				var mbtilesFiles []string
+				for _, lf := range job.LayerFiles {
+					mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")
+					args := []string{
+						"-o", mbPath,
+						"-f",
+						"--minimum-zoom=8",
+						"--maximum-zoom=17",
+						"--coalesce-densest-as-needed",
+						"--extend-zooms-if-still-dropping",
+						"--layer=" + lf.Name,
+						lf.Path,
+					}
+
+					log.Printf("tippecanoe: processing layer %s", lf.Name)
+					cmd := exec.CommandContext(ctx, tippeTool.Path, args...)
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					if err := cmd.Run(); err != nil {
+						log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
+						continue
+					}
+					mbtilesFiles = append(mbtilesFiles, mbPath)
+				}
+
+				// tile-join to merge all per-layer MBTiles
+				mergedMbtiles := filepath.Join(tmpDir, job.WorldName+"_features.mbtiles")
+				joinArgs := []string{
+					"-pk", "-pC",
+					"--force",
+					"-n", "features",
+					"--minimum-zoom=8",
+					"--maximum-zoom=17",
+					"-o", mergedMbtiles,
+				}
+				joinArgs = append(joinArgs, mbtilesFiles...)
+
+				log.Printf("tile-join: merging %d layers", len(mbtilesFiles))
+				cmd := exec.CommandContext(ctx, tileJoin.Path, joinArgs...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				joinErr := cmd.Run()
+				if joinErr == nil {
+					// Convert to PMTiles
+					outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
+					if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mergedMbtiles, outputPath); err != nil {
+						return err
+					}
+					job.HasVector = true
+					log.Printf("Generated %s", outputPath)
+					return nil
+				}
+				log.Printf("WARNING: tile-join failed (%v), falling back to single-pass tippecanoe", joinErr)
+			}
+
+			{
+				// Single tippecanoe run with --named-layer (fallback or no tile-join)
+				outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
+				args := []string{
+					"-o", outputPath,
+					"--force",
+					"--minimum-zoom=8",
+					"--maximum-zoom=17",
+					"--coalesce-densest-as-needed",
+					"--extend-zooms-if-still-dropping",
+					"--no-tile-size-limit",
+				}
+				for _, lf := range job.LayerFiles {
+					args = append(args, fmt.Sprintf("--named-layer=%s:%s", lf.Name, lf.Path))
+				}
+
+				log.Printf("Running tippecanoe with %d layers (single pass)", len(job.LayerFiles))
+				cmd := exec.CommandContext(ctx, tippeTool.Path, args...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("tippecanoe: %w", err)
+				}
+
+				job.HasVector = true
+				log.Printf("Generated %s", outputPath)
+			}
+
+			return nil
+		},
+	}
+}
+
+// LayerFile associates a layer name with its GeoJSON file path.
+type LayerFile struct {
+	Name string
+	Path string
+}
