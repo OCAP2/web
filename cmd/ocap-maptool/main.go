@@ -52,7 +52,7 @@ func serve() error {
 		log.Printf("  %s: %s%s", t.Name, status, req)
 	}
 
-	newPipeline := func() *maptool.Pipeline { return buildPipeline(tools) }
+	newPipeline := func() *maptool.Pipeline { return buildGradMehPipeline(tools) }
 	jm := maptool.NewJobManager(mapsDir, newPipeline)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,16 +61,6 @@ func serve() error {
 
 	e := echo.New()
 	e.HideBanner = true
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus: true,
-		LogURI:    true,
-		LogMethod: true,
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			log.Printf("%s %s %d", v.Method, v.URI, v.Status)
-			return nil
-		},
-	}))
-
 	e.Use(middleware.BodyLimit("2G"))
 	newHandler(e, tools, jm, mapsDir)
 

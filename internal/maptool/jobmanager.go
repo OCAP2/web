@@ -65,7 +65,7 @@ func (jm *JobManager) Stop() {
 }
 
 // Submit adds a new import job to the queue. Returns a snapshot of the job.
-func (jm *JobManager) Submit(pboPath, worldName string) (JobInfo, error) {
+func (jm *JobManager) Submit(inputPath, worldName string) (JobInfo, error) {
 	id := fmt.Sprintf("%s-%d", worldName, time.Now().UnixMilli())
 	outputDir := filepath.Join(jm.mapsDir, worldName)
 	tempDir := filepath.Join(os.TempDir(), "ocap-maptool", id)
@@ -73,7 +73,7 @@ func (jm *JobManager) Submit(pboPath, worldName string) (JobInfo, error) {
 	job := &Job{
 		ID:        id,
 		WorldName: worldName,
-		InputPath: pboPath,
+		InputPath: inputPath,
 		OutputDir: outputDir,
 		TempDir:   tempDir,
 		Status:    StatusPending,
@@ -121,6 +121,8 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
+	job.SubDirs = true
+
 	pipeline := jm.newPipeline()
 
 	jm.mu.RLock()
@@ -132,7 +134,7 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
-	// Clean up temp directory and uploaded PBOs on success
+	// Clean up temp directory and uploaded files on success
 	os.RemoveAll(job.TempDir)
 	os.RemoveAll(filepath.Dir(job.InputPath))
 }

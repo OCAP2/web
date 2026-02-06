@@ -22,7 +22,7 @@ func TestPipeline_RunsAllStages(t *testing.T) {
 		}},
 	}
 
-	job := &Job{WorldName: "test", InputPath: "/tmp/test.pbo"}
+	job := &Job{WorldName: "test", InputPath: "/tmp/test"}
 	p := NewPipeline(stages)
 	err := p.Run(context.Background(), job)
 
@@ -44,7 +44,7 @@ func TestPipeline_StopsOnError(t *testing.T) {
 		}},
 	}
 
-	job := &Job{WorldName: "test", InputPath: "/tmp/test.pbo"}
+	job := &Job{WorldName: "test", InputPath: "/tmp/test"}
 	p := NewPipeline(stages)
 	err := p.Run(context.Background(), job)
 
@@ -61,7 +61,7 @@ func TestPipeline_ReportsProgress(t *testing.T) {
 		{Name: "tile", Run: func(ctx context.Context, job *Job) error { return nil }},
 	}
 
-	job := &Job{WorldName: "test", InputPath: "/tmp/test.pbo"}
+	job := &Job{WorldName: "test", InputPath: "/tmp/test"}
 	p := NewPipeline(stages)
 	p.OnProgress = func(prog Progress) { updates = append(updates, prog) }
 	err := p.Run(context.Background(), job)
@@ -83,7 +83,7 @@ func TestPipeline_RespectsContext(t *testing.T) {
 		}},
 	}
 
-	job := &Job{WorldName: "test", InputPath: "/tmp/test.pbo"}
+	job := &Job{WorldName: "test", InputPath: "/tmp/test"}
 	p := NewPipeline(stages)
 	err := p.Run(ctx, job)
 
@@ -107,7 +107,7 @@ func TestPipeline_OptionalStageSkipped(t *testing.T) {
 		}},
 	}
 
-	job := &Job{WorldName: "test", InputPath: "/tmp/test.pbo"}
+	job := &Job{WorldName: "test", InputPath: "/tmp/test"}
 	p := NewPipeline(stages)
 	err := p.Run(context.Background(), job)
 

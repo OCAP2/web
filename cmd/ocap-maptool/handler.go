@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"embed"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/labstack/echo/v4"
@@ -33,7 +33,7 @@ func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, map
 	api.GET("/tools", h.getTools)
 	api.GET("/maps", h.getMaps)
 	api.DELETE("/maps/:name", h.deleteMap)
-	api.POST("/maps/import", h.importPBO)
+	api.POST("/maps/import", h.importZip)
 	api.GET("/jobs", h.getJobs)
 	api.GET("/jobs/:id", h.getJob)
 	api.GET("/jobs/:id/sse", h.jobSSE)
@@ -73,72 +73,135 @@ func (h *handler) deleteMap(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *handler) importPBO(c echo.Context) error {
-	form, err := c.MultipartForm()
+func (h *handler) importZip(c echo.Context) error {
+	file, err := c.FormFile("file")
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid multipart form"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "file field is required"})
 	}
-	files := form.File["pbo"]
-	if len(files) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "no pbo file uploaded"})
-	}
-
-	// Create a per-job upload directory so all PBOs are siblings
-	uploadDir := filepath.Join(os.TempDir(), "ocap-maptool-uploads",
-		fmt.Sprintf("%d", time.Now().UnixNano()))
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "only .zip files are accepted"})
 	}
 
-	// Save all uploaded files and identify the main map PBO (shortest non-data_layers name).
-	// Real Arma maps ship with extra PBOs like map_altis_data.pbo alongside map_altis.pbo,
-	// so we pick the shortest-named one — it's the stem that FindDataLayerPBOs globs against.
-	var mainPBO string
-	for _, fh := range files {
-		name := filepath.Base(fh.Filename)
-		if !strings.HasSuffix(strings.ToLower(name), ".pbo") {
-			continue
-		}
+	// Save uploaded file to temp
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to read upload"})
+	}
+	defer src.Close()
 
-		src, err := fh.Open()
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		}
+	tmpFile, err := os.CreateTemp("", "ocap-maptool-upload-*.zip")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create temp file"})
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
 
-		dst, err := os.Create(filepath.Join(uploadDir, name))
-		if err != nil {
-			src.Close()
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		}
-		if _, err = io.Copy(dst, src); err != nil {
-			dst.Close()
-			src.Close()
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		}
-		dst.Close()
-		src.Close()
+	if _, err := io.Copy(tmpFile, src); err != nil {
+		tmpFile.Close()
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save upload"})
+	}
+	tmpFile.Close()
 
-		if !strings.Contains(strings.ToLower(name), "_data_layers") {
-			path := filepath.Join(uploadDir, name)
-			if mainPBO == "" || len(name) < len(filepath.Base(mainPBO)) {
-				mainPBO = path
-			}
-		}
+	// Extract ZIP to a per-upload directory
+	extractDir, err := os.MkdirTemp("", "ocap-maptool-uploads-")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create extraction dir"})
 	}
 
-	if mainPBO == "" {
+	if err := extractZip(tmpPath, extractDir); err != nil {
+		os.RemoveAll(extractDir)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "no main map PBO found — at least one file must not be a data_layers PBO",
+			"error": fmt.Sprintf("failed to extract zip: %v", err),
 		})
 	}
 
-	worldName := maptool.WorldNameFromPBO(filepath.Base(mainPBO))
-	snap, err := h.jm.Submit(mainPBO, worldName)
+	// Locate grad_meh directory — could be at root or one level deep
+	gradMehDir, err := findGradMehDir(extractDir)
 	if err != nil {
+		os.RemoveAll(extractDir)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": fmt.Sprintf("not a valid grad_meh export: %v", err),
+		})
+	}
+
+	worldName := maptool.WorldNameFromDir(gradMehDir)
+	snap, err := h.jm.Submit(gradMehDir, worldName)
+	if err != nil {
+		os.RemoveAll(extractDir)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.JSON(http.StatusAccepted, snap)
+}
+
+// extractZip extracts a ZIP file to the target directory with zip-slip protection.
+func extractZip(zipPath, targetDir string) error {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		destPath := filepath.Join(targetDir, f.Name)
+		// Zip-slip protection
+		if !strings.HasPrefix(filepath.Clean(destPath)+string(os.PathSeparator), filepath.Clean(targetDir)+string(os.PathSeparator)) &&
+			filepath.Clean(destPath) != filepath.Clean(targetDir) {
+			return fmt.Errorf("illegal file path: %s", f.Name)
+		}
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(destPath, 0755)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			return err
+		}
+
+		outFile, err := os.Create(destPath)
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		rc.Close()
+		outFile.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// findGradMehDir locates the grad_meh export directory within an extracted ZIP.
+// It checks the root first, then one level deep.
+func findGradMehDir(dir string) (string, error) {
+	if maptool.ValidateGradMehDir(dir) == nil {
+		return dir, nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		subDir := filepath.Join(dir, e.Name())
+		if maptool.ValidateGradMehDir(subDir) == nil {
+			return subDir, nil
+		}
+	}
+
+	return "", fmt.Errorf("no directory with meta.json and sat/ found")
 }
 
 func (h *handler) getJobs(c echo.Context) error {

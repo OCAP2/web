@@ -20,7 +20,7 @@ func TestJobManager_Submit(t *testing.T) {
 	go jm.Start(context.Background())
 	defer jm.Stop()
 
-	job, err := jm.Submit("/tmp/altis.pbo", "altis")
+	job, err := jm.Submit("/tmp/altis", "altis")
 	require.NoError(t, err)
 	assert.Equal(t, "altis", job.WorldName)
 	assert.Equal(t, StatusPending, job.Status)

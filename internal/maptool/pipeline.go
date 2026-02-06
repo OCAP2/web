@@ -3,6 +3,7 @@ package maptool
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -16,7 +17,7 @@ const (
 	StatusCancelled = "cancelled"
 )
 
-// Job represents a single PBO import job.
+// Job represents a single map import job.
 type Job struct {
 	mu        sync.RWMutex `json:"-"`
 	ID        string       `json:"id"`
@@ -35,14 +36,45 @@ type Job struct {
 	Message     string `json:"message,omitempty"`
 
 	// Populated by stages (internal, not exposed via JSON)
-	WRPPath   string `json:"-"`
 	WorldSize int    `json:"-"`
 	ImageSize int    `json:"-"`
 	MinZoom   int    `json:"-"`
 	MaxZoom   int    `json:"-"`
-	TilesDir  string `json:"-"`
 	SatImage  string `json:"-"`
-	HasVector bool   `json:"-"`
+	HasVector    bool     `json:"-"`
+	VectorLayers []string `json:"-"` // layer names discovered by grad_meh stage
+	LayerFiles   []LayerFile `json:"-"` // processed GeoJSON files ready for tippecanoe
+
+	// DEM pipeline fields (populated by grad_meh stages)
+	DEMPath        string            `json:"-"` // path to georeferenced DEM GeoTIFF
+	DEMGrid        *DEMGrid          `json:"-"` // parsed elevation grid
+	ContourFiles   map[string]string `json:"-"` // interval suffix ("05","10","50","100") → GeoJSON path
+	HasHeightmap   bool              `json:"-"`
+	HasHillshade   bool              `json:"-"`
+	HasColorRelief bool              `json:"-"`
+	GradMehMeta    *GradMehMeta      `json:"-"` // original grad_meh metadata
+
+	// SubDirs enables organized output layout (tiles/, styles/ subdirectories).
+	// When true, PMTiles go to OutputDir/tiles/ and styles go to OutputDir/styles/.
+	SubDirs bool `json:"-"`
+}
+
+// TilesDir returns the directory for PMTiles output.
+// When SubDirs is enabled, returns OutputDir/tiles/; otherwise OutputDir.
+func (j *Job) TilesOutputDir() string {
+	if j.SubDirs {
+		return filepath.Join(j.OutputDir, "tiles")
+	}
+	return j.OutputDir
+}
+
+// StylesOutputDir returns the directory for style JSON output.
+// When SubDirs is enabled, returns OutputDir/styles/; otherwise OutputDir.
+func (j *Job) StylesOutputDir() string {
+	if j.SubDirs {
+		return filepath.Join(j.OutputDir, "styles")
+	}
+	return j.OutputDir
 }
 
 // JobInfo is a read-only snapshot of a Job, safe for concurrent access and serialization.

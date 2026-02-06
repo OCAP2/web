@@ -1,147 +1,80 @@
 package maptool
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenerateMapJSON(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{
-		WorldName: "altis",
-		WorldSize: 30720,
-		ImageSize: 30720,
-		MaxZoom:   6,
+func TestAssetPath(t *testing.T) {
+	assert.Equal(t, "images/maps/altis/satellite.pmtiles", assetPath("images/maps/altis", "satellite.pmtiles"))
+	assert.Equal(t, "satellite.pmtiles", assetPath("", "satellite.pmtiles"))
+}
+
+func TestComputeElevationStats_Normal(t *testing.T) {
+	grid := &DEMGrid{
+		Data: []float32{10, 20, 30, 40, 50},
 	}
-
-	err := GenerateMapJSON(dir, meta)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "map.json"))
-	require.NoError(t, err)
-
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-
-	assert.Equal(t, "altis", result["name"])
-	assert.Equal(t, float64(30720), result["worldSize"])
-	assert.Equal(t, "style.json", result["maplibreStyle"])
+	stats := computeElevationStats(grid)
+	require.NotNil(t, stats)
+	assert.Equal(t, 10.0, stats.Min)
+	assert.Equal(t, 50.0, stats.Max)
+	assert.Equal(t, 30.0, stats.Avg)
+	assert.Greater(t, stats.StdDev, 0.0)
 }
 
-func TestGenerateMapJSON_DefaultZoom(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{WorldName: "test", WorldSize: 8192, ImageSize: 8192}
-
-	err := GenerateMapJSON(dir, meta)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "map.json"))
-	require.NoError(t, err)
-
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-	assert.Equal(t, float64(6), result["maxZoom"])
-}
-
-func TestGenerateStyleJSON(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18}
-
-	err := GenerateStyleJSON(dir, meta)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
-	require.NoError(t, err)
-
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-
-	assert.Equal(t, float64(8), result["version"])
-	assert.Equal(t, "Altis", result["name"])
-
-	sources := result["sources"].(map[string]interface{})
-	topo := sources["topo"].(map[string]interface{})
-	assert.Contains(t, topo["url"], "topo.pmtiles")
-	assert.Equal(t, float64(10), topo["minzoom"])
-	assert.Equal(t, float64(18), topo["maxzoom"])
-}
-
-func TestGenerateStyleJSON_WithVector(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18, HasVector: true}
-
-	err := GenerateStyleJSON(dir, meta)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
-	require.NoError(t, err)
-
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-
-	sources := result["sources"].(map[string]interface{})
-	assert.Contains(t, sources, "topo")
-	assert.Contains(t, sources, "vectors")
-
-	vectors := sources["vectors"].(map[string]interface{})
-	assert.Equal(t, "vector", vectors["type"])
-	assert.Contains(t, vectors["url"], "vector.pmtiles")
-
-	layers := result["layers"].([]interface{})
-	assert.Greater(t, len(layers), 1, "should have vector layers in addition to basemap")
-
-	// Check for expected layer IDs
-	layerIDs := make([]string, len(layers))
-	for i, l := range layers {
-		layerIDs[i] = l.(map[string]interface{})["id"].(string)
+func TestComputeElevationStats_SingleValue(t *testing.T) {
+	grid := &DEMGrid{
+		Data: []float32{42},
 	}
-	assert.Contains(t, layerIDs, "basemap")
-	assert.Contains(t, layerIDs, "contours")
-	assert.Contains(t, layerIDs, "contours-major")
-	assert.Contains(t, layerIDs, "roads")
-	assert.Contains(t, layerIDs, "buildings")
+	stats := computeElevationStats(grid)
+	require.NotNil(t, stats)
+	assert.Equal(t, 42.0, stats.Min)
+	assert.Equal(t, 42.0, stats.Max)
+	assert.Equal(t, 42.0, stats.Avg)
+	assert.Equal(t, 0.0, stats.StdDev)
 }
 
-func TestGenerateStyleJSON_WithoutVector(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{WorldName: "altis", MinZoom: 10, MaxZoom: 18, HasVector: false}
-
-	err := GenerateStyleJSON(dir, meta)
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
-	require.NoError(t, err)
-
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-
-	sources := result["sources"].(map[string]interface{})
-	assert.NotContains(t, sources, "vectors")
-
-	layers := result["layers"].([]interface{})
-	assert.Len(t, layers, 1, "should only have basemap layer")
+func TestComputeElevationStats_AllSame(t *testing.T) {
+	grid := &DEMGrid{
+		Data: []float32{5, 5, 5, 5},
+	}
+	stats := computeElevationStats(grid)
+	require.NotNil(t, stats)
+	assert.Equal(t, 5.0, stats.Min)
+	assert.Equal(t, 5.0, stats.Max)
+	assert.Equal(t, 5.0, stats.Avg)
+	assert.Equal(t, 0.0, stats.StdDev)
 }
 
-func TestGenerateStyleJSON_DefaultZoom(t *testing.T) {
-	dir := t.TempDir()
-	meta := MapMeta{WorldName: "test"}
+func TestComputeElevationStats_NegativeElevation(t *testing.T) {
+	grid := &DEMGrid{
+		Data: []float32{-10, -5, 0, 5, 10},
+	}
+	stats := computeElevationStats(grid)
+	require.NotNil(t, stats)
+	assert.Equal(t, -10.0, stats.Min)
+	assert.Equal(t, 10.0, stats.Max)
+	assert.Equal(t, 0.0, stats.Avg)
+}
 
-	err := GenerateStyleJSON(dir, meta)
-	require.NoError(t, err)
+func TestComputeElevationStats_Nil(t *testing.T) {
+	assert.Nil(t, computeElevationStats(nil))
+}
 
-	data, err := os.ReadFile(filepath.Join(dir, "style.json"))
-	require.NoError(t, err)
+func TestComputeElevationStats_EmptyData(t *testing.T) {
+	grid := &DEMGrid{Data: []float32{}}
+	assert.Nil(t, computeElevationStats(grid))
+}
 
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(data, &result))
-
-	sources := result["sources"].(map[string]interface{})
-	topo := sources["topo"].(map[string]interface{})
-	assert.Equal(t, float64(0), topo["minzoom"])
-	assert.Equal(t, float64(6), topo["maxzoom"])
+func TestComputeElevationStats_RoundsToTwoDecimals(t *testing.T) {
+	grid := &DEMGrid{
+		Data: []float32{1.111, 2.222, 3.333},
+	}
+	stats := computeElevationStats(grid)
+	require.NotNil(t, stats)
+	assert.Equal(t, 1.11, stats.Min)
+	assert.Equal(t, 3.33, stats.Max)
+	assert.Equal(t, 2.22, stats.Avg)
 }

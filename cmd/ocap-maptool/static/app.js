@@ -21,19 +21,14 @@
     fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFiles(fileInput.files); });
 
     async function uploadFiles(fileList) {
-        const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.pbo'));
-        if (files.length === 0) {
-            alert('Please upload at least one .pbo file');
+        const file = Array.from(fileList).find(f => f.name.toLowerCase().endsWith('.zip'));
+        if (!file) {
+            alert('Please upload a .zip file');
             return;
         }
         const form = new FormData();
-        for (const file of files) {
-            form.append('pbo', file);
-        }
-        const label = files.length === 1
-            ? 'Uploading ' + files[0].name + '...'
-            : 'Uploading ' + files.length + ' files...';
-        dropZone.querySelector('p').textContent = label;
+        form.append('file', file);
+        dropZone.querySelector('p').textContent = 'Uploading ' + file.name + '...';
 
         try {
             const res = await fetch('/api/maps/import', { method: 'POST', body: form });
@@ -46,7 +41,7 @@
         } catch (err) {
             alert('Upload failed: ' + err.message);
         }
-        dropZone.querySelector('p').innerHTML = 'Drop PBO files here or <label for="file-input">click to upload</label>';
+        dropZone.querySelector('p').innerHTML = 'Drop grad_meh ZIP here or <label for="file-input">click to upload</label>';
     }
 
     function pollJob(jobId) {
@@ -105,8 +100,7 @@
                 '<tr>' +
                 '<td>' + m.name + '</td>' +
                 '<td>' + (m.worldSize ? m.worldSize + 'm' : '-') + '</td>' +
-                '<td>' + (m.hasPmtiles ? '\u2713' : '-') + '</td>' +
-                '<td>' + (m.hasStyle ? '\u2713' : '-') + '</td>' +
+                '<td><span class="status status-' + m.status + '">' + m.status + '</span></td>' +
                 '<td><button class="btn btn-danger" onclick="deleteMap(\'' + m.name + '\')">' +
                 'Delete</button></td>' +
                 '</tr>'

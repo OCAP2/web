@@ -7,13 +7,30 @@ import (
 	"path/filepath"
 )
 
+// MapStatus represents the completeness of a map's generated files.
+type MapStatus string
+
+const (
+	MapStatusNone       MapStatus = "none"
+	MapStatusIncomplete MapStatus = "incomplete"
+	MapStatusComplete   MapStatus = "complete"
+)
+
 type MapInfo struct {
-	Name       string `json:"name"`
-	WorldSize  int    `json:"worldSize,omitempty"`
-	HasPMTiles bool   `json:"hasPmtiles"`
-	HasVector  bool   `json:"hasVector"`
-	HasStyle   bool   `json:"hasStyle"`
-	HasMapJSON bool   `json:"hasMapJson"`
+	Name      string    `json:"name"`
+	WorldSize int       `json:"worldSize,omitempty"`
+	Status    MapStatus `json:"status"`
+}
+
+// fileExistsIn checks for a file in subdirectory first, then root.
+func fileExistsIn(worldDir, subdir, filename string) bool {
+	if _, err := os.Stat(filepath.Join(worldDir, subdir, filename)); err == nil {
+		return true
+	}
+	if _, err := os.Stat(filepath.Join(worldDir, filename)); err == nil {
+		return true
+	}
+	return false
 }
 
 func ScanMaps(mapsDir string) ([]MapInfo, error) {
@@ -33,25 +50,36 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 		worldDir := filepath.Join(mapsDir, entry.Name())
 		info := MapInfo{Name: entry.Name()}
 
-		if _, err := os.Stat(filepath.Join(worldDir, "topo.pmtiles")); err == nil {
-			info.HasPMTiles = true
-		}
-		if _, err := os.Stat(filepath.Join(worldDir, "vector.pmtiles")); err == nil {
-			info.HasVector = true
-		}
-		if _, err := os.Stat(filepath.Join(worldDir, "style.json")); err == nil {
-			info.HasStyle = true
-		}
+		hasSatellite := fileExistsIn(worldDir, "tiles", "satellite.pmtiles")
+		hasFeatures := fileExistsIn(worldDir, "tiles", "features.pmtiles")
+		hasStyle := fileExistsIn(worldDir, "styles", "standard.json")
+		hasMapJSON := false
 
 		mapJSONPath := filepath.Join(worldDir, "map.json")
 		if data, err := os.ReadFile(mapJSONPath); err == nil {
-			info.HasMapJSON = true
+			hasMapJSON = true
 			var meta struct {
 				WorldSize int `json:"worldSize"`
 			}
 			if json.Unmarshal(data, &meta) == nil {
 				info.WorldSize = meta.WorldSize
 			}
+		}
+
+		found := 0
+		for _, ok := range []bool{hasSatellite, hasFeatures, hasStyle, hasMapJSON} {
+			if ok {
+				found++
+			}
+		}
+
+		switch {
+		case found == 0:
+			info.Status = MapStatusNone
+		case found == 4:
+			info.Status = MapStatusComplete
+		default:
+			info.Status = MapStatusIncomplete
 		}
 
 		maps = append(maps, info)
