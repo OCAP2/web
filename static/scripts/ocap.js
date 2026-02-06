@@ -598,10 +598,17 @@ function initMap (world) {
 			console.log("[OCAP] PMTiles protocol registered");
 		}
 
+		// Resolve saved style preference so we load the correct style directly
+		var styleBase = world.maplibreStyle.replace(/\/[^/]+$/, '/');
+		var styleVariants = ['standard.json', 'satellite.json', 'hybrid.json'];
+		var savedStyleIdx = parseInt(localStorage.getItem('ocap-maplibre-style'), 10) || 0;
+		if (savedStyleIdx < 0 || savedStyleIdx >= styleVariants.length) savedStyleIdx = 0;
+		var initialStyle = styleBase + styleVariants[savedStyleIdx];
+
 		// Add MapLibre basemap layer
-		console.log("[OCAP] Loading MapLibre style:", world.maplibreStyle);
+		console.log("[OCAP] Loading MapLibre style:", initialStyle);
 		mapLibreLayer = L.maplibreGL({
-			style: world.maplibreStyle,
+			style: initialStyle,
 			interactive: false,
 			renderWorldCopies: false
 		});

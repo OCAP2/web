@@ -45,23 +45,12 @@ L.Control.MaplibreStyles = L.Control.extend({
 		// Probe variant availability — hide buttons for missing styles
 		this._styles.forEach(function (style, i) {
 			if (i === 0) return; // standard.json already loaded, always exists
-			fetch(style.url, { method: 'HEAD' }).then(function (resp) {
+			fetch(style.url).then(function (resp) {
 				if (!resp.ok) self._hideButton(i);
 			}).catch(function () {
 				self._hideButton(i);
 			});
 		});
-
-		// Apply saved preference if different from default
-		if (this._active !== 0) {
-			var idx = this._active;
-			var self2 = this;
-			// Wait for MapLibre GL map to be ready before switching style
-			var glMap = this._mlLayer.getMaplibreMap();
-			if (glMap) {
-				glMap.once('load', function () { self2._setStyle(idx); });
-			}
-		}
 
 		this._container = container;
 		return container;
