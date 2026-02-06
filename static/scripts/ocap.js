@@ -605,9 +605,10 @@ function initMap (world) {
 		} else if (world.maplibreStyle) {
 			var styleBase = world.maplibreStyle.replace(/\/[^/]+$/, '/');
 			maplibreStyles = [
-				{ label: 'Color Relief', url: styleBase + 'color-relief.json' },
+				{ label: 'Topo',         url: styleBase + 'topo.json' },
 				{ label: 'Satellite',    url: styleBase + 'satellite.json' },
-				{ label: 'Hybrid',       url: styleBase + 'hybrid.json' }
+				{ label: 'Hybrid',       url: styleBase + 'hybrid.json' },
+				{ label: 'Color Relief', url: styleBase + 'color-relief.json' }
 			];
 		} else {
 			maplibreStyles = [];

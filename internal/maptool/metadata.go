@@ -132,10 +132,10 @@ func NewGenerateStylesStage() Stage {
 				filename string
 				label    string
 			}{
-				{StyleColorRelief, "color-relief.json", "Color Relief"},
 				{StyleTopo, "topo.json", "Topo"},
 				{StyleSatellite, "satellite.json", "Satellite"},
 				{StyleHybrid, "hybrid.json", "Hybrid"},
+				{StyleColorRelief, "color-relief.json", "Color Relief"},
 			}
 
 			var styles []mapStyleEntry
