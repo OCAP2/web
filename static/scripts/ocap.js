@@ -776,13 +776,13 @@ function initMap (world) {
 	function test () {
 		// Add marker to map on click
 		map.on("click", function (e) {
-			// latLng, layerPoint, containerPoint, originalEvent
-			console.debug("latLng");
-			console.debug(e.latlng);
-			console.debug("LayerPoint");
-			console.debug(e.layerPoint);
-			console.debug("Projected");
-			console.debug(map.project(e.latlng, mapMaxNativeZoom));
+			console.debug("latLng", e.latlng);
+			console.debug("LayerPoint", e.layerPoint);
+			if (useMapLibreMode) {
+				console.debug("Arma coords", [e.latlng.lng * METERS_PER_DEGREE, e.latlng.lat * METERS_PER_DEGREE]);
+			} else {
+				console.debug("Projected", map.project(e.latlng, mapMaxNativeZoom));
+			}
 		})
 	}
 
