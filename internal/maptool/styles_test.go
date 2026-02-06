@@ -239,7 +239,7 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 		HasHillshade: true,
 	}
 
-	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleSatellite, StyleHybrid} {
+	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleSatellite, StyleHybrid} {
 		t.Run(string(variant), func(t *testing.T) {
 			doc := GenerateStyleDocument(cfg, variant)
 			assert.Equal(t, "stratis-"+string(variant), doc["name"])

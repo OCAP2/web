@@ -50,6 +50,69 @@ func contourColorExpr(landColor string) interface{} {
 	}
 }
 
+// topoContourColorExpr returns a case expression for topo-style contours.
+// Uses #80C3FF for underwater (elevation <= 0) and #D1BA94 for land.
+func topoContourColorExpr() interface{} {
+	return []interface{}{
+		"case",
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, float64(0)},
+		"#80C3FF",
+		"#D1BA94",
+	}
+}
+
+// topoTextLayout returns a label layout for the topo style variant.
+func topoTextLayout() map[string]interface{} {
+	return map[string]interface{}{
+		"text-field":  []interface{}{"get", "name"},
+		"text-font":   []interface{}{"OpenSans-Regular"},
+		"text-anchor": "left",
+		"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
+		"text-offset": []interface{}{float64(1), float64(0)},
+	}
+}
+
+// topoTextPaint returns topo-style text paint with a black halo.
+func topoTextPaint(color string) map[string]interface{} {
+	return map[string]interface{}{
+		"text-color":      color,
+		"text-opacity":    float64(1),
+		"text-halo-color": "#000000",
+		"text-halo-width": float64(1),
+		"text-halo-blur":  float64(0),
+	}
+}
+
+// topoDarkContourColorExpr returns a case expression for topo-dark contours.
+// Uses #3a5a7a for underwater (elevation <= 0) and #5a4a3a for land.
+func topoDarkContourColorExpr() interface{} {
+	return []interface{}{
+		"case",
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, float64(0)},
+		"#3a5a7a",
+		"#5a4a3a",
+	}
+}
+
+// topoDarkTextPaint returns topo-dark text paint with a dark halo for light text.
+func topoDarkTextPaint(color string) map[string]interface{} {
+	return map[string]interface{}{
+		"text-color":      color,
+		"text-opacity":    float64(1),
+		"text-halo-color": "#111111",
+		"text-halo-width": float64(1),
+		"text-halo-blur":  float64(0),
+	}
+}
+
+func makeTopoDarkLabel(name, color string) LayerStyle {
+	return LayerStyle{
+		ID: name, Type: "symbol", SourceLayer: name,
+		Layout: topoTextLayout(),
+		Paint:  topoDarkTextPaint(color),
+	}
+}
+
 // iconLayout returns a standard symbol layout for an icon layer.
 func iconLayout(iconImage string) map[string]interface{} {
 	return map[string]interface{}{
@@ -480,12 +543,336 @@ func makeVegetationStyle(name, iconImage string, iconSize float64) LayerStyle {
 	}
 }
 
+func makeTopoLabel(name, color string) LayerStyle {
+	return LayerStyle{
+		ID: name, Type: "symbol", SourceLayer: name,
+		Layout: topoTextLayout(),
+		Paint:  topoTextPaint(color),
+	}
+}
+
+// knownTopoLayerStyles maps layer names to their topo-specific MapLibre styles.
+var knownTopoLayerStyles = map[string][]LayerStyle{
+	"sea": {{
+		ID: "sea", Type: "fill", SourceLayer: "sea",
+		Paint: map[string]interface{}{
+			"fill-color": "#36B", "fill-opacity": 0.8, "fill-antialias": true,
+		},
+	}},
+	"contours05": {{
+		ID: "contours/05", Type: "line", SourceLayer: "contours05",
+		Paint: map[string]interface{}{
+			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours10": {{
+		ID: "contours/10", Type: "line", SourceLayer: "contours10",
+		Paint: map[string]interface{}{
+			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours50": {{
+		ID: "contours/50", Type: "line", SourceLayer: "contours50",
+		Paint: map[string]interface{}{
+			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours100": {{
+		ID: "contours/100", Type: "line", SourceLayer: "contours100",
+		Paint: map[string]interface{}{
+			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"track": {{
+		ID: "track", Type: "line", SourceLayer: "track",
+		Paint: map[string]interface{}{
+			"line-color": "#D6C2A6", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+		},
+	}},
+	"road": {{
+		ID: "road", Type: "line", SourceLayer: "road",
+		Paint: map[string]interface{}{
+			"line-color": "#FFFFFF", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+		},
+	}},
+	"main_road-bridge": {{
+		ID: "main_road-bridge", Type: "fill-extrusion", SourceLayer: "main_road-bridge",
+		Paint: map[string]interface{}{
+			"fill-extrusion-color":   "#BBB",
+			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"forest": {{
+		ID: "forest", Type: "fill", SourceLayer: "forest",
+		Paint: map[string]interface{}{
+			"fill-color": "#9FC763", "fill-opacity": 0.3, "fill-antialias": true,
+		},
+	}},
+	"rocks": {{
+		ID: "rocks", Type: "fill", SourceLayer: "rocks",
+		Paint: map[string]interface{}{
+			"fill-color": "#000000", "fill-opacity": 0.3, "fill-antialias": true,
+		},
+	}},
+	"house": {{
+		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
+		Paint: map[string]interface{}{
+			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
+			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"powerline": {{
+		ID: "powerline", Type: "line", SourceLayer: "powerline",
+		Paint: map[string]interface{}{
+			"line-color": "#000000", "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"runway": {{
+		ID: "runway", Type: "line", SourceLayer: "runway",
+		Paint: map[string]interface{}{
+			"line-color": "#808080", "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"bush": {{
+		ID: "bush", Type: "symbol", SourceLayer: "bush",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/bush", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"rock": {{
+		ID: "rock", Type: "symbol", SourceLayer: "rock",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/rock", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"tree": {{
+		ID: "tree", Type: "symbol", SourceLayer: "tree",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/tree", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.25, float64(16), 1.0},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"fuelstation": {{
+		ID: "fuelstation", Type: "symbol", SourceLayer: "fuelstation",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/fuelstation", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"transmitter": {{
+		ID: "transmitter", Type: "symbol", SourceLayer: "transmitter",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/transmitter", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"stack": {{
+		ID: "stack", Type: "symbol", SourceLayer: "stack",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/stack", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"strongpointarea":   {makeTopoLabel("strongpointarea", "#406633")},
+	"flatarea":          {makeTopoLabel("flatarea", "#406633")},
+	"flatareacitysmall": {makeTopoLabel("flatareacitysmall", "#406633")},
+	"citycenter":        {makeTopoLabel("citycenter", "#406633")},
+	"namemarine":        {makeTopoLabel("namemarine", "#0D66CC")},
+	"namelocal":         {makeTopoLabel("namelocal", "#70614D")},
+	"namevillage":       {makeTopoLabel("namevillage", "#CCCCCC")},
+	"namecity":          {makeTopoLabel("namecity", "#FFFFFF")},
+	"namecitycapital":   {makeTopoLabel("namecitycapital", "#FFFFFF")},
+}
+
+// topoLayerOrder defines the bottom-to-top rendering order for the topo style.
+var topoLayerOrder = []string{
+	"sea",
+	"contours05", "contours10", "contours50", "contours100",
+	"contours",
+	"track", "road",
+	"main_road-bridge",
+	"forest", "rocks",
+	"house",
+	"powerline", "runway",
+	"bush", "rock", "tree",
+	"fuelstation", "transmitter", "stack",
+	"strongpointarea", "flatarea", "flatareacitysmall",
+	"citycenter",
+	"namemarine", "namelocal", "namevillage", "namecity", "namecitycapital",
+}
+
+// knownTopoDarkLayerStyles maps layer names to their topo-dark-specific MapLibre styles.
+var knownTopoDarkLayerStyles = map[string][]LayerStyle{
+	"sea": {{
+		ID: "sea", Type: "fill", SourceLayer: "sea",
+		Paint: map[string]interface{}{
+			"fill-color": "#1a3a5c", "fill-opacity": 0.8, "fill-antialias": true,
+		},
+	}},
+	"contours05": {{
+		ID: "contours/05", Type: "line", SourceLayer: "contours05",
+		Paint: map[string]interface{}{
+			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours10": {{
+		ID: "contours/10", Type: "line", SourceLayer: "contours10",
+		Paint: map[string]interface{}{
+			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours50": {{
+		ID: "contours/50", Type: "line", SourceLayer: "contours50",
+		Paint: map[string]interface{}{
+			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"contours100": {{
+		ID: "contours/100", Type: "line", SourceLayer: "contours100",
+		Paint: map[string]interface{}{
+			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"track": {{
+		ID: "track", Type: "line", SourceLayer: "track",
+		Paint: map[string]interface{}{
+			"line-color": "#6b5a48", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+		},
+	}},
+	"road": {{
+		ID: "road", Type: "line", SourceLayer: "road",
+		Paint: map[string]interface{}{
+			"line-color": "#888888", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+		},
+	}},
+	"main_road-bridge": {{
+		ID: "main_road-bridge", Type: "fill-extrusion", SourceLayer: "main_road-bridge",
+		Paint: map[string]interface{}{
+			"fill-extrusion-color":   "#555555",
+			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"forest": {{
+		ID: "forest", Type: "fill", SourceLayer: "forest",
+		Paint: map[string]interface{}{
+			"fill-color": "#3a5a2a", "fill-opacity": 0.4, "fill-antialias": true,
+		},
+	}},
+	"rocks": {{
+		ID: "rocks", Type: "fill", SourceLayer: "rocks",
+		Paint: map[string]interface{}{
+			"fill-color": "#333333", "fill-opacity": 0.4, "fill-antialias": true,
+		},
+	}},
+	"house": {{
+		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
+		Paint: map[string]interface{}{
+			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
+			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"powerline": {{
+		ID: "powerline", Type: "line", SourceLayer: "powerline",
+		Paint: map[string]interface{}{
+			"line-color": "#666666", "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"runway": {{
+		ID: "runway", Type: "line", SourceLayer: "runway",
+		Paint: map[string]interface{}{
+			"line-color": "#555555", "line-opacity": float64(1), "line-width": float64(1),
+		},
+	}},
+	"bush": {{
+		ID: "bush", Type: "symbol", SourceLayer: "bush",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/bush", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"rock": {{
+		ID: "rock", Type: "symbol", SourceLayer: "rock",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/rock", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"tree": {{
+		ID: "tree", Type: "symbol", SourceLayer: "tree",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/tree", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.25, float64(16), 1.0},
+			"icon-allow-overlap":    true,
+			"icon-ignore-placement": true,
+		},
+	}},
+	"fuelstation": {{
+		ID: "fuelstation", Type: "symbol", SourceLayer: "fuelstation",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/fuelstation", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"transmitter": {{
+		ID: "transmitter", Type: "symbol", SourceLayer: "transmitter",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/transmitter", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"stack": {{
+		ID: "stack", Type: "symbol", SourceLayer: "stack",
+		Layout: map[string]interface{}{
+			"icon-image": "objects/stack", "icon-anchor": "center",
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.125, float64(16), 0.5},
+			"icon-allow-overlap":    false,
+			"icon-ignore-placement": false,
+		},
+	}},
+	"strongpointarea":   {makeTopoDarkLabel("strongpointarea", "#8a9a7a")},
+	"flatarea":          {makeTopoDarkLabel("flatarea", "#8a9a7a")},
+	"flatareacitysmall": {makeTopoDarkLabel("flatareacitysmall", "#8a9a7a")},
+	"citycenter":        {makeTopoDarkLabel("citycenter", "#8a9a7a")},
+	"namemarine":        {makeTopoDarkLabel("namemarine", "#5599DD")},
+	"namelocal":         {makeTopoDarkLabel("namelocal", "#B8A88A")},
+	"namevillage":       {makeTopoDarkLabel("namevillage", "#CCCCCC")},
+	"namecity":          {makeTopoDarkLabel("namecity", "#FFFFFF")},
+	"namecitycapital":   {makeTopoDarkLabel("namecitycapital", "#FFFFFF")},
+}
+
 // StyleVariant identifies which style variant to generate.
 type StyleVariant string
 
 const (
 	StyleColorRelief StyleVariant = "color-relief"
 	StyleTopo        StyleVariant = "topo"
+	StyleTopoDark    StyleVariant = "topo-dark"
 	StyleSatellite   StyleVariant = "satellite"
 	StyleHybrid      StyleVariant = "hybrid"
 )
@@ -511,8 +898,11 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 	sources := buildSources(cfg)
 
 	bgColor := "#000000"
-	if variant == StyleTopo {
+	switch variant {
+	case StyleTopo:
 		bgColor = "#DFDFDF"
+	case StyleTopoDark:
+		bgColor = "#1B1B1B"
 	}
 
 	var layers []interface{}
@@ -527,6 +917,8 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		layers = append(layers, buildColorReliefLayers(cfg)...)
 	case StyleTopo:
 		layers = append(layers, buildTopoLayers(cfg)...)
+	case StyleTopoDark:
+		layers = append(layers, buildTopoDarkLayers(cfg)...)
 	case StyleSatellite:
 		layers = append(layers, buildSatelliteLayers(cfg)...)
 	case StyleHybrid:
@@ -622,39 +1014,240 @@ func buildColorReliefLayers(cfg StyleConfig) []interface{} {
 	return layers
 }
 
-// --- Topo style layers (color relief hidden) ---
+// --- Topo style layers (native hillshade, topo-specific vector styles) ---
 
 func buildTopoLayers(cfg StyleConfig) []interface{} {
 	var layers []interface{}
 
-	// Color relief present but hidden
-	if cfg.HasColorRelief {
-		layers = append(layers, map[string]interface{}{
-			"id": "color-relief", "type": "raster", "source": "color-relief",
-			"layout": map[string]interface{}{"visibility": "none"},
-		})
-	}
-
-	// Hillshade (raster) at 50% opacity
-	if cfg.HasHillshade {
-		layers = append(layers, map[string]interface{}{
-			"id": "hillshade-raster", "type": "raster", "source": "hillshade",
-			"paint": map[string]interface{}{"raster-opacity": 0.5},
-		})
-	}
-
-	// Satellite (hidden by default)
+	// Satellite (hidden by default, allows layer toggle in UI)
 	if cfg.HasSatellite {
 		layers = append(layers, map[string]interface{}{
 			"id": "satellite", "type": "raster", "source": "satellite",
 			"layout": map[string]interface{}{"visibility": "none"},
+			"paint":  map[string]interface{}{"raster-opacity": float64(1)},
 		})
 	}
 
-	// Vector feature layers (same as color relief)
-	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisStandard)...)
+	// Native hillshade from heightmap DEM
+	if cfg.HasHeightmap {
+		layers = append(layers, map[string]interface{}{
+			"id":     "hillshade",
+			"type":   "hillshade",
+			"source": "heightmap",
+			"paint": map[string]interface{}{
+				"hillshade-exaggeration":           0.4,
+				"hillshade-highlight-color":        "rgba(255,255,255,0.4)",
+				"hillshade-shadow-color":           "rgba(0,0,0,0.4)",
+				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
+				"hillshade-illumination-anchor":    "map",
+				"hillshade-illumination-direction": float64(270),
+			},
+		})
+	}
+
+	// Vector feature layers in topo render order
+	layers = append(layers, buildTopoVectorFeatureLayers(cfg.VectorLayers)...)
 
 	return layers
+}
+
+// buildTopoVectorFeatureLayers generates topo-styled MapLibre layers from available
+// vector layer names, using topo-specific styles and render order.
+func buildTopoVectorFeatureLayers(layerNames []string) []interface{} {
+	available := make(map[string]bool, len(layerNames))
+	for _, n := range layerNames {
+		available[n] = true
+	}
+
+	emitted := make(map[string]bool)
+	var result []interface{}
+
+	// Emit layers in topo render order
+	for _, name := range topoLayerOrder {
+		if !available[name] {
+			continue
+		}
+		emitted[name] = true
+		styles, ok := knownTopoLayerStyles[name]
+		if !ok {
+			continue
+		}
+		for _, style := range styles {
+			layer := map[string]interface{}{
+				"id":           style.ID,
+				"type":         style.Type,
+				"source":       "features",
+				"source-layer": style.SourceLayer,
+			}
+			if style.MinZoom > 0 {
+				layer["minzoom"] = style.MinZoom
+			}
+			if style.MaxZoom > 0 {
+				layer["maxzoom"] = style.MaxZoom
+			}
+			if style.Paint != nil {
+				layer["paint"] = style.Paint
+			}
+			if style.Layout != nil {
+				layer["layout"] = style.Layout
+			}
+			if style.Filter != nil {
+				layer["filter"] = style.Filter
+			}
+			result = append(result, layer)
+		}
+	}
+
+	// Fallback: remaining layers not in topo order use standard styles
+	for _, name := range layerNames {
+		if emitted[name] {
+			continue
+		}
+		for _, style := range GetLayerStyles(name) {
+			layer := map[string]interface{}{
+				"id":           style.ID,
+				"type":         style.Type,
+				"source":       "features",
+				"source-layer": style.SourceLayer,
+			}
+			if style.MinZoom > 0 {
+				layer["minzoom"] = style.MinZoom
+			}
+			if style.MaxZoom > 0 {
+				layer["maxzoom"] = style.MaxZoom
+			}
+			if style.Paint != nil {
+				layer["paint"] = style.Paint
+			}
+			if style.Layout != nil {
+				layer["layout"] = style.Layout
+			}
+			if style.Filter != nil {
+				layer["filter"] = style.Filter
+			}
+			result = append(result, layer)
+		}
+	}
+
+	return result
+}
+
+// --- Topo Dark style layers ---
+
+func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
+	var layers []interface{}
+
+	// Satellite (hidden by default, allows layer toggle in UI)
+	if cfg.HasSatellite {
+		layers = append(layers, map[string]interface{}{
+			"id": "satellite", "type": "raster", "source": "satellite",
+			"layout": map[string]interface{}{"visibility": "none"},
+			"paint":  map[string]interface{}{"raster-opacity": float64(1)},
+		})
+	}
+
+	// Native hillshade from heightmap DEM — stronger for dark theme
+	if cfg.HasHeightmap {
+		layers = append(layers, map[string]interface{}{
+			"id":     "hillshade",
+			"type":   "hillshade",
+			"source": "heightmap",
+			"paint": map[string]interface{}{
+				"hillshade-exaggeration":           0.5,
+				"hillshade-highlight-color":        "rgba(255,255,255,0.3)",
+				"hillshade-shadow-color":           "rgba(0,0,0,0.6)",
+				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
+				"hillshade-illumination-anchor":    "map",
+				"hillshade-illumination-direction": float64(270),
+			},
+		})
+	}
+
+	// Vector feature layers in topo render order with dark styles
+	layers = append(layers, buildTopoDarkVectorFeatureLayers(cfg.VectorLayers)...)
+
+	return layers
+}
+
+// buildTopoDarkVectorFeatureLayers generates dark-themed topo MapLibre layers,
+// reusing topoLayerOrder for render order.
+func buildTopoDarkVectorFeatureLayers(layerNames []string) []interface{} {
+	available := make(map[string]bool, len(layerNames))
+	for _, n := range layerNames {
+		available[n] = true
+	}
+
+	emitted := make(map[string]bool)
+	var result []interface{}
+
+	// Emit layers in topo render order
+	for _, name := range topoLayerOrder {
+		if !available[name] {
+			continue
+		}
+		emitted[name] = true
+		styles, ok := knownTopoDarkLayerStyles[name]
+		if !ok {
+			continue
+		}
+		for _, style := range styles {
+			layer := map[string]interface{}{
+				"id":           style.ID,
+				"type":         style.Type,
+				"source":       "features",
+				"source-layer": style.SourceLayer,
+			}
+			if style.MinZoom > 0 {
+				layer["minzoom"] = style.MinZoom
+			}
+			if style.MaxZoom > 0 {
+				layer["maxzoom"] = style.MaxZoom
+			}
+			if style.Paint != nil {
+				layer["paint"] = style.Paint
+			}
+			if style.Layout != nil {
+				layer["layout"] = style.Layout
+			}
+			if style.Filter != nil {
+				layer["filter"] = style.Filter
+			}
+			result = append(result, layer)
+		}
+	}
+
+	// Fallback: remaining layers not in topo order use standard styles
+	for _, name := range layerNames {
+		if emitted[name] {
+			continue
+		}
+		for _, style := range GetLayerStyles(name) {
+			layer := map[string]interface{}{
+				"id":           style.ID,
+				"type":         style.Type,
+				"source":       "features",
+				"source-layer": style.SourceLayer,
+			}
+			if style.MinZoom > 0 {
+				layer["minzoom"] = style.MinZoom
+			}
+			if style.MaxZoom > 0 {
+				layer["maxzoom"] = style.MaxZoom
+			}
+			if style.Paint != nil {
+				layer["paint"] = style.Paint
+			}
+			if style.Layout != nil {
+				layer["layout"] = style.Layout
+			}
+			if style.Filter != nil {
+				layer["filter"] = style.Filter
+			}
+			result = append(result, layer)
+		}
+	}
+
+	return result
 }
 
 // --- Satellite style layers ---

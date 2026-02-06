@@ -603,8 +603,13 @@ function initMap (world) {
 
 		// Build style candidates list — frontend probes to discover which exist
 		var styleBase = world._baseUrl + '/styles/';
+		// Correct font base URL — resolved against page location so it works
+		// regardless of where the style JSON is served from (local or CDN).
+		var fontsBaseURL = new URL('images/maps/fonts/', window.location.href).href;
+
 		var styleCandidates = [
 			{ label: 'Topo',         url: styleBase + 'topo.json' },
+			{ label: 'Topo Dark',    url: styleBase + 'topo-dark.json' },
 			{ label: 'Satellite',    url: styleBase + 'satellite.json' },
 			{ label: 'Hybrid',       url: styleBase + 'hybrid.json' },
 			{ label: 'Color Relief', url: styleBase + 'color-relief.json' }
@@ -620,7 +625,19 @@ function initMap (world) {
 		mapLibreLayer = L.maplibreGL({
 			style: initialStyle,
 			interactive: false,
-			renderWorldCopies: false
+			renderWorldCopies: false,
+			// Rewrite font glyph requests to use the correct server path.
+			// The glyphs URL in the style JSON uses relative paths that may
+			// resolve incorrectly depending on where the style is served from.
+			transformRequest: function (url, resourceType) {
+				if (resourceType === 'Glyphs') {
+					// Extract fontstack and range from the URL path
+					var match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
+					if (match) {
+						return { url: fontsBaseURL + match[1] + '/' + match[2] };
+					}
+				}
+			}
 		});
 		mapLibreLayer.addTo(map);
 

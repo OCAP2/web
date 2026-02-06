@@ -133,6 +133,7 @@ func NewGenerateStylesStage() Stage {
 				filename string
 			}{
 				{StyleTopo, "topo.json"},
+				{StyleTopoDark, "topo-dark.json"},
 				{StyleSatellite, "satellite.json"},
 				{StyleHybrid, "hybrid.json"},
 				{StyleColorRelief, "color-relief.json"},
