@@ -260,8 +260,11 @@ var knownLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"runway": {{
-		ID: "runway", Type: "line", SourceLayer: "runway", MinZoom: 8,
-		Paint: map[string]interface{}{"line-color": "#808080", "line-opacity": float64(1), "line-width": float64(1)},
+		ID: "runway", Type: "fill", SourceLayer: "runway", MinZoom: 8,
+		Paint: map[string]interface{}{
+			"fill-color":   "#808080",
+			"fill-opacity": 0.8,
+		},
 	}},
 	"powerline": {{
 		ID: "powerline", Type: "line", SourceLayer: "powerline", MinZoom: 15,
@@ -379,19 +382,28 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"text-pitch-alignment":    "map",
 			"text-rotation-alignment": "map",
 		},
-		Paint: map[string]interface{}{"text-color": "#000000", "text-opacity": float64(1)},
+		Paint: map[string]interface{}{
+			"text-color": "#000000", "text-opacity": float64(1),
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+		},
 	}},
 	"namemarine": {{
 		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MinZoom: 8,
 		Layout: textLayout("Roboto Condensed Regular",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
-		Paint: map[string]interface{}{"text-color": "#0D66CC", "text-opacity": float64(1)},
+		Paint: map[string]interface{}{
+			"text-color": "#0D66CC", "text-opacity": float64(1),
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+		},
 	}},
 	"namelocal": {{
 		ID: "namelocal", Type: "symbol", SourceLayer: "namelocal", MinZoom: 8,
 		Layout: textLayout("Roboto Condensed Bold",
 			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
-		Paint: map[string]interface{}{"text-color": "#70614D", "text-opacity": float64(1)},
+		Paint: map[string]interface{}{
+			"text-color": "#70614D", "text-opacity": float64(1),
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+		},
 	}},
 	"namevillage": {{
 		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MinZoom: 8,
@@ -432,7 +444,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"text-color":      "#406633",
 			"text-opacity":    float64(1),
-			"text-halo-color": "#000000",
+			"text-halo-color": "rgba(255,255,255,0.7)",
 			"text-halo-width": float64(1),
 		},
 	}},
