@@ -12,6 +12,9 @@ import (
 func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name string,
 	minZ, maxZ int, tileFormat, resampling string) error {
 
+	// Remove stale output to avoid "readonly database" errors on re-runs
+	os.Remove(output)
+
 	args := []string{
 		"-of", "MBTILES",
 		"-co", "TYPE=baselayer",
