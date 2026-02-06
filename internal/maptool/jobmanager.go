@@ -121,6 +121,8 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
+	job.SubDirs = true
+
 	pipeline := jm.newPipeline()
 
 	jm.mu.RLock()
