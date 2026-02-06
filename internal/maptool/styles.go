@@ -1,5 +1,7 @@
 package maptool
 
+import "sort"
+
 // LayerStyle defines a MapLibre GL style layer for a vector tile layer.
 type LayerStyle struct {
 	ID          string
@@ -716,7 +718,7 @@ func categorizeLayer(name string) string {
 	case "house":
 		return "buildings"
 	case "trail", "track", "road", "main_road", "runway":
-		return "roads"
+		return name
 	case "road-bridge", "main_road-bridge", "track-bridge", "trail-bridge":
 		return "bridges"
 	case "railway":
@@ -755,7 +757,7 @@ func isLayerVisible(name string, vis layerVisibility) bool {
 		return vis.rocks
 	case "buildings":
 		return vis.buildings
-	case "roads":
+	case "trail", "track", "road", "main_road", "runway":
 		return vis.roads
 	case "bridges":
 		return vis.bridges
@@ -776,11 +778,41 @@ func isLayerVisible(name string, vis layerVisibility) bool {
 	}
 }
 
+// categoryRenderOrder defines the bottom-to-top painting order for layer
+// categories. Lower values render first (below), higher values render last
+// (on top). Labels and icons must be above roads to remain readable.
+var categoryRenderOrder = map[string]int{
+	"sea":         0,
+	"contours":    1,
+	"forest":      2,
+	"rocks":       3,
+	"buildings":   4,
+	"trail":       5,
+	"track":       6,
+	"road":        7,
+	"main_road":   8,
+	"runway":      9,
+	"railway":     10,
+	"powerline":   11,
+	"bridges":     12,
+	"vegetation":  13,
+	"icons":       14,
+	"labels":      15,
+	"other":       16,
+}
+
 // buildVectorFeatureLayers generates MapLibre layers from vector layer names,
-// filtered by the given visibility rules.
+// filtered by the given visibility rules. Layers are sorted by cartographic
+// render order so labels always appear above roads regardless of input order.
 func buildVectorFeatureLayers(layerNames []string, vis layerVisibility) []interface{} {
+	sorted := make([]string, len(layerNames))
+	copy(sorted, layerNames)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return categoryRenderOrder[categorizeLayer(sorted[i])] < categoryRenderOrder[categorizeLayer(sorted[j])]
+	})
+
 	var result []interface{}
-	for _, name := range layerNames {
+	for _, name := range sorted {
 		if !isLayerVisible(name, vis) {
 			continue
 		}
