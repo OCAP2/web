@@ -100,8 +100,7 @@
                 '<tr>' +
                 '<td>' + m.name + '</td>' +
                 '<td>' + (m.worldSize ? m.worldSize + 'm' : '-') + '</td>' +
-                '<td>' + (m.hasPmtiles ? '\u2713' : '-') + '</td>' +
-                '<td>' + (m.hasStyle ? '\u2713' : '-') + '</td>' +
+                '<td><span class="status status-' + m.status + '">' + m.status + '</span></td>' +
                 '<td><button class="btn btn-danger" onclick="deleteMap(\'' + m.name + '\')">' +
                 'Delete</button></td>' +
                 '</tr>'
