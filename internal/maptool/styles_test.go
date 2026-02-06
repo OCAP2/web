@@ -218,16 +218,17 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 		SpritePrefix: "images/maps/altis/styles",
 		VectorLayers: []string{"sea", "road", "namecity"},
 		HasSatellite: true,
+		GlyphsURL:    "../../fonts/{fontstack}/{range}.pbf",
 	}
 
-	doc := GenerateStyleDocument(cfg, StyleStandard)
+	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 
 	assert.Equal(t, 8, doc["version"])
-	assert.Equal(t, "altis-standard", doc["name"])
+	assert.Equal(t, "altis-color-relief", doc["name"])
 	assert.NotNil(t, doc["sources"])
 	assert.NotNil(t, doc["layers"])
 	assert.Equal(t, "images/maps/altis/styles/sprite", doc["sprite"])
-	assert.NotEmpty(t, doc["glyphs"])
+	assert.Equal(t, "../../fonts/{fontstack}/{range}.pbf", doc["glyphs"])
 }
 
 func TestGenerateStyleDocument_Variants(t *testing.T) {
@@ -240,7 +241,7 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 		HasHillshade: true,
 	}
 
-	for _, variant := range []StyleVariant{StyleStandard, StyleSatellite, StyleHybrid} {
+	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleSatellite, StyleHybrid} {
 		t.Run(string(variant), func(t *testing.T) {
 			doc := GenerateStyleDocument(cfg, variant)
 			assert.Equal(t, "stratis-"+string(variant), doc["name"])
@@ -264,7 +265,7 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 		HasColorRelief: true,
 	}
 
-	doc := GenerateStyleDocument(cfg, StyleStandard)
+	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 	sources := doc["sources"].(map[string]interface{})
 
 	assert.Contains(t, sources, "features")
@@ -281,7 +282,7 @@ func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
 		VectorLayers: []string{"sea"},
 	}
 
-	doc := GenerateStyleDocument(cfg, StyleStandard)
+	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 	sources := doc["sources"].(map[string]interface{})
 
 	assert.Contains(t, sources, "features")

@@ -11,13 +11,13 @@ import (
 
 // mapJSON is the structure written to map.json.
 type mapJSON struct {
-	Name          string `json:"name"`
-	WorldSize     int    `json:"worldSize"`
-	ImageSize     int    `json:"imageSize"`
-	Multiplier    int    `json:"multiplier"`
-	MaxZoom       int    `json:"maxZoom"`
-	MinZoom       int    `json:"minZoom"`
-	MaplibreStyle string `json:"maplibreStyle"`
+	Name       string `json:"name"`
+	WorldSize  int    `json:"worldSize"`
+	ImageSize  int    `json:"imageSize"`
+	Multiplier int    `json:"multiplier"`
+	MaxZoom    int    `json:"maxZoom"`
+	MinZoom    int    `json:"minZoom"`
+	Maplibre   bool   `json:"maplibre,omitempty"`
 }
 
 // assetPath joins a URL prefix with a filename. If prefix is empty, returns filename as-is.
@@ -101,21 +101,22 @@ func NewGenerateStylesStage() Stage {
 		Name: "generate_styles",
 		Run: func(ctx context.Context, job *Job) error {
 			worldName := job.WorldName
-			basePrefix := "images/maps/" + worldName
 
-			tilesPrefix := basePrefix
+			tilesPrefix := "images/maps/" + worldName
 			stylesDir := job.OutputDir
 			if job.SubDirs {
-				tilesPrefix = basePrefix + "/tiles"
+				tilesPrefix += "/tiles"
 				stylesDir = job.StylesOutputDir()
 				if err := os.MkdirAll(stylesDir, 0755); err != nil {
 					return fmt.Errorf("create styles dir: %w", err)
 				}
 			}
 
-			spritePrefix := basePrefix
+			spritePrefix := "images/maps/" + worldName
+			glyphsURL := "../fonts/{fontstack}/{range}.pbf"
 			if job.SubDirs {
-				spritePrefix = basePrefix + "/styles"
+				spritePrefix = "images/maps/" + worldName + "/styles"
+				glyphsURL = "../../fonts/{fontstack}/{range}.pbf"
 			}
 
 			styleCfg := StyleConfig{
@@ -127,22 +128,27 @@ func NewGenerateStylesStage() Stage {
 				HasHeightmap:   job.HasHeightmap,
 				HasHillshade:   job.HasHillshade,
 				HasColorRelief: job.HasColorRelief,
+				GlyphsURL:      glyphsURL,
 			}
 
 			variants := []struct {
 				variant  StyleVariant
 				filename string
 			}{
-				{StyleStandard, "standard.json"},
+				{StyleTopo, "topo.json"},
+				{StyleTopoDark, "topo-dark.json"},
 				{StyleSatellite, "satellite.json"},
 				{StyleHybrid, "hybrid.json"},
+				{StyleColorRelief, "color-relief.json"},
 			}
+
 			for _, v := range variants {
 				styleDoc := GenerateStyleDocument(styleCfg, v.variant)
 				if err := writeJSON(filepath.Join(stylesDir, v.filename), styleDoc); err != nil {
 					return fmt.Errorf("write %s: %w", v.filename, err)
 				}
 			}
+			job.HasMaplibre = true
 
 			if err := WriteSpriteFiles(stylesDir); err != nil {
 				return fmt.Errorf("write sprites: %w", err)
@@ -162,26 +168,21 @@ func NewGenerateGradMehMetadataStage() Stage {
 		Name: "generate_metadata",
 		Run: func(ctx context.Context, job *Job) error {
 			worldName := job.WorldName
-			basePrefix := "images/maps/" + worldName
 
-			stylesPrefix := basePrefix
-			if job.SubDirs {
-				stylesPrefix = basePrefix + "/styles"
-			}
-
-			// 1. Generate map.json (OCAP2 web compat) — points to standard style
+			// 1. Generate map.json (OCAP2 web compat)
 			maxZoom := job.MaxZoom
 			if maxZoom == 0 {
 				maxZoom = 6
 			}
+
 			doc := mapJSON{
-				Name:          worldName,
-				WorldSize:     job.WorldSize,
-				ImageSize:     job.ImageSize,
-				Multiplier:    1,
-				MaxZoom:       maxZoom,
-				MinZoom:       job.MinZoom,
-				MaplibreStyle: assetPath(stylesPrefix, "standard.json"),
+				Name:       worldName,
+				WorldSize:  job.WorldSize,
+				ImageSize:  job.ImageSize,
+				Multiplier: 1,
+				MaxZoom:    maxZoom,
+				MinZoom:    job.MinZoom,
+				Maplibre:   job.HasMaplibre,
 			}
 			if err := writeJSON(filepath.Join(job.OutputDir, "map.json"), doc); err != nil {
 				return fmt.Errorf("write map.json: %w", err)

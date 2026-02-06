@@ -140,6 +140,11 @@ func NewHandler(
 		hdlr.cacheControl(CacheDuration),
 	)
 	g.GET(
+		"/images/maps/fonts/:fontstack/:range",
+		hdlr.GetFont,
+		hdlr.cacheControl(CacheDuration),
+	)
+	g.GET(
 		"/images/maps/*",
 		hdlr.GetMapTitle,
 		hdlr.cacheControl(CacheDuration),
@@ -466,6 +471,15 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	return c.Stream(http.StatusOK, ct, img)
+}
+
+func (h *Handler) GetFont(c echo.Context) error {
+	fontstack := filepath.Base(c.Param("fontstack"))
+	rangeParam := filepath.Base(c.Param("range"))
+
+	absolutePath := filepath.Join(h.setting.Fonts, fontstack, rangeParam)
+
+	return c.File(absolutePath)
 }
 
 func (h *Handler) GetMapTitle(c echo.Context) error {

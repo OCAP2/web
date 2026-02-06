@@ -23,7 +23,7 @@ func TestScanMaps_Complete(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "map.json"), mapData, 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "tiles", "satellite.pmtiles"), []byte("fake"), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "tiles", "features.pmtiles"), []byte("fake"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "styles", "standard.json"), []byte("{}"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "styles", "color-relief.json"), []byte("{}"), 0644))
 
 	maps, err := ScanMaps(dir)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestScanMaps_RootFallback(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "map.json"), []byte(`{"worldSize":5120}`), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "satellite.pmtiles"), []byte("fake"), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "features.pmtiles"), []byte("fake"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "standard.json"), []byte("{}"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "color-relief.json"), []byte("{}"), 0644))
 
 	maps, err := ScanMaps(dir)
 	require.NoError(t, err)

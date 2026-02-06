@@ -361,68 +361,71 @@ async function getWorldByName (worldName) {
 		"hasTopoRelief": false,
 		"hasTopoDark": false,
 		"hasColorRelief": false,
-		"maplibreStyle": null,
 		"attribution": "Bohemia Interactive and 3rd Party Developers"
 	};
 
-	// Check for, and return local map data if available
-	const localMapRes = await fetch(
-		'images/maps/' + worldName + '/map.json',
-		{ cache: "no-store" }
-	);
-	if (localMapRes.status === 200) {
-		try {
-			return Object.assign(defaultMap, await localMapRes.json());
-		} catch (error) {
-			//ui.showHint(`Error: parsing local map.json`);
-			console.error('Error parsing local map.json', error.message || error);
+	// 1. Try local map data
+	try {
+		const localMapRes = await fetch(
+			'images/maps/' + worldName + '/map.json',
+			{ cache: "no-store" }
+		);
+		if (localMapRes.status === 200) {
+			return Object.assign(defaultMap, await localMapRes.json(), {
+				_baseUrl: 'images/maps/' + worldName
+			});
 		}
+	} catch (error) {
+		console.error('Error fetching/parsing local map.json', error.message || error);
 	}
 
-	// Fallback to cloud CDN if enabled
+	// 2. Fallback to cloud CDN if enabled
 	if (ui.useCloudTiles) {
-		let cloudMapRes;
+		// 2a. Try pmtiles CDN (MapLibre-capable)
 		try {
-			cloudMapRes = await fetch(
+			var pmtilesRes = await fetch(
+				`https://pmtiles.ocap2.com/${worldName}/map.json`,
+				{ cache: "no-store" }
+			);
+			if (pmtilesRes.status === 200) {
+				return Object.assign(defaultMap, await pmtilesRes.json(), {
+					_useCloudTiles: true,
+					_baseUrl: `https://pmtiles.ocap2.com/${worldName}`,
+					maplibre: true // subdomain implies MapLibre support
+				});
+			}
+		} catch (error) {
+			console.warn('pmtiles CDN fetch failed:', error.message || error);
+		}
+
+		// 2b. Try legacy raster CDN
+		try {
+			var rasterRes = await fetch(
 				`https://maps.ocap2.com/${worldName}/map.json`,
 				{ cache: "no-store" }
 			);
-		} catch (error) {
-			// clone default map if not found
-			Object.assign(defaultMap, {
-				"imageSize": 30720,
-				"worldSize": 30720,
-				"multiplier": 1,
-				"worldName": worldName
-			});
-			console.warn("World not found, using blank map")
-			alert(`The map for this mission (worldName: ${worldName}) is not available locally or in the cloud.\n\nA placeholder will be shown instead. Please report this issue on the OCAP2 Discord.\n\nhttps://discord.gg/wQusAQnrBP`);
-			worldName = "";
-
-			return Promise.resolve(defaultMap);
-		};
-		if (cloudMapRes.status === 200) {
-			try {
-				return Object.assign(defaultMap, await cloudMapRes.json(), { _useCloudTiles: true });
-			} catch (error) {
-				console.error('Error parsing cloud map.json', error.message || error);
-				return Promise.reject(`Cloud map "${worldName}" data parsing failed.`);
+			if (rasterRes.status === 200) {
+				return Object.assign(defaultMap, await rasterRes.json(), {
+					_useCloudTiles: true,
+					_baseUrl: `https://maps.ocap2.com/${worldName}`
+				});
 			}
-		} else {
-			// clone default map if not found
-			Object.assign(defaultMap, {
-				"imageSize": 30720,
-				"worldSize": 30720,
-				"multiplier": 1,
-				"worldName": worldName
-			});
-			worldName = "";
-			console.warn("World not found, using blank map")
-			alert(`The map for this mission (worldName: ${worldName}) is not available locally or in the cloud.\n\nA placeholder will be shown instead. Please report this issue on the OCAP2 Discord.\n\nhttps://discord.gg/wQusAQnrBP`);
-
-			return Promise.resolve(defaultMap);
-			// return Promise.reject(`Map "${worldName}" is not available on cloud (${cloudMapRes.status})`);
+		} catch (error) {
+			console.warn('Raster CDN fetch failed:', error.message || error);
 		}
+
+		// 2c. Nothing found — placeholder
+		Object.assign(defaultMap, {
+			"imageSize": 30720,
+			"worldSize": 30720,
+			"multiplier": 1,
+			"worldName": worldName
+		});
+		console.warn("World not found, using blank map");
+		alert(`The map for this mission (worldName: ${worldName}) is not available locally or in the cloud.\n\nA placeholder will be shown instead. Please report this issue on the OCAP2 Discord.\n\nhttps://discord.gg/wQusAQnrBP`);
+		worldName = "";
+
+		return defaultMap;
 	} else {
 		return Promise.reject(`Map "${worldName}" is not installed`);
 	}
@@ -436,7 +439,7 @@ function initMap (world) {
 	imageSize = world.imageSize;
 	multiplier = world.multiplier;
 
-	useMapLibreMode = Boolean(world.maplibreStyle);
+	useMapLibreMode = Boolean(world.maplibre) || Boolean(world.maplibreStyle);
 	console.log("[OCAP] Map mode:", useMapLibreMode ? "MapLibre + PMTiles" : "Legacy raster tiles");
 
 	var mapOptions;
@@ -598,19 +601,43 @@ function initMap (world) {
 			console.log("[OCAP] PMTiles protocol registered");
 		}
 
-		// Resolve saved style preference so we load the correct style directly
-		var styleBase = world.maplibreStyle.replace(/\/[^/]+$/, '/');
-		var styleVariants = ['standard.json', 'satellite.json', 'hybrid.json'];
+		// Build style candidates list — frontend probes to discover which exist
+		var styleBase = world._baseUrl + '/styles/';
+		// Correct font base URL — resolved against page location so it works
+		// regardless of where the style JSON is served from (local or CDN).
+		var fontsBaseURL = new URL('images/maps/fonts/', window.location.href).href;
+
+		var styleCandidates = [
+			{ label: 'Topo',         url: styleBase + 'topo.json' },
+			{ label: 'Topo Dark',    url: styleBase + 'topo-dark.json' },
+			{ label: 'Satellite',    url: styleBase + 'satellite.json' },
+			{ label: 'Hybrid',       url: styleBase + 'hybrid.json' },
+			{ label: 'Color Relief', url: styleBase + 'color-relief.json' }
+		];
+
+		// Resolve saved style preference
 		var savedStyleIdx = parseInt(localStorage.getItem('ocap-maplibre-style'), 10) || 0;
-		if (savedStyleIdx < 0 || savedStyleIdx >= styleVariants.length) savedStyleIdx = 0;
-		var initialStyle = styleBase + styleVariants[savedStyleIdx];
+		if (savedStyleIdx < 0 || savedStyleIdx >= styleCandidates.length) savedStyleIdx = 0;
+		var initialStyle = styleCandidates[savedStyleIdx].url;
 
 		// Add MapLibre basemap layer
 		console.log("[OCAP] Loading MapLibre style:", initialStyle);
 		mapLibreLayer = L.maplibreGL({
 			style: initialStyle,
 			interactive: false,
-			renderWorldCopies: false
+			renderWorldCopies: false,
+			// Rewrite font glyph requests to use the correct server path.
+			// The glyphs URL in the style JSON uses relative paths that may
+			// resolve incorrectly depending on where the style is served from.
+			transformRequest: function (url, resourceType) {
+				if (resourceType === 'Glyphs') {
+					// Extract fontstack and range from the URL path
+					var match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
+					if (match) {
+						return { url: fontsBaseURL + match[1] + '/' + match[2] };
+					}
+				}
+			}
 		});
 		mapLibreLayer.addTo(map);
 
@@ -637,20 +664,14 @@ function initMap (world) {
 
 		if (worldName === "") {
 			console.log("World name missing or not rendered. Using default map.")
-			// if default map is used as placeholder, use custom topo layer url
 			topoLayerUrl = 'https://maps.ocap2.com/missing_tiles.png';
-		} else if (Boolean(world._useCloudTiles)) {
-			console.log("Streaming map tiles from the cloud (maps.ocap2.com).")
-			topoLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('https://maps.ocap2.com/' + worldName.toLowerCase() + '/colorRelief/{z}/{x}/{y}.png');
 		} else {
-			console.log("Streaming map tiles from the local OCAP2 installation.")
-			topoLayerUrl = ('images/maps/' + worldName + '/{z}/{x}/{y}.png');
-			topoDarkLayerUrl = ('images/maps/' + worldName + '/topoDark/{z}/{x}/{y}.png');
-			topoReliefLayerUrl = ('images/maps/' + worldName + '/topoRelief/{z}/{x}/{y}.png');
-			colorReliefLayerUrl = ('images/maps/' + worldName + '/colorRelief/{z}/{x}/{y}.png');
+			var tileBase = world._baseUrl;
+			console.log("Streaming map tiles from:", tileBase);
+			topoLayerUrl = tileBase + '/{z}/{x}/{y}.png';
+			topoDarkLayerUrl = tileBase + '/topoDark/{z}/{x}/{y}.png';
+			topoReliefLayerUrl = tileBase + '/topoRelief/{z}/{x}/{y}.png';
+			colorReliefLayerUrl = tileBase + '/colorRelief/{z}/{x}/{y}.png';
 		}
 
 		console.log("Getting bounds for layers...")
@@ -745,7 +766,7 @@ function initMap (world) {
 	overlayLayerControl.addTo(map);
 
 	if (useMapLibreMode) {
-		L.control.maplibreStyles(mapLibreLayer, world.maplibreStyle).addTo(map);
+		L.control.maplibreStyles(mapLibreLayer, styleCandidates).addTo(map);
 	} else {
 		baseLayerControl = L.control.basemaps({
 			basemaps: baseLayers,

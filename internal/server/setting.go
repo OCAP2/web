@@ -15,6 +15,7 @@ type Setting struct {
 	DB         string     `json:"db" yaml:"db"`
 	Markers    string     `json:"markers" yaml:"markers"`
 	Ammo       string     `json:"ammo" yaml:"ammo"`
+	Fonts      string     `json:"fonts" yaml:"fonts"`
 	Maps       string     `json:"maps" yaml:"maps"`
 	Data       string     `json:"data" yaml:"data"`
 	Static     string     `json:"static" yaml:"static"`
@@ -58,6 +59,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("db", "data.db")
 	viper.SetDefault("markers", "assets/markers")
 	viper.SetDefault("ammo", "assets/ammo")
+	viper.SetDefault("fonts", "assets/fonts")
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "static")
@@ -71,7 +73,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("conversion.retryFailed", false)
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.storageEngine", "conversion.retryFailed"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.storageEngine", "conversion.retryFailed"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

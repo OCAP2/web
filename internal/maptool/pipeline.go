@@ -53,6 +53,7 @@ type Job struct {
 	HasHillshade   bool              `json:"-"`
 	HasColorRelief bool              `json:"-"`
 	GradMehMeta    *GradMehMeta      `json:"-"` // original grad_meh metadata
+	HasMaplibre    bool              `json:"-"` // set by generate_styles stage
 
 	// SubDirs enables organized output layout (tiles/, styles/ subdirectories).
 	// When true, PMTiles go to OutputDir/tiles/ and styles go to OutputDir/styles/.
@@ -76,6 +77,7 @@ func (j *Job) StylesOutputDir() string {
 	}
 	return j.OutputDir
 }
+
 
 // JobInfo is a read-only snapshot of a Job, safe for concurrent access and serialization.
 type JobInfo struct {
