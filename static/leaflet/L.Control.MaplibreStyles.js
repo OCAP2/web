@@ -45,7 +45,7 @@ L.Control.MaplibreStyles = L.Control.extend({
 		// Probe variant availability — hide buttons for missing styles
 		this._styles.forEach(function (style, i) {
 			if (i === 0) return; // standard.json already loaded, always exists
-			fetch(style.url).then(function (resp) {
+			fetch(style.url, { method: 'HEAD' }).then(function (resp) {
 				if (!resp.ok) self._hideButton(i);
 			}).catch(function () {
 				self._hideButton(i);

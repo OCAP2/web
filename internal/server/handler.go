@@ -144,6 +144,11 @@ func NewHandler(
 		hdlr.GetMapTitle,
 		hdlr.cacheControl(CacheDuration),
 	)
+	g.HEAD(
+		"/images/maps/*",
+		hdlr.GetMapTitle,
+		hdlr.cacheControl(CacheDuration),
+	)
 	g.GET(
 		"/*",
 		hdlr.GetStatic,
