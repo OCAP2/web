@@ -78,6 +78,7 @@ func TestIsLayerVisible(t *testing.T) {
 	assert.True(t, isLayerVisible("main_road", allVisible))
 	assert.True(t, isLayerVisible("namecity", allVisible))
 	assert.True(t, isLayerVisible("church", allVisible))
+	assert.True(t, isLayerVisible("tree", allVisible))
 	assert.True(t, isLayerVisible("vegetationfir", allVisible))
 
 	// None visible
@@ -214,6 +215,7 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 	cfg := StyleConfig{
 		WorldName:    "altis",
 		URLPrefix:    "images/maps/altis",
+		SpritePrefix: "images/maps/altis/styles",
 		VectorLayers: []string{"sea", "road", "namecity"},
 		HasSatellite: true,
 	}
@@ -224,7 +226,7 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 	assert.Equal(t, "altis-standard", doc["name"])
 	assert.NotNil(t, doc["sources"])
 	assert.NotNil(t, doc["layers"])
-	assert.NotEmpty(t, doc["sprite"])
+	assert.Equal(t, "images/maps/altis/styles/sprite", doc["sprite"])
 	assert.NotEmpty(t, doc["glyphs"])
 }
 

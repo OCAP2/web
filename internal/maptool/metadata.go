@@ -113,9 +113,15 @@ func NewGenerateStylesStage() Stage {
 				}
 			}
 
+			spritePrefix := basePrefix
+			if job.SubDirs {
+				spritePrefix = basePrefix + "/styles"
+			}
+
 			styleCfg := StyleConfig{
 				WorldName:      worldName,
 				URLPrefix:      tilesPrefix,
+				SpritePrefix:   spritePrefix,
 				VectorLayers:   job.VectorLayers,
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,
@@ -136,6 +142,10 @@ func NewGenerateStylesStage() Stage {
 				if err := writeJSON(filepath.Join(stylesDir, v.filename), styleDoc); err != nil {
 					return fmt.Errorf("write %s: %w", v.filename, err)
 				}
+			}
+
+			if err := WriteSpriteFiles(stylesDir); err != nil {
+				return fmt.Errorf("write sprites: %w", err)
 			}
 
 			return nil

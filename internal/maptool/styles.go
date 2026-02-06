@@ -493,6 +493,7 @@ const (
 type StyleConfig struct {
 	WorldName      string
 	URLPrefix      string // e.g. "images/maps/stratis"
+	SpritePrefix   string // e.g. "images/maps/stratis/styles" — directory containing sprite files
 	VectorLayers   []string
 	HasSatellite   bool
 	HasHeightmap   bool
@@ -500,10 +501,7 @@ type StyleConfig struct {
 	HasColorRelief bool
 }
 
-const (
-	spriteURL = "https://styles.ocap2.com/sprites/sprite"
-	glyphsURL = "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=TyliLk8pnPbcLwptyzJS"
-)
+const glyphsURL = "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=TyliLk8pnPbcLwptyzJS"
 
 // GenerateStyleDocument creates a full MapLibre style JSON document for the given variant.
 func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]interface{} {
@@ -530,7 +528,7 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		"name":    cfg.WorldName + "-" + string(variant),
 		"sources": sources,
 		"layers":  layers,
-		"sprite":  spriteURL,
+		"sprite":  assetPath(cfg.SpritePrefix, "sprite"),
 		"glyphs":  glyphsURL,
 	}
 	return doc
@@ -701,7 +699,7 @@ var layerVisStandard = layerVisibility{
 	seaLand: true, seaWater: true,
 	forest: true, rocks: true, roads: true, buildings: true,
 	contours: true, labels: true, icons: true,
-	bridges: true, railway: true, powerline: true, vegetation: true,
+	bridges: true, railway: true, powerline: true, vegetation: false,
 }
 
 var layerVisSatellite = layerVisibility{
@@ -715,7 +713,7 @@ var layerVisHybrid = layerVisibility{
 	seaLand: true, seaWater: true,
 	forest: true, rocks: true, roads: true, buildings: true,
 	contours: true, labels: true, icons: true,
-	bridges: true, railway: true, powerline: true, vegetation: true,
+	bridges: true, railway: true, powerline: true, vegetation: false,
 }
 
 // categorizeLayer returns which visibility category a layer belongs to.
@@ -739,7 +737,8 @@ func categorizeLayer(name string) string {
 		return "powerline"
 	case "contours", "contours05", "contours10", "contours50", "contours100":
 		return "contours"
-	case "vegetationbroadleaf", "vegetationfir", "vegetationpalm", "vegetationvineyard":
+	case "tree", "bush",
+		"vegetationbroadleaf", "vegetationfir", "vegetationpalm", "vegetationvineyard":
 		return "vegetation"
 	case "hill", "namemarine", "namelocal", "namevillage", "namecity",
 		"namecitycapital", "citycenter":
