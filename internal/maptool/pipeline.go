@@ -36,12 +36,10 @@ type Job struct {
 	Message     string `json:"message,omitempty"`
 
 	// Populated by stages (internal, not exposed via JSON)
-	WRPPath   string `json:"-"`
 	WorldSize int    `json:"-"`
 	ImageSize int    `json:"-"`
 	MinZoom   int    `json:"-"`
 	MaxZoom   int    `json:"-"`
-	TilesDir  string `json:"-"`
 	SatImage  string `json:"-"`
 	HasVector    bool     `json:"-"`
 	VectorLayers []string `json:"-"` // layer names discovered by grad_meh stage

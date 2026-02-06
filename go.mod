@@ -6,7 +6,6 @@ require (
 	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mattn/go-sqlite3 v1.14.33
-	github.com/rasky/go-lzo v0.0.0-20200203143853-96a758eda86e
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.36.11

@@ -40,10 +40,8 @@ var knownTools = []struct {
 	binaries []string // alternative binary names to search for
 	required bool
 }{
-	{"gdal2tiles.py", []string{"gdal2tiles.py", "gdal2tiles"}, true},
 	{"pmtiles", []string{"pmtiles"}, true},
 	{"tippecanoe", []string{"tippecanoe"}, true},
-	{"depbo", []string{"depbo", "extractpbo", "pboproject"}, false},
 	{"gdal_translate", []string{"gdal_translate"}, false},
 	{"gdaldem", []string{"gdaldem"}, false},
 	{"gdal_contour", []string{"gdal_contour"}, false},

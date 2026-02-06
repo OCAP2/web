@@ -22,19 +22,3 @@ func TestMercatorZoomForWorld(t *testing.T) {
 		assert.Equal(t, tt.wantMax, maxZ, "MercatorZoomForWorld(%d, %d) maxZoom", tt.worldSize, tt.imageSize)
 	}
 }
-
-func TestBuildGdal2tilesArgs(t *testing.T) {
-	args := buildGdal2tilesArgs("/tmp/sat.tiff", "/tmp/tiles", 10, 18)
-	assert.Contains(t, args, "--profile=mercator")
-	assert.Contains(t, args, "-z")
-	assert.Contains(t, args, "10-18")
-	assert.Contains(t, args, "-r")
-	assert.Contains(t, args, "average")
-	assert.Contains(t, args, "/tmp/sat.tiff")
-	assert.Contains(t, args, "/tmp/tiles")
-}
-
-func TestBuildPmtilesConvertArgs(t *testing.T) {
-	args := buildPmtilesConvertArgs("/tmp/tiles", "/output/topo.pmtiles")
-	assert.Equal(t, []string{"convert", "/tmp/tiles", "/output/topo.pmtiles"}, args)
-}

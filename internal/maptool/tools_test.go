@@ -10,10 +10,10 @@ func TestDetectTools(t *testing.T) {
 	tools := DetectTools()
 
 	// Should always return a result for each known tool
-	assert.Len(t, tools, 12)
+	assert.Len(t, tools, 10)
 
 	expectedNames := []string{
-		"gdal2tiles.py", "pmtiles", "tippecanoe", "depbo",
+		"pmtiles", "tippecanoe",
 		"gdal_translate", "gdaldem", "gdal_contour", "gdal_calc.py",
 		"gdaladdo", "gdalbuildvrt", "tile-join", "gdal_fillnodata.py",
 	}
@@ -46,11 +46,11 @@ func TestToolSet_FindTool(t *testing.T) {
 
 func TestToolStatus_MissingRequired(t *testing.T) {
 	tools := ToolSet{
-		{Name: "depbo", Required: true, Found: false},
+		{Name: "tippecanoe", Required: true, Found: false},
 		{Name: "pmtiles", Required: true, Found: true, Path: "/usr/bin/pmtiles"},
 	}
 
 	missing := tools.MissingRequired()
 	assert.Len(t, missing, 1)
-	assert.Equal(t, "depbo", missing[0].Name)
+	assert.Equal(t, "tippecanoe", missing[0].Name)
 }

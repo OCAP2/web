@@ -11,6 +11,19 @@ import (
 	"strconv"
 )
 
+// SatTile represents a decoded satellite tile with its grid position.
+type SatTile struct {
+	X       int    // grid X coordinate
+	Y       int    // grid Y coordinate
+	Width   int    // decoded image width in pixels
+	Height  int    // decoded image height in pixels
+	PNGPath string // path to decoded PNG file
+}
+
+// metersPerDegree is the number of meters per degree of longitude at the equator.
+// Must match METERS_PER_DEGREE in static/scripts/ocap.js.
+const metersPerDegree = 111320
+
 // ScanGradMehSatTiles scans a grad_meh sat/ directory for PNG tiles.
 // The directory structure is sat/{X}/{Y}.png.
 // Returns the tiles, the detected tile pixel size, and any error.
