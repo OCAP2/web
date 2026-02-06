@@ -50,6 +50,17 @@ func contourColorExpr(landColor string) interface{} {
 	}
 }
 
+// darkenedColorExpr returns a MapLibre expression that darkens the feature's
+// "color" property by 50%, interpolating it halfway toward black.
+func darkenedColorExpr() interface{} {
+	return []interface{}{
+		"interpolate-hcl", []interface{}{"linear"},
+		float64(1),                     // input: constant 1
+		float64(0), "#000000",          // stop 0: black
+		float64(2), []interface{}{"to-color", []interface{}{"concat", "#", []interface{}{"get", "color"}}}, // stop 2: data color
+	}
+}
+
 // iconLayout returns a standard symbol layout for an icon layer.
 func iconLayout(iconImage string) map[string]interface{} {
 	return map[string]interface{}{
@@ -128,14 +139,14 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"house": {{
 		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
 		Paint: map[string]interface{}{
-			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-color":     darkenedColorExpr(),
 			"fill-antialias": true,
 			"fill-opacity":   float64(1),
 		},
 	}, {
 		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
 		Paint: map[string]interface{}{
-			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-extrusion-color":   darkenedColorExpr(),
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
 		},
