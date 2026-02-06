@@ -3,6 +3,8 @@ L.Control.MaplibreStyles = L.Control.extend({
 		position: 'bottomright'
 	},
 
+	_storageKey: 'ocap-maplibre-style',
+
 	initialize: function (maplibreLayer, styleUrl, opts) {
 		L.setOptions(this, opts);
 		this._mlLayer = maplibreLayer;
@@ -14,7 +16,10 @@ L.Control.MaplibreStyles = L.Control.extend({
 			{ label: 'Satellite', url: base + 'satellite.json' },
 			{ label: 'Hybrid',    url: base + 'hybrid.json' }
 		];
-		this._active = 0;
+
+		// Restore saved preference
+		var saved = this._loadPreference();
+		this._active = saved !== null ? saved : 0;
 	},
 
 	onAdd: function () {
@@ -47,6 +52,17 @@ L.Control.MaplibreStyles = L.Control.extend({
 			});
 		});
 
+		// Apply saved preference if different from default
+		if (this._active !== 0) {
+			var idx = this._active;
+			var self2 = this;
+			// Wait for MapLibre GL map to be ready before switching style
+			var glMap = this._mlLayer.getMaplibreMap();
+			if (glMap) {
+				glMap.once('load', function () { self2._setStyle(idx); });
+			}
+		}
+
 		this._container = container;
 		return container;
 	},
@@ -71,6 +87,22 @@ L.Control.MaplibreStyles = L.Control.extend({
 		L.DomUtil.addClass(this._buttons[this._active], 'active');
 
 		glMap.setStyle(this._styles[index].url);
+		this._savePreference(index);
+	},
+
+	_savePreference: function (index) {
+		try { localStorage.setItem(this._storageKey, index); } catch (e) {}
+	},
+
+	_loadPreference: function () {
+		try {
+			var val = localStorage.getItem(this._storageKey);
+			if (val !== null) {
+				var idx = parseInt(val, 10);
+				if (idx >= 0 && idx < this._styles.length) return idx;
+			}
+		} catch (e) {}
+		return null;
 	}
 });
 
