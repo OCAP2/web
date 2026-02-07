@@ -420,16 +420,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 
 	// --- Object symbols ---
 	"rock":        {makeIconStyle("rock", "objects/rock", 16)},
-	"tree": {{
-		ID: "tree", Type: "circle", SourceLayer: "tree", MinZoom: 15,
-		Paint: map[string]interface{}{
-			"circle-radius":       []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 15.0, 3.0, 18.0, 6.0, 20.0, 10.0},
-			"circle-color":        "transparent",
-			"circle-stroke-color": "#5CA05C",
-			"circle-stroke-width": 1.5,
-			"circle-opacity":      0.7,
-		},
-	}},
+	"tree":        makeTreeCircleStyle("#5CA05C"),
 	"chapel":      {makeIconStyle("chapel", "objects/chapel", 15)},
 	"church":      {makeIconStyle("church", "objects/church", 15)},
 	"cross":       {makeIconStyle("cross", "objects/cross", 15)},
@@ -599,6 +590,19 @@ func makeLabelStyle(name, color string, minZoom int) LayerStyle {
 	}
 }
 
+func makeTreeCircleStyle(strokeColor string) []LayerStyle {
+	return []LayerStyle{{
+		ID: "tree", Type: "circle", SourceLayer: "tree", MinZoom: 15,
+		Paint: map[string]interface{}{
+			"circle-radius":       []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 15.0, 3.0, 18.0, 6.0, 20.0, 10.0},
+			"circle-color":        "transparent",
+			"circle-stroke-color": strokeColor,
+			"circle-stroke-width": 1.5,
+			"circle-opacity":      0.7,
+		},
+	}}
+}
+
 func makeTopoLabel(name, color string) LayerStyle {
 	return LayerStyle{
 		ID: name, Type: "symbol", SourceLayer: name,
@@ -700,17 +704,8 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"line-color": "#808080", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
-	"rock": {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
-	"tree": {{
-		ID: "tree", Type: "circle", SourceLayer: "tree", MinZoom: 15,
-		Paint: map[string]interface{}{
-			"circle-radius":       []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 15.0, 3.0, 18.0, 6.0, 20.0, 10.0},
-			"circle-color":        "transparent",
-			"circle-stroke-color": "#5CA05C",
-			"circle-stroke-width": 1.5,
-			"circle-opacity":      0.7,
-		},
-	}},
+	"rock":        {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
+	"tree":        makeTreeCircleStyle("#5CA05C"),
 	"fuelstation": {makeTopoSymbol("fuelstation", "objects/fuelstation", 0.125, false)},
 	"transmitter": {makeTopoSymbol("transmitter", "objects/transmitter", 0.125, false)},
 	"stack":       {makeTopoSymbol("stack", "objects/stack", 0.125, false)},
@@ -865,17 +860,8 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"line-color": "#555555", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
-	"rock": {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
-	"tree": {{
-		ID: "tree", Type: "circle", SourceLayer: "tree", MinZoom: 15,
-		Paint: map[string]interface{}{
-			"circle-radius":       []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 15.0, 3.0, 18.0, 6.0, 20.0, 10.0},
-			"circle-color":        "transparent",
-			"circle-stroke-color": "#6BBF6B",
-			"circle-stroke-width": 1.5,
-			"circle-opacity":      0.7,
-		},
-	}},
+	"rock":        {makeTopoSymbol("rock", "objects/rock", 0.125, true)},
+	"tree":        makeTreeCircleStyle("#6BBF6B"),
 	"fuelstation": {makeTopoSymbol("fuelstation", "objects/fuelstation", 0.125, false)},
 	"transmitter": {makeTopoSymbol("transmitter", "objects/transmitter", 0.125, false)},
 	"stack":       {makeTopoSymbol("stack", "objects/stack", 0.125, false)},
