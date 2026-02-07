@@ -1,8 +1,10 @@
 package maptool
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -86,11 +88,12 @@ func NewGenerateContoursStage(tools ToolSet) Stage {
 				seaPath,
 			}
 			log.Printf("Generating sea polygons from DEM")
+			var seaOut bytes.Buffer
 			seaCmd := exec.CommandContext(ctx, gdalContour.Path, seaArgs...)
-			seaCmd.Stdout = os.Stdout
-			seaCmd.Stderr = os.Stderr
+			seaCmd.Stdout = io.MultiWriter(os.Stdout, &seaOut)
+			seaCmd.Stderr = io.MultiWriter(os.Stderr, &seaOut)
 			if err := seaCmd.Run(); err != nil {
-				log.Printf("WARNING: sea polygon generation failed: %v", err)
+				log.Printf("WARNING: sea polygon generation failed: %v\nOutput:\n%s", err, seaOut.String())
 			} else {
 				job.SeaFile = seaPath
 				log.Printf("Generated sea.geojson")

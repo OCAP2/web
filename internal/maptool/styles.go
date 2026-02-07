@@ -1047,22 +1047,30 @@ func hasVectorLayer(layers []string, name string) bool {
 	return false
 }
 
+// buildLandSeaLayers returns fill layers for land and sea polygons from the
+// "sea" vector source layer, filtered by ELEV_MAX. Used by topo and topo-dark.
+func buildLandSeaLayers(landColor, seaColor string) []interface{} {
+	return []interface{}{
+		map[string]interface{}{
+			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": landColor, "fill-opacity": 0.8, "fill-antialias": true},
+		},
+		map[string]interface{}{
+			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": seaColor, "fill-opacity": 0.8, "fill-antialias": true},
+		},
+	}
+}
+
 func buildTopoLayers(cfg StyleConfig) []interface{} {
 	var layers []interface{}
 
 	// Land/sea fills — rendered immediately after background so everything
 	// else draws on top. Land provides the base terrain color; sea fills oceans.
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, map[string]interface{}{
-			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-			"paint":  map[string]interface{}{"fill-color": "#DFDFDF", "fill-opacity": 0.8, "fill-antialias": true},
-		})
-		layers = append(layers, map[string]interface{}{
-			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-			"paint":  map[string]interface{}{"fill-color": "#36B", "fill-opacity": 0.8, "fill-antialias": true},
-		})
+		layers = append(layers, buildLandSeaLayers("#DFDFDF", "#36B")...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
@@ -1182,16 +1190,7 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 
 	// Land/sea fills — dark variants
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, map[string]interface{}{
-			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-			"paint":  map[string]interface{}{"fill-color": "#2a2a2a", "fill-opacity": 0.8, "fill-antialias": true},
-		})
-		layers = append(layers, map[string]interface{}{
-			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-			"paint":  map[string]interface{}{"fill-color": "#1a3a5c", "fill-opacity": 0.8, "fill-antialias": true},
-		})
+		layers = append(layers, buildLandSeaLayers("#2a2a2a", "#1a3a5c")...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
