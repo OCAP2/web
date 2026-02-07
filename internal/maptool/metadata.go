@@ -139,8 +139,6 @@ func NewGenerateStylesStage() Stage {
 				{StyleTopo, "topo.json"},
 				{StyleTopoDark, "topo-dark.json"},
 				{StyleTopoRelief, "topo-relief.json"},
-				{StyleSatellite, "satellite.json"},
-				{StyleHybrid, "hybrid.json"},
 				{StyleColorRelief, "color-relief.json"},
 			}
 

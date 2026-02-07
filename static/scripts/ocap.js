@@ -610,8 +610,6 @@ function initMap (world) {
 		var styleCandidates = [
 			{ label: getLocalizable('basemap_topographic'),        url: styleBase + 'topo.json' },
 			{ label: getLocalizable('basemap_topographic_dark'),   url: styleBase + 'topo-dark.json' },
-			{ label: getLocalizable('basemap_satellite'),          url: styleBase + 'satellite.json' },
-			{ label: getLocalizable('basemap_hybrid'),             url: styleBase + 'hybrid.json' },
 			{ label: getLocalizable('basemap_color_relief'),       url: styleBase + 'color-relief.json' },
 			{ label: getLocalizable('basemap_topographic_relief'), url: styleBase + 'topo-relief.json' }
 		];

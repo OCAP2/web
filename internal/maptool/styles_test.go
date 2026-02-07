@@ -98,14 +98,6 @@ func TestIsLayerVisible_SeaPartial(t *testing.T) {
 	assert.False(t, isLayerVisible("sea", neither))
 }
 
-func TestIsLayerVisible_SatelliteVariant(t *testing.T) {
-	// Satellite mode: no forest, no vegetation, no land
-	assert.False(t, isLayerVisible("forest", layerVisSatellite))
-	assert.False(t, isLayerVisible("tree", layerVisSatellite))
-	assert.True(t, isLayerVisible("road", layerVisSatellite))
-	assert.True(t, isLayerVisible("namecity", layerVisSatellite))
-}
-
 func TestGetLayerStyles_Known(t *testing.T) {
 	styles := GetLayerStyles("road")
 	require.Len(t, styles, 2, "road should have outline + fill")
@@ -237,7 +229,7 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 		HasHillshade: true,
 	}
 
-	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleTopoRelief, StyleSatellite, StyleHybrid} {
+	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleTopoRelief} {
 		t.Run(string(variant), func(t *testing.T) {
 			doc := GenerateStyleDocument(cfg, variant)
 			assert.Equal(t, "stratis-"+string(variant), doc["name"])
@@ -314,11 +306,9 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 		expected []string
 		banned   []string
 	}{
-		{StyleTopo, []string{"features", "satellite"}, []string{"color-relief", "hillshade-full", "heightmap"}},
-		{StyleTopoDark, []string{"features", "satellite"}, []string{"color-relief", "hillshade-full", "heightmap"}},
+		{StyleTopo, []string{"features"}, []string{"color-relief", "hillshade-full", "heightmap", "satellite"}},
+		{StyleTopoDark, []string{"features"}, []string{"color-relief", "hillshade-full", "heightmap", "satellite"}},
 		{StyleTopoRelief, []string{"features", "hillshade-full"}, []string{"satellite", "color-relief"}},
-		{StyleSatellite, []string{"features", "satellite", "hillshade"}, []string{"color-relief", "hillshade-full"}},
-		{StyleHybrid, []string{"features", "satellite", "heightmap"}, []string{"color-relief", "hillshade-full"}},
 		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "hillshade-full"}},
 	}
 

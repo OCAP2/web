@@ -960,8 +960,6 @@ const (
 	StyleTopo        StyleVariant = "topo"
 	StyleTopoDark    StyleVariant = "topo-dark"
 	StyleTopoRelief  StyleVariant = "topo-relief"
-	StyleSatellite   StyleVariant = "satellite"
-	StyleHybrid      StyleVariant = "hybrid"
 )
 
 // StyleConfig holds the parameters for generating a style document.
@@ -1005,10 +1003,6 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		layers = append(layers, buildTopoDarkLayers(cfg)...)
 	case StyleTopoRelief:
 		layers = append(layers, buildTopoReliefLayers(cfg)...)
-	case StyleSatellite:
-		layers = append(layers, buildSatelliteLayers(cfg)...)
-	case StyleHybrid:
-		layers = append(layers, buildHybridLayers(cfg)...)
 	}
 
 	// Only include sources that are actually referenced by layers
@@ -1168,15 +1162,6 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 		layers = append(layers, buildLandSeaLayers(landColor, arma3SeaColor)...)
 	}
 
-	// Satellite (hidden by default, allows layer toggle in UI)
-	if cfg.HasSatellite {
-		layers = append(layers, map[string]interface{}{
-			"id": "satellite", "type": "raster", "source": "satellite",
-			"layout": map[string]interface{}{"visibility": "none"},
-			"paint":  map[string]interface{}{"raster-opacity": 1.0},
-		})
-	}
-
 	// Vector feature layers in topo render order
 	layers = append(layers, buildTopoVectorFeatureLayers(cfg.VectorLayers)...)
 
@@ -1271,15 +1256,6 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 		layers = append(layers, buildLandSeaLayers(landColorDark, arma3SeaColorDark)...)
 	}
 
-	// Satellite (hidden by default, allows layer toggle in UI)
-	if cfg.HasSatellite {
-		layers = append(layers, map[string]interface{}{
-			"id": "satellite", "type": "raster", "source": "satellite",
-			"layout": map[string]interface{}{"visibility": "none"},
-			"paint":  map[string]interface{}{"raster-opacity": 1.0},
-		})
-	}
-
 	// Vector feature layers in topo render order with dark styles
 	layers = append(layers, buildTopoDarkVectorFeatureLayers(cfg.VectorLayers)...)
 
@@ -1318,71 +1294,6 @@ func buildTopoReliefLayers(cfg StyleConfig) []interface{} {
 	return layers
 }
 
-// --- Satellite style layers ---
-
-func buildSatelliteLayers(cfg StyleConfig) []interface{} {
-	var layers []interface{}
-
-	// Hillshade at 40% with high contrast
-	if cfg.HasHillshade {
-		layers = append(layers, map[string]interface{}{
-			"id": "hillshade-raster", "type": "raster", "source": "hillshade",
-			"paint": map[string]interface{}{
-				"raster-opacity": 0.4,
-				"raster-contrast": 0.3,
-			},
-		})
-	}
-
-	// Satellite at 100%
-	if cfg.HasSatellite {
-		layers = append(layers, map[string]interface{}{
-			"id": "satellite", "type": "raster", "source": "satellite",
-		})
-	}
-
-	// Sea fill at 50% opacity, no land fill
-	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisSatellite)...)
-
-	return layers
-}
-
-// --- Hybrid style layers ---
-
-func buildHybridLayers(cfg StyleConfig) []interface{} {
-	var layers []interface{}
-
-	// Native hillshade from heightmap DEM source
-	if cfg.HasHeightmap {
-		layers = append(layers, map[string]interface{}{
-			"id":     "hillshade-native",
-			"type":   "hillshade",
-			"source": "heightmap",
-			"paint": map[string]interface{}{
-				"hillshade-shadow-color":    "#000000",
-				"hillshade-highlight-color": "#ffffff",
-				"hillshade-exaggeration":    0.3,
-			},
-		})
-	}
-
-	// Satellite at 60% with reduced saturation
-	if cfg.HasSatellite {
-		layers = append(layers, map[string]interface{}{
-			"id": "satellite", "type": "raster", "source": "satellite",
-			"paint": map[string]interface{}{
-				"raster-opacity":   0.6,
-				"raster-saturation": -0.3,
-			},
-		})
-	}
-
-	// Full vector features
-	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisHybrid)...)
-
-	return layers
-}
-
 // layerVisibility controls per-layer visibility across style variants.
 type layerVisibility struct {
 	seaLand     bool
@@ -1409,20 +1320,6 @@ var layerVisColorRelief = layerVisibility{
 }
 
 var layerVisStandard = layerVisibility{
-	seaLand: true, seaWater: true,
-	forest: true, rocks: true, roads: true, buildings: true,
-	contours: true, labels: true, icons: true,
-	bridges: true, railway: true, powerline: true, vegetation: false,
-}
-
-var layerVisSatellite = layerVisibility{
-	seaLand: false, seaWater: true, seaOpacity: 0.5,
-	forest: false, rocks: true, roads: true, buildings: true,
-	contours: true, labels: true, icons: true,
-	bridges: true, railway: true, powerline: true, vegetation: false,
-}
-
-var layerVisHybrid = layerVisibility{
 	seaLand: true, seaWater: true,
 	forest: true, rocks: true, roads: true, buildings: true,
 	contours: true, labels: true, icons: true,

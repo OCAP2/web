@@ -384,20 +384,6 @@ let _localizable = {
 		"cs": "Topografická tmavá",
 		"it": "Topografica scura"
 	},
-	"basemap_satellite": {
-		"ru": "Спутник",
-		"en": "Satellite",
-		"de": "Satellit",
-		"cs": "Satelitní",
-		"it": "Satellite"
-	},
-	"basemap_hybrid": {
-		"ru": "Гибрид",
-		"en": "Hybrid",
-		"de": "Hybrid",
-		"cs": "Hybridní",
-		"it": "Ibrida"
-	},
 	"basemap_color_relief": {
 		"ru": "Цветной рельеф",
 		"en": "Color Relief",

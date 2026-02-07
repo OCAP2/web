@@ -122,8 +122,6 @@ func restyleWorld(mapsDir, worldName string) error {
 		{maptool.StyleTopo, "topo.json"},
 		{maptool.StyleTopoDark, "topo-dark.json"},
 		{maptool.StyleTopoRelief, "topo-relief.json"},
-		{maptool.StyleSatellite, "satellite.json"},
-		{maptool.StyleHybrid, "hybrid.json"},
 		{maptool.StyleColorRelief, "color-relief.json"},
 	}
 
