@@ -125,6 +125,7 @@ func BuildGradMehVRT(vrtPath string, tiles []SatTile, tileSize, worldSize int) e
 	for i, t := range tiles {
 		abs, err := filepath.Abs(t.PNGPath)
 		if err != nil {
+			log.Printf("WARNING: failed to get absolute path for %q: %v. Using original path.", t.PNGPath, err)
 			abs = t.PNGPath
 		}
 		absTiles[i] = SatTile{X: t.X, Y: t.Y, Width: t.Width, Height: t.Height, PNGPath: abs}
