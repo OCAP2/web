@@ -96,8 +96,11 @@ L.Control.MaplibreStyles = L.Control.extend({
 			self._active = activeIdx;
 			L.DomUtil.addClass(self._items[activeIdx], 'active');
 
+			// Cache available indices for use in _setStyle
+			self._availableIndices = availableIndices;
+
 			// Set "alt" on the next available style (shown when collapsed)
-			self._updateAlt(availableIndices);
+			self._updateAlt();
 
 			// Expand/collapse on hover for non-mobile
 			if (availableIndices.length > 1 && !L.Browser.mobile) {
@@ -143,7 +146,16 @@ L.Control.MaplibreStyles = L.Control.extend({
 			preserveDrawingBuffer: true
 		});
 
+		var timeoutId = setTimeout(function () {
+			if (div.parentNode) {
+				try { miniMap.remove(); } catch (e) {}
+				document.body.removeChild(div);
+			}
+		}, 10000);
+
 		miniMap.once('idle', function () {
+			clearTimeout(timeoutId);
+			if (!div.parentNode) return;
 			try {
 				var dataUrl = miniMap.getCanvas().toDataURL();
 				callback(dataUrl);
@@ -153,14 +165,6 @@ L.Control.MaplibreStyles = L.Control.extend({
 			miniMap.remove();
 			document.body.removeChild(div);
 		});
-
-		// Timeout fallback in case idle never fires
-		setTimeout(function () {
-			if (div.parentNode) {
-				try { miniMap.remove(); } catch (e) {}
-				document.body.removeChild(div);
-			}
-		}, 10000);
 	},
 
 	_setStyle: function (index) {
@@ -173,20 +177,14 @@ L.Control.MaplibreStyles = L.Control.extend({
 		this._active = index;
 		L.DomUtil.addClass(this._items[this._active], 'active');
 
-		// Update alt marker to next available style after the new active
-		var available = [];
-		for (var i = 0; i < this._items.length; i++) {
-			if (this._items[i] && this._items[i].style.display !== 'none') {
-				available.push(i);
-			}
-		}
-		this._updateAlt(available);
+		this._updateAlt();
 
 		glMap.setStyle(this._candidates[index].url);
 		this._savePreference(index);
 	},
 
-	_updateAlt: function (availableIndices) {
+	_updateAlt: function () {
+		var availableIndices = this._availableIndices;
 		// Remove existing alt
 		for (var i = 0; i < this._items.length; i++) {
 			if (this._items[i]) {
