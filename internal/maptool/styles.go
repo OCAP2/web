@@ -742,12 +742,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
-	"powerline": {{
-		ID: "powerline", Type: "line", SourceLayer: "powerline",
-		Paint: map[string]interface{}{
-			"line-color": "#000000", "line-opacity": 1.0, "line-width": 1.0,
-		},
-	}},
+	"powerline": {},
 	"runway": {{
 		ID: "runway", Type: "line", SourceLayer: "runway",
 		Paint: map[string]interface{}{
@@ -897,12 +892,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
-	"powerline": {{
-		ID: "powerline", Type: "line", SourceLayer: "powerline",
-		Paint: map[string]interface{}{
-			"line-color": "#666666", "line-opacity": 1.0, "line-width": 1.0,
-		},
-	}},
+	"powerline": {},
 	"runway": {{
 		ID: "runway", Type: "line", SourceLayer: "runway",
 		Paint: map[string]interface{}{
