@@ -973,7 +973,7 @@ type StyleConfig struct {
 	HasSatellite   bool
 	HasHeightmap   bool
 	HasHillshade     bool
-	HasHillshadeFull bool
+	HasBathymetry    bool
 	HasColorRelief   bool
 	GlyphsURL      string // template for font glyphs, e.g. "../../fonts/{fontstack}/{range}.pbf"
 }
@@ -1077,10 +1077,10 @@ func buildSources(cfg StyleConfig) map[string]interface{} {
 		}
 	}
 
-	if cfg.HasHillshadeFull {
-		sources["hillshade-full"] = map[string]interface{}{
+	if cfg.HasBathymetry {
+		sources["bathymetry"] = map[string]interface{}{
 			"type":     "raster",
-			"url":      "pmtiles://" + assetPath(prefix, "hillshade-full.pmtiles"),
+			"url":      "pmtiles://" + assetPath(prefix, "bathymetry.pmtiles"),
 			"tileSize": 256,
 		}
 	}
@@ -1330,10 +1330,10 @@ func buildTopoReliefLayers(cfg StyleConfig) []interface{} {
 		layers = append(layers, buildLandSeaLayers(landColor, arma3SeaColor)...)
 	}
 
-	// Hillshade at 50% opacity for 3D depth — prefer full (land+underwater), fall back to land-only
+	// Hillshade at 50% opacity for 3D depth — prefer bathymetry (land+underwater), fall back to land-only
 	var hillshadeSource string
-	if cfg.HasHillshadeFull {
-		hillshadeSource = "hillshade-full"
+	if cfg.HasBathymetry {
+		hillshadeSource = "bathymetry"
 	} else if cfg.HasHillshade {
 		hillshadeSource = "hillshade"
 	}

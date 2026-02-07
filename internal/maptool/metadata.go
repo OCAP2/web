@@ -127,7 +127,7 @@ func NewGenerateStylesStage() Stage {
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,
 				HasHillshade:     job.HasHillshade,
-				HasHillshadeFull: job.HasHillshadeFull,
+				HasBathymetry:    job.HasBathymetry,
 				HasColorRelief:   job.HasColorRelief,
 				GlyphsURL:      glyphsURL,
 			}

@@ -258,11 +258,11 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 		HasSatellite:     true,
 		HasHeightmap:     true,
 		HasHillshade:     true,
-		HasHillshadeFull: true,
+		HasBathymetry:    true,
 		HasColorRelief:   true,
 	}
 
-	// Color-relief references: features, color-relief, hillshade, satellite — but NOT heightmap or hillshade-full
+	// Color-relief references: features, color-relief, hillshade, satellite — but NOT heightmap or bathymetry
 	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 	sources := doc["sources"].(map[string]interface{})
 
@@ -271,7 +271,7 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 	assert.Contains(t, sources, "hillshade")
 	assert.Contains(t, sources, "color-relief")
 	assert.NotContains(t, sources, "heightmap", "heightmap not referenced by color-relief layers")
-	assert.NotContains(t, sources, "hillshade-full", "hillshade-full not referenced by color-relief layers")
+	assert.NotContains(t, sources, "bathymetry", "bathymetry not referenced by color-relief layers")
 }
 
 func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
@@ -288,7 +288,7 @@ func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
 	assert.NotContains(t, sources, "satellite")
 	assert.NotContains(t, sources, "heightmap")
 	assert.NotContains(t, sources, "hillshade")
-	assert.NotContains(t, sources, "hillshade-full")
+	assert.NotContains(t, sources, "bathymetry")
 	assert.NotContains(t, sources, "color-relief")
 }
 
@@ -300,7 +300,7 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 		HasSatellite:     true,
 		HasHeightmap:     true,
 		HasHillshade:     true,
-		HasHillshadeFull: true,
+		HasBathymetry:    true,
 		HasColorRelief:   true,
 	}
 
@@ -314,12 +314,12 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 		expected []string
 		banned   []string
 	}{
-		{StyleTopo, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
-		{StyleTopoDark, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
-		{StyleTopoRelief, []string{"features", "hillshade-full"}, []string{"satellite", "color-relief"}},
-		{StyleSatellite, []string{"features", "satellite", "hillshade"}, []string{"color-relief", "hillshade-full"}},
-		{StyleHybrid, []string{"features", "satellite", "heightmap"}, []string{"color-relief", "hillshade-full"}},
-		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "hillshade-full"}},
+		{StyleTopo, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "bathymetry"}},
+		{StyleTopoDark, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "bathymetry"}},
+		{StyleTopoRelief, []string{"features", "bathymetry"}, []string{"satellite", "color-relief"}},
+		{StyleSatellite, []string{"features", "satellite", "hillshade"}, []string{"color-relief", "bathymetry"}},
+		{StyleHybrid, []string{"features", "satellite", "heightmap"}, []string{"color-relief", "bathymetry"}},
+		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "bathymetry"}},
 	}
 
 	for _, tt := range tests {
