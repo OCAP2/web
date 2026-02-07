@@ -77,10 +77,10 @@ func NewGenerateBathymetryStage(tools ToolSet) Stage {
 			}
 
 			// Generate hillshade from full DEM (no sea masking)
-			hillshadeTif := filepath.Join(job.TempDir, "bathymetry.tif")
+			bathymetryTif := filepath.Join(job.TempDir, "bathymetry.tif")
 			log.Printf("Generating bathymetry hillshade (including underwater)")
 			if err := runCmd(ctx, ht.gdalDem,
-				"hillshade", job.DEMPath, hillshadeTif,
+				"hillshade", job.DEMPath, bathymetryTif,
 				"-alg", "ZevenbergenThorne",
 				"-multidirectional",
 				"-z", "1.0", "-s", "1.0", "-alt", "45.0",
@@ -93,7 +93,7 @@ func NewGenerateBathymetryStage(tools ToolSet) Stage {
 			// Convert to PMTiles
 			mbtilesPath := filepath.Join(job.TempDir, "bathymetry.mbtiles")
 			outputPath := filepath.Join(job.TilesOutputDir(), "bathymetry.pmtiles")
-			if err := rasterToPMTiles(ctx, ht, hillshadeTif, mbtilesPath, outputPath, "bathymetry"); err != nil {
+			if err := rasterToPMTiles(ctx, ht, bathymetryTif, mbtilesPath, outputPath, "bathymetry"); err != nil {
 				return err
 			}
 
