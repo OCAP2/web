@@ -647,7 +647,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
-			"text-field":       []interface{}{"get", "elevation"},
+			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
 			"text-font":        []interface{}{"OpenSans-Regular"},
 			"text-size":        10,
 			"text-max-angle":   30,
@@ -804,7 +804,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
-			"text-field":       []interface{}{"get", "elevation"},
+			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
 			"text-font":        []interface{}{"OpenSans-Regular"},
 			"text-size":        10,
 			"text-max-angle":   30,
