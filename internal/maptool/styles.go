@@ -114,11 +114,16 @@ func seaContourOpacityExpr(landOpacity float64) interface{} {
 
 // topoTextLayout returns a label layout for the topo style variant.
 func topoTextLayout() map[string]interface{} {
+	return topoTextLayoutSized(12.0, 32.0)
+}
+
+// topoTextLayoutSized returns a topo label layout with custom text size range.
+func topoTextLayoutSized(minSize, maxSize float64) map[string]interface{} {
 	return map[string]interface{}{
 		"text-field":  []interface{}{"get", "name"},
 		"text-font":   []interface{}{"OpenSans-Regular"},
 		"text-anchor": "left",
-		"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
+		"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, minSize, 16.0, maxSize},
 		"text-offset": []interface{}{1.0, 0.0},
 	}
 }
@@ -791,18 +796,18 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"namelocal":         {makeTopoLabel("namelocal", "#70614D")},
 	"namevillage": {{
 		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MaxZoom: 17,
-		Layout: topoTextLayout(),
+		Layout: topoTextLayoutSized(14.0, 40.0),
 		Paint:  map[string]interface{}{"text-color": "#CCCCCC", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
 	}},
 	"namecity": {{
 		ID: "namecity", Type: "symbol", SourceLayer: "namecity", MaxZoom: 17,
-		Layout: topoTextLayout(),
-		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
+		Layout: topoTextLayoutSized(18.0, 46.0),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0},
 	}},
 	"namecitycapital": {{
 		ID: "namecitycapital", Type: "symbol", SourceLayer: "namecitycapital", MaxZoom: 17,
-		Layout: topoTextLayout(),
-		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
+		Layout: topoTextLayoutSized(24.0, 54.0),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0},
 	}},
 }
 
@@ -948,16 +953,28 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"dangerousforces":  {makeTopoDarkLabel("dangerousforces", "#CCCCCC")},
 	"safetyzone":       {makeTopoDarkLabel("safetyzone", "#CCCCCC")},
 	"power":            {makeTopoDarkLabel("power", "#CCCCCC")},
-	"citycenter":        {makeTopoDarkLabel("citycenter", "#8a9a7a")},
+	"citycenter":        {makeTopoDarkLabel("citycenter", "#B0C0A0")},
 	"namemarine": {{
 		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MaxZoom: 17,
 		Layout: topoTextLayout(),
 		Paint:  map[string]interface{}{"text-color": "#5599DD", "text-opacity": 1.0},
 	}},
-	"namelocal":         {makeTopoDarkLabel("namelocal", "#B8A88A")},
-	"namevillage":       {makeTopoDarkLabel("namevillage", "#CCCCCC")},
-	"namecity":          {makeTopoDarkLabel("namecity", "#FFFFFF")},
-	"namecitycapital":   {makeTopoDarkLabel("namecitycapital", "#FFFFFF")},
+	"namelocal":         {makeTopoDarkLabel("namelocal", "#D0C0A0")},
+	"namevillage": {{
+		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MaxZoom: 17,
+		Layout: topoTextLayoutSized(14.0, 40.0),
+		Paint:  topoDarkTextPaint("#DDDDDD"),
+	}},
+	"namecity": {{
+		ID: "namecity", Type: "symbol", SourceLayer: "namecity", MaxZoom: 17,
+		Layout: topoTextLayoutSized(18.0, 46.0),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0},
+	}},
+	"namecitycapital": {{
+		ID: "namecitycapital", Type: "symbol", SourceLayer: "namecitycapital", MaxZoom: 17,
+		Layout: topoTextLayoutSized(24.0, 54.0),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0},
+	}},
 }
 
 // StyleVariant identifies which style variant to generate.
