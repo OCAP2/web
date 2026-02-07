@@ -19,11 +19,11 @@ type LayerStyle struct {
 func roadWidthInterp() interface{} {
 	return []interface{}{
 		"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
-		float64(10), []interface{}{"/", []interface{}{"get", "width"}, float64(8)},
-		float64(12), []interface{}{"/", []interface{}{"get", "width"}, float64(6)},
-		float64(16), []interface{}{"/", []interface{}{"get", "width"}, float64(3)},
-		float64(18), []interface{}{"*", []interface{}{"get", "width"}, 2.5},
-		float64(20), []interface{}{"*", []interface{}{"get", "width"}, float64(3)},
+		10.0, []interface{}{"/", []interface{}{"get", "width"}, 8.0},
+		12.0, []interface{}{"/", []interface{}{"get", "width"}, 6.0},
+		16.0, []interface{}{"/", []interface{}{"get", "width"}, 3.0},
+		18.0, []interface{}{"*", []interface{}{"get", "width"}, 2.5},
+		20.0, []interface{}{"*", []interface{}{"get", "width"}, 3.0},
 	}
 }
 
@@ -31,11 +31,11 @@ func roadWidthInterp() interface{} {
 func roadOutlineWidthInterp() interface{} {
 	return []interface{}{
 		"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
-		float64(10), []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, float64(8)},
-		float64(12), []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, float64(6)},
-		float64(16), []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, float64(3)},
-		float64(18), []interface{}{"*", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 2.5},
-		float64(20), []interface{}{"*", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, float64(3)},
+		10.0, []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 8.0},
+		12.0, []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 6.0},
+		16.0, []interface{}{"/", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 3.0},
+		18.0, []interface{}{"*", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 2.5},
+		20.0, []interface{}{"*", []interface{}{"*", []interface{}{"get", "width"}, 1.3}, 3.0},
 	}
 }
 
@@ -44,7 +44,7 @@ func roadOutlineWidthInterp() interface{} {
 func contourColorExpr(landColor string) interface{} {
 	return []interface{}{
 		"case",
-		[]interface{}{"<", []interface{}{"get", "elevation"}, float64(0)},
+		[]interface{}{"<", []interface{}{"get", "elevation"}, 0.0},
 		"#a2b5ce",
 		landColor,
 	}
@@ -55,7 +55,7 @@ func contourColorExpr(landColor string) interface{} {
 func topoContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
-		[]interface{}{"<=", []interface{}{"get", "elevation"}, float64(0)},
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		"#80C3FF",
 		"#D1BA94",
 	}
@@ -67,8 +67,8 @@ func topoTextLayout() map[string]interface{} {
 		"text-field":  []interface{}{"get", "name"},
 		"text-font":   []interface{}{"OpenSans-Regular"},
 		"text-anchor": "left",
-		"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
-		"text-offset": []interface{}{float64(1), float64(0)},
+		"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+		"text-offset": []interface{}{1.0, 0.0},
 	}
 }
 
@@ -76,10 +76,10 @@ func topoTextLayout() map[string]interface{} {
 func topoTextPaint(color string) map[string]interface{} {
 	return map[string]interface{}{
 		"text-color":      color,
-		"text-opacity":    float64(1),
+		"text-opacity":    1.0,
 		"text-halo-color": "#000000",
-		"text-halo-width": float64(1),
-		"text-halo-blur":  float64(0),
+		"text-halo-width": 1.0,
+		"text-halo-blur":  0.0,
 	}
 }
 
@@ -88,7 +88,7 @@ func topoTextPaint(color string) map[string]interface{} {
 func topoDarkContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
-		[]interface{}{"<=", []interface{}{"get", "elevation"}, float64(0)},
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		"#3a5a7a",
 		"#5a4a3a",
 	}
@@ -98,10 +98,10 @@ func topoDarkContourColorExpr() interface{} {
 func topoDarkTextPaint(color string) map[string]interface{} {
 	return map[string]interface{}{
 		"text-color":      color,
-		"text-opacity":    float64(1),
+		"text-opacity":    1.0,
 		"text-halo-color": "#111111",
-		"text-halo-width": float64(1),
-		"text-halo-blur":  float64(0),
+		"text-halo-width": 1.0,
+		"text-halo-blur":  0.0,
 	}
 }
 
@@ -119,7 +119,7 @@ func makeTopoSymbol(name, iconImage string, iconSize float64, allowOverlap bool)
 		ID: name, Type: "symbol", SourceLayer: name,
 		Layout: map[string]interface{}{
 			"icon-image": iconImage, "icon-anchor": "center",
-			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), iconSize, float64(16), iconSize * 4},
+			"icon-size":             []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, iconSize, 16.0, iconSize * 4},
 			"icon-allow-overlap":    allowOverlap,
 			"icon-ignore-placement": allowOverlap,
 		},
@@ -130,7 +130,7 @@ func makeTopoSymbol(name, iconImage string, iconSize float64, allowOverlap bool)
 func iconLayout(iconImage string) map[string]interface{} {
 	return map[string]interface{}{
 		"icon-image":              iconImage,
-		"icon-size":               []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 0.25, float64(16), float64(1)},
+		"icon-size":               []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 0.25, 16.0, 1.0},
 		"icon-anchor":             "center",
 		"icon-allow-overlap":      false,
 		"icon-ignore-placement":   false,
@@ -186,12 +186,12 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}},
 	"sea": {{
 		ID: "sea-land", Type: "fill", SourceLayer: "sea", MinZoom: 8,
-		Filter: []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-		Paint:  map[string]interface{}{"fill-color": "#DFDFDF", "fill-opacity": float64(1), "fill-antialias": true},
+		Filter: []interface{}{">", []interface{}{"get", "ELEV_MAX"}, 0.0},
+		Paint:  map[string]interface{}{"fill-color": "#DFDFDF", "fill-opacity": 1.0, "fill-antialias": true},
 	}, {
 		ID: "sea-water", Type: "fill", SourceLayer: "sea", MinZoom: 8,
-		Filter: []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
-		Paint:  map[string]interface{}{"fill-color": "#b7cbe6", "fill-opacity": float64(1), "fill-antialias": false},
+		Filter: []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, 0.0},
+		Paint:  map[string]interface{}{"fill-color": "#b7cbe6", "fill-opacity": 1.0, "fill-antialias": false},
 	}},
 	"rocks": {{
 		ID: "rocks", Type: "fill", SourceLayer: "rocks", MinZoom: 16,
@@ -206,14 +206,14 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-antialias": true,
-			"fill-opacity":   float64(1),
+			"fill-opacity":   1.0,
 		},
 	}, {
 		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-extrusion-height":  []interface{}{"get", "height"},
-			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
+			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
 		},
 	}},
 
@@ -222,7 +222,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "trail", Type: "line", SourceLayer: "trail", MinZoom: 14,
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(0, 0, 0, 1)",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadWidthInterp(),
 		},
 	}},
@@ -230,14 +230,14 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "track-outline", Type: "line", SourceLayer: "track", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(0, 0, 0, 1)",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadOutlineWidthInterp(),
 		},
 	}, {
 		ID: "track", Type: "line", SourceLayer: "track", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color":   "#D6C2A6",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadWidthInterp(),
 		},
 	}},
@@ -245,14 +245,14 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "road-outline", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(0, 0, 0, 1)",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadOutlineWidthInterp(),
 		},
 	}, {
 		ID: "road", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color":   "#FFFFFF",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadWidthInterp(),
 		},
 	}},
@@ -260,7 +260,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "main_road-outline", Type: "line", SourceLayer: "main_road", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(230, 128, 77, 1)",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadOutlineWidthInterp(),
 		},
 	}, {
@@ -270,7 +270,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		},
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(255, 153, 1, 1)",
-			"line-opacity": float64(1),
+			"line-opacity": 1.0,
 			"line-width":   roadWidthInterp(),
 		},
 	}},
@@ -280,7 +280,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "road-bridge", Type: "fill-extrusion", SourceLayer: "road-bridge", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "rgba(92, 92, 92, 1)",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -288,7 +288,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "main_road-bridge", Type: "fill-extrusion", SourceLayer: "main_road-bridge", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "#BBB",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -296,7 +296,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "track-bridge", Type: "fill-extrusion", SourceLayer: "track-bridge", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "rgba(92, 92, 92, 1)",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -304,7 +304,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "trail-bridge", Type: "fill-extrusion", SourceLayer: "trail-bridge", MinZoom: 14,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "rgba(92, 92, 92, 1)",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -316,10 +316,10 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"line-color": "rgba(0, 0, 0, 1)",
 			"line-width": []interface{}{
 				"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
-				float64(14), []interface{}{"/", []interface{}{"*", float64(4), 1.3}, float64(5)},
-				float64(16), []interface{}{"/", []interface{}{"*", float64(4), 1.3}, float64(2)},
-				float64(18), []interface{}{"*", []interface{}{"*", float64(4), 1.3}, 2.5},
-				float64(20), []interface{}{"*", []interface{}{"*", float64(4), 1.3}, float64(3)},
+				14.0, []interface{}{"/", []interface{}{"*", 4.0, 1.3}, 5.0},
+				16.0, []interface{}{"/", []interface{}{"*", 4.0, 1.3}, 2.0},
+				18.0, []interface{}{"*", []interface{}{"*", 4.0, 1.3}, 2.5},
+				20.0, []interface{}{"*", []interface{}{"*", 4.0, 1.3}, 3.0},
 			},
 		},
 	}, {
@@ -328,10 +328,10 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"line-color": "#CC3300",
 			"line-width": []interface{}{
 				"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
-				float64(14), []interface{}{"/", float64(4), float64(5)},
-				float64(16), []interface{}{"/", float64(4), float64(2)},
-				float64(18), []interface{}{"*", float64(4), 2.5},
-				float64(20), []interface{}{"*", float64(4), float64(3)},
+				14.0, []interface{}{"/", 4.0, 5.0},
+				16.0, []interface{}{"/", 4.0, 2.0},
+				18.0, []interface{}{"*", 4.0, 2.5},
+				20.0, []interface{}{"*", 4.0, 3.0},
 			},
 		},
 	}},
@@ -346,8 +346,8 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "powerline", Type: "line", SourceLayer: "powerline", MinZoom: 15,
 		Paint: map[string]interface{}{
 			"line-color":   "rgba(128, 121, 121, 1)",
-			"line-opacity": float64(1),
-			"line-width":   float64(2),
+			"line-opacity": 1.0,
+			"line-width":   2.0,
 		},
 	}},
 
@@ -366,7 +366,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"line-color":   "#A67345",
 			"line-opacity": 0.7,
-			"line-width":   float64(1),
+			"line-width":   1.0,
 		},
 	}},
 
@@ -376,7 +376,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"line-color":   contourColorExpr("#A67345"),
 			"line-opacity": 0.7,
-			"line-width":   float64(1),
+			"line-width":   1.0,
 		},
 	}},
 	"contours50": {{
@@ -384,10 +384,10 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"line-color":   contourColorExpr("#A67345"),
 			"line-opacity": 0.7,
-			"line-width":   float64(1),
+			"line-width":   1.0,
 		},
 	}, {
-		ID: "contours50-label", Type: "symbol", SourceLayer: "contours50", MinZoom: 12,
+		ID: "contours50-label", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
 			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
@@ -398,7 +398,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"text-color":      contourColorExpr("#A67345"),
 			"text-halo-color": "rgba(255,255,255,0.7)",
-			"text-halo-width": float64(1),
+			"text-halo-width": 1.0,
 		},
 	}},
 	"contours10": {{
@@ -414,7 +414,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		Paint: map[string]interface{}{
 			"line-color":   contourColorExpr("#D1BA94"),
 			"line-opacity": 0.3,
-			"line-width":   0.5,
+			"line-width":   0.25,
 		},
 	}},
 
@@ -451,8 +451,8 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"text-font":             []interface{}{"OpenSans-Regular"},
 			"text-anchor":           "left",
 			"text-size":             12,
-			"text-offset":           []interface{}{0.5, float64(0)},
-			"symbol-sort-key":       []interface{}{"*", []interface{}{"get", "elevation"}, float64(-1)},
+			"text-offset":           []interface{}{0.5, 0.0},
+			"symbol-sort-key":       []interface{}{"*", []interface{}{"get", "elevation"}, -1.0},
 		},
 		Paint: map[string]interface{}{
 			"text-color": "#482c18", "text-opacity": 0.5,
@@ -489,60 +489,60 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"text-field":              []interface{}{"get", "name"},
 			"text-font":               []interface{}{"OpenSans-Regular"},
 			"text-anchor":             "left",
-			"text-size":               []interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(12), float64(16), float64(32)},
-			"text-offset":             []interface{}{float64(1), float64(0)},
+			"text-size":               []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
+			"text-offset":             []interface{}{1.0, 0.0},
 			"icon-rotation-alignment": "map",
 			"text-pitch-alignment":    "map",
 			"text-rotation-alignment": "map",
 		},
 		Paint: map[string]interface{}{
-			"text-color": "#000000", "text-opacity": float64(1),
-			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+			"text-color": "#000000", "text-opacity": 1.0,
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1.0,
 		},
 	}},
 	"namemarine": {{
 		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MinZoom: 8,
 		Layout: textLayout("OpenSans-Regular",
-			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
+			[]interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 14.0, 16.0, 40.0}),
 		Paint: map[string]interface{}{
-			"text-color": "#0D66CC", "text-opacity": float64(1),
-			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+			"text-color": "#0D66CC", "text-opacity": 1.0,
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1.0,
 		},
 	}},
 	"namelocal": {{
 		ID: "namelocal", Type: "symbol", SourceLayer: "namelocal", MinZoom: 8,
 		Layout: textLayout("OpenSans-Bold",
-			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
+			[]interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 14.0, 16.0, 40.0}),
 		Paint: map[string]interface{}{
-			"text-color": "#70614D", "text-opacity": float64(1),
-			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": float64(1),
+			"text-color": "#70614D", "text-opacity": 1.0,
+			"text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1.0,
 		},
 	}},
 	"namevillage": {{
 		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MinZoom: 8,
 		Layout: textLayout("OpenSans-Regular",
-			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(14), float64(16), float64(40)}),
+			[]interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 14.0, 16.0, 40.0}),
 		Paint: map[string]interface{}{
-			"text-color": "#FFFFFF", "text-opacity": float64(1),
-			"text-halo-color": "#000000", "text-halo-width": float64(1), "text-halo-blur": float64(0),
+			"text-color": "#FFFFFF", "text-opacity": 1.0,
+			"text-halo-color": "#000000", "text-halo-width": 1.0, "text-halo-blur": 0.0,
 		},
 	}},
 	"namecity": {{
 		ID: "namecity", Type: "symbol", SourceLayer: "namecity", MinZoom: 8,
 		Layout: textLayout("OpenSans-Regular",
-			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(18), float64(16), float64(46)}),
+			[]interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 18.0, 16.0, 46.0}),
 		Paint: map[string]interface{}{
-			"text-color": "#FFFFFF", "text-opacity": float64(1),
-			"text-halo-color": "#000000", "text-halo-width": float64(1), "text-halo-blur": float64(0),
+			"text-color": "#FFFFFF", "text-opacity": 1.0,
+			"text-halo-color": "#000000", "text-halo-width": 1.0, "text-halo-blur": 0.0,
 		},
 	}},
 	"namecitycapital": {{
 		ID: "namecitycapital", Type: "symbol", SourceLayer: "namecitycapital", MinZoom: 8,
 		Layout: textLayout("OpenSans-Regular",
-			[]interface{}{"interpolate", []interface{}{"exponential", float64(2)}, []interface{}{"zoom"}, float64(12), float64(24), float64(16), float64(54)}),
+			[]interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 24.0, 16.0, 54.0}),
 		Paint: map[string]interface{}{
-			"text-color": "#FFFFFF", "text-opacity": float64(1),
-			"text-halo-color": "#000000", "text-halo-width": float64(1), "text-halo-blur": float64(0),
+			"text-color": "#FFFFFF", "text-opacity": 1.0,
+			"text-halo-color": "#000000", "text-halo-width": 1.0, "text-halo-blur": 0.0,
 		},
 	}},
 	"citycenter": {{
@@ -551,14 +551,14 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"text-field":  []interface{}{"get", "name"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
 			"text-justify": "auto",
 		},
 		Paint: map[string]interface{}{
 			"text-color":      "#406633",
-			"text-opacity":    float64(1),
+			"text-opacity":    1.0,
 			"text-halo-color": "rgba(255,255,255,0.7)",
-			"text-halo-width": float64(1),
+			"text-halo-width": 1.0,
 		},
 	}},
 
@@ -584,14 +584,14 @@ func makeLabelStyle(name, color string, minZoom int) LayerStyle {
 			"text-field":  []interface{}{"get", "name"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
 			"text-justify": "auto",
 		},
 		Paint: map[string]interface{}{
 			"text-color":      color,
-			"text-opacity":    float64(1),
+			"text-opacity":    1.0,
 			"text-halo-color": "rgba(255,255,255,0.7)",
-			"text-halo-width": float64(1),
+			"text-halo-width": 1.0,
 		},
 	}
 }
@@ -606,10 +606,10 @@ func makeVegetationStyle(name, iconImage string, iconSize float64) LayerStyle {
 			"text-field":  []interface{}{"get", "name"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
-			"text-offset": []interface{}{float64(1), float64(0)},
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+			"text-offset": []interface{}{1.0, 0.0},
 		},
-		Paint: map[string]interface{}{"text-color": "#406633", "text-opacity": float64(1)},
+		Paint: map[string]interface{}{"text-color": "#406633", "text-opacity": 1.0},
 	}
 }
 
@@ -626,46 +626,59 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	// NOTE: "sea" is handled explicitly in buildTopoLayers() as sea-land/sea-water
 	// with ELEV_MAX filters. It's kept in topoLayerOrder to suppress fallback.
 	"contours05": {{
-		ID: "contours/05", Type: "line", SourceLayer: "contours05",
+		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
-		ID: "contours/10", Type: "line", SourceLayer: "contours10",
+		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"contours50": {{
-		ID: "contours/50", Type: "line", SourceLayer: "contours50",
+		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+		},
+	}, {
+		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
+		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
+		Layout: map[string]interface{}{
+			"symbol-placement": "line",
+			"text-field":       []interface{}{"get", "elevation"},
+			"text-font":        []interface{}{"OpenSans-Regular"},
+			"text-size":        10,
+			"text-max-angle":   30,
+		},
+		Paint: map[string]interface{}{
+			"text-color": topoContourColorExpr(),
 		},
 	}},
 	"contours100": {{
-		ID: "contours/100", Type: "line", SourceLayer: "contours100",
+		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"track": {{
 		ID: "track", Type: "line", SourceLayer: "track",
 		Paint: map[string]interface{}{
-			"line-color": "#D6C2A6", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+			"line-color": "#D6C2A6", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"road": {{
 		ID: "road", Type: "line", SourceLayer: "road",
 		Paint: map[string]interface{}{
-			"line-color": "#FFFFFF", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+			"line-color": "#FFFFFF", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
 		ID: "main_road-bridge", Type: "fill-extrusion", SourceLayer: "main_road-bridge",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "#BBB",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -685,20 +698,20 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
+			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
 	"powerline": {{
 		ID: "powerline", Type: "line", SourceLayer: "powerline",
 		Paint: map[string]interface{}{
-			"line-color": "#000000", "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": "#000000", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"runway": {{
 		ID: "runway", Type: "line", SourceLayer: "runway",
 		Paint: map[string]interface{}{
-			"line-color": "#808080", "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": "#808080", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"bush":        {makeTopoSymbol("bush", "objects/bush", 0.125, true)},
@@ -716,8 +729,8 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"text-field":  []interface{}{"get", "text"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
-			"text-offset": []interface{}{float64(1), float64(0)},
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+			"text-offset": []interface{}{1.0, 0.0},
 		},
 		Paint: topoTextPaint("#482c18"),
 	}},
@@ -770,46 +783,59 @@ var topoLayerOrder = []string{
 var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	// NOTE: "sea" is handled explicitly in buildTopoDarkLayers() as sea-land/sea-water.
 	"contours05": {{
-		ID: "contours/05", Type: "line", SourceLayer: "contours05",
+		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
-		ID: "contours/10", Type: "line", SourceLayer: "contours10",
+		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"contours50": {{
-		ID: "contours/50", Type: "line", SourceLayer: "contours50",
+		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+		},
+	}, {
+		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
+		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
+		Layout: map[string]interface{}{
+			"symbol-placement": "line",
+			"text-field":       []interface{}{"get", "elevation"},
+			"text-font":        []interface{}{"OpenSans-Regular"},
+			"text-size":        10,
+			"text-max-angle":   30,
+		},
+		Paint: map[string]interface{}{
+			"text-color": topoDarkContourColorExpr(),
 		},
 	}},
 	"contours100": {{
-		ID: "contours/100", Type: "line", SourceLayer: "contours100",
+		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"track": {{
 		ID: "track", Type: "line", SourceLayer: "track",
 		Paint: map[string]interface{}{
-			"line-color": "#6b5a48", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+			"line-color": "#6b5a48", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"road": {{
 		ID: "road", Type: "line", SourceLayer: "road",
 		Paint: map[string]interface{}{
-			"line-color": "#888888", "line-opacity": float64(1), "line-width": roadWidthInterp(),
+			"line-color": "#888888", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
 		ID: "main_road-bridge", Type: "fill-extrusion", SourceLayer: "main_road-bridge",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   "#555555",
-			"fill-extrusion-opacity": float64(1),
+			"fill-extrusion-opacity": 1.0,
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
@@ -829,20 +855,20 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(16), float64(1), float64(18), 0.85},
+			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
 			"fill-extrusion-height":  []interface{}{"get", "height"},
 		},
 	}},
 	"powerline": {{
 		ID: "powerline", Type: "line", SourceLayer: "powerline",
 		Paint: map[string]interface{}{
-			"line-color": "#666666", "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": "#666666", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"runway": {{
 		ID: "runway", Type: "line", SourceLayer: "runway",
 		Paint: map[string]interface{}{
-			"line-color": "#555555", "line-opacity": float64(1), "line-width": float64(1),
+			"line-color": "#555555", "line-opacity": 1.0, "line-width": 1.0,
 		},
 	}},
 	"bush":        {makeTopoSymbol("bush", "objects/bush", 0.125, true)},
@@ -860,8 +886,8 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"text-field":  []interface{}{"get", "text"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
-			"text-offset": []interface{}{float64(1), float64(0)},
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+			"text-offset": []interface{}{1.0, 0.0},
 		},
 		Paint: topoDarkTextPaint("#9a8a6a"),
 	}},
@@ -1053,12 +1079,12 @@ func buildLandSeaLayers(landColor, seaColor string) []interface{} {
 	return []interface{}{
 		map[string]interface{}{
 			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, 0.0},
 			"paint":  map[string]interface{}{"fill-color": landColor, "fill-opacity": 0.8, "fill-antialias": true},
 		},
 		map[string]interface{}{
 			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
-			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, 0.0},
 			"paint":  map[string]interface{}{"fill-color": seaColor, "fill-opacity": 0.8, "fill-antialias": true},
 		},
 	}
@@ -1078,7 +1104,7 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 		layers = append(layers, map[string]interface{}{
 			"id": "satellite", "type": "raster", "source": "satellite",
 			"layout": map[string]interface{}{"visibility": "none"},
-			"paint":  map[string]interface{}{"raster-opacity": float64(1)},
+			"paint":  map[string]interface{}{"raster-opacity": 1.0},
 		})
 	}
 
@@ -1094,7 +1120,7 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 				"hillshade-shadow-color":           "rgba(0,0,0,0.4)",
 				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
 				"hillshade-illumination-anchor":    "map",
-				"hillshade-illumination-direction": float64(270),
+				"hillshade-illumination-direction": 270.0,
 			},
 		})
 	}
@@ -1198,7 +1224,7 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 		layers = append(layers, map[string]interface{}{
 			"id": "satellite", "type": "raster", "source": "satellite",
 			"layout": map[string]interface{}{"visibility": "none"},
-			"paint":  map[string]interface{}{"raster-opacity": float64(1)},
+			"paint":  map[string]interface{}{"raster-opacity": 1.0},
 		})
 	}
 
@@ -1214,7 +1240,7 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 				"hillshade-shadow-color":           "rgba(0,0,0,0.6)",
 				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
 				"hillshade-illumination-anchor":    "map",
-				"hillshade-illumination-direction": float64(270),
+				"hillshade-illumination-direction": 270.0,
 			},
 		})
 	}
