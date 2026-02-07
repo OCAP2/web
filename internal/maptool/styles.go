@@ -84,13 +84,13 @@ func topoContourTextColorExpr() interface{} {
 	}
 }
 
-// topoDarkContourTextColorExpr returns a darker case expression for topo-dark contour labels.
+// topoDarkContourTextColorExpr returns a lighter case expression for topo-dark contour labels.
 func topoDarkContourTextColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
-		"#2A6B9F",
-		"#3a2a1a",
+		"#5599DD",
+		"#9a8a6a",
 	}
 }
 
@@ -1177,23 +1177,6 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 		})
 	}
 
-	// Native hillshade from heightmap DEM
-	if cfg.HasHeightmap {
-		layers = append(layers, map[string]interface{}{
-			"id":     "hillshade",
-			"type":   "hillshade",
-			"source": "heightmap",
-			"paint": map[string]interface{}{
-				"hillshade-exaggeration":           0.4,
-				"hillshade-highlight-color":        "rgba(255,255,255,0.4)",
-				"hillshade-shadow-color":           "rgba(0,0,0,0.4)",
-				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
-				"hillshade-illumination-anchor":    "map",
-				"hillshade-illumination-direction": 270.0,
-			},
-		})
-	}
-
 	// Vector feature layers in topo render order
 	layers = append(layers, buildTopoVectorFeatureLayers(cfg.VectorLayers)...)
 
@@ -1294,23 +1277,6 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 			"id": "satellite", "type": "raster", "source": "satellite",
 			"layout": map[string]interface{}{"visibility": "none"},
 			"paint":  map[string]interface{}{"raster-opacity": 1.0},
-		})
-	}
-
-	// Native hillshade from heightmap DEM — stronger for dark theme
-	if cfg.HasHeightmap {
-		layers = append(layers, map[string]interface{}{
-			"id":     "hillshade",
-			"type":   "hillshade",
-			"source": "heightmap",
-			"paint": map[string]interface{}{
-				"hillshade-exaggeration":           0.5,
-				"hillshade-highlight-color":        "rgba(255,255,255,0.3)",
-				"hillshade-shadow-color":           "rgba(0,0,0,0.6)",
-				"hillshade-accent-color":           "rgba(0,0,0.2,0.4)",
-				"hillshade-illumination-anchor":    "map",
-				"hillshade-illumination-direction": 270.0,
-			},
 		})
 	}
 

@@ -314,8 +314,8 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 		expected []string
 		banned   []string
 	}{
-		{StyleTopo, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
-		{StyleTopoDark, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
+		{StyleTopo, []string{"features", "satellite"}, []string{"color-relief", "hillshade-full", "heightmap"}},
+		{StyleTopoDark, []string{"features", "satellite"}, []string{"color-relief", "hillshade-full", "heightmap"}},
 		{StyleTopoRelief, []string{"features", "hillshade-full"}, []string{"satellite", "color-relief"}},
 		{StyleSatellite, []string{"features", "satellite", "hillshade"}, []string{"color-relief", "hillshade-full"}},
 		{StyleHybrid, []string{"features", "satellite", "heightmap"}, []string{"color-relief", "hillshade-full"}},
