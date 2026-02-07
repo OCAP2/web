@@ -9,6 +9,10 @@ const (
 	arma3SeaColorDark = "#3a6a9c"
 	// arma3UnderwaterContour is the contour line color for negative elevations.
 	arma3UnderwaterContour = "#4A8BBF"
+	// landColor is the base terrain fill for light style variants.
+	landColor = "#DFDFDF"
+	// landColorDark is the base terrain fill for the topo-dark variant.
+	landColorDark = "#2a2a2a"
 )
 
 // LayerStyle defines a MapLibre GL style layer for a vector tile layer.
@@ -196,7 +200,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"sea": {{
 		ID: "sea-land", Type: "fill", SourceLayer: "sea", MinZoom: 8,
 		Filter: []interface{}{">", []interface{}{"get", "ELEV_MAX"}, 0.0},
-		Paint:  map[string]interface{}{"fill-color": "#DFDFDF", "fill-opacity": 1.0, "fill-antialias": true},
+		Paint:  map[string]interface{}{"fill-color": landColor, "fill-opacity": 1.0, "fill-antialias": true},
 	}, {
 		ID: "sea-water", Type: "fill", SourceLayer: "sea", MinZoom: 8,
 		Filter: []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, 0.0},
@@ -944,7 +948,7 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 	bgColor := "#000000"
 	switch variant {
 	case StyleTopo:
-		bgColor = "#DFDFDF"
+		bgColor = landColor
 	case StyleTopoDark:
 		bgColor = "#1B1B1B"
 	}
@@ -1093,7 +1097,7 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 	// Land/sea fills — rendered immediately after background so everything
 	// else draws on top. Land provides the base terrain color; sea fills oceans.
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, buildLandSeaLayers("#DFDFDF", arma3SeaColor)...)
+		layers = append(layers, buildLandSeaLayers(landColor, arma3SeaColor)...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
@@ -1213,7 +1217,7 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 
 	// Land/sea fills — dark variants
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, buildLandSeaLayers("#2a2a2a", arma3SeaColorDark)...)
+		layers = append(layers, buildLandSeaLayers(landColorDark, arma3SeaColorDark)...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
