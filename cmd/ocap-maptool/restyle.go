@@ -47,12 +47,18 @@ func runRestyle(args []string) error {
 		}
 	}
 
+	var hadErrors bool
 	for _, world := range worlds {
 		if err := restyleWorld(*mapsDir, world); err != nil {
 			log.Printf("ERROR: %s: %v", world, err)
+			hadErrors = true
 			continue
 		}
 		log.Printf("Restyled: %s", world)
+	}
+
+	if hadErrors {
+		return fmt.Errorf("one or more worlds failed to restyle")
 	}
 
 	return nil
@@ -95,7 +101,7 @@ func restyleWorld(mapsDir, worldName string) error {
 		URLPrefix:      "images/maps/" + meta.WorldName + "/tiles",
 		SpritePrefix:   "images/maps/" + meta.WorldName + "/styles",
 		VectorLayers:   meta.FeatureLayers,
-		HasSatellite:   true,
+		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),
 		HasHillshade:   hasFile("hillshade.pmtiles"),
 		HasColorRelief: hasFile("color-relief.pmtiles"),
