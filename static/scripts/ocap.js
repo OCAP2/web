@@ -766,7 +766,11 @@ function initMap (world) {
 	overlayLayerControl.addTo(map);
 
 	if (useMapLibreMode) {
-		L.control.maplibreStyles(mapLibreLayer, styleCandidates).addTo(map);
+		var previewCenter = [worldSizeDeg / 2, worldSizeDeg / 2];
+		L.control.maplibreStyles(mapLibreLayer, styleCandidates, {
+			center: previewCenter,
+			zoom: 12
+		}).addTo(map);
 	} else {
 		baseLayerControl = L.control.basemaps({
 			basemaps: baseLayers,
