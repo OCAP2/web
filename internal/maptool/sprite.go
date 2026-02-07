@@ -19,43 +19,48 @@ var iconFS embed.FS
 
 // spriteIcon defines a single icon in the sprite sheet.
 type spriteIcon struct {
-	Name string // MapLibre icon name, e.g. "objects/tree"
-	File string // embedded filename, e.g. "tree.png"
+	Name    string // MapLibre icon name, e.g. "objects/tree"
+	File    string // embedded filename, e.g. "tree.png"
+	Blacken bool   // true for simple white icons that should be inverted for light themes
 }
 
 // spriteIcons lists all icons referenced by knownLayerStyles, sorted by name.
+// Blacken=true for pure-white single-shape icons; false for detailed grayscale icons
+// that have shading/structure which would be lost if blackened.
 var spriteIcons = func() []spriteIcon {
 	icons := []spriteIcon{
-		// Objects (MapControl)
-		{"objects/bunker", "bunker.png"},
-		{"objects/bush", "bush.png"},
-		{"objects/chapel", "chapel.png"},
-		{"objects/church", "church.png"},
-		{"objects/cross", "cross.png"},
-		{"objects/fountain", "fountain.png"},
-		{"objects/fuelstation", "fuelstation.png"},
-		{"objects/hospital", "hospital.png"},
-		{"objects/lighthouse", "lighthouse.png"},
-		{"objects/powersolar", "powersolar.png"},
-		{"objects/powerwave", "powerwave.png"},
-		{"objects/powerwind", "powerwind.png"},
-		{"objects/quay", "quay.png"},
-		{"objects/rock", "rock.png"},
-		{"objects/ruin", "ruin.png"},
-		{"objects/shipwreck", "shipwreck.png"},
-		{"objects/stack", "stack.png"},
-		{"objects/tourism", "tourism.png"},
-		{"objects/transmitter", "transmitter.png"},
-		{"objects/tree", "tree.png"},
-		{"objects/viewtower", "viewtower.png"},
-		{"objects/watertower", "watertower.png"},
+		// Objects (MapControl) — simple white shapes
+		{"objects/bunker", "bunker.png", true},
+		{"objects/bush", "bush.png", true},
+		{"objects/chapel", "chapel.png", true},
+		{"objects/cross", "cross.png", true},
+		{"objects/fountain", "fountain.png", true},
+		{"objects/rock", "rock.png", true},
+		{"objects/ruin", "ruin.png", true},
+		{"objects/shipwreck", "shipwreck.png", true},
+		{"objects/stack", "stack.png", true},
+		{"objects/tourism", "tourism.png", true},
+		{"objects/tree", "tree.png", true},
+		{"objects/viewtower", "viewtower.png", true},
 
-		// Locations (LocationTypes)
-		{"locations/hill", "hill.png"},
-		{"locations/vegetationbroadleaf", "vegetationbroadleaf.png"},
-		{"locations/vegetationfir", "vegetationfir.png"},
-		{"locations/vegetationpalm", "vegetationpalm.png"},
-		{"locations/vegetationvineyard", "vegetationvineyard.png"},
+		// Objects (MapControl) — detailed grayscale icons
+		{"objects/church", "church.png", false},
+		{"objects/fuelstation", "fuelstation.png", false},
+		{"objects/hospital", "hospital.png", false},
+		{"objects/lighthouse", "lighthouse.png", false},
+		{"objects/powersolar", "powersolar.png", false},
+		{"objects/powerwave", "powerwave.png", false},
+		{"objects/powerwind", "powerwind.png", false},
+		{"objects/quay", "quay.png", false},
+		{"objects/transmitter", "transmitter.png", false},
+		{"objects/watertower", "watertower.png", false},
+
+		// Locations (LocationTypes) — simple white shapes
+		{"locations/hill", "hill.png", true},
+		{"locations/vegetationbroadleaf", "vegetationbroadleaf.png", true},
+		{"locations/vegetationfir", "vegetationfir.png", true},
+		{"locations/vegetationpalm", "vegetationpalm.png", true},
+		{"locations/vegetationvineyard", "vegetationvineyard.png", true},
 	}
 	sort.Slice(icons, func(i, j int) bool { return icons[i].Name < icons[j].Name })
 	return icons
@@ -85,11 +90,12 @@ func loadIcon(filename string) (image.Image, error) {
 	return img, nil
 }
 
-// GenerateSprite renders all icons at baseSize*scale pixels and returns the
-// packed PNG image and JSON manifest.
-func GenerateSprite(scale int) (*image.NRGBA, map[string]spriteEntry) {
-	const baseSize = 32
-	size := baseSize * scale
+// GenerateSprite packs all icons at their native 64px size into a sprite sheet.
+// When blacken is true, icons flagged with Blacken=true have their pixels
+// converted to black (R=G=B=0, alpha preserved) for light themes. Detailed
+// grayscale icons are left unchanged.
+func GenerateSprite(blacken bool) (*image.NRGBA, map[string]spriteEntry) {
+	const size = 64
 
 	cols := spriteColumns
 	rows := (len(spriteIcons) + cols - 1) / cols
@@ -108,54 +114,68 @@ func GenerateSprite(scale int) (*image.NRGBA, map[string]spriteEntry) {
 			continue
 		}
 
-		// Scale the 64x64 source icon to the target size
 		dst := image.Rect(x, y, x+size, y+size)
 		xdraw.BiLinear.Scale(sheet, dst, src, src.Bounds(), xdraw.Over, nil)
+
+		if blacken && icon.Blacken {
+			pix := sheet.Pix
+			stride := sheet.Stride
+			for py := y; py < y+size; py++ {
+				off := py*stride + x*4
+				for px := 0; px < size; px++ {
+					pix[off+0] = 0
+					pix[off+1] = 0
+					pix[off+2] = 0
+					off += 4
+				}
+			}
+		}
 
 		manifest[icon.Name] = spriteEntry{
 			X:          x,
 			Y:          y,
 			Width:      size,
 			Height:     size,
-			PixelRatio: scale,
+			PixelRatio: 1,
 		}
 	}
 
 	return sheet, manifest
 }
 
-// WriteSpriteFiles generates 1x and 2x sprite sheets and writes four files
-// to dir: sprite.json, sprite.png, sprite@2x.json, sprite@2x.png.
+// WriteSpriteFiles generates sprite sheets at native 64px and writes to dir:
+//   - sprite.json, sprite.png (blackened — for light themes)
+//   - sprite-dark.json, sprite-dark.png (original — for dark themes)
 func WriteSpriteFiles(dir string) error {
-	for _, s := range []struct {
-		scale  int
-		suffix string
+	for _, v := range []struct {
+		prefix  string
+		blacken bool
 	}{
-		{1, ""},
-		{2, "@2x"},
+		{"sprite", true},
+		{"sprite-dark", false},
 	} {
-		img, manifest := GenerateSprite(s.scale)
+		img, manifest := GenerateSprite(v.blacken)
 
-		jsonPath := filepath.Join(dir, "sprite"+s.suffix+".json")
+		jsonPath := filepath.Join(dir, v.prefix+".json")
 		data, err := json.MarshalIndent(manifest, "", "  ")
 		if err != nil {
-			return fmt.Errorf("marshal sprite%s.json: %w", s.suffix, err)
+			return fmt.Errorf("marshal %s.json: %w", v.prefix, err)
 		}
 		if err := os.WriteFile(jsonPath, data, 0644); err != nil {
-			return fmt.Errorf("write sprite%s.json: %w", s.suffix, err)
+			return fmt.Errorf("write %s.json: %w", v.prefix, err)
 		}
 
-		pngPath := filepath.Join(dir, "sprite"+s.suffix+".png")
+		pngPath := filepath.Join(dir, v.prefix+".png")
 		f, err := os.Create(pngPath)
 		if err != nil {
-			return fmt.Errorf("create sprite%s.png: %w", s.suffix, err)
+			return fmt.Errorf("create %s.png: %w", v.prefix, err)
 		}
 		if err := png.Encode(f, img); err != nil {
 			f.Close()
-			return fmt.Errorf("encode sprite%s.png: %w", s.suffix, err)
+			return fmt.Errorf("encode %s.png: %w", v.prefix, err)
 		}
 		if err := f.Close(); err != nil {
-			return fmt.Errorf("close sprite%s.png: %w", s.suffix, err)
+			return fmt.Errorf("close %s.png: %w", v.prefix, err)
 		}
 	}
 	return nil

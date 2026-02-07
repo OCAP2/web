@@ -12,34 +12,42 @@ import (
 )
 
 func TestGenerateSprite(t *testing.T) {
-	img, manifest := GenerateSprite(1)
+	img, manifest := GenerateSprite(false)
 
 	assert.Len(t, manifest, len(spriteIcons), "manifest should have one entry per icon")
 
 	cols := spriteColumns
 	rows := (len(spriteIcons) + cols - 1) / cols
-	assert.Equal(t, cols*32, img.Bounds().Dx(), "1x width")
-	assert.Equal(t, rows*32, img.Bounds().Dy(), "1x height")
-
-	for _, entry := range manifest {
-		assert.Equal(t, 32, entry.Width)
-		assert.Equal(t, 32, entry.Height)
-		assert.Equal(t, 1, entry.PixelRatio)
-	}
-}
-
-func TestGenerateSprite_2x(t *testing.T) {
-	img, manifest := GenerateSprite(2)
-
-	cols := spriteColumns
-	rows := (len(spriteIcons) + cols - 1) / cols
-	assert.Equal(t, cols*64, img.Bounds().Dx(), "2x width")
-	assert.Equal(t, rows*64, img.Bounds().Dy(), "2x height")
+	assert.Equal(t, cols*64, img.Bounds().Dx(), "width")
+	assert.Equal(t, rows*64, img.Bounds().Dy(), "height")
 
 	for _, entry := range manifest {
 		assert.Equal(t, 64, entry.Width)
 		assert.Equal(t, 64, entry.Height)
-		assert.Equal(t, 2, entry.PixelRatio)
+		assert.Equal(t, 1, entry.PixelRatio)
+	}
+}
+
+func TestGenerateSprite_Blacken(t *testing.T) {
+	img, manifest := GenerateSprite(true)
+	pix := img.Pix
+	stride := img.Stride
+
+	for _, icon := range spriteIcons {
+		if !icon.Blacken {
+			continue
+		}
+		entry := manifest[icon.Name]
+		// Check every pixel in this icon's region is black (RGB=0)
+		for py := entry.Y; py < entry.Y+entry.Height; py++ {
+			off := py*stride + entry.X*4
+			for px := 0; px < entry.Width; px++ {
+				assert.Equal(t, uint8(0), pix[off+0], "R should be 0 for %s at (%d,%d)", icon.Name, px, py)
+				assert.Equal(t, uint8(0), pix[off+1], "G should be 0 for %s at (%d,%d)", icon.Name, px, py)
+				assert.Equal(t, uint8(0), pix[off+2], "B should be 0 for %s at (%d,%d)", icon.Name, px, py)
+				off += 4
+			}
+		}
 	}
 }
 
@@ -48,7 +56,10 @@ func TestWriteSpriteFiles(t *testing.T) {
 	err := WriteSpriteFiles(dir)
 	require.NoError(t, err)
 
-	expectedFiles := []string{"sprite.json", "sprite.png", "sprite@2x.json", "sprite@2x.png"}
+	expectedFiles := []string{
+		"sprite.json", "sprite.png",
+		"sprite-dark.json", "sprite-dark.png",
+	}
 	for _, name := range expectedFiles {
 		path := filepath.Join(dir, name)
 		info, err := os.Stat(path)
@@ -57,7 +68,7 @@ func TestWriteSpriteFiles(t *testing.T) {
 	}
 
 	// Verify JSON parses correctly
-	for _, name := range []string{"sprite.json", "sprite@2x.json"} {
+	for _, name := range []string{"sprite.json", "sprite-dark.json"} {
 		data, err := os.ReadFile(filepath.Join(dir, name))
 		require.NoError(t, err)
 		var manifest map[string]spriteEntry
@@ -66,7 +77,7 @@ func TestWriteSpriteFiles(t *testing.T) {
 	}
 
 	// Verify PNG decodes correctly
-	for _, name := range []string{"sprite.png", "sprite@2x.png"} {
+	for _, name := range []string{"sprite.png", "sprite-dark.png"} {
 		f, err := os.Open(filepath.Join(dir, name))
 		require.NoError(t, err)
 		defer f.Close()
