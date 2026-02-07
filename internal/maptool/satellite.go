@@ -121,14 +121,14 @@ func BuildGradMehVRT(vrtPath string, tiles []SatTile, tileSize, worldSize int) e
 		return fmt.Errorf("no tiles to build VRT from")
 	}
 
-	vrtDir := filepath.Dir(vrtPath)
-	relTiles := make([]SatTile, len(tiles))
+	absTiles := make([]SatTile, len(tiles))
 	for i, t := range tiles {
-		rel, err := filepath.Rel(vrtDir, t.PNGPath)
+		abs, err := filepath.Abs(t.PNGPath)
 		if err != nil {
-			rel = t.PNGPath
+			log.Printf("WARNING: failed to get absolute path for %q: %v. Using original path.", t.PNGPath, err)
+			abs = t.PNGPath
 		}
-		relTiles[i] = SatTile{X: t.X, Y: t.Y, Width: t.Width, Height: t.Height, PNGPath: rel}
+		absTiles[i] = SatTile{X: t.X, Y: t.Y, Width: t.Width, Height: t.Height, PNGPath: abs}
 	}
 
 	f, err := os.Create(vrtPath)
@@ -155,11 +155,11 @@ func BuildGradMehVRT(vrtPath string, tiles []SatTile, tileSize, worldSize int) e
 	for _, band := range bands {
 		fmt.Fprintf(f, "  <VRTRasterBand dataType=\"Byte\" band=\"%d\">\n", band.num)
 		fmt.Fprintf(f, "    <ColorInterp>%s</ColorInterp>\n", band.color)
-		for _, t := range relTiles {
+		for _, t := range absTiles {
 			xOff := t.X * tileSize
 			yOff := t.Y * tileSize
 			fmt.Fprintf(f, "    <SimpleSource>\n")
-			fmt.Fprintf(f, "      <SourceFilename relativeToVRT=\"1\">%s</SourceFilename>\n", t.PNGPath)
+			fmt.Fprintf(f, "      <SourceFilename relativeToVRT=\"0\">%s</SourceFilename>\n", t.PNGPath)
 			fmt.Fprintf(f, "      <SourceBand>%d</SourceBand>\n", band.num)
 			fmt.Fprintf(f, "      <SrcRect xOff=\"0\" yOff=\"0\" xSize=\"%d\" ySize=\"%d\" />\n", t.Width, t.Height)
 			fmt.Fprintf(f, "      <DstRect xOff=\"%d\" yOff=\"%d\" xSize=\"%d\" ySize=\"%d\" />\n",
