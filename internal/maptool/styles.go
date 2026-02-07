@@ -191,7 +191,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	}, {
 		ID: "sea-water", Type: "fill", SourceLayer: "sea", MinZoom: 8,
 		Filter: []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, 0.0},
-		Paint:  map[string]interface{}{"fill-color": "#b7cbe6", "fill-opacity": 1.0, "fill-antialias": false},
+		Paint:  map[string]interface{}{"fill-color": "#8FCCFA", "fill-opacity": 0.5, "fill-antialias": false},
 	}},
 	"rocks": {{
 		ID: "rocks", Type: "fill", SourceLayer: "rocks", MinZoom: 16,
@@ -1084,7 +1084,7 @@ func buildTopoLayers(cfg StyleConfig) []interface{} {
 	// Land/sea fills — rendered immediately after background so everything
 	// else draws on top. Land provides the base terrain color; sea fills oceans.
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, buildLandSeaLayers("#DFDFDF", "#36B")...)
+		layers = append(layers, buildLandSeaLayers("#DFDFDF", "#8FCCFA")...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
@@ -1204,7 +1204,7 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 
 	// Land/sea fills — dark variants
 	if hasVectorLayer(cfg.VectorLayers, "sea") {
-		layers = append(layers, buildLandSeaLayers("#2a2a2a", "#1a3a5c")...)
+		layers = append(layers, buildLandSeaLayers("#2a2a2a", "#3a6a9c")...)
 	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
