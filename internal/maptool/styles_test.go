@@ -252,25 +252,26 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 
 func TestGenerateStyleDocument_Sources(t *testing.T) {
 	cfg := StyleConfig{
-		WorldName:      "altis",
-		URLPrefix:      "images/maps/altis",
-		VectorLayers:   []string{"sea"},
-		HasSatellite:   true,
-		HasHeightmap:   true,
+		WorldName:        "altis",
+		URLPrefix:        "images/maps/altis",
+		VectorLayers:     []string{"sea"},
+		HasSatellite:     true,
+		HasHeightmap:     true,
 		HasHillshade:     true,
 		HasHillshadeFull: true,
 		HasColorRelief:   true,
 	}
 
+	// Color-relief references: features, color-relief, hillshade, satellite — but NOT heightmap or hillshade-full
 	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 	sources := doc["sources"].(map[string]interface{})
 
 	assert.Contains(t, sources, "features")
 	assert.Contains(t, sources, "satellite")
-	assert.Contains(t, sources, "heightmap")
 	assert.Contains(t, sources, "hillshade")
-	assert.Contains(t, sources, "hillshade-full")
 	assert.Contains(t, sources, "color-relief")
+	assert.NotContains(t, sources, "heightmap", "heightmap not referenced by color-relief layers")
+	assert.NotContains(t, sources, "hillshade-full", "hillshade-full not referenced by color-relief layers")
 }
 
 func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
@@ -289,6 +290,49 @@ func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
 	assert.NotContains(t, sources, "hillshade")
 	assert.NotContains(t, sources, "hillshade-full")
 	assert.NotContains(t, sources, "color-relief")
+}
+
+func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
+	cfg := StyleConfig{
+		WorldName:        "test",
+		URLPrefix:        "images/maps/test",
+		VectorLayers:     []string{"sea", "road"},
+		HasSatellite:     true,
+		HasHeightmap:     true,
+		HasHillshade:     true,
+		HasHillshadeFull: true,
+		HasColorRelief:   true,
+	}
+
+	getSources := func(variant StyleVariant) map[string]interface{} {
+		doc := GenerateStyleDocument(cfg, variant)
+		return doc["sources"].(map[string]interface{})
+	}
+
+	tests := []struct {
+		variant  StyleVariant
+		expected []string
+		banned   []string
+	}{
+		{StyleTopo, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
+		{StyleTopoDark, []string{"features", "heightmap", "satellite"}, []string{"color-relief", "hillshade-full"}},
+		{StyleTopoRelief, []string{"features", "hillshade-full"}, []string{"satellite", "color-relief"}},
+		{StyleSatellite, []string{"features", "satellite", "hillshade"}, []string{"color-relief", "hillshade-full"}},
+		{StyleHybrid, []string{"features", "satellite", "heightmap"}, []string{"color-relief", "hillshade-full"}},
+		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "hillshade-full"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.variant), func(t *testing.T) {
+			sources := getSources(tt.variant)
+			for _, s := range tt.expected {
+				assert.Contains(t, sources, s)
+			}
+			for _, s := range tt.banned {
+				assert.NotContains(t, sources, s)
+			}
+		})
+	}
 }
 
 func indexOf(slice []string, val string) int {

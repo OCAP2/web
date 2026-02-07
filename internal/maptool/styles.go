@@ -981,8 +981,6 @@ type StyleConfig struct {
 
 // GenerateStyleDocument creates a full MapLibre style JSON document for the given variant.
 func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]interface{} {
-	sources := buildSources(cfg)
-
 	bgColor := "#000000"
 	switch variant {
 	case StyleTopo:
@@ -1013,6 +1011,15 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		layers = append(layers, buildHybridLayers(cfg)...)
 	}
 
+	// Only include sources that are actually referenced by layers
+	sources := buildSources(cfg)
+	referenced := referencedSources(layers)
+	for name := range sources {
+		if !referenced[name] {
+			delete(sources, name)
+		}
+	}
+
 	doc := map[string]interface{}{
 		"version": 8,
 		"name":    cfg.WorldName + "-" + string(variant),
@@ -1022,6 +1029,19 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		"glyphs":  cfg.GlyphsURL,
 	}
 	return doc
+}
+
+// referencedSources scans layers and returns the set of source names they reference.
+func referencedSources(layers []interface{}) map[string]bool {
+	refs := map[string]bool{}
+	for _, l := range layers {
+		if m, ok := l.(map[string]interface{}); ok {
+			if src, ok := m["source"].(string); ok {
+				refs[src] = true
+			}
+		}
+	}
+	return refs
 }
 
 func buildSources(cfg StyleConfig) map[string]interface{} {
