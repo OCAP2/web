@@ -99,7 +99,7 @@ func TestIsLayerVisible_SeaPartial(t *testing.T) {
 }
 
 func TestIsLayerVisible_SatelliteVariant(t *testing.T) {
-	// Satellite mode: no forest, no vegetation, no sea-land
+	// Satellite mode: no forest, no vegetation, no land
 	assert.False(t, isLayerVisible("forest", layerVisSatellite))
 	assert.False(t, isLayerVisible("tree", layerVisSatellite))
 	assert.True(t, isLayerVisible("road", layerVisSatellite))
@@ -134,7 +134,7 @@ func TestBuildVectorFeatureLayers_SortsCorrectly(t *testing.T) {
 	}
 
 	// Verify order: sea < contours < forest < road < namecity
-	idxSea := indexOf(ids, "sea-land")
+	idxSea := indexOf(ids, "land")
 	idxContours := indexOf(ids, "contours")
 	idxForest := indexOf(ids, "forest")
 	idxRoad := indexOf(ids, "road-outline")
@@ -237,7 +237,7 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 		HasHillshade: true,
 	}
 
-	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleSatellite, StyleHybrid} {
+	for _, variant := range []StyleVariant{StyleColorRelief, StyleTopo, StyleTopoDark, StyleTopoRelief, StyleSatellite, StyleHybrid} {
 		t.Run(string(variant), func(t *testing.T) {
 			doc := GenerateStyleDocument(cfg, variant)
 			assert.Equal(t, "stratis-"+string(variant), doc["name"])
@@ -257,8 +257,9 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 		VectorLayers:   []string{"sea"},
 		HasSatellite:   true,
 		HasHeightmap:   true,
-		HasHillshade:   true,
-		HasColorRelief: true,
+		HasHillshade:     true,
+		HasHillshadeFull: true,
+		HasColorRelief:   true,
 	}
 
 	doc := GenerateStyleDocument(cfg, StyleColorRelief)
@@ -268,6 +269,7 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 	assert.Contains(t, sources, "satellite")
 	assert.Contains(t, sources, "heightmap")
 	assert.Contains(t, sources, "hillshade")
+	assert.Contains(t, sources, "hillshade-full")
 	assert.Contains(t, sources, "color-relief")
 }
 
@@ -285,6 +287,7 @@ func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
 	assert.NotContains(t, sources, "satellite")
 	assert.NotContains(t, sources, "heightmap")
 	assert.NotContains(t, sources, "hillshade")
+	assert.NotContains(t, sources, "hillshade-full")
 	assert.NotContains(t, sources, "color-relief")
 }
 

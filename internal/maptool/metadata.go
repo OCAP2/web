@@ -94,8 +94,8 @@ func computeElevationStats(grid *DEMGrid) *elevStats {
 	}
 }
 
-// NewGenerateStylesStage creates a pipeline stage that writes the 3 MapLibre
-// style variants (standard.json, satellite.json, hybrid.json).
+// NewGenerateStylesStage creates a pipeline stage that writes the MapLibre
+// style variants.
 func NewGenerateStylesStage() Stage {
 	return Stage{
 		Name: "generate_styles",
@@ -126,8 +126,9 @@ func NewGenerateStylesStage() Stage {
 				VectorLayers:   job.VectorLayers,
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,
-				HasHillshade:   job.HasHillshade,
-				HasColorRelief: job.HasColorRelief,
+				HasHillshade:     job.HasHillshade,
+				HasHillshadeFull: job.HasHillshadeFull,
+				HasColorRelief:   job.HasColorRelief,
 				GlyphsURL:      glyphsURL,
 			}
 
@@ -137,6 +138,7 @@ func NewGenerateStylesStage() Stage {
 			}{
 				{StyleTopo, "topo.json"},
 				{StyleTopoDark, "topo-dark.json"},
+				{StyleTopoRelief, "topo-relief.json"},
 				{StyleSatellite, "satellite.json"},
 				{StyleHybrid, "hybrid.json"},
 				{StyleColorRelief, "color-relief.json"},

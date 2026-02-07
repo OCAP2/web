@@ -9,13 +9,14 @@ func buildGradMehPipeline(tools maptool.ToolSet) *maptool.Pipeline {
 		maptool.NewGradMehSatelliteStage(),       // 3. process_satellite
 		maptool.NewGenerateSatellitePMTilesStage(tools), // 4. generate_satellite_tiles
 		maptool.NewGenerateHeightmapStage(tools), // 5. generate_heightmap
-		maptool.NewGenerateHillshadeStage(tools), // 6. generate_hillshade
-		maptool.NewGenerateColorReliefStage(tools), // 7. generate_colorrelief
-		maptool.NewGenerateContoursStage(tools),  // 8. generate_contours
-		maptool.NewProcessGeoJSONStage(),         // 9. process_geojson
-		maptool.NewGradMehVectorTilesStage(tools), // 10. generate_vector_tiles
-		maptool.NewGenerateStylesStage(),         // 11. generate_styles
-		maptool.NewGenerateGradMehMetadataStage(), // 12. generate_metadata
+		maptool.NewGenerateHillshadeStage(tools),     // 6. generate_hillshade
+		maptool.NewGenerateHillshadeFullStage(tools), // 7. generate_hillshade_full
+		maptool.NewGenerateColorReliefStage(tools), // 8. generate_colorrelief
+		maptool.NewGenerateContoursStage(tools),  // 9. generate_contours
+		maptool.NewProcessGeoJSONStage(),         // 10. process_geojson
+		maptool.NewGradMehVectorTilesStage(tools), // 11. generate_vector_tiles
+		maptool.NewGenerateStylesStage(),         // 12. generate_styles
+		maptool.NewGenerateGradMehMetadataStage(), // 13. generate_metadata
 	}
 	return maptool.NewPipeline(stages)
 }

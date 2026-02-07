@@ -74,6 +74,44 @@ func topoContourColorExpr() interface{} {
 	}
 }
 
+// topoContourTextColorExpr returns a darker case expression for topo contour labels.
+func topoContourTextColorExpr() interface{} {
+	return []interface{}{
+		"case",
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
+		"#2A6B9F",
+		"#9A8060",
+	}
+}
+
+// topoDarkContourTextColorExpr returns a darker case expression for topo-dark contour labels.
+func topoDarkContourTextColorExpr() interface{} {
+	return []interface{}{
+		"case",
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
+		"#2A6B9F",
+		"#3a2a1a",
+	}
+}
+
+// seaContourOpacityExpr returns a zoom-interpolated opacity for underwater contours
+// that fades in from low opacity when zoomed out to full when zoomed in.
+// Land contours keep the given landOpacity at all zoom levels.
+func seaContourOpacityExpr(landOpacity float64) interface{} {
+	// zoom must be top-level — nest case inside interpolate stops
+	seaLow := []interface{}{
+		"case",
+		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
+		0.15,
+		landOpacity,
+	}
+	return []interface{}{
+		"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
+		12.0, seaLow,
+		15.0, landOpacity,
+	}
+}
+
 // topoTextLayout returns a label layout for the topo style variant.
 func topoTextLayout() map[string]interface{} {
 	return map[string]interface{}{
@@ -198,11 +236,11 @@ var knownLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"sea": {{
-		ID: "sea-land", Type: "fill", SourceLayer: "sea", MinZoom: 8,
+		ID: "land", Type: "fill", SourceLayer: "sea",
 		Filter: []interface{}{">", []interface{}{"get", "ELEV_MAX"}, 0.0},
 		Paint:  map[string]interface{}{"fill-color": landColor, "fill-opacity": 1.0, "fill-antialias": true},
 	}, {
-		ID: "sea-water", Type: "fill", SourceLayer: "sea", MinZoom: 8,
+		ID: "sea", Type: "fill", SourceLayer: "sea",
 		Filter: []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, 0.0},
 		Paint:  map[string]interface{}{"fill-color": arma3SeaColor, "fill-opacity": 0.5, "fill-antialias": false},
 	}},
@@ -626,43 +664,42 @@ func makeTopoLabel(name, color string) LayerStyle {
 
 // knownTopoLayerStyles maps layer names to their topo-specific MapLibre styles.
 var knownTopoLayerStyles = map[string][]LayerStyle{
-	// NOTE: "sea" is handled explicitly in buildTopoLayers() as sea-land/sea-water
+	// NOTE: "sea" is handled explicitly in buildTopoLayers() as land/sea
 	// with ELEV_MAX filters. It's kept in topoLayerOrder to suppress fallback.
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 0.25,
+			"line-color": topoContourColorExpr(), "line-opacity": 0.3, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
 		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoContourColorExpr(), "line-opacity": 0.5, "line-width": 0.5,
 		},
 	}},
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
-		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
 			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
 			"text-font":        []interface{}{"OpenSans-Regular"},
-			"text-size":        10,
+			"text-size":        14,
 			"text-max-angle":   30,
 		},
 		Paint: map[string]interface{}{
-			"text-color": topoContourColorExpr(),
+			"text-color": topoContourTextColorExpr(),
 		},
 	}},
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}},
 	"track": {{
@@ -783,42 +820,41 @@ var topoLayerOrder = []string{
 
 // knownTopoDarkLayerStyles maps layer names to their topo-dark-specific MapLibre styles.
 var knownTopoDarkLayerStyles = map[string][]LayerStyle{
-	// NOTE: "sea" is handled explicitly in buildTopoDarkLayers() as sea-land/sea-water.
+	// NOTE: "sea" is handled explicitly in buildTopoDarkLayers() as land/sea.
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 0.25,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.3, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
 		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.5, "line-width": 0.5,
 		},
 	}},
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
-		Filter: []interface{}{"all", []interface{}{">", "elevation", 0.0}},
 		Layout: map[string]interface{}{
 			"symbol-placement": "line",
 			"text-field":       []interface{}{"concat", []interface{}{"to-string", []interface{}{"get", "elevation"}}, "m"},
 			"text-font":        []interface{}{"OpenSans-Regular"},
-			"text-size":        10,
+			"text-size":        14,
 			"text-max-angle":   30,
 		},
 		Paint: map[string]interface{}{
-			"text-color": topoDarkContourColorExpr(),
+			"text-color": topoDarkContourTextColorExpr(),
 		},
 	}},
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 1.0, "line-width": 1.0,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}},
 	"track": {{
@@ -923,6 +959,7 @@ const (
 	StyleColorRelief StyleVariant = "color-relief"
 	StyleTopo        StyleVariant = "topo"
 	StyleTopoDark    StyleVariant = "topo-dark"
+	StyleTopoRelief  StyleVariant = "topo-relief"
 	StyleSatellite   StyleVariant = "satellite"
 	StyleHybrid      StyleVariant = "hybrid"
 )
@@ -935,8 +972,9 @@ type StyleConfig struct {
 	VectorLayers   []string
 	HasSatellite   bool
 	HasHeightmap   bool
-	HasHillshade   bool
-	HasColorRelief bool
+	HasHillshade     bool
+	HasHillshadeFull bool
+	HasColorRelief   bool
 	GlyphsURL      string // template for font glyphs, e.g. "../../fonts/{fontstack}/{range}.pbf"
 }
 
@@ -967,6 +1005,8 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		layers = append(layers, buildTopoLayers(cfg)...)
 	case StyleTopoDark:
 		layers = append(layers, buildTopoDarkLayers(cfg)...)
+	case StyleTopoRelief:
+		layers = append(layers, buildTopoReliefLayers(cfg)...)
 	case StyleSatellite:
 		layers = append(layers, buildSatelliteLayers(cfg)...)
 	case StyleHybrid:
@@ -1017,6 +1057,14 @@ func buildSources(cfg StyleConfig) map[string]interface{} {
 		}
 	}
 
+	if cfg.HasHillshadeFull {
+		sources["hillshade-full"] = map[string]interface{}{
+			"type":     "raster",
+			"url":      "pmtiles://" + assetPath(prefix, "hillshade-full.pmtiles"),
+			"tileSize": 256,
+		}
+	}
+
 	if cfg.HasColorRelief {
 		sources["color-relief"] = map[string]interface{}{
 			"type":     "raster",
@@ -1056,8 +1104,8 @@ func buildColorReliefLayers(cfg StyleConfig) []interface{} {
 		})
 	}
 
-	// Vector feature layers
-	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisStandard)...)
+	// Vector feature layers (no land fill — color-relief raster covers it)
+	layers = append(layers, buildVectorFeatureLayers(cfg.VectorLayers, layerVisColorRelief)...)
 
 	return layers
 }
@@ -1252,6 +1300,38 @@ func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 	return layers
 }
 
+// --- Topo Relief style layers (color-relief base + topo vector overlays) ---
+
+func buildTopoReliefLayers(cfg StyleConfig) []interface{} {
+	var layers []interface{}
+
+	// Land/sea fills — hillshade only covers land, so sea stays opaque
+	if hasVectorLayer(cfg.VectorLayers, "sea") {
+		layers = append(layers, buildLandSeaLayers(landColor, arma3SeaColor)...)
+	}
+
+	// Hillshade at 50% opacity for 3D depth — prefer full (land+underwater), fall back to land-only
+	var hillshadeSource string
+	if cfg.HasHillshadeFull {
+		hillshadeSource = "hillshade-full"
+	} else if cfg.HasHillshade {
+		hillshadeSource = "hillshade"
+	}
+	if hillshadeSource != "" {
+		layers = append(layers, map[string]interface{}{
+			"id":     "hillshade-raster",
+			"type":   "raster",
+			"source": hillshadeSource,
+			"paint":  map[string]interface{}{"raster-opacity": 0.5},
+		})
+	}
+
+	// Vector feature layers in topo render order with topo styles
+	layers = append(layers, buildTopoVectorFeatureLayers(cfg.VectorLayers)...)
+
+	return layers
+}
+
 // --- Satellite style layers ---
 
 func buildSatelliteLayers(cfg StyleConfig) []interface{} {
@@ -1321,7 +1401,7 @@ func buildHybridLayers(cfg StyleConfig) []interface{} {
 type layerVisibility struct {
 	seaLand     bool
 	seaWater    bool
-	seaOpacity  float64 // override sea-water opacity (0 = use default)
+	seaOpacity  float64 // override sea opacity (0 = use default)
 	forest      bool
 	rocks       bool
 	roads       bool
@@ -1333,6 +1413,13 @@ type layerVisibility struct {
 	railway     bool
 	powerline   bool
 	vegetation  bool
+}
+
+var layerVisColorRelief = layerVisibility{
+	seaLand: false, seaWater: true,
+	forest: true, rocks: true, roads: true, buildings: true,
+	contours: true, labels: true, icons: true,
+	bridges: true, railway: true, powerline: true, vegetation: false,
 }
 
 var layerVisStandard = layerVisibility{
@@ -1495,10 +1582,10 @@ func buildVectorFeatureLayers(layerNames []string, vis layerVisibility) []interf
 
 			// Apply sea layer visibility/opacity overrides
 			if name == "sea" {
-				if style.ID == "sea-land" && !vis.seaLand {
+				if style.ID == "land" && !vis.seaLand {
 					continue
 				}
-				if style.ID == "sea-water" {
+				if style.ID == "sea" {
 					if !vis.seaWater {
 						continue
 					}

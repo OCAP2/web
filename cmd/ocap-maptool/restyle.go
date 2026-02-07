@@ -65,7 +65,7 @@ func runRestyle(args []string) error {
 }
 
 // restyleWorld reads meta.json, probes which pmtiles exist,
-// and regenerates the 5 style JSONs + sprites.
+// and regenerates the style JSONs + sprites.
 func restyleWorld(mapsDir, worldName string) error {
 	worldDir := filepath.Join(mapsDir, worldName)
 
@@ -103,12 +103,13 @@ func restyleWorld(mapsDir, worldName string) error {
 		VectorLayers:   meta.FeatureLayers,
 		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),
-		HasHillshade:   hasFile("hillshade.pmtiles"),
-		HasColorRelief: hasFile("color-relief.pmtiles"),
+		HasHillshade:     hasFile("hillshade.pmtiles"),
+		HasHillshadeFull: hasFile("hillshade-full.pmtiles"),
+		HasColorRelief:   hasFile("color-relief.pmtiles"),
 		GlyphsURL:      "../../fonts/{fontstack}/{range}.pbf",
 	}
 
-	// 4. Generate all 5 style variants
+	// 4. Generate all style variants
 	stylesDir := filepath.Join(worldDir, "styles")
 	if err := os.MkdirAll(stylesDir, 0755); err != nil {
 		return fmt.Errorf("create styles dir: %w", err)
@@ -120,6 +121,7 @@ func restyleWorld(mapsDir, worldName string) error {
 	}{
 		{maptool.StyleTopo, "topo.json"},
 		{maptool.StyleTopoDark, "topo-dark.json"},
+		{maptool.StyleTopoRelief, "topo-relief.json"},
 		{maptool.StyleSatellite, "satellite.json"},
 		{maptool.StyleHybrid, "hybrid.json"},
 		{maptool.StyleColorRelief, "color-relief.json"},

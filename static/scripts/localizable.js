@@ -369,6 +369,48 @@ let _localizable = {
 		"de": "Addon Version: ",
 		"cs": "Verze addonu: ",
 		"it": "Versione addon: "
+	},
+	"basemap_topographic": {
+		"ru": "Топографическая",
+		"en": "Topographic",
+		"de": "Topografisch",
+		"cs": "Topografická",
+		"it": "Topografica"
+	},
+	"basemap_topographic_dark": {
+		"ru": "Топографическая (тёмная)",
+		"en": "Topographic Dark",
+		"de": "Topografisch Dunkel",
+		"cs": "Topografická tmavá",
+		"it": "Topografica scura"
+	},
+	"basemap_satellite": {
+		"ru": "Спутник",
+		"en": "Satellite",
+		"de": "Satellit",
+		"cs": "Satelitní",
+		"it": "Satellite"
+	},
+	"basemap_hybrid": {
+		"ru": "Гибрид",
+		"en": "Hybrid",
+		"de": "Hybrid",
+		"cs": "Hybridní",
+		"it": "Ibrida"
+	},
+	"basemap_color_relief": {
+		"ru": "Цветной рельеф",
+		"en": "Color Relief",
+		"de": "Farbreliefkarte",
+		"cs": "Barevný reliéf",
+		"it": "Rilievo a colori"
+	},
+	"basemap_topographic_relief": {
+		"ru": "Топографический рельеф",
+		"en": "Topographic Relief",
+		"de": "Topografisches Relief",
+		"cs": "Topografický reliéf",
+		"it": "Rilievo topografico"
 	}
 };
 let localizableElement = [];

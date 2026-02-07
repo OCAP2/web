@@ -608,11 +608,12 @@ function initMap (world) {
 		var fontsBaseURL = new URL('images/maps/fonts/', window.location.href).href;
 
 		var styleCandidates = [
-			{ label: 'Topo',         url: styleBase + 'topo.json' },
-			{ label: 'Topo Dark',    url: styleBase + 'topo-dark.json' },
-			{ label: 'Satellite',    url: styleBase + 'satellite.json' },
-			{ label: 'Hybrid',       url: styleBase + 'hybrid.json' },
-			{ label: 'Color Relief', url: styleBase + 'color-relief.json' }
+			{ label: getLocalizable('basemap_topographic'),        url: styleBase + 'topo.json' },
+			{ label: getLocalizable('basemap_topographic_dark'),   url: styleBase + 'topo-dark.json' },
+			{ label: getLocalizable('basemap_satellite'),          url: styleBase + 'satellite.json' },
+			{ label: getLocalizable('basemap_hybrid'),             url: styleBase + 'hybrid.json' },
+			{ label: getLocalizable('basemap_color_relief'),       url: styleBase + 'color-relief.json' },
+			{ label: getLocalizable('basemap_topographic_relief'), url: styleBase + 'topo-relief.json' }
 		];
 
 		// Resolve saved style preference
@@ -683,7 +684,7 @@ function initMap (world) {
 				// maxZoom: mapMaxZoom,
 				minNativeZoom: world.minZoom,
 				bounds: mapBounds,
-				label: "Topographic",
+				label: getLocalizable('basemap_topographic'),
 				attribution: "Map Data &copy; " + world.attribution,
 				noWrap: true,
 				tms: false,
@@ -700,7 +701,7 @@ function initMap (world) {
 				// maxZoom: mapMaxZoom,
 				minNativeZoom: world.minZoom,
 				bounds: mapBounds,
-				label: "Topographic Dark",
+				label: getLocalizable('basemap_topographic_dark'),
 				attribution: "Map Data &copy; " + world.attribution,
 				noWrap: true,
 				tms: false,
@@ -717,7 +718,7 @@ function initMap (world) {
 				// maxZoom: mapMaxZoom,
 				minNativeZoom: world.minZoom,
 				bounds: mapBounds,
-				label: "Topographic Relief",
+				label: getLocalizable('basemap_topographic_relief'),
 				attribution: "Map Data &copy; " + world.attribution,
 				noWrap: true,
 				tms: false,
@@ -735,7 +736,7 @@ function initMap (world) {
 				minNativeZoom: world.minZoom,
 				bounds: mapBounds,
 				attribution: "Map Data &copy; " + world.attribution,
-				label: "Colored Relief",
+				label: getLocalizable('basemap_color_relief'),
 				noWrap: true,
 				tms: false,
 				keepBuffer: 4,

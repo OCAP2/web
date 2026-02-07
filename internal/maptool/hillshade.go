@@ -7,6 +7,103 @@ import (
 	"path/filepath"
 )
 
+// hillshadeTools holds the common GDAL tools needed by hillshade stages.
+type hillshadeTools struct {
+	gdalDem       string
+	gdalTranslate string
+	pmtiles       string
+	gdalAddo      string
+	hasAddo       bool
+}
+
+// findHillshadeTools resolves the common tools needed by hillshade stages.
+func findHillshadeTools(tools ToolSet) (hillshadeTools, error) {
+	var ht hillshadeTools
+	gdalDem, ok := tools.FindTool("gdaldem")
+	if !ok {
+		return ht, fmt.Errorf("gdaldem not found")
+	}
+	ht.gdalDem = gdalDem.Path
+
+	gdalTranslate, ok := tools.FindTool("gdal_translate")
+	if !ok {
+		return ht, fmt.Errorf("gdal_translate not found")
+	}
+	ht.gdalTranslate = gdalTranslate.Path
+
+	pmtilesBin, ok := tools.FindTool("pmtiles")
+	if !ok {
+		return ht, fmt.Errorf("pmtiles not found")
+	}
+	ht.pmtiles = pmtilesBin.Path
+
+	gdalAddo, hasAddo := tools.FindTool("gdaladdo")
+	ht.gdalAddo = gdalAddo.Path
+	ht.hasAddo = hasAddo
+	return ht, nil
+}
+
+// rasterToPMTiles converts a GeoTIFF to PMTiles via MBTiles, with optional overviews.
+func rasterToPMTiles(ctx context.Context, ht hillshadeTools, inputTif, mbtilesPath, outputPath, name string) error {
+	if err := RasterToMBTiles(ctx, ht.gdalTranslate, inputTif, mbtilesPath,
+		name, 8, 18, "PNG", "LANCZOS"); err != nil {
+		return err
+	}
+
+	if ht.hasAddo {
+		if err := AddOverviews(ctx, ht.gdalAddo, mbtilesPath); err != nil {
+			log.Printf("WARNING: gdaladdo failed: %v", err)
+		}
+	}
+
+	return MBTilesToPMTiles(ctx, ht.pmtiles, mbtilesPath, outputPath)
+}
+
+// NewGenerateHillshadeFullStage creates a pipeline stage that generates a hillshade
+// raster from the full DEM (including underwater terrain) and packages it as PMTiles.
+// Unlike the land-only hillshade, this does not mask below sea level.
+func NewGenerateHillshadeFullStage(tools ToolSet) Stage {
+	return Stage{
+		Name:     "generate_hillshade_full",
+		Optional: true,
+		Run: func(ctx context.Context, job *Job) error {
+			if job.DEMPath == "" {
+				return fmt.Errorf("DEM not available")
+			}
+
+			ht, err := findHillshadeTools(tools)
+			if err != nil {
+				return err
+			}
+
+			// Generate hillshade from full DEM (no sea masking)
+			hillshadeTif := filepath.Join(job.TempDir, "hillshade-full.tif")
+			log.Printf("Generating full hillshade (including underwater)")
+			if err := runCmd(ctx, ht.gdalDem,
+				"hillshade", job.DEMPath, hillshadeTif,
+				"-alg", "ZevenbergenThorne",
+				"-multidirectional",
+				"-z", "1.0", "-s", "1.0", "-alt", "45.0",
+				"-compute_edges",
+				"-co", "COMPRESS=LZW", "-co", "PREDICTOR=2", "-co", "NUM_THREADS=ALL_CPUS",
+			); err != nil {
+				return fmt.Errorf("gdaldem hillshade-full: %w", err)
+			}
+
+			// Convert to PMTiles
+			mbtilesPath := filepath.Join(job.TempDir, "hillshade-full.mbtiles")
+			outputPath := filepath.Join(job.TilesOutputDir(), "hillshade-full.pmtiles")
+			if err := rasterToPMTiles(ctx, ht, hillshadeTif, mbtilesPath, outputPath, "hillshade-full"); err != nil {
+				return err
+			}
+
+			job.HasHillshadeFull = true
+			log.Printf("Generated %s", outputPath)
+			return nil
+		},
+	}
+}
+
 // NewGenerateHillshadeStage creates a pipeline stage that generates a hillshade
 // raster from the DEM GeoTIFF and packages it as PMTiles.
 func NewGenerateHillshadeStage(tools ToolSet) Stage {
@@ -18,24 +115,15 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 				return fmt.Errorf("DEM not available")
 			}
 
-			gdalCalc, hasCalc := tools.FindTool("gdal_calc.py")
-			gdalDem, ok := tools.FindTool("gdaldem")
-			if !ok {
-				return fmt.Errorf("gdaldem not found")
+			ht, err := findHillshadeTools(tools)
+			if err != nil {
+				return err
 			}
+			gdalCalc, hasCalc := tools.FindTool("gdal_calc.py")
 			gdalBuildVrt, ok := tools.FindTool("gdalbuildvrt")
 			if !ok {
 				return fmt.Errorf("gdalbuildvrt not found")
 			}
-			gdalTranslate, ok := tools.FindTool("gdal_translate")
-			if !ok {
-				return fmt.Errorf("gdal_translate not found")
-			}
-			pmtilesBin, ok := tools.FindTool("pmtiles")
-			if !ok {
-				return fmt.Errorf("pmtiles not found")
-			}
-			gdalAddo, hasAddo := tools.FindTool("gdaladdo")
 
 			demInput := job.DEMPath
 
@@ -59,7 +147,7 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 			hillshadeTif := filepath.Join(job.TempDir, "hillshade.tif")
 			{
 				log.Printf("Generating hillshade")
-				if err := runCmd(ctx, gdalDem.Path,
+				if err := runCmd(ctx, ht.gdalDem,
 					"hillshade", demInput, hillshadeTif,
 					"-alg", "ZevenbergenThorne",
 					"-multidirectional",
@@ -101,7 +189,7 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 
 				// 5. Convert to RGBA GeoTIFF
 				log.Printf("Converting hillshade to RGBA GeoTIFF")
-				if err := runCmd(ctx, gdalTranslate.Path,
+				if err := runCmd(ctx, ht.gdalTranslate,
 					"-of", "GTiff",
 					"-colorinterp_4", "alpha",
 					"-co", "TILED=YES", "-co", "COMPRESS=LZW",
@@ -114,21 +202,10 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 				hillshadeRgba = hillshadeTif
 			}
 
-			// 6. Convert to MBTiles → PMTiles
+			// 6. Convert to PMTiles
 			mbtilesPath := filepath.Join(job.TempDir, "hillshade.mbtiles")
-			if err := RasterToMBTiles(ctx, gdalTranslate.Path, hillshadeRgba, mbtilesPath,
-				"hillshade", 8, 18, "PNG", "LANCZOS"); err != nil {
-				return err
-			}
-
-			if hasAddo {
-				if err := AddOverviews(ctx, gdalAddo.Path, mbtilesPath); err != nil {
-					log.Printf("WARNING: gdaladdo failed: %v", err)
-				}
-			}
-
 			outputPath := filepath.Join(job.TilesOutputDir(), "hillshade.pmtiles")
-			if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mbtilesPath, outputPath); err != nil {
+			if err := rasterToPMTiles(ctx, ht, hillshadeRgba, mbtilesPath, outputPath, "hillshade"); err != nil {
 				return err
 			}
 

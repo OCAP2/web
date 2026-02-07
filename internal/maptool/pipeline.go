@@ -51,7 +51,8 @@ type Job struct {
 	ContourFiles   map[string]string `json:"-"` // interval suffix ("05","10","50","100") → GeoJSON path
 	SeaFile        string            `json:"-"` // path to generated sea polygon GeoJSON (from DEM)
 	HasHeightmap   bool              `json:"-"`
-	HasHillshade   bool              `json:"-"`
+	HasHillshade     bool              `json:"-"`
+	HasHillshadeFull bool              `json:"-"`
 	HasColorRelief bool              `json:"-"`
 	GradMehMeta    *GradMehMeta      `json:"-"` // original grad_meh metadata
 	HasMaplibre    bool              `json:"-"` // set by generate_styles stage
