@@ -18,6 +18,12 @@ type geoJSONSource struct {
 	Path string // full path to .geojson.gz file
 }
 
+// layerNameAliases maps grad_meh layer names to canonical names used in styles.
+// Some grad_meh versions use different names for the same feature.
+var layerNameAliases = map[string]string{
+	"mounts": "mount",
+}
+
 // DiscoverGeoJSONLayers scans a grad_meh export directory for GeoJSON layers.
 // Looks for geojson/**/*.geojson.gz files recursively (layers may be in subdirectories
 // like geojson/locations/ or geojson/roads/).
@@ -216,13 +222,26 @@ func NewProcessGeoJSONStage() Stage {
 					log.Printf("Skipping bush layer (too dense for vector tiles)")
 					continue
 				}
-				outPath := filepath.Join(tmpDir, src.Name+".geojson")
+				// Normalize layer names (e.g. "mounts" → "mount")
+				name := src.Name
+				if canonical, ok := layerNameAliases[name]; ok {
+					log.Printf("Renaming layer %s → %s", name, canonical)
+					name = canonical
+				}
+				outPath := filepath.Join(tmpDir, name+".geojson")
 				if err := ProcessGeoJSONGz(src.Path, outPath); err != nil {
-					log.Printf("WARNING: skipping layer %s: %v", src.Name, err)
+					log.Printf("WARNING: skipping layer %s: %v", name, err)
 					continue
 				}
-				layerFiles = append(layerFiles, LayerFile{Name: src.Name, Path: outPath})
-				layerNames = append(layerNames, src.Name)
+				layerFiles = append(layerFiles, LayerFile{Name: name, Path: outPath})
+				layerNames = append(layerNames, name)
+			}
+
+			// Add sea polygon file if available (from generate_contours stage)
+			if job.SeaFile != "" {
+				layerFiles = append(layerFiles, LayerFile{Name: "sea", Path: job.SeaFile})
+				layerNames = append(layerNames, "sea")
+				log.Printf("Added sea polygon layer from DEM")
 			}
 
 			// Add GDAL contour files if available (from generate_contours stage)

@@ -442,6 +442,43 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"powerwind":   {makeIconStyle("powerwind", "objects/powerwind", 15)},
 	"viewtower":   {makeIconStyle("viewtower", "objects/viewtower", 15)},
 
+	// --- Mountain peaks ---
+	"mount": {{
+		ID: "mount", Type: "symbol", SourceLayer: "mount", MinZoom: 8,
+		Layout: map[string]interface{}{
+			"icon-allow-overlap":    true,
+			"text-field":            []interface{}{"get", "text"},
+			"text-font":             []interface{}{"OpenSans-Regular"},
+			"text-anchor":           "left",
+			"text-size":             12,
+			"text-offset":           []interface{}{0.5, float64(0)},
+			"symbol-sort-key":       []interface{}{"*", []interface{}{"get", "elevation"}, float64(-1)},
+		},
+		Paint: map[string]interface{}{
+			"text-color": "#482c18", "text-opacity": 0.5,
+		},
+	}},
+
+	// --- Missing location labels & POIs (text-only, no icon PNGs yet) ---
+	"fortress":         {makeLabelStyle("fortress", "#000000", 14)},
+	"airport":          {makeLabelStyle("airport", "#406633", 12)},
+	"bordercrossing":   {makeLabelStyle("bordercrossing", "#C7000D", 15)},
+	"viewpoint":        {makeLabelStyle("viewpoint", "#C7000D", 11)},
+	"flag":             {makeLabelStyle("flag", "#000000", 12)},
+	"rockarea":         {makeLabelStyle("rockarea", "#000000", 12)},
+	"handdrawncamp":    {makeLabelStyle("handdrawncamp", "#000000", 12)},
+	"power":            {makeLabelStyle("power", "#000000", 15)},
+	"name":             {makeLabelStyle("name", "#000000", 12)},
+	"faketown":         {makeLabelStyle("faketown", "#000000", 12)},
+	"strategic":        {makeLabelStyle("strategic", "#406633", 12)},
+	"flatareacity":     {makeLabelStyle("flatareacity", "#406633", 12)},
+	"flatareacitysmall": {makeLabelStyle("flatareacitysmall", "#406633", 12)},
+	"strongpointarea":  {makeLabelStyle("strongpointarea", "#406633", 12)},
+	"civildefense":     {makeLabelStyle("civildefense", "#406633", 12)},
+	"culturalproperty": {makeLabelStyle("culturalproperty", "#FFFFFF", 12)},
+	"dangerousforces":  {makeLabelStyle("dangerousforces", "#FFFFFF", 12)},
+	"safetyzone":       {makeLabelStyle("safetyzone", "#FFFFFF", 12)},
+
 	// --- Location labels ---
 	"hill": {{
 		ID: "hill", Type: "symbol", SourceLayer: "hill", MinZoom: 8,
@@ -539,6 +576,26 @@ func makeIconStyle(name, iconImage string, minZoom int) LayerStyle {
 	}
 }
 
+// makeLabelStyle creates a text-only symbol layer for named features.
+func makeLabelStyle(name, color string, minZoom int) LayerStyle {
+	return LayerStyle{
+		ID: name, Type: "symbol", SourceLayer: name, MinZoom: minZoom,
+		Layout: map[string]interface{}{
+			"text-field":  []interface{}{"get", "name"},
+			"text-font":   []interface{}{"OpenSans-Regular"},
+			"text-anchor": "left",
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), float64(5), float64(16), float64(20)},
+			"text-justify": "auto",
+		},
+		Paint: map[string]interface{}{
+			"text-color":      color,
+			"text-opacity":    float64(1),
+			"text-halo-color": "rgba(255,255,255,0.7)",
+			"text-halo-width": float64(1),
+		},
+	}
+}
+
 func makeVegetationStyle(name, iconImage string, iconSize float64) LayerStyle {
 	return LayerStyle{
 		ID: name, Type: "symbol", SourceLayer: name, MinZoom: 12,
@@ -566,12 +623,8 @@ func makeTopoLabel(name, color string) LayerStyle {
 
 // knownTopoLayerStyles maps layer names to their topo-specific MapLibre styles.
 var knownTopoLayerStyles = map[string][]LayerStyle{
-	"sea": {{
-		ID: "sea", Type: "fill", SourceLayer: "sea",
-		Paint: map[string]interface{}{
-			"fill-color": "#36B", "fill-opacity": 0.8, "fill-antialias": true,
-		},
-	}},
+	// NOTE: "sea" is handled explicitly in buildTopoLayers() as sea-land/sea-water
+	// with ELEV_MAX filters. It's kept in topoLayerOrder to suppress fallback.
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05",
 		Paint: map[string]interface{}{
@@ -657,6 +710,33 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"strongpointarea":   {makeTopoLabel("strongpointarea", "#406633")},
 	"flatarea":          {makeTopoLabel("flatarea", "#406633")},
 	"flatareacitysmall": {makeTopoLabel("flatareacitysmall", "#406633")},
+	"mount": {{
+		ID: "mount", Type: "symbol", SourceLayer: "mount",
+		Layout: map[string]interface{}{
+			"text-field":  []interface{}{"get", "text"},
+			"text-font":   []interface{}{"OpenSans-Regular"},
+			"text-anchor": "left",
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
+			"text-offset": []interface{}{float64(1), float64(0)},
+		},
+		Paint: topoTextPaint("#482c18"),
+	}},
+	"airport":          {makeTopoLabel("airport", "#406633")},
+	"fortress":         {makeTopoLabel("fortress", "#406633")},
+	"viewpoint":        {makeTopoLabel("viewpoint", "#C7000D")},
+	"bordercrossing":   {makeTopoLabel("bordercrossing", "#C7000D")},
+	"flag":             {makeTopoLabel("flag", "#406633")},
+	"rockarea":         {makeTopoLabel("rockarea", "#406633")},
+	"handdrawncamp":    {makeTopoLabel("handdrawncamp", "#406633")},
+	"name":             {makeTopoLabel("name", "#000000")},
+	"faketown":         {makeTopoLabel("faketown", "#000000")},
+	"strategic":        {makeTopoLabel("strategic", "#406633")},
+	"flatareacity":     {makeTopoLabel("flatareacity", "#406633")},
+	"civildefense":     {makeTopoLabel("civildefense", "#406633")},
+	"culturalproperty": {makeTopoLabel("culturalproperty", "#FFFFFF")},
+	"dangerousforces":  {makeTopoLabel("dangerousforces", "#FFFFFF")},
+	"safetyzone":       {makeTopoLabel("safetyzone", "#FFFFFF")},
+	"power":            {makeTopoLabel("power", "#000000")},
 	"citycenter":        {makeTopoLabel("citycenter", "#406633")},
 	"namemarine":        {makeTopoLabel("namemarine", "#0D66CC")},
 	"namelocal":         {makeTopoLabel("namelocal", "#70614D")},
@@ -678,18 +758,17 @@ var topoLayerOrder = []string{
 	"bush", "rock", "tree",
 	"fuelstation", "transmitter", "stack",
 	"strongpointarea", "flatarea", "flatareacitysmall",
+	"mount", "airport", "fortress", "viewpoint", "bordercrossing",
+	"flag", "rockarea", "handdrawncamp",
+	"name", "faketown", "strategic", "flatareacity",
+	"civildefense", "culturalproperty", "dangerousforces", "safetyzone", "power",
 	"citycenter",
 	"namemarine", "namelocal", "namevillage", "namecity", "namecitycapital",
 }
 
 // knownTopoDarkLayerStyles maps layer names to their topo-dark-specific MapLibre styles.
 var knownTopoDarkLayerStyles = map[string][]LayerStyle{
-	"sea": {{
-		ID: "sea", Type: "fill", SourceLayer: "sea",
-		Paint: map[string]interface{}{
-			"fill-color": "#1a3a5c", "fill-opacity": 0.8, "fill-antialias": true,
-		},
-	}},
+	// NOTE: "sea" is handled explicitly in buildTopoDarkLayers() as sea-land/sea-water.
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05",
 		Paint: map[string]interface{}{
@@ -775,6 +854,33 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"strongpointarea":   {makeTopoDarkLabel("strongpointarea", "#8a9a7a")},
 	"flatarea":          {makeTopoDarkLabel("flatarea", "#8a9a7a")},
 	"flatareacitysmall": {makeTopoDarkLabel("flatareacitysmall", "#8a9a7a")},
+	"mount": {{
+		ID: "mount", Type: "symbol", SourceLayer: "mount",
+		Layout: map[string]interface{}{
+			"text-field":  []interface{}{"get", "text"},
+			"text-font":   []interface{}{"OpenSans-Regular"},
+			"text-anchor": "left",
+			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, float64(12), 5.0, float64(16), float64(20)},
+			"text-offset": []interface{}{float64(1), float64(0)},
+		},
+		Paint: topoDarkTextPaint("#9a8a6a"),
+	}},
+	"airport":          {makeTopoDarkLabel("airport", "#8a9a7a")},
+	"fortress":         {makeTopoDarkLabel("fortress", "#8a9a7a")},
+	"viewpoint":        {makeTopoDarkLabel("viewpoint", "#aa4444")},
+	"bordercrossing":   {makeTopoDarkLabel("bordercrossing", "#aa4444")},
+	"flag":             {makeTopoDarkLabel("flag", "#8a9a7a")},
+	"rockarea":         {makeTopoDarkLabel("rockarea", "#8a9a7a")},
+	"handdrawncamp":    {makeTopoDarkLabel("handdrawncamp", "#8a9a7a")},
+	"name":             {makeTopoDarkLabel("name", "#CCCCCC")},
+	"faketown":         {makeTopoDarkLabel("faketown", "#CCCCCC")},
+	"strategic":        {makeTopoDarkLabel("strategic", "#8a9a7a")},
+	"flatareacity":     {makeTopoDarkLabel("flatareacity", "#8a9a7a")},
+	"civildefense":     {makeTopoDarkLabel("civildefense", "#8a9a7a")},
+	"culturalproperty": {makeTopoDarkLabel("culturalproperty", "#CCCCCC")},
+	"dangerousforces":  {makeTopoDarkLabel("dangerousforces", "#CCCCCC")},
+	"safetyzone":       {makeTopoDarkLabel("safetyzone", "#CCCCCC")},
+	"power":            {makeTopoDarkLabel("power", "#CCCCCC")},
 	"citycenter":        {makeTopoDarkLabel("citycenter", "#8a9a7a")},
 	"namemarine":        {makeTopoDarkLabel("namemarine", "#5599DD")},
 	"namelocal":         {makeTopoDarkLabel("namelocal", "#B8A88A")},
@@ -931,8 +1037,33 @@ func buildColorReliefLayers(cfg StyleConfig) []interface{} {
 
 // --- Topo style layers (native hillshade, topo-specific vector styles) ---
 
+// hasVectorLayer checks if a layer name is present in the list.
+func hasVectorLayer(layers []string, name string) bool {
+	for _, l := range layers {
+		if l == name {
+			return true
+		}
+	}
+	return false
+}
+
 func buildTopoLayers(cfg StyleConfig) []interface{} {
 	var layers []interface{}
+
+	// Land/sea fills — rendered immediately after background so everything
+	// else draws on top. Land provides the base terrain color; sea fills oceans.
+	if hasVectorLayer(cfg.VectorLayers, "sea") {
+		layers = append(layers, map[string]interface{}{
+			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": "#DFDFDF", "fill-opacity": 0.8, "fill-antialias": true},
+		})
+		layers = append(layers, map[string]interface{}{
+			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": "#36B", "fill-opacity": 0.8, "fill-antialias": true},
+		})
+	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
 	if cfg.HasSatellite {
@@ -1048,6 +1179,20 @@ func layerStyleToMap(style LayerStyle) map[string]interface{} {
 
 func buildTopoDarkLayers(cfg StyleConfig) []interface{} {
 	var layers []interface{}
+
+	// Land/sea fills — dark variants
+	if hasVectorLayer(cfg.VectorLayers, "sea") {
+		layers = append(layers, map[string]interface{}{
+			"id": "land", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{">", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": "#2a2a2a", "fill-opacity": 0.8, "fill-antialias": true},
+		})
+		layers = append(layers, map[string]interface{}{
+			"id": "sea", "type": "fill", "source": "features", "source-layer": "sea",
+			"filter": []interface{}{"<=", []interface{}{"get", "ELEV_MAX"}, float64(0)},
+			"paint":  map[string]interface{}{"fill-color": "#1a3a5c", "fill-opacity": 0.8, "fill-antialias": true},
+		})
+	}
 
 	// Satellite (hidden by default, allows layer toggle in UI)
 	if cfg.HasSatellite {
@@ -1210,7 +1355,12 @@ func categorizeLayer(name string) string {
 		"vegetationbroadleaf", "vegetationfir", "vegetationpalm", "vegetationvineyard":
 		return "vegetation"
 	case "hill", "namemarine", "namelocal", "namevillage", "namecity",
-		"namecitycapital", "citycenter":
+		"namecitycapital", "citycenter",
+		"mount", "airport", "name", "faketown", "strategic",
+		"flatareacity", "flatareacitysmall", "strongpointarea",
+		"civildefense", "culturalproperty", "dangerousforces", "safetyzone",
+		"fortress", "viewpoint", "bordercrossing", "flag", "rockarea",
+		"handdrawncamp", "power":
 		return "labels"
 	}
 	// Object icons

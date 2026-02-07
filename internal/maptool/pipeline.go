@@ -49,6 +49,7 @@ type Job struct {
 	DEMPath        string            `json:"-"` // path to georeferenced DEM GeoTIFF
 	DEMGrid        *DEMGrid          `json:"-"` // parsed elevation grid
 	ContourFiles   map[string]string `json:"-"` // interval suffix ("05","10","50","100") → GeoJSON path
+	SeaFile        string            `json:"-"` // path to generated sea polygon GeoJSON (from DEM)
 	HasHeightmap   bool              `json:"-"`
 	HasHillshade   bool              `json:"-"`
 	HasColorRelief bool              `json:"-"`
