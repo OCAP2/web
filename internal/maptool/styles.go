@@ -45,18 +45,18 @@ func contourColorExpr(landColor string) interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<", []interface{}{"get", "elevation"}, 0.0},
-		"#1B4F8A",
+		"#4A8BBF",
 		landColor,
 	}
 }
 
 // topoContourColorExpr returns a case expression for topo-style contours.
-// Uses #1B4F8A for underwater (elevation <= 0) and #D1BA94 for land.
+// Uses #4A8BBF for underwater (elevation <= 0) and #D1BA94 for land.
 func topoContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
-		"#1B4F8A",
+		"#4A8BBF",
 		"#D1BA94",
 	}
 }
@@ -84,12 +84,12 @@ func topoTextPaint(color string) map[string]interface{} {
 }
 
 // topoDarkContourColorExpr returns a case expression for topo-dark contours.
-// Uses #1B4F8A for underwater (elevation <= 0) and #5a4a3a for land.
+// Uses #4A8BBF for underwater (elevation <= 0) and #5a4a3a for land.
 func topoDarkContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
-		"#1B4F8A",
+		"#4A8BBF",
 		"#5a4a3a",
 	}
 }
