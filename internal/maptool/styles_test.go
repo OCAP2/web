@@ -32,10 +32,7 @@ func TestCategorizeLayer(t *testing.T) {
 		{"contours10", "contours"},
 		{"contours50", "contours"},
 		{"contours100", "contours"},
-		{"vegetationbroadleaf", "vegetation"},
-		{"vegetationfir", "vegetation"},
-		{"vegetationpalm", "vegetation"},
-		{"vegetationvineyard", "vegetation"},
+		{"tree", "vegetation"},
 		{"hill", "labels"},
 		{"namemarine", "labels"},
 		{"namelocal", "labels"},
@@ -79,7 +76,6 @@ func TestIsLayerVisible(t *testing.T) {
 	assert.True(t, isLayerVisible("namecity", allVisible))
 	assert.True(t, isLayerVisible("church", allVisible))
 	assert.True(t, isLayerVisible("tree", allVisible))
-	assert.True(t, isLayerVisible("vegetationfir", allVisible))
 
 	// None visible
 	assert.False(t, isLayerVisible("forest", noneVisible))
@@ -105,7 +101,7 @@ func TestIsLayerVisible_SeaPartial(t *testing.T) {
 func TestIsLayerVisible_SatelliteVariant(t *testing.T) {
 	// Satellite mode: no forest, no vegetation, no sea-land
 	assert.False(t, isLayerVisible("forest", layerVisSatellite))
-	assert.False(t, isLayerVisible("vegetationbroadleaf", layerVisSatellite))
+	assert.False(t, isLayerVisible("tree", layerVisSatellite))
 	assert.True(t, isLayerVisible("road", layerVisSatellite))
 	assert.True(t, isLayerVisible("namecity", layerVisSatellite))
 }

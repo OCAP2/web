@@ -76,19 +76,31 @@ func TestWriteSpriteFiles(t *testing.T) {
 }
 
 func TestSpriteIconNamesMatchStyles(t *testing.T) {
-	// Collect all icon-image values referenced in knownLayerStyles
+	// Collect all icon-image values referenced across all style maps
 	styleIcons := make(map[string]bool)
-	for _, styles := range knownLayerStyles {
-		for _, s := range styles {
-			if s.Layout == nil {
-				continue
-			}
-			if iconImage, ok := s.Layout["icon-image"]; ok {
-				if name, ok := iconImage.(string); ok {
-					styleIcons[name] = true
+	for _, styleMap := range []map[string][]LayerStyle{knownLayerStyles, knownTopoLayerStyles, knownTopoDarkLayerStyles} {
+		for _, styles := range styleMap {
+			for _, s := range styles {
+				if s.Layout == nil {
+					continue
+				}
+				if iconImage, ok := s.Layout["icon-image"]; ok {
+					if name, ok := iconImage.(string); ok {
+						styleIcons[name] = true
+					}
 				}
 			}
 		}
+	}
+
+	// Sprite icons that exist but are intentionally not styled
+	unusedSpriteIcons := map[string]bool{
+		"objects/bush":                 true,
+		"objects/tree":                 true,
+		"locations/vegetationbroadleaf": true,
+		"locations/vegetationfir":       true,
+		"locations/vegetationpalm":      true,
+		"locations/vegetationvineyard":  true,
 	}
 
 	// Collect all sprite icon names
@@ -102,8 +114,11 @@ func TestSpriteIconNamesMatchStyles(t *testing.T) {
 		assert.True(t, spriteNames[name], "icon %q referenced in styles but missing from sprite", name)
 	}
 
-	// Every sprite icon should be referenced by at least one style
+	// Every sprite icon should be referenced by at least one style (unless intentionally unused)
 	for name := range spriteNames {
+		if unusedSpriteIcons[name] {
+			continue
+		}
 		assert.True(t, styleIcons[name], "sprite icon %q not referenced by any style", name)
 	}
 }
