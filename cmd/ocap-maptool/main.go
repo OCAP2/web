@@ -23,6 +23,13 @@ func main() {
 		return
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == "restyle" {
+		if err := runRestyle(os.Args[2:]); err != nil {
+			log.Fatalf("restyle: %v", err)
+		}
+		return
+	}
+
 	if err := serve(); err != nil {
 		log.Fatalf("fatal: %v", err)
 	}
