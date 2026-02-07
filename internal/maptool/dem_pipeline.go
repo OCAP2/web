@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -60,10 +59,7 @@ func NewPrepareDEMStage(tools ToolSet) Stage {
 			}
 
 			log.Printf("Georeferencing DEM → %s", demTif)
-			cmd := exec.CommandContext(ctx, gdalTranslate.Path, args...)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
+			if err := runCmd(ctx, gdalTranslate.Path, args...); err != nil {
 				return fmt.Errorf("gdal_translate DEM: %w", err)
 			}
 
@@ -72,15 +68,7 @@ func NewPrepareDEMStage(tools ToolSet) Stage {
 			if hasFill {
 				log.Printf("Filling DEM nodata holes")
 				demFilled := filepath.Join(job.TempDir, "dem-filled.tif")
-				fillArgs := []string{
-					"-md", "25",
-					demTif,
-					demFilled,
-				}
-				fillCmd := exec.CommandContext(ctx, fillNodata.Path, fillArgs...)
-				fillCmd.Stdout = os.Stdout
-				fillCmd.Stderr = os.Stderr
-				if err := fillCmd.Run(); err != nil {
+				if err := runCmd(ctx, fillNodata.Path, "-md", "25", demTif, demFilled); err != nil {
 					log.Printf("WARNING: gdal_fillnodata failed: %v", err)
 				} else {
 					// Replace original with filled version

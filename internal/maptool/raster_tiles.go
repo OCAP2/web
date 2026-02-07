@@ -1,12 +1,28 @@
 package maptool
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 )
+
+// runCmd executes a command, streaming output to stdout/stderr in real time
+// while also capturing it. On error, the captured output is included in the
+// error message for diagnostics.
+func runCmd(ctx context.Context, name string, args ...string) error {
+	var buf bytes.Buffer
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Stdout = io.MultiWriter(os.Stdout, &buf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &buf)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w\nOutput:\n%s", err, buf.String())
+	}
+	return nil
+}
 
 // RasterToMBTiles converts a raster image to MBTiles using gdal_translate.
 func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name string,
@@ -31,37 +47,17 @@ func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name str
 	}
 
 	log.Printf("gdal_translate → %s (z%d-%d, %s, %s)", output, minZ, maxZ, tileFormat, resampling)
-	cmd := exec.CommandContext(ctx, gdalTranslate, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gdal_translate: %w", err)
-	}
-	return nil
+	return runCmd(ctx, gdalTranslate, args...)
 }
 
 // AddOverviews adds overview levels to an MBTiles file using gdaladdo.
 func AddOverviews(ctx context.Context, gdalAddo, mbtiles string) error {
-	args := []string{"-r", "average", mbtiles, "2", "4", "8", "16"}
 	log.Printf("gdaladdo %s", mbtiles)
-	cmd := exec.CommandContext(ctx, gdalAddo, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gdaladdo: %w", err)
-	}
-	return nil
+	return runCmd(ctx, gdalAddo, "-r", "average", mbtiles, "2", "4", "8", "16")
 }
 
 // MBTilesToPMTiles converts MBTiles to PMTiles using the pmtiles CLI.
 func MBTilesToPMTiles(ctx context.Context, pmtilesBin, input, output string) error {
-	args := []string{"convert", input, output}
 	log.Printf("pmtiles convert → %s", output)
-	cmd := exec.CommandContext(ctx, pmtilesBin, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("pmtiles convert: %w", err)
-	}
-	return nil
+	return runCmd(ctx, pmtilesBin, "convert", input, output)
 }

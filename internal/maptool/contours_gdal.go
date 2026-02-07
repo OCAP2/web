@@ -1,13 +1,10 @@
 package maptool
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -57,10 +54,7 @@ func NewGenerateContoursStage(tools ToolSet) Stage {
 				}
 
 				log.Printf("Generating %dm contours", ci.interval)
-				cmd := exec.CommandContext(ctx, gdalContour.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				if err := runCmd(ctx, gdalContour.Path, args...); err != nil {
 					log.Printf("WARNING: gdal_contour %dm failed: %v", ci.interval, err)
 					continue
 				}
@@ -88,12 +82,8 @@ func NewGenerateContoursStage(tools ToolSet) Stage {
 				seaPath,
 			}
 			log.Printf("Generating sea polygons from DEM")
-			var seaOut bytes.Buffer
-			seaCmd := exec.CommandContext(ctx, gdalContour.Path, seaArgs...)
-			seaCmd.Stdout = io.MultiWriter(os.Stdout, &seaOut)
-			seaCmd.Stderr = io.MultiWriter(os.Stderr, &seaOut)
-			if err := seaCmd.Run(); err != nil {
-				log.Printf("WARNING: sea polygon generation failed: %v\nOutput:\n%s", err, seaOut.String())
+			if err := runCmd(ctx, gdalContour.Path, seaArgs...); err != nil {
+				log.Printf("WARNING: sea polygon generation failed: %v", err)
 			} else {
 				job.SeaFile = seaPath
 				log.Printf("Generated sea.geojson")

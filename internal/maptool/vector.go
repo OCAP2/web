@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -334,10 +333,7 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 					}
 
 					log.Printf("tippecanoe: processing layer %s", lf.Name)
-					cmd := exec.CommandContext(ctx, tippeTool.Path, args...)
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					if err := cmd.Run(); err != nil {
+					if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
 						log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
 						continue
 					}
@@ -357,10 +353,7 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 				joinArgs = append(joinArgs, mbtilesFiles...)
 
 				log.Printf("tile-join: merging %d layers", len(mbtilesFiles))
-				cmd := exec.CommandContext(ctx, tileJoin.Path, joinArgs...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				joinErr := cmd.Run()
+				joinErr := runCmd(ctx, tileJoin.Path, joinArgs...)
 				if joinErr == nil {
 					// Convert to PMTiles
 					outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
@@ -391,10 +384,7 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 				}
 
 				log.Printf("Running tippecanoe with %d layers (single pass)", len(job.LayerFiles))
-				cmd := exec.CommandContext(ctx, tippeTool.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
 					return fmt.Errorf("tippecanoe: %w", err)
 				}
 

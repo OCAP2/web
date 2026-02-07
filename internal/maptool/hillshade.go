@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -44,18 +42,14 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 			// 1. Mask below sea level (keep only elevation > 0)
 			if hasCalc {
 				demAboveSea := filepath.Join(job.TempDir, "dem-above-sea.tif")
-				args := []string{
+				log.Printf("Masking DEM below sea level")
+				if err := runCmd(ctx, gdalCalc.Path,
 					"-A", job.DEMPath,
-					"--outfile=" + demAboveSea,
+					"--outfile="+demAboveSea,
 					"--calc=A*(A>=0)",
 					"--NoDataValue=0",
 					"--overwrite",
-				}
-				log.Printf("Masking DEM below sea level")
-				cmd := exec.CommandContext(ctx, gdalCalc.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				); err != nil {
 					return fmt.Errorf("gdal_calc (mask sea level): %w", err)
 				}
 				demInput = demAboveSea
@@ -64,25 +58,15 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 			// 2. Generate hillshade
 			hillshadeTif := filepath.Join(job.TempDir, "hillshade.tif")
 			{
-				args := []string{
-					"hillshade",
-					demInput,
-					hillshadeTif,
+				log.Printf("Generating hillshade")
+				if err := runCmd(ctx, gdalDem.Path,
+					"hillshade", demInput, hillshadeTif,
 					"-alg", "ZevenbergenThorne",
 					"-multidirectional",
-					"-z", "1.0",
-					"-s", "1.0",
-					"-alt", "45.0",
+					"-z", "1.0", "-s", "1.0", "-alt", "45.0",
 					"-compute_edges",
-					"-co", "COMPRESS=LZW",
-					"-co", "PREDICTOR=2",
-					"-co", "NUM_THREADS=ALL_CPUS",
-				}
-				log.Printf("Generating hillshade")
-				cmd := exec.CommandContext(ctx, gdalDem.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+					"-co", "COMPRESS=LZW", "-co", "PREDICTOR=2", "-co", "NUM_THREADS=ALL_CPUS",
+				); err != nil {
 					return fmt.Errorf("gdaldem hillshade: %w", err)
 				}
 			}
@@ -91,18 +75,14 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 			var hillshadeInvTif string
 			if hasCalc {
 				hillshadeInvTif = filepath.Join(job.TempDir, "hillshade-inv.tif")
-				args := []string{
+				log.Printf("Inverting hillshade for alpha")
+				if err := runCmd(ctx, gdalCalc.Path,
 					"-A", hillshadeTif,
-					"--outfile=" + hillshadeInvTif,
+					"--outfile="+hillshadeInvTif,
 					"--calc=255-A",
 					"--NoDataValue=0",
 					"--overwrite",
-				}
-				log.Printf("Inverting hillshade for alpha")
-				cmd := exec.CommandContext(ctx, gdalCalc.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				); err != nil {
 					return fmt.Errorf("gdal_calc (invert): %w", err)
 				}
 			}
@@ -111,38 +91,23 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 			hillshadeRgba := filepath.Join(job.TempDir, "hillshade-rgba.tif")
 			if hasCalc && hillshadeInvTif != "" {
 				mergeVrt := filepath.Join(job.TempDir, "hillshade-merge.vrt")
-				{
-					args := []string{
-						"-separate",
-						mergeVrt,
-						hillshadeTif, hillshadeTif, hillshadeTif, hillshadeInvTif,
-					}
-					log.Printf("Building hillshade RGBA VRT")
-					cmd := exec.CommandContext(ctx, gdalBuildVrt.Path, args...)
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					if err := cmd.Run(); err != nil {
-						return fmt.Errorf("gdalbuildvrt: %w", err)
-					}
+				log.Printf("Building hillshade RGBA VRT")
+				if err := runCmd(ctx, gdalBuildVrt.Path,
+					"-separate", mergeVrt,
+					hillshadeTif, hillshadeTif, hillshadeTif, hillshadeInvTif,
+				); err != nil {
+					return fmt.Errorf("gdalbuildvrt: %w", err)
 				}
 
 				// 5. Convert to RGBA GeoTIFF
-				{
-					args := []string{
-						"-of", "GTiff",
-						"-colorinterp_4", "alpha",
-						"-co", "TILED=YES",
-						"-co", "COMPRESS=LZW",
-						mergeVrt,
-						hillshadeRgba,
-					}
-					log.Printf("Converting hillshade to RGBA GeoTIFF")
-					cmd := exec.CommandContext(ctx, gdalTranslate.Path, args...)
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					if err := cmd.Run(); err != nil {
-						return fmt.Errorf("gdal_translate (RGBA): %w", err)
-					}
+				log.Printf("Converting hillshade to RGBA GeoTIFF")
+				if err := runCmd(ctx, gdalTranslate.Path,
+					"-of", "GTiff",
+					"-colorinterp_4", "alpha",
+					"-co", "TILED=YES", "-co", "COMPRESS=LZW",
+					mergeVrt, hillshadeRgba,
+				); err != nil {
+					return fmt.Errorf("gdal_translate (RGBA): %w", err)
 				}
 			} else {
 				// Without gdal_calc, just use the raw hillshade (no alpha)

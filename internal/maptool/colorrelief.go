@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -70,10 +69,7 @@ func NewGenerateColorReliefStage(tools ToolSet) Stage {
 					colorReliefTif,
 				}
 				log.Printf("Generating color relief")
-				cmd := exec.CommandContext(ctx, gdalDem.Path, args...)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err != nil {
+				if err := runCmd(ctx, gdalDem.Path, args...); err != nil {
 					return fmt.Errorf("gdaldem color-relief: %w", err)
 				}
 			}
