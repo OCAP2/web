@@ -118,19 +118,18 @@ func topoTextLayout() map[string]interface{} {
 		"text-field":  []interface{}{"get", "name"},
 		"text-font":   []interface{}{"OpenSans-Regular"},
 		"text-anchor": "left",
-		"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+		"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
 		"text-offset": []interface{}{1.0, 0.0},
 	}
 }
 
-// topoTextPaint returns topo-style text paint with a black halo.
+// topoTextPaint returns topo-style text paint with a translucent white halo.
 func topoTextPaint(color string) map[string]interface{} {
 	return map[string]interface{}{
 		"text-color":      color,
 		"text-opacity":    1.0,
-		"text-halo-color": "#000000",
+		"text-halo-color": "rgba(255,255,255,0.7)",
 		"text-halo-width": 1.0,
-		"text-halo-blur":  0.0,
 	}
 }
 
@@ -145,20 +144,19 @@ func topoDarkContourColorExpr() interface{} {
 	}
 }
 
-// topoDarkTextPaint returns topo-dark text paint with a dark halo for light text.
+// topoDarkTextPaint returns topo-dark text paint with a translucent dark halo.
 func topoDarkTextPaint(color string) map[string]interface{} {
 	return map[string]interface{}{
 		"text-color":      color,
 		"text-opacity":    1.0,
-		"text-halo-color": "#111111",
+		"text-halo-color": "rgba(0,0,0,0.7)",
 		"text-halo-width": 1.0,
-		"text-halo-blur":  0.0,
 	}
 }
 
 func makeTopoDarkLabel(name, color string) LayerStyle {
 	return LayerStyle{
-		ID: name, Type: "symbol", SourceLayer: name,
+		ID: name, Type: "symbol", SourceLayer: name, MaxZoom: 17,
 		Layout: topoTextLayout(),
 		Paint:  topoDarkTextPaint(color),
 	}
@@ -656,7 +654,7 @@ func makeTreeCircleStyle(strokeColor string) []LayerStyle {
 
 func makeTopoLabel(name, color string) LayerStyle {
 	return LayerStyle{
-		ID: name, Type: "symbol", SourceLayer: name,
+		ID: name, Type: "symbol", SourceLayer: name, MaxZoom: 17,
 		Layout: topoTextLayout(),
 		Paint:  topoTextPaint(color),
 	}
@@ -758,12 +756,12 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"flatarea":          {makeTopoLabel("flatarea", "#406633")},
 	"flatareacitysmall": {makeTopoLabel("flatareacitysmall", "#406633")},
 	"mount": {{
-		ID: "mount", Type: "symbol", SourceLayer: "mount",
+		ID: "mount", Type: "symbol", SourceLayer: "mount", MaxZoom: 17,
 		Layout: map[string]interface{}{
 			"text-field":  []interface{}{"get", "text"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+			"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
 			"text-offset": []interface{}{1.0, 0.0},
 		},
 		Paint: topoTextPaint("#482c18"),
@@ -785,11 +783,27 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"safetyzone":       {makeTopoLabel("safetyzone", "#FFFFFF")},
 	"power":            {makeTopoLabel("power", "#000000")},
 	"citycenter":        {makeTopoLabel("citycenter", "#406633")},
-	"namemarine":        {makeTopoLabel("namemarine", "#0D66CC")},
+	"namemarine": {{
+		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MaxZoom: 17,
+		Layout: topoTextLayout(),
+		Paint:  map[string]interface{}{"text-color": "#0D66CC", "text-opacity": 1.0},
+	}},
 	"namelocal":         {makeTopoLabel("namelocal", "#70614D")},
-	"namevillage":       {makeTopoLabel("namevillage", "#CCCCCC")},
-	"namecity":          {makeTopoLabel("namecity", "#FFFFFF")},
-	"namecitycapital":   {makeTopoLabel("namecitycapital", "#FFFFFF")},
+	"namevillage": {{
+		ID: "namevillage", Type: "symbol", SourceLayer: "namevillage", MaxZoom: 17,
+		Layout: topoTextLayout(),
+		Paint:  map[string]interface{}{"text-color": "#CCCCCC", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
+	}},
+	"namecity": {{
+		ID: "namecity", Type: "symbol", SourceLayer: "namecity", MaxZoom: 17,
+		Layout: topoTextLayout(),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
+	}},
+	"namecitycapital": {{
+		ID: "namecitycapital", Type: "symbol", SourceLayer: "namecitycapital", MaxZoom: 17,
+		Layout: topoTextLayout(),
+		Paint:  map[string]interface{}{"text-color": "#FFFFFF", "text-opacity": 1.0, "text-halo-color": "rgba(0,0,0,0.7)", "text-halo-width": 1.0},
+	}},
 }
 
 // topoLayerOrder defines the bottom-to-top rendering order for the topo style.
@@ -908,12 +922,12 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"flatarea":          {makeTopoDarkLabel("flatarea", "#8a9a7a")},
 	"flatareacitysmall": {makeTopoDarkLabel("flatareacitysmall", "#8a9a7a")},
 	"mount": {{
-		ID: "mount", Type: "symbol", SourceLayer: "mount",
+		ID: "mount", Type: "symbol", SourceLayer: "mount", MaxZoom: 17,
 		Layout: map[string]interface{}{
 			"text-field":  []interface{}{"get", "text"},
 			"text-font":   []interface{}{"OpenSans-Regular"},
 			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 5.0, 16.0, 20.0},
+			"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
 			"text-offset": []interface{}{1.0, 0.0},
 		},
 		Paint: topoDarkTextPaint("#9a8a6a"),
@@ -935,7 +949,11 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"safetyzone":       {makeTopoDarkLabel("safetyzone", "#CCCCCC")},
 	"power":            {makeTopoDarkLabel("power", "#CCCCCC")},
 	"citycenter":        {makeTopoDarkLabel("citycenter", "#8a9a7a")},
-	"namemarine":        {makeTopoDarkLabel("namemarine", "#5599DD")},
+	"namemarine": {{
+		ID: "namemarine", Type: "symbol", SourceLayer: "namemarine", MaxZoom: 17,
+		Layout: topoTextLayout(),
+		Paint:  map[string]interface{}{"text-color": "#5599DD", "text-opacity": 1.0},
+	}},
 	"namelocal":         {makeTopoDarkLabel("namelocal", "#B8A88A")},
 	"namevillage":       {makeTopoDarkLabel("namevillage", "#CCCCCC")},
 	"namecity":          {makeTopoDarkLabel("namecity", "#FFFFFF")},
