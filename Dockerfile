@@ -15,6 +15,7 @@ RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps 
 
 ENV OCAP_MARKERS=/usr/local/ocap/markers \
     OCAP_AMMO=/usr/local/ocap/ammo \
+    OCAP_FONTS=/usr/local/ocap/fonts \
     OCAP_STATIC=/usr/local/ocap/static \
     OCAP_DB=/var/lib/ocap/db/data.db \
     OCAP_MAPS=/var/lib/ocap/maps \
@@ -25,6 +26,7 @@ VOLUME /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data
 
 COPY assets/markers /usr/local/ocap/markers
 COPY assets/ammo /usr/local/ocap/ammo
+COPY assets/fonts /usr/local/ocap/fonts
 COPY static /usr/local/ocap/static
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
 
