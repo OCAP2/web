@@ -147,6 +147,25 @@
         }
     }, true);
 
+    // Restyle all maps
+    const restyleBtn = document.getElementById('restyle-all-btn');
+    restyleBtn.addEventListener('click', async () => {
+        if (!confirm('Restyle all maps? This regenerates styles and sprites for every map.')) return;
+        restyleBtn.disabled = true;
+        try {
+            const res = await fetch('/api/maps/restyle', { method: 'POST' });
+            const job = await res.json();
+            if (res.ok) {
+                pollJob(job.id);
+            } else {
+                alert('Restyle failed: ' + (job.error || 'unknown error'));
+            }
+        } catch (err) {
+            alert('Restyle failed: ' + err.message);
+        }
+        restyleBtn.disabled = false;
+    });
+
     // Initial load
     loadTools();
     loadMaps();

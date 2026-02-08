@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"context"
 	"embed"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/labstack/echo/v4"
@@ -34,6 +36,7 @@ func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, map
 	api.GET("/maps", h.getMaps)
 	api.DELETE("/maps/:name", h.deleteMap)
 	api.POST("/maps/import", h.importZip)
+	api.POST("/maps/restyle", h.restyleAll)
 	api.GET("/jobs", h.getJobs)
 	api.GET("/jobs/:id", h.getJob)
 	api.GET("/jobs/:id/sse", h.jobSSE)
@@ -131,6 +134,38 @@ func (h *handler) importZip(c echo.Context) error {
 	snap, err := h.jm.Submit(gradMehDir, worldName)
 	if err != nil {
 		os.RemoveAll(extractDir)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusAccepted, snap)
+}
+
+func (h *handler) restyleAll(c echo.Context) error {
+	maps, err := maptool.ScanMaps(h.mapsDir)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	if len(maps) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "no maps found"})
+	}
+
+	mapsDir := h.mapsDir
+	id := fmt.Sprintf("restyle-%d", time.Now().UnixMilli())
+	snap, err := h.jm.SubmitFunc(id, "restyle-all", func(ctx context.Context, job *maptool.Job) error {
+		for i, m := range maps {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			job.SetProgress(m.Name, i+1, len(maps))
+			if err := restyleWorld(mapsDir, m.Name); err != nil {
+				log.Printf("restyle %s: %v", m.Name, err)
+				return fmt.Errorf("%s: %w", m.Name, err)
+			}
+			log.Printf("restyled: %s", m.Name)
+		}
+		return nil
+	})
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 

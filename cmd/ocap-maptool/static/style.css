@@ -38,6 +38,9 @@ th { color: #aaa; font-weight: 500; }
 .btn { padding: 4px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
 .btn-danger { background: #e94560; color: #fff; }
 .btn-danger:hover { background: #c73e54; }
+.btn-restyle { background: #0f3460; color: #fff; margin-left: 12px; font-size: 0.8em; vertical-align: middle; }
+.btn-restyle:hover { background: #1a4980; }
+.btn-restyle:disabled { opacity: 0.5; cursor: not-allowed; }
 
 #active-job { padding: 8px; }
 .progress-bar { height: 8px; background: #333; border-radius: 4px; margin-top: 8px; }

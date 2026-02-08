@@ -88,6 +88,24 @@ func (jm *JobManager) Submit(inputPath, worldName string) (JobInfo, error) {
 	return snap, nil
 }
 
+// SubmitFunc adds a custom job to the queue that runs fn instead of the pipeline.
+func (jm *JobManager) SubmitFunc(id, worldName string, fn func(ctx context.Context, job *Job) error) (JobInfo, error) {
+	job := &Job{
+		ID:        id,
+		WorldName: worldName,
+		Status:    StatusPending,
+		customRun: fn,
+	}
+
+	jm.mu.Lock()
+	jm.jobs[job.ID] = job
+	jm.mu.Unlock()
+
+	snap := job.Snapshot()
+	jm.queue <- job
+	return snap, nil
+}
+
 // GetJob returns a snapshot of a job by ID, or nil if not found.
 func (jm *JobManager) GetJob(id string) *JobInfo {
 	jm.mu.RLock()
@@ -112,6 +130,19 @@ func (jm *JobManager) ListJobs() []JobInfo {
 }
 
 func (jm *JobManager) processJob(ctx context.Context, job *Job) {
+	if job.customRun != nil {
+		job.setStatus(StatusRunning, "")
+		job.mu.Lock()
+		job.StartedAt = time.Now()
+		job.mu.Unlock()
+		if err := job.customRun(ctx, job); err != nil {
+			job.setStatus(StatusFailed, err.Error())
+			return
+		}
+		job.setStatus(StatusDone, "")
+		return
+	}
+
 	if err := os.MkdirAll(job.OutputDir, 0755); err != nil {
 		job.setStatus(StatusFailed, err.Error())
 		return

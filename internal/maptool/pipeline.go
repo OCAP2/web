@@ -60,6 +60,9 @@ type Job struct {
 	// SubDirs enables organized output layout (tiles/, styles/ subdirectories).
 	// When true, PMTiles go to OutputDir/tiles/ and styles go to OutputDir/styles/.
 	SubDirs bool `json:"-"`
+
+	// customRun, if set, is used instead of the pipeline for job processing.
+	customRun func(ctx context.Context, job *Job) error
 }
 
 // TilesDir returns the directory for PMTiles output.
@@ -115,6 +118,15 @@ func (j *Job) Snapshot() JobInfo {
 		TotalStages: j.TotalStages,
 		Message:     j.Message,
 	}
+}
+
+// SetProgress updates the job's progress fields (thread-safe).
+func (j *Job) SetProgress(stage string, stageNum, totalStages int) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.Stage = stage
+	j.StageNum = stageNum
+	j.TotalStages = totalStages
 }
 
 func (j *Job) setStatus(status, errMsg string) {
