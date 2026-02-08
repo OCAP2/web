@@ -161,11 +161,11 @@ class Entity {
 			display = "none";
 		} else if (ui.nameDisplayMode === "players") {
 			// Only show player names (hide AI units)
-			if (this.constructor.name === 'Unit' && !this.isPlayer) {
+			if (this instanceof Unit && !this.isPlayer) {
 				display = "none";
 			}
 			// Hide vehicle popups unless a player is in the crew
-			if (this.constructor.name === 'Vehicle') {
+			if (this instanceof Vehicle) {
 				const hasPlayer = this._crew && this._crew.some(id => {
 					const unit = entities.getById(id);
 					return unit && unit.isPlayer;
