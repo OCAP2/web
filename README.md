@@ -165,6 +165,53 @@ docker run --name ocap-web -d \
   ghcr.io/ocap2/web:latest
 ```
 
+### Map Tool
+
+The map tool processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles. It provides a web UI for uploading and managing maps, and CLI commands for scripted workflows.
+
+The image bundles all required tools (gdal2tiles, pmtiles, tippecanoe).
+
+```bash
+docker pull ghcr.io/ocap2/maptool:latest
+```
+
+**Environment Variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OCAP_MAPTOOL_LISTEN` | Server address | `0.0.0.0:5001` |
+| `OCAP_MAPS` | Maps output directory | `/var/lib/ocap/maps` |
+
+**Start the maptool web UI alongside the webserver:**
+
+```bash
+docker run --name ocap-maptool -d \
+  -p 5001:5001/tcp \
+  -v ocap-maps:/var/lib/ocap/maps \
+  ghcr.io/ocap2/maptool:latest
+```
+
+The shared `ocap-maps` volume lets the maptool write processed map tiles that the webserver serves directly.
+
+**CLI usage (import a grad_meh export):**
+
+```bash
+docker run --rm \
+  -v ocap-maps:/var/lib/ocap/maps \
+  -v /path/to/gradmeh:/input:ro \
+  ghcr.io/ocap2/maptool:latest \
+  ./ocap-maptool import /input/altis
+```
+
+**Restyle all existing maps:**
+
+```bash
+docker run --rm \
+  -v ocap-maps:/var/lib/ocap/maps \
+  ghcr.io/ocap2/maptool:latest \
+  ./ocap-maptool restyle
+```
+
 ## Installation
 
 ### Pre-built binaries
