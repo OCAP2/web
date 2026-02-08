@@ -61,13 +61,13 @@ func ParseASCGrid(r io.Reader) (*DEMGrid, error) {
 		case "nrows":
 			grid.Rows = int(val)
 		case "xllcenter":
-			grid.XllCorner = val
 			xIsCenter = true
+			fallthrough
 		case "xllcorner":
 			grid.XllCorner = val
 		case "yllcenter":
-			grid.YllCorner = val
 			yIsCenter = true
+			fallthrough
 		case "yllcorner":
 			grid.YllCorner = val
 		case "cellsize":
