@@ -357,7 +357,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"main_road": {{
 		ID: "main_road-outline", Type: "line", SourceLayer: "main_road", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color":   "rgba(230, 128, 77, 1)",
+			"line-color":   "#E08050",
 			"line-opacity": 1.0,
 			"line-width":   roadOutlineWidthInterp(),
 		},
@@ -367,7 +367,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"line-cap": "butt", "line-join": "round",
 		},
 		Paint: map[string]interface{}{
-			"line-color":   "rgba(255, 153, 1, 1)",
+			"line-color":   "#FF9966",
 			"line-opacity": 1.0,
 			"line-width":   roadWidthInterp(),
 		},
@@ -768,7 +768,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"road": {{
 		ID: "road", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": "#FFFFFF", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+			"line-color": "#D6C2A6", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road": {{
@@ -777,7 +777,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"line-cap": "butt", "line-join": "round",
 		},
 		Paint: map[string]interface{}{
-			"line-color": "rgba(255, 153, 1, 1)", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+			"line-color": "#FF9966", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
@@ -1004,7 +1004,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"road": {{
 		ID: "road", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": "#888888", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+			"line-color": "#555555", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road": {{
@@ -1013,7 +1013,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"line-cap": "butt", "line-join": "round",
 		},
 		Paint: map[string]interface{}{
-			"line-color": "#cc8833", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+			"line-color": "#FF9966", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
