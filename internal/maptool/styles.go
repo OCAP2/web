@@ -13,6 +13,8 @@ const (
 	landColor = "#DFDFDF"
 	// landColorDark is the base terrain fill for the topo-dark variant.
 	landColorDark = "#2a2a2a"
+	// topoSymbolIconSize is the icon-size for topo symbol layers (fraction of native 64px).
+	topoSymbolIconSize = 0.7
 )
 
 // LayerStyle defines a MapLibre GL style layer for a vector tile layer.
@@ -158,7 +160,7 @@ func topoTextLayoutZoomed(layerName string) map[string]interface{} {
 		"text-font":   []interface{}{"OpenSans-Regular"},
 		"text-anchor": "left",
 		"text-size": []interface{}{
-			"interpolate", []interface{}{"linear"}, []interface{}{"zoom"},
+			"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"},
 			sizes[0], sizes[1],
 			15.0, sizes[2],
 			18.0, sizes[3],
@@ -211,7 +213,7 @@ func makeTopoSymbol(name, iconImage string, allowOverlap bool) LayerStyle {
 		Layout: map[string]interface{}{
 			"icon-image":            iconImage,
 			"icon-anchor":           "center",
-			"icon-size":             0.7,
+			"icon-size":             topoSymbolIconSize,
 			"icon-allow-overlap":    allowOverlap,
 			"icon-ignore-placement": allowOverlap,
 		},
