@@ -269,6 +269,7 @@ func NewProcessGeoJSONStage() Stage {
 					} else {
 						contours := GenerateContours(
 							grid.Data, grid.Cols, grid.Rows, grid.CellSize,
+							grid.XllCorner, grid.YllCorner,
 							50, 10,
 						)
 						if len(contours) > 0 {

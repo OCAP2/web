@@ -4,8 +4,9 @@ import "math"
 
 // GenerateContours generates contour line features from an elevation grid using marching squares.
 // gridW, gridH are the grid dimensions; cellSize is meters per grid cell.
+// originX, originY are the lower-left corner position in Arma meters (from ASC xllcorner/yllcorner).
 // majorInterval and minorInterval specify contour spacing in meters.
-func GenerateContours(elevation []float32, gridW, gridH int, cellSize float64, majorInterval, minorInterval float64) []Feature {
+func GenerateContours(elevation []float32, gridW, gridH int, cellSize, originX, originY float64, majorInterval, minorInterval float64) []Feature {
 	if len(elevation) != gridW*gridH {
 		return nil
 	}
@@ -30,7 +31,7 @@ func GenerateContours(elevation []float32, gridW, gridH int, cellSize float64, m
 		if level <= 0 {
 			continue // skip sea level and below
 		}
-		lines := marchingSquares(elevation, gridW, gridH, cellSize, level)
+		lines := marchingSquares(elevation, gridW, gridH, cellSize, originX, originY, level)
 		if len(lines) == 0 {
 			continue
 		}
@@ -65,8 +66,9 @@ func GenerateContours(elevation []float32, gridW, gridH int, cellSize float64, m
 }
 
 // marchingSquares traces contour lines at the given level through the elevation grid.
+// originX, originY are the lower-left corner offset in Arma meters.
 // Returns a slice of polylines, each being a sequence of (x, z) world coordinates.
-func marchingSquares(grid []float32, w, h int, cellSize, level float64) [][][2]float64 {
+func marchingSquares(grid []float32, w, h int, cellSize, originX, originY, level float64) [][][2]float64 {
 	var segments [][2][2]float64
 
 	for row := 0; row < h-1; row++ {
@@ -77,11 +79,11 @@ func marchingSquares(grid []float32, w, h int, cellSize, level float64) [][][2]f
 			tr := float64(grid[(row+1)*w+col+1])
 			tl := float64(grid[(row+1)*w+col])
 
-			// World coordinates: X=east (col), Z=north (row)
-			x0 := float64(col) * cellSize
-			x1 := float64(col+1) * cellSize
-			z0 := float64(row) * cellSize
-			z1 := float64(row+1) * cellSize
+			// World coordinates: X=east (col), Z=north (row), offset by grid origin
+			x0 := originX + float64(col)*cellSize
+			x1 := originX + float64(col+1)*cellSize
+			z0 := originY + float64(row)*cellSize
+			z1 := originY + float64(row+1)*cellSize
 
 			caseIndex := 0
 			if bl >= level {

@@ -13,13 +13,13 @@ import (
 
 // DEMGrid holds a parsed ESRI ASCII Grid elevation dataset.
 type DEMGrid struct {
-	Cols     int
-	Rows     int
-	XllCenter float64
-	YllCenter float64
-	CellSize float64
-	NoData   float64
-	Data     []float32 // row-major, row 0 = south (flipped from ASC convention)
+	Cols      int
+	Rows      int
+	XllCorner float64 // X of lower-left pixel outer edge (always corner, converted from center if needed)
+	YllCorner float64 // Y of lower-left pixel outer edge (always corner, converted from center if needed)
+	CellSize  float64
+	NoData    float64
+	Data      []float32 // row-major, row 0 = south (flipped from ASC convention)
 }
 
 // ParseASCGrid parses an ESRI ASCII Grid from a reader.
@@ -36,6 +36,7 @@ func ParseASCGrid(r io.Reader) (*DEMGrid, error) {
 		"ncols": true, "nrows": true, "xllcenter": true, "yllcenter": true,
 		"xllcorner": true, "yllcorner": true, "cellsize": true, "nodata_value": true,
 	}
+	var xIsCenter, yIsCenter bool
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -59,10 +60,16 @@ func ParseASCGrid(r io.Reader) (*DEMGrid, error) {
 			grid.Cols = int(val)
 		case "nrows":
 			grid.Rows = int(val)
-		case "xllcenter", "xllcorner":
-			grid.XllCenter = val
-		case "yllcenter", "yllcorner":
-			grid.YllCenter = val
+		case "xllcenter":
+			grid.XllCorner = val
+			xIsCenter = true
+		case "xllcorner":
+			grid.XllCorner = val
+		case "yllcenter":
+			grid.YllCorner = val
+			yIsCenter = true
+		case "yllcorner":
+			grid.YllCorner = val
 		case "cellsize":
 			grid.CellSize = val
 		case "nodata_value":
@@ -75,6 +82,15 @@ func ParseASCGrid(r io.Reader) (*DEMGrid, error) {
 	}
 	if grid.CellSize <= 0 {
 		return nil, fmt.Errorf("invalid cellsize: %v", grid.CellSize)
+	}
+
+	// Convert center coordinates to corner (outer edge) for consistent handling.
+	// xllcenter refers to the center of the lower-left pixel; corner is half a cell left/below.
+	if xIsCenter {
+		grid.XllCorner -= grid.CellSize / 2
+	}
+	if yIsCenter {
+		grid.YllCorner -= grid.CellSize / 2
 	}
 
 	// Parse data rows (ASC row 0 = north, last row = south)

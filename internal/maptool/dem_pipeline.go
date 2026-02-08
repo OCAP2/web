@@ -43,17 +43,23 @@ func NewPrepareDEMStage(tools ToolSet) Stage {
 				return fmt.Errorf("gdal_translate not found")
 			}
 
-			worldSizeDeg := float64(job.WorldSize) / float64(metersPerDegree)
+			// Use actual DEM bounds from ASC header for correct alignment.
+			// The ASC grid may not start at (0,0) — e.g. yllcorner=-7.5.
+			xMin := grid.XllCorner / float64(metersPerDegree)
+			yMin := grid.YllCorner / float64(metersPerDegree)
+			xMax := (grid.XllCorner + float64(grid.Cols)*grid.CellSize) / float64(metersPerDegree)
+			yMax := (grid.YllCorner + float64(grid.Rows)*grid.CellSize) / float64(metersPerDegree)
+
 			demTif := filepath.Join(job.TempDir, "dem.tif")
 			args := []string{
 				"-of", "GTiff",
 				"-ot", "Float32",
 				"-a_srs", "EPSG:4326",
 				"-a_ullr",
-				"0",
-				fmt.Sprintf("%f", worldSizeDeg),
-				fmt.Sprintf("%f", worldSizeDeg),
-				"0",
+				fmt.Sprintf("%f", xMin),
+				fmt.Sprintf("%f", yMax),
+				fmt.Sprintf("%f", xMax),
+				fmt.Sprintf("%f", yMin),
 				ascPath,
 				demTif,
 			}

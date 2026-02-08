@@ -15,7 +15,7 @@ func TestGenerateContours_Simple(t *testing.T) {
 		0, 100, 0,
 		0, 0, 0,
 	}
-	features := GenerateContours(grid, 3, 3, 10.0, 50, 10)
+	features := GenerateContours(grid, 3, 3, 10.0, 0, 0, 50, 10)
 	require.NotEmpty(t, features)
 
 	// Should have contours at 10, 20, ..., 90 (minor) and 50 (major)
@@ -38,13 +38,13 @@ func TestGenerateContours_Flat(t *testing.T) {
 	for i := range grid {
 		grid[i] = 50
 	}
-	features := GenerateContours(grid, 4, 4, 10.0, 50, 10)
+	features := GenerateContours(grid, 4, 4, 10.0, 0, 0, 50, 10)
 	assert.Empty(t, features)
 }
 
 func TestGenerateContours_WrongSize(t *testing.T) {
 	grid := []float32{1, 2, 3}
-	features := GenerateContours(grid, 2, 2, 10.0, 50, 10)
+	features := GenerateContours(grid, 2, 2, 10.0, 0, 0, 50, 10)
 	assert.Nil(t, features)
 }
 
@@ -54,7 +54,7 @@ func TestGenerateContours_BelowSeaLevel(t *testing.T) {
 		-10, -5,
 		-8, -3,
 	}
-	features := GenerateContours(grid, 2, 2, 10.0, 50, 10)
+	features := GenerateContours(grid, 2, 2, 10.0, 0, 0, 50, 10)
 	assert.Empty(t, features)
 }
 
@@ -65,7 +65,7 @@ func TestMarchingSquares_SingleContour(t *testing.T) {
 		0, 20,
 		20, 20,
 	}
-	lines := marchingSquares(grid, 2, 2, 10.0, 10)
+	lines := marchingSquares(grid, 2, 2, 10.0, 0, 0, 10)
 	require.NotEmpty(t, lines)
 	// Should have at least one polyline
 	assert.GreaterOrEqual(t, len(lines), 1)
