@@ -775,6 +775,27 @@ function initMap (world) {
 		});
 	};
 
+	// Create a dummy Leaflet layer that toggles MapLibre 3D building extrusion visibility
+	var buildings3DLayer = L.layerGroup([]);
+	buildings3DLayer.onAdd = function (leafletMap) {
+		L.LayerGroup.prototype.onAdd.call(this, leafletMap);
+		this._setExtrusionVisibility("visible");
+	};
+	buildings3DLayer.onRemove = function (leafletMap) {
+		L.LayerGroup.prototype.onRemove.call(this, leafletMap);
+		this._setExtrusionVisibility("none");
+	};
+	buildings3DLayer._setExtrusionVisibility = function (vis) {
+		if (!mapLibreLayer) return;
+		var glMap = mapLibreLayer.getMaplibreMap();
+		if (!glMap || !glMap.getStyle()) return;
+		glMap.getStyle().layers.forEach(function (layer) {
+			if (layer.type === "fill-extrusion") {
+				glMap.setLayoutProperty(layer.id, "visibility", vis);
+			}
+		});
+	};
+
 	var overlays = {
 		"Units and Vehicles": entitiesLayerGroup,
 		"Selected Side Markers": markersLayerGroup,
@@ -784,15 +805,30 @@ function initMap (world) {
 	};
 	if (useMapLibreMode) {
 		overlays["Map Icons"] = mapIconsLayer;
+		overlays["3D Buildings"] = buildings3DLayer;
 	}
 	overlayLayerControl = L.control.layers({}, overlays, {
 		position: 'bottomright',
 		collapsed: false
 	});
 	overlayLayerControl.addTo(map);
-	// Add map icons layer to map by default (checked)
+	// Add MapLibre overlay layers to map by default (checked)
 	if (useMapLibreMode) {
 		mapIconsLayer.addTo(map);
+		buildings3DLayer.addTo(map);
+
+		// Reapply overlay toggle states after a style switch (setStyle resets all layers)
+		var glMap = mapLibreLayer.getMaplibreMap();
+		if (glMap) {
+			glMap.on('style.load', function () {
+				if (!map.hasLayer(mapIconsLayer)) {
+					mapIconsLayer._setMapLibreIconVisibility("none");
+				}
+				if (!map.hasLayer(buildings3DLayer)) {
+					buildings3DLayer._setExtrusionVisibility("none");
+				}
+			});
+		}
 	}
 
 	if (useMapLibreMode) {
