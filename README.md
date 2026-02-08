@@ -198,9 +198,9 @@ The shared `ocap-maps` volume lets the maptool write processed map tiles that th
 ```bash
 docker run --rm \
   -v ocap-maps:/var/lib/ocap/maps \
-  -v /path/to/gradmeh:/input:ro \
+  -v /path/to/exports:/input:ro \
   ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool import /input/altis
+  ./ocap-maptool import -maps /var/lib/ocap/maps /input/altis
 ```
 
 **Restyle all existing maps:**
@@ -209,7 +209,7 @@ docker run --rm \
 docker run --rm \
   -v ocap-maps:/var/lib/ocap/maps \
   ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool restyle
+  ./ocap-maptool restyle -maps /var/lib/ocap/maps
 ```
 
 ## Installation
