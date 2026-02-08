@@ -637,14 +637,25 @@ class UI {
 
 					var vals = [
 						op.mission_name,
-						op.world_name,
+						null, // map column handled separately
 						dateToLittleEndianString(new Date(op.date)),
 						secondsToTimeString(op.mission_duration),
 						op.tag
 					];
 					vals.forEach(function (val) {
 						var cell = document.createElement("td");
-						cell.textContent = val;
+						if (val === null) {
+							// Map column: preview thumbnail + name
+							var img = document.createElement("img");
+							img.src = "images/maps/" + op.world_name.toLowerCase() + "/preview_256.png";
+							img.alt = "";
+							img.className = "op-map-preview";
+							img.onerror = function() { this.style.display = "none"; };
+							cell.appendChild(img);
+							cell.appendChild(document.createTextNode(op.world_name));
+						} else {
+							cell.textContent = val;
+						}
 						row.appendChild(cell);
 					});
 

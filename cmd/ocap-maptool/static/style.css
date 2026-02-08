@@ -48,4 +48,7 @@ th { color: #aaa; font-weight: 500; }
 .status-incomplete { background: #4a3800; color: #fcd34d; }
 .status-none { background: #6b2020; color: #fca5a5; }
 
+.map-preview { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; vertical-align: middle; }
+.map-preview-placeholder { display: inline-block; width: 48px; height: 48px; border-radius: 4px; background: #333; }
+
 #no-maps { color: #666; font-style: italic; }

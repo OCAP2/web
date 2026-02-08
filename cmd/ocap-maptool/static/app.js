@@ -96,15 +96,19 @@
                 return;
             }
             noMaps.hidden = true;
-            mapsBody.innerHTML = maps.map(m =>
-                '<tr>' +
-                '<td>' + m.name + '</td>' +
-                '<td>' + (m.worldSize ? m.worldSize + 'm' : '-') + '</td>' +
-                '<td><span class="status status-' + m.status + '">' + m.status + '</span></td>' +
-                '<td><button class="btn btn-danger" onclick="deleteMap(\'' + m.name + '\')">' +
-                'Delete</button></td>' +
-                '</tr>'
-            ).join('');
+            mapsBody.innerHTML = maps.map(m => {
+                var img = m.hasPreview
+                    ? '<img src="maps/' + m.name + '/preview_256.png" alt="" class="map-preview">'
+                    : '<span class="map-preview-placeholder"></span>';
+                return '<tr>' +
+                    '<td>' + img + '</td>' +
+                    '<td>' + m.name + '</td>' +
+                    '<td>' + (m.worldSize ? m.worldSize + 'm' : '-') + '</td>' +
+                    '<td><span class="status status-' + m.status + '">' + m.status + '</span></td>' +
+                    '<td><button class="btn btn-danger" onclick="deleteMap(\'' + m.name + '\')">' +
+                    'Delete</button></td>' +
+                    '</tr>';
+            }).join('');
         } catch (e) {
             mapsBody.innerHTML = '';
             noMaps.textContent = 'Failed to load maps';

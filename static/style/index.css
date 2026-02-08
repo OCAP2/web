@@ -737,6 +737,15 @@ input[type=range]::-webkit-slider-runnable-track {
 	background-color: rgba(205, 134, 20, 0.9);
 }
 
+.op-map-preview {
+	width: 28px;
+	height: 28px;
+	border-radius: 3px;
+	object-fit: cover;
+	vertical-align: middle;
+	margin-right: 6px;
+}
+
 .modalButtons {
 	box-sizing: border-box;
 	width: 100%;

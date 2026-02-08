@@ -38,6 +38,9 @@ func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, map
 	api.GET("/jobs/:id", h.getJob)
 	api.GET("/jobs/:id/sse", h.jobSSE)
 
+	// Serve map files (previews, etc.) from the maps directory
+	e.Static("/maps", mapsDir)
+
 	// Static files (embedded) — strip "static/" prefix so files are served from root
 	staticSub, _ := fs.Sub(staticFiles, "static")
 	fileServer := http.FileServer(http.FS(staticSub))

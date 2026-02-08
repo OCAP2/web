@@ -17,9 +17,10 @@ const (
 )
 
 type MapInfo struct {
-	Name      string    `json:"name"`
-	WorldSize int       `json:"worldSize,omitempty"`
-	Status    MapStatus `json:"status"`
+	Name       string    `json:"name"`
+	WorldSize  int       `json:"worldSize,omitempty"`
+	Status     MapStatus `json:"status"`
+	HasPreview bool      `json:"hasPreview,omitempty"`
 }
 
 // fileExistsIn checks for a file in subdirectory first, then root.
@@ -64,6 +65,11 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 			if json.Unmarshal(data, &meta) == nil {
 				info.WorldSize = meta.WorldSize
 			}
+		}
+
+		// Check for any preview thumbnail
+		if _, err := os.Stat(filepath.Join(worldDir, "preview_256.png")); err == nil {
+			info.HasPreview = true
 		}
 
 		found := 0
