@@ -8,6 +8,7 @@
     const noMaps = document.getElementById('no-maps');
     const jobsSection = document.getElementById('jobs-section');
     const activeJobDiv = document.getElementById('active-job');
+    const previewPopup = document.getElementById('preview-popup');
 
     // Drag and drop
     dropZone.addEventListener('click', () => fileInput.click());
@@ -98,7 +99,7 @@
             noMaps.hidden = true;
             mapsBody.innerHTML = maps.map(m => {
                 var img = m.hasPreview
-                    ? '<img src="maps/' + m.name + '/preview_256.png" alt="" class="map-preview">'
+                    ? '<img src="maps/' + m.name + '/preview_256.png" alt="" class="map-preview" data-preview="maps/' + m.name + '/preview_512.png">'
                     : '<span class="map-preview-placeholder"></span>';
                 return '<tr>' +
                     '<td>' + img + '</td>' +
@@ -127,6 +128,24 @@
         d.textContent = s;
         return d.innerHTML;
     }
+
+    // Preview popup via event delegation
+    mapsBody.addEventListener('mouseenter', function(e) {
+        var src = e.target.dataset && e.target.dataset.preview;
+        if (!src) return;
+        var rect = e.target.getBoundingClientRect();
+        previewPopup.src = src;
+        var top = rect.top + rect.height / 2 - 128;
+        top = Math.max(8, Math.min(top, window.innerHeight - 264));
+        previewPopup.style.left = (rect.left - 264) + 'px';
+        previewPopup.style.top = top + 'px';
+        previewPopup.style.display = 'block';
+    }, true);
+    mapsBody.addEventListener('mouseleave', function(e) {
+        if (e.target.dataset && e.target.dataset.preview) {
+            previewPopup.style.display = 'none';
+        }
+    }, true);
 
     // Initial load
     loadTools();

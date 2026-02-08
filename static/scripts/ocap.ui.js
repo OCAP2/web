@@ -290,6 +290,30 @@ class UI {
 		this.modalFilter = document.getElementById("modalFilter");
 		this.modalBody = document.getElementById("modalBody");
 		this.modalButtons = document.getElementById("modalButtons");
+
+		// Preview popup for operation list
+		this.opPreviewPopup = document.createElement("img");
+		this.opPreviewPopup.id = "op-preview-popup";
+		this.opPreviewPopup.alt = "";
+		document.body.appendChild(this.opPreviewPopup);
+		var popup = this.opPreviewPopup;
+		this.modalBody.addEventListener("mouseenter", function(e) {
+			var src = e.target.dataset && e.target.dataset.preview;
+			if (!src) return;
+			var rect = e.target.getBoundingClientRect();
+			popup.src = src;
+			var top = rect.top + rect.height / 2 - 128;
+			top = Math.max(8, Math.min(top, window.innerHeight - 264));
+			popup.style.left = (rect.right + 8) + "px";
+			popup.style.top = top + "px";
+			popup.style.display = "block";
+		}, true);
+		this.modalBody.addEventListener("mouseleave", function(e) {
+			if (e.target.dataset && e.target.dataset.preview) {
+				popup.style.display = "none";
+			}
+		}, true);
+
 		this.showModalOpSelection();
 
 		// Stats
@@ -646,10 +670,12 @@ class UI {
 						var cell = document.createElement("td");
 						if (val === null) {
 							// Map column: preview thumbnail + name
+							var mapBase = "images/maps/" + op.world_name.toLowerCase();
 							var img = document.createElement("img");
-							img.src = "images/maps/" + op.world_name.toLowerCase() + "/preview_256.png";
+							img.src = mapBase + "/preview_256.png";
 							img.alt = "";
 							img.className = "op-map-preview";
+							img.dataset.preview = mapBase + "/preview_512.png";
 							img.onerror = function() { this.style.display = "none"; };
 							cell.appendChild(img);
 							cell.appendChild(document.createTextNode(op.world_name));

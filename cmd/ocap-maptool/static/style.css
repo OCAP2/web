@@ -50,5 +50,6 @@ th { color: #aaa; font-weight: 500; }
 
 .map-preview { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; vertical-align: middle; }
 .map-preview-placeholder { display: inline-block; width: 48px; height: 48px; border-radius: 4px; background: #333; }
+#preview-popup { display: none; position: fixed; width: 256px; height: 256px; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 10; pointer-events: none; }
 
 #no-maps { color: #666; font-style: italic; }

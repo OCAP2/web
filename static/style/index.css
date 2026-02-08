@@ -745,6 +745,7 @@ input[type=range]::-webkit-slider-runnable-track {
 	vertical-align: middle;
 	margin-right: 6px;
 }
+#op-preview-popup { display: none; position: fixed; width: 256px; height: 256px; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 100; pointer-events: none; }
 
 .modalButtons {
 	box-sizing: border-box;
