@@ -131,10 +131,7 @@ func (jm *JobManager) ListJobs() []JobInfo {
 
 func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	if job.customRun != nil {
-		job.setStatus(StatusRunning, "")
-		job.mu.Lock()
-		job.StartedAt = time.Now()
-		job.mu.Unlock()
+		job.Start()
 		if err := job.customRun(ctx, job); err != nil {
 			job.setStatus(StatusFailed, err.Error())
 			return

@@ -149,7 +149,6 @@ func (h *handler) restyleAll(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "no maps found"})
 	}
 
-	mapsDir := h.mapsDir
 	id := fmt.Sprintf("restyle-%d", time.Now().UnixMilli())
 	snap, err := h.jm.SubmitFunc(id, "restyle-all", func(ctx context.Context, job *maptool.Job) error {
 		for i, m := range maps {
@@ -157,7 +156,7 @@ func (h *handler) restyleAll(c echo.Context) error {
 				return err
 			}
 			job.SetProgress(m.Name, i+1, len(maps))
-			if err := restyleWorld(mapsDir, m.Name); err != nil {
+			if err := restyleWorld(h.mapsDir, m.Name); err != nil {
 				log.Printf("restyle %s: %v", m.Name, err)
 				return fmt.Errorf("%s: %w", m.Name, err)
 			}

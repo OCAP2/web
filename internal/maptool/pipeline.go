@@ -120,6 +120,15 @@ func (j *Job) Snapshot() JobInfo {
 	}
 }
 
+// Start sets the job status to running and records the start time (thread-safe).
+func (j *Job) Start() {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.Status = StatusRunning
+	j.Error = ""
+	j.StartedAt = time.Now()
+}
+
 // SetProgress updates the job's progress fields (thread-safe).
 func (j *Job) SetProgress(stage string, stageNum, totalStages int) {
 	j.mu.Lock()
