@@ -751,18 +751,49 @@ function initMap (world) {
 	// Create grid layer
 	gridLayer = new L.Layer.Grid();
 
-	overlayLayerControl = L.control.layers({}, {
-		// overlay layers
+	// Create a dummy Leaflet layer that toggles MapLibre icon layer visibility
+	var mapIconsLayer = L.layerGroup([]);
+	mapIconsLayer._mapLibreIconsVisible = true;
+	mapIconsLayer.onAdd = function (leafletMap) {
+		L.LayerGroup.prototype.onAdd.call(this, leafletMap);
+		this._mapLibreIconsVisible = true;
+		this._setMapLibreIconVisibility("visible");
+	};
+	mapIconsLayer.onRemove = function (leafletMap) {
+		L.LayerGroup.prototype.onRemove.call(this, leafletMap);
+		this._mapLibreIconsVisible = false;
+		this._setMapLibreIconVisibility("none");
+	};
+	mapIconsLayer._setMapLibreIconVisibility = function (vis) {
+		if (!mapLibreLayer) return;
+		var glMap = mapLibreLayer.getMaplibreMap();
+		if (!glMap || !glMap.getStyle()) return;
+		glMap.getStyle().layers.forEach(function (layer) {
+			if (layer.type === "symbol" && layer.layout && layer.layout["icon-image"]) {
+				glMap.setLayoutProperty(layer.id, "visibility", vis);
+			}
+		});
+	};
+
+	var overlays = {
 		"Units and Vehicles": entitiesLayerGroup,
 		"Selected Side Markers": markersLayerGroup,
 		"Editor/Briefing Markers": systemMarkersLayerGroup,
 		"Projectile Markers": projectileMarkersLayerGroup,
-		"Coordinate Grid": gridLayer
-	}, {
+		"Coordinate Grid": gridLayer,
+	};
+	if (useMapLibreMode) {
+		overlays["Map Icons"] = mapIconsLayer;
+	}
+	overlayLayerControl = L.control.layers({}, overlays, {
 		position: 'bottomright',
 		collapsed: false
 	});
 	overlayLayerControl.addTo(map);
+	// Add map icons layer to map by default (checked)
+	if (useMapLibreMode) {
+		mapIconsLayer.addTo(map);
+	}
 
 	if (useMapLibreMode) {
 		var previewCenter = [worldSizeDeg / 2, worldSizeDeg / 2];

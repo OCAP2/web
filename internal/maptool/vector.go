@@ -326,11 +326,13 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 						"-f",
 						"--minimum-zoom=8",
 						"--maximum-zoom=17",
-						"--coalesce-densest-as-needed",
-						"--extend-zooms-if-still-dropping",
-						"--layer=" + lf.Name,
-						lf.Path,
 					}
+					if categorizeLayer(lf.Name) == "icons" {
+						args = append(args, "-r1", "--no-feature-limit", "--no-tile-size-limit")
+					} else {
+						args = append(args, "--coalesce-densest-as-needed", "--extend-zooms-if-still-dropping")
+					}
+					args = append(args, "--layer="+lf.Name, lf.Path)
 
 					log.Printf("tippecanoe: processing layer %s", lf.Name)
 					if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
@@ -375,8 +377,8 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 					"--force",
 					"--minimum-zoom=8",
 					"--maximum-zoom=17",
-					"--coalesce-densest-as-needed",
-					"--extend-zooms-if-still-dropping",
+					"-r1",
+					"--no-feature-limit",
 					"--no-tile-size-limit",
 				}
 				for _, lf := range job.LayerFiles {
