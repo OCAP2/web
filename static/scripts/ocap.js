@@ -790,7 +790,7 @@ function initMap (world) {
 		var glMap = mapLibreLayer.getMaplibreMap();
 		if (!glMap || !glMap.getStyle()) return;
 		glMap.getStyle().layers.forEach(function (layer) {
-			if (layer.type === "fill-extrusion") {
+			if (layer.type === "fill-extrusion" && layer.id.indexOf("bridge") === -1) {
 				glMap.setLayoutProperty(layer.id, "visibility", vis);
 			}
 		});
@@ -817,16 +817,19 @@ function initMap (world) {
 		mapIconsLayer.addTo(map);
 		buildings3DLayer.addTo(map);
 
-		// Reapply overlay toggle states after a style switch (setStyle resets all layers)
+		// Reapply overlay toggle states after a style switch (setStyle resets all layers).
+		// Defer briefly so newly loaded layers are fully available.
 		var glMap = mapLibreLayer.getMaplibreMap();
 		if (glMap) {
 			glMap.on('style.load', function () {
-				if (!map.hasLayer(mapIconsLayer)) {
-					mapIconsLayer._setMapLibreIconVisibility("none");
-				}
-				if (!map.hasLayer(buildings3DLayer)) {
-					buildings3DLayer._setExtrusionVisibility("none");
-				}
+				setTimeout(function () {
+					if (!map.hasLayer(mapIconsLayer)) {
+						mapIconsLayer._setMapLibreIconVisibility("none");
+					}
+					if (!map.hasLayer(buildings3DLayer)) {
+						buildings3DLayer._setExtrusionVisibility("none");
+					}
+				}, 50);
 			});
 		}
 	}
