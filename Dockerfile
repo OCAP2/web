@@ -21,6 +21,7 @@ ENV OCAP_MARKERS=/usr/local/ocap/markers \
     OCAP_DATA=/var/lib/ocap/data \
     OCAP_LISTEN=0.0.0.0:5000
 EXPOSE 5000/tcp
+VOLUME /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data
 
 COPY assets/markers /usr/local/ocap/markers
 COPY assets/ammo /usr/local/ocap/ammo
