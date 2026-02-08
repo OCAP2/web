@@ -291,29 +291,6 @@ class UI {
 		this.modalBody = document.getElementById("modalBody");
 		this.modalButtons = document.getElementById("modalButtons");
 
-		// Preview popup for operation list
-		this.opPreviewPopup = document.createElement("img");
-		this.opPreviewPopup.id = "op-preview-popup";
-		this.opPreviewPopup.alt = "";
-		document.body.appendChild(this.opPreviewPopup);
-		var popup = this.opPreviewPopup;
-		this.modalBody.addEventListener("mouseenter", function(e) {
-			var src = e.target.dataset && e.target.dataset.preview;
-			if (!src) return;
-			var rect = e.target.getBoundingClientRect();
-			popup.src = src;
-			var top = rect.top + rect.height / 2 - 128;
-			top = Math.max(8, Math.min(top, window.innerHeight - 264));
-			popup.style.left = (rect.right + 8) + "px";
-			popup.style.top = top + "px";
-			popup.style.display = "block";
-		}, true);
-		this.modalBody.addEventListener("mouseleave", function(e) {
-			if (e.target.dataset && e.target.dataset.preview) {
-				popup.style.display = "none";
-			}
-		}, true);
-
 		this.showModalOpSelection();
 
 		// Stats
@@ -671,13 +648,20 @@ class UI {
 						if (val === null) {
 							// Map column: preview thumbnail + name
 							var mapBase = "images/maps/" + op.world_name.toLowerCase();
+							var wrap = document.createElement("span");
+							wrap.className = "op-map-preview-wrap";
 							var img = document.createElement("img");
 							img.src = mapBase + "/preview_256.png";
 							img.alt = "";
 							img.className = "op-map-preview";
-							img.dataset.preview = mapBase + "/preview_512.png";
-							img.onerror = function() { this.style.display = "none"; };
-							cell.appendChild(img);
+							img.onerror = function() { this.parentNode.style.display = "none"; };
+							var big = document.createElement("img");
+							big.src = mapBase + "/preview_512.png";
+							big.alt = "";
+							big.className = "op-preview-popup";
+							wrap.appendChild(img);
+							wrap.appendChild(big);
+							cell.appendChild(wrap);
 							cell.appendChild(document.createTextNode(op.world_name));
 						} else {
 							cell.textContent = val;

@@ -737,15 +737,36 @@ input[type=range]::-webkit-slider-runnable-track {
 	background-color: rgba(205, 134, 20, 0.9);
 }
 
+.op-map-preview-wrap {
+	position: relative;
+	display: inline-block;
+	vertical-align: middle;
+	margin-right: 6px;
+}
 .op-map-preview {
 	width: 28px;
 	height: 28px;
 	border-radius: 3px;
 	object-fit: cover;
 	vertical-align: middle;
-	margin-right: 6px;
 }
-#op-preview-popup { display: none; position: fixed; width: 256px; height: 256px; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 100; pointer-events: none; }
+.op-preview-popup {
+	display: none;
+	position: fixed;
+	width: 256px;
+	height: 256px;
+	border-radius: 6px;
+	object-fit: cover;
+	box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+	z-index: 100;
+	pointer-events: none;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+.op-map-preview-wrap:hover .op-preview-popup {
+	display: block;
+}
 
 .modalButtons {
 	box-sizing: border-box;
