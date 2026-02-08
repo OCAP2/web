@@ -308,7 +308,10 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 			if !ok {
 				return fmt.Errorf("pmtiles not found")
 			}
-			tileJoin, hasTileJoin := tools.FindTool("tile-join")
+			tileJoin, ok := tools.FindTool("tile-join")
+			if !ok {
+				return fmt.Errorf("tile-join not found")
+			}
 
 			tmpDir := filepath.Join(job.TempDir, "vector")
 			mbtilesDir := filepath.Join(tmpDir, "mbtiles")
@@ -317,82 +320,54 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 			}
 
 			// Per-layer tippecanoe + tile-join approach (matching Python arma3-maptiler)
-			if hasTileJoin {
-				var mbtilesFiles []string
-				for _, lf := range job.LayerFiles {
-					mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")
-					args := []string{
-						"-o", mbPath,
-						"-f",
-						"--minimum-zoom=8",
-						"--maximum-zoom=17",
-					}
-					if categorizeLayer(lf.Name) == "icons" {
-						args = append(args, "-r1", "--no-feature-limit", "--no-tile-size-limit")
-					} else {
-						args = append(args, "--coalesce-densest-as-needed", "--extend-zooms-if-still-dropping")
-					}
-					args = append(args, "--layer="+lf.Name, lf.Path)
-
-					log.Printf("tippecanoe: processing layer %s", lf.Name)
-					if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
-						log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
-						continue
-					}
-					mbtilesFiles = append(mbtilesFiles, mbPath)
-				}
-
-				// tile-join to merge all per-layer MBTiles
-				mergedMbtiles := filepath.Join(tmpDir, job.WorldName+"_features.mbtiles")
-				joinArgs := []string{
-					"-pk", "-pC",
-					"--force",
-					"-n", "features",
-					"--minimum-zoom=8",
-					"--maximum-zoom=17",
-					"-o", mergedMbtiles,
-				}
-				joinArgs = append(joinArgs, mbtilesFiles...)
-
-				log.Printf("tile-join: merging %d layers", len(mbtilesFiles))
-				joinErr := runCmd(ctx, tileJoin.Path, joinArgs...)
-				if joinErr == nil {
-					// Convert to PMTiles
-					outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
-					if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mergedMbtiles, outputPath); err != nil {
-						return err
-					}
-					job.HasVector = true
-					log.Printf("Generated %s", outputPath)
-					return nil
-				}
-				log.Printf("WARNING: tile-join failed (%v), falling back to single-pass tippecanoe", joinErr)
-			}
-
-			{
-				// Single tippecanoe run with --named-layer (fallback or no tile-join)
-				outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
+			var mbtilesFiles []string
+			for _, lf := range job.LayerFiles {
+				mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")
 				args := []string{
-					"-o", outputPath,
-					"--force",
+					"-o", mbPath,
+					"-f",
 					"--minimum-zoom=8",
 					"--maximum-zoom=17",
-					"-r1",
-					"--no-feature-limit",
-					"--no-tile-size-limit",
 				}
-				for _, lf := range job.LayerFiles {
-					args = append(args, fmt.Sprintf("--named-layer=%s:%s", lf.Name, lf.Path))
+				if categorizeLayer(lf.Name) == "icons" {
+					args = append(args, "-r1", "--no-feature-limit", "--no-tile-size-limit")
+				} else {
+					args = append(args, "--coalesce-densest-as-needed", "--extend-zooms-if-still-dropping")
 				}
+				args = append(args, "--layer="+lf.Name, lf.Path)
 
-				log.Printf("Running tippecanoe with %d layers (single pass)", len(job.LayerFiles))
+				log.Printf("tippecanoe: processing layer %s", lf.Name)
 				if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
-					return fmt.Errorf("tippecanoe: %w", err)
+					log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
+					continue
 				}
-
-				job.HasVector = true
-				log.Printf("Generated %s", outputPath)
+				mbtilesFiles = append(mbtilesFiles, mbPath)
 			}
+
+			// tile-join to merge all per-layer MBTiles
+			mergedMbtiles := filepath.Join(tmpDir, job.WorldName+"_features.mbtiles")
+			joinArgs := []string{
+				"-pk", "-pC",
+				"--force",
+				"-n", "features",
+				"--minimum-zoom=8",
+				"--maximum-zoom=17",
+				"-o", mergedMbtiles,
+			}
+			joinArgs = append(joinArgs, mbtilesFiles...)
+
+			log.Printf("tile-join: merging %d layers", len(mbtilesFiles))
+			if err := runCmd(ctx, tileJoin.Path, joinArgs...); err != nil {
+				return fmt.Errorf("tile-join: %w", err)
+			}
+
+			// Convert to PMTiles
+			outputPath := filepath.Join(job.TilesOutputDir(), "features.pmtiles")
+			if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mergedMbtiles, outputPath); err != nil {
+				return err
+			}
+			job.HasVector = true
+			log.Printf("Generated %s", outputPath)
 
 			return nil
 		},

@@ -209,9 +209,8 @@ func makeTopoDarkLabel(name, color string) LayerStyle {
 	}
 }
 
-// makeTopoSymbol creates a symbol layer style shared by topo and topo-dark variants.
-// Uses native icon size (64px) with no zoom scaling.
 // iconLayout returns a standard symbol layout for an icon layer.
+// Uses a constant icon size and ensures icons are always shown by allowing overlap.
 func iconLayout(iconImage string) map[string]interface{} {
 	return map[string]interface{}{
 		"icon-image":              iconImage,
