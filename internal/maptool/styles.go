@@ -292,7 +292,8 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"fill-antialias": true,
 			"fill-opacity":   1.0,
 		},
-	}, {
+	}},
+	"house-extrusion": {{
 		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
@@ -732,6 +733,12 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}},
+	"trail": {{
+		ID: "trail", Type: "line", SourceLayer: "trail", MinZoom: 14,
+		Paint: map[string]interface{}{
+			"line-color": "rgba(0, 0, 0, 1)", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+		},
+	}},
 	"track": {{
 		ID: "track", Type: "line", SourceLayer: "track", MinZoom: 12,
 		Paint: map[string]interface{}{
@@ -742,6 +749,15 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		ID: "road", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color": "#FFFFFF", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+		},
+	}},
+	"main_road": {{
+		ID: "main_road", Type: "line", SourceLayer: "main_road", MinZoom: 12,
+		Layout: map[string]interface{}{
+			"line-cap": "butt", "line-join": "round",
+		},
+		Paint: map[string]interface{}{
+			"line-color": "rgba(255, 153, 1, 1)", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
@@ -765,11 +781,25 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house": {{
-		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
+		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
+		Paint: map[string]interface{}{
+			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-antialias": true,
+			"fill-opacity":   1.0,
+		},
+	}},
+	"house-extrusion": {{
+		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
 			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"railway": {{
+		ID: "railway", Type: "line", SourceLayer: "railway", MinZoom: 14,
+		Paint: map[string]interface{}{
+			"line-color": "#CC3300", "line-opacity": 1.0, "line-width": 2.0,
 		},
 	}},
 	"powerline": {{
@@ -872,11 +902,13 @@ var topoLayerOrder = []string{
 	"sea",
 	"contours05", "contours10", "contours50", "contours100",
 	"contours",
-	"track", "road",
-	"main_road-bridge",
 	"forest", "rocks",
-	"house",
+	"trail", "track", "road", "main_road",
 	"powerline", "runway",
+	"house",
+	"railway",
+	"house-extrusion",
+	"main_road-bridge",
 	"rock", "tree",
 	"chapel", "church", "cross", "fuelstation", "hospital", "lighthouse",
 	"bunker", "fountain", "tourism", "ruin", "transmitter", "stack",
@@ -929,6 +961,12 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
 		},
 	}},
+	"trail": {{
+		ID: "trail", Type: "line", SourceLayer: "trail", MinZoom: 14,
+		Paint: map[string]interface{}{
+			"line-color": "#555555", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+		},
+	}},
 	"track": {{
 		ID: "track", Type: "line", SourceLayer: "track", MinZoom: 12,
 		Paint: map[string]interface{}{
@@ -939,6 +977,15 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		ID: "road", Type: "line", SourceLayer: "road", MinZoom: 12,
 		Paint: map[string]interface{}{
 			"line-color": "#888888", "line-opacity": 1.0, "line-width": roadWidthInterp(),
+		},
+	}},
+	"main_road": {{
+		ID: "main_road", Type: "line", SourceLayer: "main_road", MinZoom: 12,
+		Layout: map[string]interface{}{
+			"line-cap": "butt", "line-join": "round",
+		},
+		Paint: map[string]interface{}{
+			"line-color": "#cc8833", "line-opacity": 1.0, "line-width": roadWidthInterp(),
 		},
 	}},
 	"main_road-bridge": {{
@@ -962,11 +1009,25 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house": {{
-		ID: "house", Type: "fill-extrusion", SourceLayer: "house",
+		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
+		Paint: map[string]interface{}{
+			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
+			"fill-antialias": true,
+			"fill-opacity":   1.0,
+		},
+	}},
+	"house-extrusion": {{
+		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
 			"fill-extrusion-height":  []interface{}{"get", "height"},
+		},
+	}},
+	"railway": {{
+		ID: "railway", Type: "line", SourceLayer: "railway", MinZoom: 14,
+		Paint: map[string]interface{}{
+			"line-color": "#993322", "line-opacity": 1.0, "line-width": 2.0,
 		},
 	}},
 	"powerline": {{
@@ -1296,6 +1357,30 @@ func buildTopoDarkVectorFeatureLayers(layerNames []string) []interface{} {
 	return buildOrderedVectorLayers(layerNames, knownTopoDarkLayerStyles)
 }
 
+// virtualLayers maps synthetic layer names to real vector source layer names.
+// This allows splitting a single source layer's styles across different
+// positions in the render order (e.g. house fill below railway, extrusion above).
+var virtualLayers = map[string]string{
+	"house-extrusion": "house",
+}
+
+// expandVirtualLayers adds virtual layer names to the list when their
+// source layer is present in the input.
+func expandVirtualLayers(layerNames []string) []string {
+	has := make(map[string]bool, len(layerNames))
+	for _, n := range layerNames {
+		has[n] = true
+	}
+	result := make([]string, len(layerNames))
+	copy(result, layerNames)
+	for virt, source := range virtualLayers {
+		if has[source] && !has[virt] {
+			result = append(result, virt)
+		}
+	}
+	return result
+}
+
 // buildOrderedVectorLayers generates MapLibre layers from available vector layer
 // names using the given style map and topoLayerOrder for render order. Layers not
 // in the style map fall back to standard styles.
@@ -1303,6 +1388,12 @@ func buildOrderedVectorLayers(layerNames []string, styleMap map[string][]LayerSt
 	available := make(map[string]bool, len(layerNames))
 	for _, n := range layerNames {
 		available[n] = true
+	}
+	// Virtual layers are available when their source layer exists.
+	for virt, source := range virtualLayers {
+		if available[source] {
+			available[virt] = true
+		}
 	}
 
 	emitted := make(map[string]bool)
@@ -1453,6 +1544,8 @@ func categorizeLayer(name string) string {
 		return "rocks"
 	case "house":
 		return "buildings"
+	case "house-extrusion":
+		return "buildings-3d"
 	case "trail", "track", "road", "main_road", "runway":
 		return name
 	case "road-bridge", "main_road-bridge", "track-bridge", "trail-bridge":
@@ -1496,7 +1589,7 @@ func isLayerVisible(name string, vis layerVisibility) bool {
 		return vis.forest
 	case "rocks":
 		return vis.rocks
-	case "buildings":
+	case "buildings", "buildings-3d":
 		return vis.buildings
 	case "trail", "track", "road", "main_road", "runway":
 		return vis.roads
@@ -1527,27 +1620,29 @@ var categoryRenderOrder = map[string]int{
 	"contours":   1,
 	"forest":     2,
 	"rocks":      3,
-	"buildings":  4,
-	"trail":      5,
-	"track":      6,
-	"road":       7,
-	"main_road":  8,
-	"runway":     9,
-	"railway":    10,
-	"powerline":  11,
-	"bridges":    12,
-	"vegetation": 13,
-	"icons":      14,
-	"labels":     15,
-	"other":      16,
+	"trail":         4,
+	"track":         5,
+	"road":          6,
+	"main_road":     7,
+	"runway":        8,
+	"buildings":     9,
+	"railway":       10,
+	"powerline":     11,
+	"buildings-3d":  12,
+	"bridges":       13,
+	"vegetation":    14,
+	"icons":         15,
+	"labels":        16,
+	"other":         17,
 }
 
 // buildVectorFeatureLayers generates MapLibre layers from vector layer names,
 // filtered by the given visibility rules. Layers are sorted by cartographic
 // render order so labels always appear above roads regardless of input order.
 func buildVectorFeatureLayers(layerNames []string, vis layerVisibility) []interface{} {
-	sorted := make([]string, len(layerNames))
-	copy(sorted, layerNames)
+	expanded := expandVirtualLayers(layerNames)
+	sorted := make([]string, len(expanded))
+	copy(sorted, expanded)
 	sort.SliceStable(sorted, func(i, j int) bool {
 		return categoryRenderOrder[categorizeLayer(sorted[i])] < categoryRenderOrder[categorizeLayer(sorted[j])]
 	})
