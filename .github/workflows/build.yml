@@ -183,9 +183,6 @@ jobs:
           context: .
           file: Dockerfile.maptool
           platforms: ${{ matrix.platform }}
-          build-args: |
-             build_version=${{ github.ref_name }}
-             build_commit=${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=maptool-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=maptool-${{ matrix.platform }}

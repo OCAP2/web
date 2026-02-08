@@ -4,9 +4,7 @@ WORKDIR /go/pkg/ocap
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-ARG build_version
-ARG build_commit
-RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -o ocap-maptool ./cmd/ocap-maptool
+RUN go build -o ocap-maptool ./cmd/ocap-maptool
 
 FROM alpine:3.23 AS tippecanoe-builder
 ARG TIPPECANOE_VERSION=2.79.0
