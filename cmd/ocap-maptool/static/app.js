@@ -99,7 +99,7 @@
             noMaps.hidden = true;
             mapsBody.innerHTML = maps.map(m => {
                 var img = m.hasPreview
-                    ? '<img src="maps/' + m.name + '/preview_256.png" alt="" class="map-preview" data-preview="maps/' + m.name + '/preview_512.png">'
+                    ? '<img src="maps/' + encodeURIComponent(m.name) + '/preview_256.png" alt="" class="map-preview" data-preview="maps/' + encodeURIComponent(m.name) + '/preview_512.png">'
                     : '<span class="map-preview-placeholder"></span>';
                 return '<tr>' +
                     '<td>' + img + '</td>' +
