@@ -19,6 +19,10 @@ func TestColorArrayToHex(t *testing.T) {
 		{"green", []interface{}{0.0, 1.0, 0.0}, "00ff00"},
 		{"blue", []interface{}{0.0, 0.0, 1.0}, "0000ff"},
 		{"mid gray", []interface{}{0.5, 0.5, 0.5}, "7f7f7f"},
+		// 0-255 integer range (grad_meh exports)
+		{"grad_meh gray", []interface{}{128.0, 121.0, 118.0}, "807976"},
+		{"grad_meh white", []interface{}{255.0, 255.0, 255.0}, "ffffff"},
+		{"grad_meh dark", []interface{}{110.0, 111.0, 111.0}, "6e6f6f"},
 		{"too few elements", []interface{}{1.0, 0.5}, "888888"},
 		{"empty", []interface{}{}, "888888"},
 	}
@@ -29,21 +33,21 @@ func TestColorArrayToHex(t *testing.T) {
 	}
 }
 
-func TestClamp255(t *testing.T) {
+func TestClampInt(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    float64
 		expected int
 	}{
 		{"zero", 0.0, 0},
-		{"one", 1.0, 255},
-		{"mid", 0.5, 127},
-		{"negative", -0.5, 0},
-		{"overflow", 2.0, 255},
+		{"255", 255.0, 255},
+		{"mid", 127.0, 127},
+		{"negative", -1.0, 0},
+		{"overflow", 300.0, 255},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, clamp255(tt.input))
+			assert.Equal(t, tt.expected, clampInt(tt.input))
 		})
 	}
 }

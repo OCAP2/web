@@ -157,7 +157,8 @@ func transformCoords(coords interface{}) interface{} {
 	}
 }
 
-// colorArrayToHex converts a color array [r, g, b] with 0-1 float values to "rrggbb" hex string.
+// colorArrayToHex converts a color array [r, g, b] to "rrggbb" hex string.
+// Handles both 0-1 float range (Arma config) and 0-255 integer range (grad_meh exports).
 func colorArrayToHex(arr []interface{}) string {
 	if len(arr) < 3 {
 		return "888888"
@@ -165,11 +166,16 @@ func colorArrayToHex(arr []interface{}) string {
 	r, _ := toFloat64(arr[0])
 	g, _ := toFloat64(arr[1])
 	b, _ := toFloat64(arr[2])
-	return fmt.Sprintf("%02x%02x%02x", clamp255(r), clamp255(g), clamp255(b))
+
+	// Detect range: if any channel > 1, values are 0-255 integers
+	if r > 1 || g > 1 || b > 1 {
+		return fmt.Sprintf("%02x%02x%02x", clampInt(r), clampInt(g), clampInt(b))
+	}
+	return fmt.Sprintf("%02x%02x%02x", clampInt(r*255), clampInt(g*255), clampInt(b*255))
 }
 
-func clamp255(v float64) int {
-	n := int(v * 255)
+func clampInt(v float64) int {
+	n := int(v)
 	if n < 0 {
 		return 0
 	}
