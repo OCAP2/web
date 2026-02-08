@@ -1667,9 +1667,9 @@ var categoryRenderOrder = map[string]int{
 	"buildings-3d":  12,
 	"bridges":       13,
 	"vegetation":    14,
-	"icons":         15,
-	"labels":        16,
-	"other":         17,
+	"other":         15,
+	"icons":         16,
+	"labels":        17,
 }
 
 // buildVectorFeatureLayers generates MapLibre layers from vector layer names,
