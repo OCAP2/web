@@ -62,6 +62,13 @@ let _localizable = {
 		"cs": " zraněn od ",
 		"it": " ferito da "
 	},
+	"by_destroyed": {
+		"ru": " уничтожен ",
+		"en": " destroyed by ",
+		"de": " zerstört durch ",
+		"cs": " zničen od ",
+		"it": " distrutto da "
+	},
 	"shared": {
 		"ru": "Поделиться",
 		"en": "Shared",

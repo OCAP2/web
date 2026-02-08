@@ -164,6 +164,16 @@ class Entity {
 			if (this.constructor.name === 'Unit' && !this.isPlayer) {
 				display = "none";
 			}
+			// Hide vehicle popups unless a player is in the crew
+			if (this.constructor.name === 'Vehicle') {
+				const hasPlayer = this._crew && this._crew.some(id => {
+					const unit = entities.getById(id);
+					return unit && unit.isPlayer;
+				});
+				if (!hasPlayer) {
+					display = "none";
+				}
+			}
 		}
 		// When mode is "all", display remains "inherit" (show everything)
 

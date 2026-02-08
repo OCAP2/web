@@ -88,7 +88,6 @@ class GameEvent {
 	}
 }
 
-// TODO: Handle case where victim is a vehicle
 class HitKilledEvent extends GameEvent {
 	constructor(frameNum, type, causedBy, victim, distance, weapon) {
 		super(frameNum, type);
@@ -120,8 +119,9 @@ class HitKilledEvent extends GameEvent {
 		victimSpan.textContent = this.victim.getName();
 
 		// CausedBy
+		const victimIsVehicle = victim instanceof Vehicle;
 		const causedBySpan = document.createElement("span");
-		if ((causedBy instanceof Unit) && (causedBy.getId() != null) && !ui.disableKillCount) {
+		if ((causedBy instanceof Unit) && (causedBy.getId() != null) && !ui.disableKillCount && !victimIsVehicle) {
 			causedBySpan.className = this.causedBy.getSideClass();
 			switch (this.type) {
 				case "killed":
@@ -132,6 +132,9 @@ class HitKilledEvent extends GameEvent {
 					break;
 			}
 		} else {
+			if (causedBy instanceof Unit) {
+				causedBySpan.className = this.causedBy.getSideClass();
+			}
 			causedBySpan.textContent = this.causedBy.getName()
 		}
 		causedBySpan.className += " medium";
@@ -139,7 +142,7 @@ class HitKilledEvent extends GameEvent {
 		const textSpan = document.createElement("span");
 		switch (this.type) {
 			case "killed":
-				localizable(textSpan, "by_killer");
+				localizable(textSpan, victimIsVehicle ? "by_destroyed" : "by_killer");
 				break;
 			case "hit":
 				localizable(textSpan, "by_injured");

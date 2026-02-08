@@ -1466,8 +1466,8 @@ function processOp (filepath, opRecord) {
 							});
 						}
 
-						// Incrememt kill/death count for killer/victim
-						if (type === "killed" && (causedBy != null)) {
+						// Increment kill/death count for killer/victim (only for unit victims)
+						if (type === "killed" && (causedBy != null) && (victim instanceof Unit)) {
 							if (causedBy !== victim) {
 								if (causedBy._side === victim._side) {
 									causedBy.teamKillCount++;
@@ -2066,7 +2066,7 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 			case 'hit':
 				const victim = entities.getById(evt.targetId);
 				const causedBy = entities.getById(evt.sourceId);
-				if (causedBy && evt.type === 'killed' && victim) {
+				if (causedBy && evt.type === 'killed' && victim && (victim instanceof Unit)) {
 					if (causedBy !== victim && causedBy._side === victim._side) {
 						causedBy.teamKillCount++;
 					}
