@@ -818,18 +818,16 @@ function initMap (world) {
 		buildings3DLayer.addTo(map);
 
 		// Reapply overlay toggle states after a style switch (setStyle resets all layers).
-		// Defer briefly so newly loaded layers are fully available.
+		// Use 'styledata' which fires after layers are fully available from vector sources.
 		var glMap = mapLibreLayer.getMaplibreMap();
 		if (glMap) {
-			glMap.on('style.load', function () {
-				setTimeout(function () {
-					if (!map.hasLayer(mapIconsLayer)) {
-						mapIconsLayer._setMapLibreIconVisibility("none");
-					}
-					if (!map.hasLayer(buildings3DLayer)) {
-						buildings3DLayer._setExtrusionVisibility("none");
-					}
-				}, 50);
+			glMap.on('styledata', function () {
+				if (!map.hasLayer(mapIconsLayer)) {
+					mapIconsLayer._setMapLibreIconVisibility("none");
+				}
+				if (!map.hasLayer(buildings3DLayer)) {
+					buildings3DLayer._setExtrusionVisibility("none");
+				}
 			});
 		}
 	}
