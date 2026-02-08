@@ -66,23 +66,24 @@ func contourColorExpr(landColor string) interface{} {
 }
 
 // topoContourColorExpr returns a case expression for topo-style contours.
-// Uses arma3UnderwaterContour for underwater (elevation <= 0) and #D1BA94 for land.
+// Uses arma3UnderwaterContour for underwater (elevation <= 0) and the Arma 3
+// olive-khaki color for land contours.
 func topoContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		arma3UnderwaterContour,
-		"#D1BA94",
+		"#7C8159",
 	}
 }
 
-// topoContourTextColorExpr returns a darker case expression for topo contour labels.
+// topoContourTextColorExpr returns a case expression for topo contour labels.
 func topoContourTextColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		"#2A6B9F",
-		"#9A8060",
+		"#7C8159",
 	}
 }
 
@@ -92,7 +93,7 @@ func topoDarkContourTextColorExpr() interface{} {
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		"#5599DD",
-		"#9a8a6a",
+		"#6B7050",
 	}
 }
 
@@ -183,13 +184,14 @@ func topoTextPaint(color string) map[string]interface{} {
 }
 
 // topoDarkContourColorExpr returns a case expression for topo-dark contours.
-// Uses arma3UnderwaterContour for underwater (elevation <= 0) and #5a4a3a for land.
+// Uses arma3UnderwaterContour for underwater (elevation <= 0) and a darkened
+// olive-khaki for land contours.
 func topoDarkContourColorExpr() interface{} {
 	return []interface{}{
 		"case",
 		[]interface{}{"<=", []interface{}{"get", "elevation"}, 0.0},
 		arma3UnderwaterContour,
-		"#5a4a3a",
+		"#4A4F36",
 	}
 }
 
@@ -441,16 +443,16 @@ var knownLayerStyles = map[string][]LayerStyle{
 		ID: "contours", Type: "line", SourceLayer: "contours", MinZoom: 12,
 		Filter: []interface{}{"==", "type", "minor"},
 		Paint: map[string]interface{}{
-			"line-color":   "#D1BA94",
-			"line-opacity": 0.4,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 0.7,
 			"line-width":   0.5,
 		},
 	}, {
 		ID: "contours-major", Type: "line", SourceLayer: "contours", MinZoom: 10,
 		Filter: []interface{}{"==", "type", "major"},
 		Paint: map[string]interface{}{
-			"line-color":   "#A67345",
-			"line-opacity": 0.7,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 1.0,
 			"line-width":   1.0,
 		},
 	}},
@@ -459,16 +461,16 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"contours100": {{
 		ID: "contours100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color":   contourColorExpr("#A67345"),
-			"line-opacity": 0.7,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 1.0,
 			"line-width":   1.0,
 		},
 	}},
 	"contours50": {{
 		ID: "contours50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color":   contourColorExpr("#A67345"),
-			"line-opacity": 0.7,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 0.9,
 			"line-width":   1.0,
 		},
 	}, {
@@ -481,7 +483,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 			"text-max-angle":   30,
 		},
 		Paint: map[string]interface{}{
-			"text-color":      contourColorExpr("#A67345"),
+			"text-color":      contourColorExpr("#7C8159"),
 			"text-halo-color": "rgba(255,255,255,0.7)",
 			"text-halo-width": 1.0,
 		},
@@ -489,16 +491,16 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"contours10": {{
 		ID: "contours10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color":   contourColorExpr("#D1BA94"),
-			"line-opacity": 0.5,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 0.7,
 			"line-width":   0.5,
 		},
 	}},
 	"contours05": {{
 		ID: "contours05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color":   contourColorExpr("#D1BA94"),
-			"line-opacity": 0.3,
+			"line-color":   contourColorExpr("#7C8159"),
+			"line-opacity": 0.6,
 			"line-width":   0.25,
 		},
 	}},
@@ -700,19 +702,19 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 0.3, "line-width": 0.25,
+			"line-color": topoContourColorExpr(), "line-opacity": 0.6, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
 		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": 0.5, "line-width": 0.5,
+			"line-color": topoContourColorExpr(), "line-opacity": 0.7, "line-width": 0.5,
 		},
 	}},
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
+			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.9), "line-width": 1.0,
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
@@ -730,7 +732,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
+			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(1.0), "line-width": 1.0,
 		},
 	}},
 	"trail": {{
@@ -928,19 +930,19 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.3, "line-width": 0.25,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.6, "line-width": 0.25,
 		},
 	}},
 	"contours10": {{
 		ID: "contours/10", Type: "line", SourceLayer: "contours10", MinZoom: 14,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.5, "line-width": 0.5,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": 0.7, "line-width": 0.5,
 		},
 	}},
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.9), "line-width": 1.0,
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
@@ -958,7 +960,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.7), "line-width": 1.0,
+			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(1.0), "line-width": 1.0,
 		},
 	}},
 	"trail": {{
