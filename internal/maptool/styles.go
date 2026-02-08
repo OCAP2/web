@@ -29,6 +29,17 @@ type LayerStyle struct {
 	Filter      interface{}
 }
 
+// mountTextField returns a MapLibre expression for the mount label text.
+// Uses the "text" property if available (named peaks), otherwise falls back
+// to the rounded elevation value (spot heights like "34").
+func mountTextField() interface{} {
+	return []interface{}{
+		"coalesce",
+		[]interface{}{"get", "text"},
+		[]interface{}{"to-string", []interface{}{"round", []interface{}{"get", "elevation"}}},
+	}
+}
+
 // roadWidthInterp returns a MapLibre interpolation expression for road width
 // based on the "width" property.
 func roadWidthInterp() interface{} {
@@ -528,20 +539,27 @@ var knownLayerStyles = map[string][]LayerStyle{
 	"powerwind":   {makeIconStyle("powerwind", "objects/powerwind", 15)},
 	"viewtower":   {makeIconStyle("viewtower", "objects/viewtower", 15)},
 
-	// --- Mountain peaks ---
+	// --- Mountain peaks / elevation spots ---
 	"mount": {{
+		ID: "mount-dot", Type: "circle", SourceLayer: "mount", MinZoom: 8,
+		Paint: map[string]interface{}{
+			"circle-radius": 1.5,
+			"circle-color":  "#7C8159",
+		},
+	}, {
 		ID: "mount", Type: "symbol", SourceLayer: "mount", MinZoom: 8,
 		Layout: map[string]interface{}{
-			"icon-allow-overlap": true,
-			"text-field":         []interface{}{"get", "text"},
-			"text-font":          []interface{}{"OpenSans-Regular"},
-			"text-anchor":        "left",
-			"text-size":          12,
-			"text-offset":        []interface{}{0.5, 0.0},
-			"symbol-sort-key":    []interface{}{"*", []interface{}{"get", "elevation"}, -1.0},
+			"text-field":            mountTextField(),
+			"text-font":             []interface{}{"OpenSans-Bold"},
+			"text-anchor":           "left",
+			"text-size":             6,
+			"text-offset":           []interface{}{0.3, 0.0},
+			"text-allow-overlap":    true,
+			"text-ignore-placement": true,
+			"symbol-sort-key":       []interface{}{"*", []interface{}{"get", "elevation"}, -1.0},
 		},
 		Paint: map[string]interface{}{
-			"text-color": "#482c18", "text-opacity": 0.5,
+			"text-color": "#7C8159",
 		},
 	}},
 
@@ -841,15 +859,23 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"flatarea":          {makeTopoLabel("flatarea", "#406633")},
 	"flatareacitysmall": {makeTopoLabel("flatareacitysmall", "#406633")},
 	"mount": {{
+		ID: "mount-dot", Type: "circle", SourceLayer: "mount",
+		Paint: map[string]interface{}{
+			"circle-radius": 1.5,
+			"circle-color":  "#7C8159",
+		},
+	}, {
 		ID: "mount", Type: "symbol", SourceLayer: "mount",
 		Layout: map[string]interface{}{
-			"text-field":  []interface{}{"get", "text"},
-			"text-font":   []interface{}{"OpenSans-Regular"},
-			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
-			"text-offset": []interface{}{1.0, 0.0},
+			"text-field":            mountTextField(),
+			"text-font":             []interface{}{"OpenSans-Bold"},
+			"text-anchor":           "left",
+			"text-size":             []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 6.0, 16.0, 13.0},
+			"text-offset":           []interface{}{0.5, 0.0},
+			"text-allow-overlap":    true,
+			"text-ignore-placement": true,
 		},
-		Paint: topoTextPaint("#482c18"),
+		Paint: topoTextPaint("#7C8159"),
 	}},
 	"airport":          {makeTopoLabel("airport", "#406633")},
 	"fortress":         {makeTopoLabel("fortress", "#406633")},
@@ -1069,15 +1095,23 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"flatarea":          {makeTopoDarkLabel("flatarea", "#8a9a7a")},
 	"flatareacitysmall": {makeTopoDarkLabel("flatareacitysmall", "#8a9a7a")},
 	"mount": {{
+		ID: "mount-dot", Type: "circle", SourceLayer: "mount",
+		Paint: map[string]interface{}{
+			"circle-radius": 1.5,
+			"circle-color":  "#6B7050",
+		},
+	}, {
 		ID: "mount", Type: "symbol", SourceLayer: "mount",
 		Layout: map[string]interface{}{
-			"text-field":  []interface{}{"get", "text"},
-			"text-font":   []interface{}{"OpenSans-Regular"},
-			"text-anchor": "left",
-			"text-size":   []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 12.0, 16.0, 32.0},
-			"text-offset": []interface{}{1.0, 0.0},
+			"text-field":            mountTextField(),
+			"text-font":             []interface{}{"OpenSans-Bold"},
+			"text-anchor":           "left",
+			"text-size":             []interface{}{"interpolate", []interface{}{"exponential", 2.0}, []interface{}{"zoom"}, 12.0, 6.0, 16.0, 13.0},
+			"text-offset":           []interface{}{0.5, 0.0},
+			"text-allow-overlap":    true,
+			"text-ignore-placement": true,
 		},
-		Paint: topoDarkTextPaint("#9a8a6a"),
+		Paint: topoDarkTextPaint("#6B7050"),
 	}},
 	"airport":          {makeTopoDarkLabel("airport", "#8a9a7a")},
 	"fortress":         {makeTopoDarkLabel("fortress", "#8a9a7a")},
