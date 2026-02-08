@@ -10,7 +10,7 @@ func buildGradMehPipeline(tools maptool.ToolSet) *maptool.Pipeline {
 		maptool.NewGenerateSatellitePMTilesStage(tools), // 4. generate_satellite_tiles
 		maptool.NewGenerateHeightmapStage(tools), // 5. generate_heightmap
 		maptool.NewGenerateHillshadeStage(tools),     // 6. generate_hillshade
-		maptool.NewGenerateHillshadeFullStage(tools), // 7. generate_hillshade_full
+		maptool.NewGenerateBathymetryStage(tools), // 7. generate_bathymetry
 		maptool.NewGenerateColorReliefStage(tools), // 8. generate_colorrelief
 		maptool.NewGenerateContoursStage(tools),  // 9. generate_contours
 		maptool.NewProcessGeoJSONStage(),         // 10. process_geojson

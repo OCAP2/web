@@ -59,12 +59,12 @@ func rasterToPMTiles(ctx context.Context, ht hillshadeTools, inputTif, mbtilesPa
 	return MBTilesToPMTiles(ctx, ht.pmtiles, mbtilesPath, outputPath)
 }
 
-// NewGenerateHillshadeFullStage creates a pipeline stage that generates a hillshade
+// NewGenerateBathymetryStage creates a pipeline stage that generates a hillshade
 // raster from the full DEM (including underwater terrain) and packages it as PMTiles.
 // Unlike the land-only hillshade, this does not mask below sea level.
-func NewGenerateHillshadeFullStage(tools ToolSet) Stage {
+func NewGenerateBathymetryStage(tools ToolSet) Stage {
 	return Stage{
-		Name:     "generate_hillshade_full",
+		Name:     "generate_bathymetry",
 		Optional: true,
 		Run: func(ctx context.Context, job *Job) error {
 			if job.DEMPath == "" {
@@ -77,27 +77,27 @@ func NewGenerateHillshadeFullStage(tools ToolSet) Stage {
 			}
 
 			// Generate hillshade from full DEM (no sea masking)
-			hillshadeTif := filepath.Join(job.TempDir, "hillshade-full.tif")
-			log.Printf("Generating full hillshade (including underwater)")
+			bathymetryTif := filepath.Join(job.TempDir, "bathymetry.tif")
+			log.Printf("Generating bathymetry hillshade (including underwater)")
 			if err := runCmd(ctx, ht.gdalDem,
-				"hillshade", job.DEMPath, hillshadeTif,
+				"hillshade", job.DEMPath, bathymetryTif,
 				"-alg", "ZevenbergenThorne",
 				"-multidirectional",
 				"-z", "1.0", "-s", "1.0", "-alt", "45.0",
 				"-compute_edges",
 				"-co", "COMPRESS=LZW", "-co", "PREDICTOR=2", "-co", "NUM_THREADS=ALL_CPUS",
 			); err != nil {
-				return fmt.Errorf("gdaldem hillshade-full: %w", err)
+				return fmt.Errorf("gdaldem bathymetry: %w", err)
 			}
 
 			// Convert to PMTiles
-			mbtilesPath := filepath.Join(job.TempDir, "hillshade-full.mbtiles")
-			outputPath := filepath.Join(job.TilesOutputDir(), "hillshade-full.pmtiles")
-			if err := rasterToPMTiles(ctx, ht, hillshadeTif, mbtilesPath, outputPath, "hillshade-full"); err != nil {
+			mbtilesPath := filepath.Join(job.TempDir, "bathymetry.mbtiles")
+			outputPath := filepath.Join(job.TilesOutputDir(), "bathymetry.pmtiles")
+			if err := rasterToPMTiles(ctx, ht, bathymetryTif, mbtilesPath, outputPath, "bathymetry"); err != nil {
 				return err
 			}
 
-			job.HasHillshadeFull = true
+			job.HasBathymetry = true
 			log.Printf("Generated %s", outputPath)
 			return nil
 		},

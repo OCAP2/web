@@ -104,7 +104,7 @@ func restyleWorld(mapsDir, worldName string) error {
 		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),
 		HasHillshade:     hasFile("hillshade.pmtiles"),
-		HasHillshadeFull: hasFile("hillshade-full.pmtiles"),
+		HasBathymetry:    hasFile("bathymetry.pmtiles"),
 		HasColorRelief:   hasFile("color-relief.pmtiles"),
 		GlyphsURL:      "../../fonts/{fontstack}/{range}.pbf",
 	}

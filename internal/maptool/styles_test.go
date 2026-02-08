@@ -244,17 +244,17 @@ func TestGenerateStyleDocument_Variants(t *testing.T) {
 
 func TestGenerateStyleDocument_Sources(t *testing.T) {
 	cfg := StyleConfig{
-		WorldName:        "altis",
-		URLPrefix:        "images/maps/altis",
-		VectorLayers:     []string{"sea"},
-		HasSatellite:     true,
-		HasHeightmap:     true,
-		HasHillshade:     true,
-		HasHillshadeFull: true,
-		HasColorRelief:   true,
+		WorldName:      "altis",
+		URLPrefix:      "images/maps/altis",
+		VectorLayers:   []string{"sea"},
+		HasSatellite:   true,
+		HasHeightmap:   true,
+		HasHillshade:   true,
+		HasBathymetry:  true,
+		HasColorRelief: true,
 	}
 
-	// Color-relief references: features, color-relief, hillshade, satellite — but NOT heightmap or hillshade-full
+	// Color-relief references: features, color-relief, hillshade, satellite — but NOT heightmap or bathymetry
 	doc := GenerateStyleDocument(cfg, StyleColorRelief)
 	sources := doc["sources"].(map[string]interface{})
 
@@ -263,7 +263,7 @@ func TestGenerateStyleDocument_Sources(t *testing.T) {
 	assert.Contains(t, sources, "hillshade")
 	assert.Contains(t, sources, "color-relief")
 	assert.NotContains(t, sources, "heightmap", "heightmap not referenced by color-relief layers")
-	assert.NotContains(t, sources, "hillshade-full", "hillshade-full not referenced by color-relief layers")
+	assert.NotContains(t, sources, "bathymetry", "bathymetry not referenced by color-relief layers")
 }
 
 func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
@@ -280,20 +280,20 @@ func TestGenerateStyleDocument_NoOptionalSources(t *testing.T) {
 	assert.NotContains(t, sources, "satellite")
 	assert.NotContains(t, sources, "heightmap")
 	assert.NotContains(t, sources, "hillshade")
-	assert.NotContains(t, sources, "hillshade-full")
+	assert.NotContains(t, sources, "bathymetry")
 	assert.NotContains(t, sources, "color-relief")
 }
 
 func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 	cfg := StyleConfig{
-		WorldName:        "test",
-		URLPrefix:        "images/maps/test",
-		VectorLayers:     []string{"sea", "road"},
-		HasSatellite:     true,
-		HasHeightmap:     true,
-		HasHillshade:     true,
-		HasHillshadeFull: true,
-		HasColorRelief:   true,
+		WorldName:      "test",
+		URLPrefix:      "images/maps/test",
+		VectorLayers:   []string{"sea", "road"},
+		HasSatellite:   true,
+		HasHeightmap:   true,
+		HasHillshade:   true,
+		HasBathymetry:  true,
+		HasColorRelief: true,
 	}
 
 	getSources := func(variant StyleVariant) map[string]interface{} {
@@ -306,10 +306,10 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 		expected []string
 		banned   []string
 	}{
-		{StyleTopo, []string{"features"}, []string{"color-relief", "hillshade-full", "heightmap", "satellite"}},
-		{StyleTopoDark, []string{"features"}, []string{"color-relief", "hillshade-full", "heightmap", "satellite"}},
-		{StyleTopoRelief, []string{"features", "hillshade-full"}, []string{"satellite", "color-relief"}},
-		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "hillshade-full"}},
+		{StyleTopo, []string{"features"}, []string{"color-relief", "bathymetry", "heightmap", "satellite"}},
+		{StyleTopoDark, []string{"features"}, []string{"color-relief", "bathymetry", "heightmap", "satellite"}},
+		{StyleTopoRelief, []string{"features", "bathymetry"}, []string{"satellite", "color-relief"}},
+		{StyleColorRelief, []string{"features", "color-relief", "hillshade", "satellite"}, []string{"heightmap", "bathymetry"}},
 	}
 
 	for _, tt := range tests {

@@ -52,7 +52,7 @@ type Job struct {
 	SeaFile        string            `json:"-"` // path to generated sea polygon GeoJSON (from DEM)
 	HasHeightmap   bool              `json:"-"`
 	HasHillshade     bool              `json:"-"`
-	HasHillshadeFull bool              `json:"-"`
+	HasBathymetry    bool              `json:"-"`
 	HasColorRelief bool              `json:"-"`
 	GradMehMeta    *GradMehMeta      `json:"-"` // original grad_meh metadata
 	HasMaplibre    bool              `json:"-"` // set by generate_styles stage
