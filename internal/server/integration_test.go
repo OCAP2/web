@@ -215,10 +215,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
-		// Skip 4-byte version prefix
 		data := rec.Body.Bytes()
-		require.Greater(t, len(data), 4)
-		data = data[4:]
 
 		var manifest pbv1.Manifest
 		err = proto.Unmarshal(data, &manifest)
@@ -244,10 +241,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
-		// Skip 4-byte version prefix
 		data := rec.Body.Bytes()
-		require.Greater(t, len(data), 4)
-		data = data[4:]
 
 		var chunk pbv1.Chunk
 		err = proto.Unmarshal(data, &chunk)
@@ -275,10 +269,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		// Skip 4-byte version prefix
 		data := rec.Body.Bytes()
-		require.Greater(t, len(data), 4)
-		data = data[4:]
 
 		var chunk pbv1.Chunk
 		err = proto.Unmarshal(data, &chunk)

@@ -350,6 +350,9 @@ func TestProtobufWriterV1WriteChunks(t *testing.T) {
 	if err := proto.Unmarshal(data, &pbChunk); err != nil {
 		t.Fatalf("failed to unmarshal chunk protobuf: %v", err)
 	}
+	if pbChunk.Index != 0 {
+		t.Errorf("expected chunk index 0, got %d", pbChunk.Index)
+	}
 }
 
 func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
