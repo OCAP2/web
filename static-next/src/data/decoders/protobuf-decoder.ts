@@ -253,6 +253,24 @@ function rawEntityStateToEntityState(raw: RawEntityState): EntityState {
   return state;
 }
 
+// ───────── Vehicle class mapping ─────────
+
+function mapVehicleClass(vehicleClass: string): EntityType {
+  switch (vehicleClass) {
+    case "car": return "car";
+    case "tank": return "tank";
+    case "apc": return "apc";
+    case "truck": return "truck";
+    case "sea": return "ship";
+    case "heli": return "heli";
+    case "plane": return "plane";
+    case "parachute": return "parachute";
+    case "static-weapon": return "staticWeapon";
+    case "static-mortar": return "staticMortar";
+    default: return "unknown";
+  }
+}
+
 // ───────── Sub-message decoders ─────────
 
 function decodeFiredFrame(
@@ -288,6 +306,7 @@ function decodeEntityDef(reader: ProtobufReader, endPos: number): EntityDef {
   let startFrame = 0;
   let endFrame = 0;
   let isPlayer = false;
+  let vehicleClass = "";
   const framesFired: Array<[number, ArmaCoord]> = [];
 
   while (reader.pos < endPos) {
@@ -303,7 +322,7 @@ function decodeEntityDef(reader: ProtobufReader, endPos: number): EntityDef {
       case 7: startFrame = reader.readVarint(); break;
       case 8: endFrame = reader.readVarint(); break;
       case 9: isPlayer = reader.readVarint() !== 0; break;
-      case 10: reader.readString(); break; // vehicleClass — consumed but not in EntityDef
+      case 10: vehicleClass = reader.readString(); break;
       case 11: {
         const len = reader.readVarint();
         const end = reader.pos + len;
@@ -315,15 +334,14 @@ function decodeEntityDef(reader: ProtobufReader, endPos: number): EntityDef {
   }
 
   // Map proto EntityType enum to application EntityType.
-  // The proto only distinguishes unknown/unit/vehicle; we default to
-  // "man" for units and "unknown" for vehicles (the UI refines later
-  // using vehicleClass if available).
+  // The proto only distinguishes unknown/unit/vehicle; for vehicles
+  // we use vehicleClass to determine the specific type.
   const typeStr = ENTITY_TYPE_MAP[protoType] ?? "unknown";
   let entityType: EntityType;
   if (typeStr === "unit") {
     entityType = "man";
-  } else if (typeStr === "vehicle") {
-    entityType = "unknown";
+  } else if (typeStr === "vehicle" && vehicleClass) {
+    entityType = mapVehicleClass(vehicleClass);
   } else {
     entityType = "unknown";
   }

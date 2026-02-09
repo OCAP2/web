@@ -4,6 +4,9 @@ import type { WorldConfig, Operation } from "./data/types";
 import type { MarkerHandle } from "./renderers/renderer.types";
 import { ApiClient } from "./data/api-client";
 import { JsonDecoder } from "./data/decoders/json-decoder";
+import { ProtobufDecoder } from "./data/decoders/protobuf-decoder";
+import { FlatBuffersDecoder } from "./data/decoders/flatbuffers-decoder";
+import type { DecoderStrategy } from "./data/decoders/decoder.interface";
 import { PlaybackEngine } from "./playback/engine";
 import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
@@ -92,21 +95,29 @@ export function App(): JSX.Element {
    */
   async function loadOperation(op: Operation): Promise<void> {
     try {
-      // Determine filename: use op.filename if available, fall back to id-based
-      const filename = op.filename ?? `${op.id}.json`;
-
       // 1. Fetch world config for the map
       const world = await api.getWorldConfig(op.worldName);
       setWorldConfig(world);
 
-      // 2. Fetch the mission data (gzipped JSON from /data/{filename})
-      const buffer = await api.getMissionData(filename);
+      // 2. Choose decoder and fetch data based on storage format
+      const useStreaming = op.storageFormat === "protobuf" || op.storageFormat === "flatbuffers";
+      let decoder: DecoderStrategy;
+      let manifest;
 
-      // 3. Decode the JSON into a manifest (includes entity positions)
-      const decoder = new JsonDecoder();
-      const manifest = decoder.decodeManifest(buffer);
+      if (useStreaming) {
+        decoder = op.storageFormat === "flatbuffers"
+          ? new FlatBuffersDecoder()
+          : new ProtobufDecoder();
+        const buffer = await api.getManifest(op.id);
+        manifest = decoder.decodeManifest(buffer);
+      } else {
+        decoder = new JsonDecoder();
+        const filename = op.filename ?? `${op.id}.json`;
+        const buffer = await api.getMissionData(filename);
+        manifest = decoder.decodeManifest(buffer);
+      }
 
-      // 4. Load into playback engine (no chunk manager needed for JSON format)
+      // 3. Load into playback engine
       engine.loadOperation(manifest);
 
       // 5. Update UI state

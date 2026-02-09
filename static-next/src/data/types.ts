@@ -153,6 +153,8 @@ export interface Operation {
   date: string;
   tag?: string;
   filename?: string;
+  storageFormat?: string;
+  schemaVersion?: number;
 }
 
 /** Per-world map configuration (from map.json). */

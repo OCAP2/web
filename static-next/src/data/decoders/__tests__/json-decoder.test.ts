@@ -185,11 +185,11 @@ describe("JsonDecoder.decodeManifest", () => {
       entities: [
         {
           id: 5,
-          type: "heli",
+          type: "vehicle",
           name: "UH-80 Ghost Hawk",
           side: "WEST",
           startFrameNum: 0,
-          class: "B_Heli_Transport_01_F",
+          class: "heli",
           positions: [
             [[1000, 2000], 45, 1, [10, 11, 12]],
             [[1010, 2010], 50, 1, [10, 11]],
@@ -208,9 +208,9 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(entity.positions![2].crewIds).toEqual([]);
   });
 
-  it("uses raw.type not raw.class for entity type mapping", () => {
-    // In legacy JSON, raw.type carries the simplified vehicle class (e.g. "heli"),
-    // while raw.class carries the Arma classname (e.g. "O_Heli_Light_02_unarmed_F")
+  it("uses raw.class for vehicle entity type mapping", () => {
+    // In legacy JSON, raw.type is always "vehicle" for non-units,
+    // while raw.class carries the simplified vehicle class (e.g. "heli", "car")
     const data = {
       worldName: "Altis",
       missionName: "Op",
@@ -219,20 +219,20 @@ describe("JsonDecoder.decodeManifest", () => {
       entities: [
         {
           id: 1,
-          type: "heli",
+          type: "vehicle",
           name: "Orca",
           side: "EAST",
           startFrameNum: 0,
-          class: "O_Heli_Light_02_unarmed_F",
+          class: "heli",
           positions: [[[0, 0], 0, 1, []]],
         },
         {
           id: 2,
-          type: "car",
+          type: "vehicle",
           name: "Offroad",
           side: "CIV",
           startFrameNum: 0,
-          class: "C_Offroad_01_F",
+          class: "car",
           positions: [[[0, 0], 0, 1, []]],
         },
       ],

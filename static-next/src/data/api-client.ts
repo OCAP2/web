@@ -52,6 +52,8 @@ function mapOperation(raw: RawOperation): Operation {
     date: raw.date,
     tag: raw.tag,
     filename: raw.filename,
+    storageFormat: raw.storageFormat,
+    schemaVersion: raw.schemaVersion,
   };
 }
 

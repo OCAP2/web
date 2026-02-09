@@ -208,6 +208,24 @@ function rawEntityStateToEntityState(raw: RawFbEntityState): EntityState {
   return state;
 }
 
+// ───────── Vehicle class mapping ─────────
+
+function mapVehicleClass(vehicleClass: string): EntityType {
+  switch (vehicleClass) {
+    case "car": return "car";
+    case "tank": return "tank";
+    case "apc": return "apc";
+    case "truck": return "truck";
+    case "sea": return "ship";
+    case "heli": return "heli";
+    case "plane": return "plane";
+    case "parachute": return "parachute";
+    case "static-weapon": return "staticWeapon";
+    case "static-mortar": return "staticMortar";
+    default: return "unknown";
+  }
+}
+
 // ───────── Sub-message decoders ─────────
 
 function decodeEntityDef(
@@ -254,11 +272,20 @@ function decodeEntityDef(
   fieldOffset = reader.getFieldOffset(tableOffset, 8);
   if (fieldOffset) isPlayer = reader.readBool(tableOffset + fieldOffset);
 
-  // Map FB EntityType enum to application EntityType
+  let vehicleClass = "";
+  fieldOffset = reader.getFieldOffset(tableOffset, 9);
+  if (fieldOffset) {
+    vehicleClass = reader.readString(tableOffset + fieldOffset);
+  }
+
+  // Map FB EntityType enum to application EntityType.
+  // For vehicles, use vehicleClass to determine the specific type.
   const typeStr = ENTITY_TYPE_MAP[protoType] ?? "unknown";
   let entityType: EntityType;
   if (typeStr === "unit") {
     entityType = "man";
+  } else if (typeStr === "vehicle" && vehicleClass) {
+    entityType = mapVehicleClass(vehicleClass);
   } else {
     entityType = "unknown";
   }

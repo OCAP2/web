@@ -159,7 +159,7 @@ function convertEntity(raw: RawJsonEntity): EntityDef {
   const isUnit = raw.type === "unit";
   const def: EntityDef = {
     id: raw.id,
-    type: mapEntityType(raw.type),
+    type: mapEntityType(isUnit ? raw.type : (raw.class ?? raw.type)),
     name: raw.name,
     side: mapSide(raw.side),
     groupName: raw.group ?? "",
