@@ -56,9 +56,9 @@ export function ToggleBar(): JSX.Element {
       {/* Time display mode */}
       <span class={`${styles.a3Select} ${styles.toggleTimeSelect}`}>
         <select data-testid="toggle-time">
-          <option value="elapsed">Elapsed</option>
-          <option value="mission" disabled>Mission</option>
-          <option value="system" disabled>System</option>
+          <option value="elapsed">Recording Time Elapsed</option>
+          <option value="mission" disabled>In-Game World Time</option>
+          <option value="system" disabled>Server Time UTC</option>
         </select>
       </span>
 
