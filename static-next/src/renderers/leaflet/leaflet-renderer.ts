@@ -187,8 +187,8 @@ export class LeafletRenderer implements MapRenderer {
     if (!(window as any)._pmtilesRegistered) {
       try {
         // Dynamic import — PMTiles and maplibre-gl must be available
-        const pmtiles = (window as any).pmtiles ?? require("pmtiles");
-        const maplibregl = (window as any).maplibregl ?? require("maplibre-gl");
+        const pmtiles = (window as any).pmtiles ?? (globalThis as any).pmtiles;
+        const maplibregl = (window as any).maplibregl ?? (globalThis as any).maplibregl;
         const protocol = new pmtiles.Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
         (window as any)._pmtilesRegistered = true;

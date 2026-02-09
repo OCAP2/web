@@ -96,7 +96,7 @@ class ZoomInfoControl extends L.Control {
   }
 
   private _onZoomChange(): void {
-    const map = this._map;
+    const map = (this as unknown as { _map: L.Map | undefined })._map;
     if (!map) return;
     this._updateInfoValue(map);
     this._updateDisabled(map);

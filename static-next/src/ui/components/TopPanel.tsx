@@ -40,7 +40,7 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
           data-testid="download-button"
           class="download-button"
           href={downloadHref()}
-          download
+          download=""
         >
           Download
         </a>
