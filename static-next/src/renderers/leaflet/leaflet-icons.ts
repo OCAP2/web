@@ -120,3 +120,48 @@ export function hitIcon(iconType: string): L.Icon {
 export function iconSize(iconType: string): [number, number] {
   return ICON_SIZES[iconType] ?? ICON_SIZES.unknown;
 }
+
+// --------------- Icon atlas: entityType × state string ---------------
+
+/**
+ * All visual states an entity icon can be in.
+ * Side states use the side CSS class name; others are fixed filenames.
+ */
+export const ICON_STATES = [
+  "blufor",
+  "opfor",
+  "ind",
+  "civ",
+  "logic",
+  "unknown",
+  "dead",
+  "hit",
+  "follow",
+  "unconscious",
+] as const;
+
+export type IconState = (typeof ICON_STATES)[number];
+
+/**
+ * Build a Leaflet L.Icon for a given entity type and string-based state.
+ *
+ * This is the atlas-style API matching the legacy icon creation where every
+ * combination of entity type and visual state (blufor, opfor, dead, hit, etc.)
+ * gets its own pre-built L.Icon instance.
+ *
+ * @param iconType  One of the entity type keys (man, car, tank, ...).
+ * @param state     One of the ICON_STATES values.
+ */
+export function getEntityIcon(iconType: string, state: string): L.Icon {
+  const type = ICON_PATHS[iconType] ? iconType : "unknown";
+  const size = ICON_SIZES[type];
+  const path = ICON_PATHS[type];
+  const variant = ICON_STATES.includes(state as IconState) ? state : "unknown";
+
+  return L.icon({
+    className: "animation",
+    iconSize: size,
+    iconAnchor: [size[0] / 2, size[1] / 2],
+    iconUrl: `${path}${variant}.svg`,
+  });
+}

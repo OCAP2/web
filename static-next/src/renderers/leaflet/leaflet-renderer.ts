@@ -21,6 +21,11 @@ import type {
   RendererControls,
 } from "../renderer.types";
 import { entityIcon } from "./leaflet-icons";
+import {
+  enableSmoothing,
+  disableSmoothing,
+  setZooming,
+} from "./leaflet-smoothing";
 
 // --------------- Internal handle wrapper ---------------
 
@@ -111,6 +116,10 @@ export class LeafletRenderer implements MapRenderer {
 
   private listeners = new Map<RendererEvent, Set<(...args: any[]) => void>>();
 
+  // Smoothing state
+  private smoothingEnabled = false;
+  private smoothingSpeed = 1;
+
   // Legacy-mode state
   private imageSize = 0;
   private multiplier = 1;
@@ -139,7 +148,11 @@ export class LeafletRenderer implements MapRenderer {
     }
 
     // Forward Leaflet events
+    this.map.on("zoomstart", () => {
+      setZooming(container, true);
+    });
     this.map.on("zoomend", () => {
+      setZooming(container, false);
       this.fireEvent("zoom", this.map.getZoom());
     });
     this.map.on("dragstart", () => {
@@ -536,8 +549,20 @@ export class LeafletRenderer implements MapRenderer {
 
   // ==================== Settings ====================
 
-  setSmoothingEnabled(_enabled: boolean): void {
-    // Smoothing is managed at the playback layer; no Leaflet-specific action needed
+  setSmoothingEnabled(enabled: boolean, speed?: number): void {
+    this.smoothingEnabled = enabled;
+    if (speed !== undefined) {
+      this.smoothingSpeed = speed;
+    }
+
+    const container = this.map?.getContainer();
+    if (!container) return;
+
+    if (enabled) {
+      enableSmoothing(container, this.smoothingSpeed);
+    } else {
+      disableSmoothing(container);
+    }
   }
 
   // ==================== Events ====================
