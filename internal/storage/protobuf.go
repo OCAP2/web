@@ -2,7 +2,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -13,9 +12,6 @@ import (
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
-
-// versionPrefixSize is the size of the version prefix in bytes
-const versionPrefixSize = 4
 
 // ProtobufEngine reads chunked protobuf recordings
 type ProtobufEngine struct {
@@ -38,7 +34,7 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 	}
 	defer f.Close()
 
-	data, err := e.readVersionedData(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest data: %w", err)
 	}
@@ -90,7 +86,7 @@ func (e *ProtobufEngine) GetChunk(ctx context.Context, filename string, chunkInd
 	}
 	defer f.Close()
 
-	data, err := e.readVersionedData(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("read chunk %d data: %w", chunkIndex, err)
 	}
@@ -141,7 +137,7 @@ func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, 
 	}
 	defer f.Close()
 
-	data, err := e.readVersionedData(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return 0, err
 	}
@@ -152,64 +148,6 @@ func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, 
 	}
 
 	return int(manifest.ChunkCount), nil
-}
-
-// readVersionedData reads file data, handling the optional version prefix.
-// Files may have a 4-byte version prefix (new format) or not (legacy format).
-// This method provides backward compatibility with both formats.
-func (e *ProtobufEngine) readVersionedData(f io.ReadSeeker) ([]byte, error) {
-	// Read the entire file
-	allData, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	// If file is too small to have version prefix, return as-is
-	if len(allData) < versionPrefixSize {
-		return allData, nil
-	}
-
-	// Check if this looks like a version prefix.
-	// Version prefix is 4 bytes little-endian. For small version numbers (1-255),
-	// bytes 2, 3, 4 will be zero: [version, 0x00, 0x00, 0x00]
-	//
-	// Legacy protobuf files start with a field tag. Common first bytes:
-	// - 0x08 (field 1, varint)
-	// - 0x0A (field 1, length-delimited)
-	// - 0x10 (field 2, varint)
-	// - 0x12 (field 2, length-delimited)
-	//
-	// These are followed by actual data, not zeros.
-	// So we can distinguish by checking if bytes 2-4 are all zero.
-
-	// Check if bytes 2-4 are all zero (indicates version prefix)
-	hasVersionPrefix := allData[1] == 0 && allData[2] == 0 && allData[3] == 0
-
-	if !hasVersionPrefix {
-		// Legacy file without version prefix
-		return allData, nil
-	}
-
-	// Looks like a version prefix, read the version
-	reader := bytes.NewReader(allData[:versionPrefixSize])
-	version, err := ReadVersionPrefix(reader)
-	if err != nil {
-		// Can't read version, treat entire file as data (legacy)
-		return allData, nil
-	}
-
-	// Check if version is supported
-	switch version {
-	case SchemaVersionV1:
-		// Version prefix present and valid, skip it
-		return allData[versionPrefixSize:], nil
-	case SchemaVersionUnknown:
-		// Version 0 with zeros in bytes 2-4 - unusual but treat as legacy
-		return allData, nil
-	default:
-		// Unsupported version
-		return nil, fmt.Errorf("unsupported protobuf schema version: %d", version)
-	}
 }
 
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {

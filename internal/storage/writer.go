@@ -2,9 +2,7 @@ package storage
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
-	"io"
 )
 
 // Writer writes ParseResult to a specific schema version
@@ -31,16 +29,4 @@ func GetWriter(format string, version SchemaVersion) (Writer, error) {
 		return w, nil
 	}
 	return nil, fmt.Errorf("no writer for %s version %d", format, version)
-}
-
-// WriteVersionPrefix writes the version as a 4-byte little-endian prefix
-func WriteVersionPrefix(f io.Writer, version SchemaVersion) error {
-	return binary.Write(f, binary.LittleEndian, uint32(version))
-}
-
-// ReadVersionPrefix reads the version prefix from a file
-func ReadVersionPrefix(f io.Reader) (SchemaVersion, error) {
-	var version uint32
-	err := binary.Read(f, binary.LittleEndian, &version)
-	return SchemaVersion(version), err
 }

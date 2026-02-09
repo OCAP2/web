@@ -24,7 +24,7 @@ func (w *FlatBuffersWriterV1) Version() SchemaVersion { return SchemaVersionV1 }
 // Format returns the format name
 func (w *FlatBuffersWriterV1) Format() string { return "flatbuffers" }
 
-// WriteManifest writes the manifest to a FlatBuffers file with version prefix
+// WriteManifest writes the manifest to a FlatBuffers file
 func (w *FlatBuffersWriterV1) WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error {
 	builder := flatbuffers.NewBuilder(1024 * 1024)
 
@@ -32,27 +32,15 @@ func (w *FlatBuffersWriterV1) WriteManifest(ctx context.Context, outputPath stri
 	manifestOff := w.toFBManifest(builder, result)
 	builder.Finish(manifestOff)
 
-	// Create file
-	f, err := os.Create(filepath.Join(outputPath, "manifest.fb"))
-	if err != nil {
-		return fmt.Errorf("create manifest file: %w", err)
-	}
-	defer f.Close()
-
-	// Write version prefix (4 bytes, little-endian)
-	if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil {
-		return fmt.Errorf("write version prefix: %w", err)
-	}
-
-	// Write FlatBuffer data
-	if _, err := f.Write(builder.FinishedBytes()); err != nil {
-		return fmt.Errorf("write manifest data: %w", err)
+	// Write file
+	if err := os.WriteFile(filepath.Join(outputPath, "manifest.fb"), builder.FinishedBytes(), 0644); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
 	}
 
 	return nil
 }
 
-// WriteChunks writes all chunks to FlatBuffers files with version prefix
+// WriteChunks writes all chunks to FlatBuffers files
 func (w *FlatBuffersWriterV1) WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error {
 	// Create chunks directory
 	chunksDir := filepath.Join(outputPath, "chunks")
@@ -286,7 +274,7 @@ func (w *FlatBuffersWriterV1) toFBTimeSample(builder *flatbuffers.Builder, t Tim
 	return fbv1.TimeSampleEnd(builder)
 }
 
-// writeChunk writes a single chunk file with version prefix
+// writeChunk writes a single chunk file
 func (w *FlatBuffersWriterV1) writeChunk(chunksDir string, chunkIdx uint32, result *ParseResult) error {
 	builder := flatbuffers.NewBuilder(1024 * 1024)
 
@@ -294,22 +282,9 @@ func (w *FlatBuffersWriterV1) writeChunk(chunksDir string, chunkIdx uint32, resu
 	chunkOff := w.buildFBChunk(builder, result, chunkIdx)
 	builder.Finish(chunkOff)
 
-	// Create file
 	path := filepath.Join(chunksDir, fmt.Sprintf("%04d.fb", chunkIdx))
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create chunk file: %w", err)
-	}
-	defer f.Close()
-
-	// Write version prefix (4 bytes, little-endian)
-	if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil {
-		return fmt.Errorf("write version prefix: %w", err)
-	}
-
-	// Write FlatBuffer data
-	if _, err := f.Write(builder.FinishedBytes()); err != nil {
-		return fmt.Errorf("write chunk data: %w", err)
+	if err := os.WriteFile(path, builder.FinishedBytes(), 0644); err != nil {
+		return fmt.Errorf("write chunk: %w", err)
 	}
 
 	return nil

@@ -1,11 +1,15 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"strings"
 	"testing"
+
+	"google.golang.org/protobuf/proto"
+
+	fbv1gen "github.com/OCAP2/web/pkg/schemas/flatbuffers/v1/generated"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 // mockWriter is a test writer implementation
@@ -161,133 +165,6 @@ func TestRegisterMultipleFormats(t *testing.T) {
 	}
 }
 
-func TestWriteVersionPrefix(t *testing.T) {
-	var buf bytes.Buffer
-
-	err := WriteVersionPrefix(&buf, SchemaVersionV1)
-	if err != nil {
-		t.Fatalf("WriteVersionPrefix returned error: %v", err)
-	}
-
-	// Check the bytes are correct (little-endian uint32 = 1)
-	expected := []byte{0x01, 0x00, 0x00, 0x00}
-	if !bytes.Equal(buf.Bytes(), expected) {
-		t.Errorf("WriteVersionPrefix wrote %v, want %v", buf.Bytes(), expected)
-	}
-}
-
-func TestWriteVersionPrefixHigherVersion(t *testing.T) {
-	var buf bytes.Buffer
-
-	// Test with a higher version number (e.g., 256 = 0x100)
-	err := WriteVersionPrefix(&buf, SchemaVersion(256))
-	if err != nil {
-		t.Fatalf("WriteVersionPrefix returned error: %v", err)
-	}
-
-	// Check the bytes are correct (little-endian uint32 = 256)
-	expected := []byte{0x00, 0x01, 0x00, 0x00}
-	if !bytes.Equal(buf.Bytes(), expected) {
-		t.Errorf("WriteVersionPrefix wrote %v, want %v", buf.Bytes(), expected)
-	}
-}
-
-func TestReadVersionPrefix(t *testing.T) {
-	// Create a buffer with version 1 in little-endian
-	data := []byte{0x01, 0x00, 0x00, 0x00}
-	buf := bytes.NewReader(data)
-
-	version, err := ReadVersionPrefix(buf)
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("ReadVersionPrefix = %v, want %v", version, SchemaVersionV1)
-	}
-}
-
-func TestReadVersionPrefixHigherVersion(t *testing.T) {
-	// Create a buffer with version 256 in little-endian
-	data := []byte{0x00, 0x01, 0x00, 0x00}
-	buf := bytes.NewReader(data)
-
-	version, err := ReadVersionPrefix(buf)
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersion(256) {
-		t.Errorf("ReadVersionPrefix = %v, want %v", version, SchemaVersion(256))
-	}
-}
-
-func TestReadVersionPrefixTooShort(t *testing.T) {
-	// Create a buffer with only 2 bytes
-	data := []byte{0x01, 0x00}
-	buf := bytes.NewReader(data)
-
-	_, err := ReadVersionPrefix(buf)
-	if err == nil {
-		t.Fatal("expected error for too short data, got nil")
-	}
-}
-
-func TestReadVersionPrefixEmpty(t *testing.T) {
-	// Create an empty buffer
-	buf := bytes.NewReader([]byte{})
-
-	_, err := ReadVersionPrefix(buf)
-	if err == nil {
-		t.Fatal("expected error for empty data, got nil")
-	}
-}
-
-func TestVersionPrefixRoundTrip(t *testing.T) {
-	testCases := []SchemaVersion{
-		SchemaVersionUnknown,
-		SchemaVersionV1,
-		SchemaVersion(2),
-		SchemaVersion(100),
-		SchemaVersion(65535),
-		SchemaVersion(0xFFFFFFFF), // Max uint32
-	}
-
-	for _, version := range testCases {
-		t.Run(version.String(), func(t *testing.T) {
-			var buf bytes.Buffer
-
-			// Write version
-			err := WriteVersionPrefix(&buf, version)
-			if err != nil {
-				t.Fatalf("WriteVersionPrefix returned error: %v", err)
-			}
-
-			// Read it back
-			readVersion, err := ReadVersionPrefix(bytes.NewReader(buf.Bytes()))
-			if err != nil {
-				t.Fatalf("ReadVersionPrefix returned error: %v", err)
-			}
-
-			if readVersion != version {
-				t.Errorf("round-trip failed: wrote %v, read %v", version, readVersion)
-			}
-		})
-	}
-}
-
-func TestVersionPrefixSize(t *testing.T) {
-	var buf bytes.Buffer
-
-	err := WriteVersionPrefix(&buf, SchemaVersionV1)
-	if err != nil {
-		t.Fatalf("WriteVersionPrefix returned error: %v", err)
-	}
-
-	// Version prefix should always be exactly 4 bytes
-	if buf.Len() != 4 {
-		t.Errorf("version prefix size = %d bytes, want 4 bytes", buf.Len())
-	}
-}
-
 // ProtobufWriterV1 tests
 
 func TestProtobufWriterV1Registration(t *testing.T) {
@@ -326,10 +203,8 @@ func TestProtobufWriterV1VersionAndFormat(t *testing.T) {
 func TestProtobufWriterV1WriteManifest(t *testing.T) {
 	w := &ProtobufWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -392,46 +267,39 @@ func TestProtobufWriterV1WriteManifest(t *testing.T) {
 		},
 	}
 
-	// Write manifest
 	ctx := context.Background()
 	err := w.WriteManifest(ctx, tmpDir, result)
 	if err != nil {
 		t.Fatalf("WriteManifest returned error: %v", err)
 	}
 
-	// Verify file was created
+	// Verify file was created and contains valid protobuf
 	manifestPath := tmpDir + "/manifest.pb"
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("failed to read manifest file: %v", err)
 	}
 
-	// Check version prefix (first 4 bytes)
-	if len(data) < 4 {
-		t.Fatalf("manifest file too short: %d bytes", len(data))
-	}
-	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+	if len(data) == 0 {
+		t.Fatal("manifest file is empty")
 	}
 
-	// Verify protobuf data can be parsed
-	manifestData := data[4:]
-	if len(manifestData) == 0 {
-		t.Fatal("manifest protobuf data is empty")
+	// Verify the data is valid protobuf (no version prefix)
+	var pbManifest pbv1.Manifest
+	if err := proto.Unmarshal(data, &pbManifest); err != nil {
+		t.Fatalf("failed to unmarshal manifest protobuf: %v", err)
+	}
+
+	if pbManifest.WorldName != "TestWorld" {
+		t.Errorf("expected WorldName 'TestWorld', got %q", pbManifest.WorldName)
 	}
 }
 
 func TestProtobufWriterV1WriteChunks(t *testing.T) {
 	w := &ProtobufWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult with position data
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -449,7 +317,6 @@ func TestProtobufWriterV1WriteChunks(t *testing.T) {
 		},
 	}
 
-	// Write chunks
 	ctx := context.Background()
 	err := w.WriteChunks(ctx, tmpDir, result)
 	if err != nil {
@@ -468,33 +335,28 @@ func TestProtobufWriterV1WriteChunks(t *testing.T) {
 		t.Errorf("expected 2 chunk files, got %d", len(entries))
 	}
 
-	// Verify first chunk file
+	// Verify first chunk file contains valid protobuf (no version prefix)
 	chunkPath := chunksDir + "/0000.pb"
 	data, err := os.ReadFile(chunkPath)
 	if err != nil {
 		t.Fatalf("failed to read chunk file: %v", err)
 	}
 
-	// Check version prefix
-	if len(data) < 4 {
-		t.Fatalf("chunk file too short: %d bytes", len(data))
+	if len(data) == 0 {
+		t.Fatal("chunk file is empty")
 	}
-	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+
+	var pbChunk pbv1.Chunk
+	if err := proto.Unmarshal(data, &pbChunk); err != nil {
+		t.Fatalf("failed to unmarshal chunk protobuf: %v", err)
 	}
 }
 
 func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
 	w := &ProtobufWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult with many frames
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -578,10 +440,8 @@ func TestProtobufWriterV1StringToSide(t *testing.T) {
 func TestProtobufWriterV1EmptyResult(t *testing.T) {
 	w := &ProtobufWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create minimal ParseResult
 	result := &ParseResult{
 		WorldName:      "EmptyWorld",
 		MissionName:    "EmptyMission",
@@ -655,10 +515,8 @@ func TestFlatBuffersWriterV1VersionAndFormat(t *testing.T) {
 func TestFlatBuffersWriterV1WriteManifest(t *testing.T) {
 	w := &FlatBuffersWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -721,46 +579,35 @@ func TestFlatBuffersWriterV1WriteManifest(t *testing.T) {
 		},
 	}
 
-	// Write manifest
 	ctx := context.Background()
 	err := w.WriteManifest(ctx, tmpDir, result)
 	if err != nil {
 		t.Fatalf("WriteManifest returned error: %v", err)
 	}
 
-	// Verify file was created
+	// Verify file was created and contains valid FlatBuffer data (no version prefix)
 	manifestPath := tmpDir + "/manifest.fb"
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("failed to read manifest file: %v", err)
 	}
 
-	// Check version prefix (first 4 bytes)
-	if len(data) < 4 {
-		t.Fatalf("manifest file too short: %d bytes", len(data))
-	}
-	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+	if len(data) == 0 {
+		t.Fatal("manifest file is empty")
 	}
 
-	// Verify FlatBuffer data can be parsed (just check it's not empty)
-	fbData := data[4:]
-	if len(fbData) == 0 {
-		t.Fatal("manifest FlatBuffer data is empty")
+	// Verify the data is valid FlatBuffer
+	fbManifest := fbv1gen.GetRootAsManifest(data, 0)
+	if string(fbManifest.WorldName()) != "TestWorld" {
+		t.Errorf("expected WorldName 'TestWorld', got %q", string(fbManifest.WorldName()))
 	}
 }
 
 func TestFlatBuffersWriterV1WriteChunks(t *testing.T) {
 	w := &FlatBuffersWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult with position data
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -778,7 +625,6 @@ func TestFlatBuffersWriterV1WriteChunks(t *testing.T) {
 		},
 	}
 
-	// Write chunks
 	ctx := context.Background()
 	err := w.WriteChunks(ctx, tmpDir, result)
 	if err != nil {
@@ -797,33 +643,29 @@ func TestFlatBuffersWriterV1WriteChunks(t *testing.T) {
 		t.Errorf("expected 2 chunk files, got %d", len(entries))
 	}
 
-	// Verify first chunk file
+	// Verify first chunk file contains valid FlatBuffer (no version prefix)
 	chunkPath := chunksDir + "/0000.fb"
 	data, err := os.ReadFile(chunkPath)
 	if err != nil {
 		t.Fatalf("failed to read chunk file: %v", err)
 	}
 
-	// Check version prefix
-	if len(data) < 4 {
-		t.Fatalf("chunk file too short: %d bytes", len(data))
+	if len(data) == 0 {
+		t.Fatal("chunk file is empty")
 	}
-	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+
+	// Verify it's valid FlatBuffer data
+	fbChunk := fbv1gen.GetRootAsChunk(data, 0)
+	if fbChunk.Index() != 0 {
+		t.Errorf("expected chunk index 0, got %d", fbChunk.Index())
 	}
 }
 
 func TestFlatBuffersWriterV1WriteChunksCancellation(t *testing.T) {
 	w := &FlatBuffersWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult with many frames
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -907,10 +749,8 @@ func TestFlatBuffersWriterV1StringToSide(t *testing.T) {
 func TestFlatBuffersWriterV1EmptyResult(t *testing.T) {
 	w := &FlatBuffersWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create minimal ParseResult
 	result := &ParseResult{
 		WorldName:      "EmptyWorld",
 		MissionName:    "EmptyMission",
@@ -949,10 +789,8 @@ func TestFlatBuffersWriterV1EmptyResult(t *testing.T) {
 func TestFlatBuffersWriterV1MarkerWithSize(t *testing.T) {
 	w := &FlatBuffersWriterV1{}
 
-	// Create a temp directory
 	tmpDir := t.TempDir()
 
-	// Create test ParseResult with marker that has size
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
@@ -978,29 +816,26 @@ func TestFlatBuffersWriterV1MarkerWithSize(t *testing.T) {
 		},
 	}
 
-	// Write manifest
 	ctx := context.Background()
 	err := w.WriteManifest(ctx, tmpDir, result)
 	if err != nil {
 		t.Fatalf("WriteManifest returned error: %v", err)
 	}
 
-	// Verify file was created
+	// Verify file was created and contains valid FlatBuffer data
 	manifestPath := tmpDir + "/manifest.fb"
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("failed to read manifest file: %v", err)
 	}
 
-	// Check version prefix (first 4 bytes)
-	if len(data) < 4 {
-		t.Fatalf("manifest file too short: %d bytes", len(data))
+	if len(data) == 0 {
+		t.Fatal("manifest file is empty")
 	}
-	version, err := ReadVersionPrefix(bytes.NewReader(data[:4]))
-	if err != nil {
-		t.Fatalf("ReadVersionPrefix returned error: %v", err)
-	}
-	if version != SchemaVersionV1 {
-		t.Errorf("version prefix = %v, want %v", version, SchemaVersionV1)
+
+	// Verify it's valid FlatBuffer
+	fbManifest := fbv1gen.GetRootAsManifest(data, 0)
+	if fbManifest.MarkersLength() != 1 {
+		t.Errorf("expected 1 marker, got %d", fbManifest.MarkersLength())
 	}
 }

@@ -104,18 +104,12 @@ func TestConverter_Convert(t *testing.T) {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Verify manifest was created - now with version prefix
+	// Verify manifest was created
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
-
-	// Skip 4-byte version prefix
-	if len(manifestData) < 4 {
-		t.Fatalf("manifest data too short")
-	}
-	manifestData = manifestData[4:]
 
 	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
@@ -210,15 +204,11 @@ func TestConverter_Convert(t *testing.T) {
 		t.Errorf("chunk 1 not created: %v", err)
 	}
 
-	// Read and verify chunk 0 - skip 4-byte version prefix
+	// Read and verify chunk 0
 	chunk0Data, err := os.ReadFile(chunk0Path)
 	if err != nil {
 		t.Fatalf("read chunk 0: %v", err)
 	}
-	if len(chunk0Data) < 4 {
-		t.Fatalf("chunk 0 data too short")
-	}
-	chunk0Data = chunk0Data[4:]
 
 	var chunk0 pbv1.Chunk
 	if err := proto.Unmarshal(chunk0Data, &chunk0); err != nil {
@@ -269,15 +259,11 @@ func TestConverter_Convert(t *testing.T) {
 		}
 	}
 
-	// Read and verify chunk 1 - skip 4-byte version prefix
+	// Read and verify chunk 1
 	chunk1Data, err := os.ReadFile(chunk1Path)
 	if err != nil {
 		t.Fatalf("read chunk 1: %v", err)
 	}
-	if len(chunk1Data) < 4 {
-		t.Fatalf("chunk 1 data too short")
-	}
-	chunk1Data = chunk1Data[4:]
 
 	var chunk1 pbv1.Chunk
 	if err := proto.Unmarshal(chunk1Data, &chunk1); err != nil {
@@ -338,16 +324,12 @@ func TestConverter_ConvertGzipped(t *testing.T) {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Verify manifest - skip 4-byte version prefix
+	// Verify manifest
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
-	if len(manifestData) < 4 {
-		t.Fatalf("manifest data too short")
-	}
-	manifestData = manifestData[4:]
 
 	var manifest pbv1.Manifest
 	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
@@ -452,16 +434,12 @@ func TestConverter_VehicleCrew(t *testing.T) {
 		t.Fatalf("convert: %v", err)
 	}
 
-	// Read chunk and verify crew - skip 4-byte version prefix
+	// Read chunk and verify crew
 	chunkPath := filepath.Join(outputPath, "chunks", "0000.pb")
 	chunkData, err := os.ReadFile(chunkPath)
 	if err != nil {
 		t.Fatalf("read chunk: %v", err)
 	}
-	if len(chunkData) < 4 {
-		t.Fatalf("chunk data too short")
-	}
-	chunkData = chunkData[4:]
 
 	var chunk pbv1.Chunk
 	if err := proto.Unmarshal(chunkData, &chunk); err != nil {

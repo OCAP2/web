@@ -25,36 +25,26 @@ func (w *ProtobufWriterV1) Version() SchemaVersion { return SchemaVersionV1 }
 // Format returns the format name
 func (w *ProtobufWriterV1) Format() string { return "protobuf" }
 
-// WriteManifest writes the manifest to a protobuf file with version prefix
+// WriteManifest writes the manifest to a protobuf file
 func (w *ProtobufWriterV1) WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error {
 	// Convert ParseResult to pbv1.Manifest
 	manifest := w.toProtoManifest(result)
 
-	// Create file
-	f, err := os.Create(filepath.Join(outputPath, "manifest.pb"))
-	if err != nil {
-		return fmt.Errorf("create manifest file: %w", err)
-	}
-	defer f.Close()
-
-	// Write version prefix (4 bytes, little-endian)
-	if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil {
-		return fmt.Errorf("write version prefix: %w", err)
-	}
-
-	// Write protobuf data
+	// Marshal protobuf data
 	data, err := proto.Marshal(manifest)
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
 	}
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("write manifest data: %w", err)
+
+	// Write file
+	if err := os.WriteFile(filepath.Join(outputPath, "manifest.pb"), data, 0644); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
 	}
 
 	return nil
 }
 
-// WriteChunks writes all chunks to protobuf files with version prefix
+// WriteChunks writes all chunks to protobuf files
 func (w *ProtobufWriterV1) WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error {
 	// Create chunks directory
 	chunksDir := filepath.Join(outputPath, "chunks")
@@ -267,27 +257,17 @@ func (w *ProtobufWriterV1) getEntityStateAtFrame(ep EntityPositionData, frameNum
 	return nil
 }
 
-// writeChunk writes a single chunk file with version prefix
+// writeChunk writes a single chunk file
 func (w *ProtobufWriterV1) writeChunk(chunksDir string, index uint32, chunk *pbv1.Chunk) error {
 	path := filepath.Join(chunksDir, fmt.Sprintf("%04d.pb", index))
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create chunk file: %w", err)
-	}
-	defer f.Close()
 
-	// Write version prefix (4 bytes, little-endian)
-	if err := WriteVersionPrefix(f, SchemaVersionV1); err != nil {
-		return fmt.Errorf("write version prefix: %w", err)
-	}
-
-	// Write protobuf data
 	data, err := proto.Marshal(chunk)
 	if err != nil {
 		return fmt.Errorf("marshal chunk: %w", err)
 	}
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("write chunk data: %w", err)
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("write chunk: %w", err)
 	}
 
 	return nil
