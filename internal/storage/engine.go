@@ -3,7 +3,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"io"
 )
 
@@ -86,9 +85,6 @@ type EntityState struct {
 
 // Engine defines the storage engine interface
 type Engine interface {
-	// Name returns the engine identifier (e.g., "json", "protobuf")
-	Name() string
-
 	// SupportsStreaming indicates if chunked loading is supported
 	SupportsStreaming() bool
 
@@ -112,26 +108,3 @@ type Engine interface {
 	Convert(ctx context.Context, jsonPath, outputPath string) error
 }
 
-var engines = make(map[string]Engine)
-
-// RegisterEngine adds an engine to the registry
-func RegisterEngine(e Engine) {
-	engines[e.Name()] = e
-}
-
-// GetEngine returns an engine by name
-func GetEngine(name string) (Engine, error) {
-	if e, ok := engines[name]; ok {
-		return e, nil
-	}
-	return nil, fmt.Errorf("unknown storage engine: %s", name)
-}
-
-// ListEngines returns all registered engine names
-func ListEngines() []string {
-	names := make([]string, 0, len(engines))
-	for name := range engines {
-		names = append(names, name)
-	}
-	return names
-}

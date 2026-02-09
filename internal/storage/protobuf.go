@@ -23,7 +23,6 @@ func NewProtobufEngine(dataDir string) *ProtobufEngine {
 	return &ProtobufEngine{dataDir: dataDir}
 }
 
-func (e *ProtobufEngine) Name() string            { return "protobuf" }
 func (e *ProtobufEngine) SupportsStreaming() bool { return true }
 
 func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {

@@ -2,7 +2,7 @@
  * LoaderV1 - Schema version 1 loader
  *
  * Handles decoding of manifest and chunk data for schema version 1.
- * Wraps the existing ProtobufDecoder and FlatBuffersDecoder with version prefix handling.
+ * Wraps the existing ProtobufDecoder with version prefix handling.
  */
 
 const LoaderV1 = (function() {
@@ -20,36 +20,24 @@ const LoaderV1 = (function() {
      * Decode manifest from binary data
      *
      * @param {ArrayBuffer} buffer - Raw binary manifest data (may include version prefix)
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Object} Decoded manifest
      */
-    function decodeManifest(buffer, format = 'protobuf') {
+    function decodeManifest(buffer) {
         // Strip version prefix if present
         const data = LoaderUtils.stripVersionPrefix(buffer);
-
-        if (format === 'flatbuffers') {
-            return FlatBuffersDecoder.decodeManifest(data);
-        } else {
-            return ProtobufDecoder.decodeManifest(data);
-        }
+        return ProtobufDecoder.decodeManifest(data);
     }
 
     /**
      * Decode chunk from binary data
      *
      * @param {ArrayBuffer} buffer - Raw binary chunk data (may include version prefix)
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
      * @returns {Object} Decoded chunk
      */
-    function decodeChunk(buffer, format = 'protobuf') {
+    function decodeChunk(buffer) {
         // Strip version prefix if present
         const data = LoaderUtils.stripVersionPrefix(buffer);
-
-        if (format === 'flatbuffers') {
-            return FlatBuffersDecoder.decodeChunk(data);
-        } else {
-            return ProtobufDecoder.decodeChunk(data);
-        }
+        return ProtobufDecoder.decodeChunk(data);
     }
 
     // Public API

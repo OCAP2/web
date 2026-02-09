@@ -32,11 +32,12 @@ type ConversionTrigger interface {
 }
 
 type Handler struct {
-	repoOperation       *RepoOperation
-	repoMarker          *RepoMarker
-	repoAmmo            *RepoAmmo
-	setting             Setting
-	conversionTrigger   ConversionTrigger // optional, nil if conversion disabled
+	repoOperation     *RepoOperation
+	repoMarker        *RepoMarker
+	repoAmmo          *RepoAmmo
+	setting           Setting
+	engines           map[string]storage.Engine
+	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
 }
 
 // FormatInfo contains storage format details for a recording
@@ -65,16 +66,15 @@ func NewHandler(
 	setting Setting,
 	opts ...HandlerOption,
 ) {
-	// Register storage engines
-	storage.RegisterEngine(storage.NewJSONEngine(setting.Data))
-	storage.RegisterEngine(storage.NewProtobufEngine(setting.Data))
-	storage.RegisterEngine(storage.NewFlatBuffersEngine(setting.Data))
-
 	hdlr := Handler{
 		repoOperation: repoOperation,
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
 		setting:       setting,
+		engines: map[string]storage.Engine{
+			"json":     storage.NewJSONEngine(setting.Data),
+			"protobuf": storage.NewProtobufEngine(setting.Data),
+		},
 	}
 
 	// Apply options
@@ -198,6 +198,18 @@ func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// resolveEngine returns the storage engine for the given format string,
+// falling back to "json" if the format is empty or unknown.
+func (h *Handler) resolveEngine(format string) (storage.Engine, string) {
+	if format == "" {
+		format = "json"
+	}
+	if e, ok := h.engines[format]; ok {
+		return e, format
+	}
+	return h.engines["json"], "json"
+}
+
 func (h *Handler) GetOperations(c echo.Context) error {
 	var (
 		ctx    = c.Request().Context()
@@ -244,19 +256,7 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	// Get engine for this format
-	format := op.StorageFormat
-	if format == "" {
-		format = "json"
-	}
-
-	engine, err := storage.GetEngine(format)
-	if err != nil {
-		// Fallback to json if unknown format
-		engine, _ = storage.GetEngine("json")
-		format = "json"
-	}
-
+	engine, format := h.resolveEngine(op.StorageFormat)
 	chunkCount, _ := engine.ChunkCount(c.Request().Context(), op.Filename)
 
 	// Default schema version to 1 for legacy recordings
@@ -281,32 +281,17 @@ func (h *Handler) GetOperationManifest(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	// Get engine for this format
-	format := op.StorageFormat
-	if format == "" {
-		format = "json"
-	}
+	engine, format := h.resolveEngine(op.StorageFormat)
 
-	engine, err := storage.GetEngine(format)
-	if err != nil {
-		// Fallback to json if unknown format
-		engine, _ = storage.GetEngine("json")
-		format = "json"
-	}
-
-	// For binary formats (protobuf, flatbuffers), stream raw file
-	if format == "protobuf" || format == "flatbuffers" {
+	// For protobuf format, stream raw binary file
+	if format == "protobuf" {
 		reader, err := engine.GetManifestReader(c.Request().Context(), op.Filename)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
 		}
 		defer reader.Close()
 
-		contentType := "application/x-protobuf"
-		if format == "flatbuffers" {
-			contentType = "application/x-flatbuffers"
-		}
-		return c.Stream(http.StatusOK, contentType, reader)
+		return c.Stream(http.StatusOK, "application/x-protobuf", reader)
 	}
 
 	// For JSON format, return as JSON
@@ -333,18 +318,7 @@ func (h *Handler) GetOperationChunk(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	// Determine format (use "json" as fallback if StorageFormat is empty)
-	format := op.StorageFormat
-	if format == "" {
-		format = "json"
-	}
-
-	// Get engine for this format
-	engine, err := storage.GetEngine(format)
-	if err != nil {
-		// Fallback to json if unknown format
-		engine, _ = storage.GetEngine("json")
-	}
+	engine, _ := h.resolveEngine(op.StorageFormat)
 
 	// Get chunk reader for streaming
 	reader, err := engine.GetChunkReader(c.Request().Context(), op.Filename, chunkIndex)
@@ -353,13 +327,7 @@ func (h *Handler) GetOperationChunk(c echo.Context) error {
 	}
 	defer reader.Close()
 
-	// Set content type based on format
-	contentType := "application/x-protobuf"
-	if format == "flatbuffers" {
-		contentType = "application/x-flatbuffers"
-	}
-
-	return c.Stream(http.StatusOK, contentType, reader)
+	return c.Stream(http.StatusOK, "application/x-protobuf", reader)
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {

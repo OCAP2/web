@@ -4,7 +4,7 @@ import "fmt"
 
 // ParseResult contains parsed data in a schema-agnostic format.
 // This is the intermediate representation produced by parsing JSON input,
-// before writing to protobuf/flatbuffers format.
+// before writing to protobuf format.
 type ParseResult struct {
 	// Manifest data
 	WorldName        string

@@ -12,7 +12,7 @@ class ChunkManager {
      * @param {StorageManager} storageManager - Storage backend
      * @param {string} baseUrl - Base URL for chunk fetching
      * @param {Object} options - Configuration options
-     * @param {string} options.format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} options.format - Storage format ('protobuf')
      * @param {boolean} options.enableBrowserCache - Enable browser storage caching (default: false)
      * @param {Object} options.loader - Versioned loader for decoding chunks
      */
@@ -148,18 +148,10 @@ class ChunkManager {
         }
 
         // Fallback to direct decoder usage (legacy compatibility)
-        if (this._format === 'flatbuffers') {
-            if (typeof FlatBuffersDecoder !== 'undefined') {
-                return FlatBuffersDecoder.decodeChunk(data);
-            }
-            console.warn('FlatBuffersDecoder not available');
-        } else {
-            // Default to protobuf
-            if (typeof ProtobufDecoder !== 'undefined') {
-                return ProtobufDecoder.decodeChunk(data);
-            }
-            console.warn('ProtobufDecoder not available');
+        if (typeof ProtobufDecoder !== 'undefined') {
+            return ProtobufDecoder.decodeChunk(data);
         }
+        console.warn('ProtobufDecoder not available');
 
         // Fallback: return raw data if decoder not available
         console.warn('No decoder available, returning raw data');

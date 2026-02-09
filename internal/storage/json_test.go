@@ -15,7 +15,6 @@ import (
 func TestJSONEngineBasics(t *testing.T) {
 	engine := NewJSONEngine("/tmp")
 
-	assert.Equal(t, "json", engine.Name())
 	assert.False(t, engine.SupportsStreaming())
 
 	count, err := engine.ChunkCount(context.Background(), "test")

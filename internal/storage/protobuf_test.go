@@ -18,7 +18,6 @@ import (
 func TestProtobufEngineBasics(t *testing.T) {
 	engine := NewProtobufEngine("/tmp")
 
-	assert.Equal(t, "protobuf", engine.Name())
 	assert.True(t, engine.SupportsStreaming())
 }
 

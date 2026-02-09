@@ -1210,8 +1210,8 @@ function secondsToTimeString (seconds) {
  * @returns {Promise}
  */
 async function loadOperation(op) {
-	// Use streaming for protobuf/flatbuffers formats
-	if (op.storageFormat === 'protobuf' || op.storageFormat === 'flatbuffers') {
+	// Use streaming for protobuf format
+	if (op.storageFormat === 'protobuf') {
 		// Get schema version from operation or default to 1
 		const schemaVersion = op.schemaVersion || 1;
 		console.log(`Loading operation ${op.id} using streaming mode (${op.storageFormat}, schema v${schemaVersion})`);
@@ -1945,7 +1945,7 @@ async function getOperationFormat(operationId) {
 /**
  * Process operation using streaming/chunked mode
  * @param {string} operationId - Operation ID from database
- * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+ * @param {string} format - Storage format ('protobuf')
  * @param {number} schemaVersion - Schema version (default: 1)
  * @returns {Promise<void>}
  */

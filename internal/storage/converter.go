@@ -15,7 +15,7 @@ import (
 // DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)
 const DefaultChunkSize = 300
 
-// Converter transforms JSON recordings to chunked protobuf/flatbuffers format
+// Converter transforms JSON recordings to chunked protobuf format
 type Converter struct {
 	ChunkSize uint32
 }
@@ -29,7 +29,7 @@ func NewConverter(chunkSize uint32) *Converter {
 }
 
 // Convert reads a JSON recording and writes chunked output files.
-// The format parameter specifies the output format ("protobuf" or "flatbuffers").
+// The format parameter specifies the output format ("protobuf").
 func (c *Converter) Convert(ctx context.Context, jsonPath, outputPath string, format string) error {
 	// 1. Load JSON
 	data, err := c.loadJSON(jsonPath)

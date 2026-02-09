@@ -8,7 +8,7 @@ This document describes the playback and conversion flows for large recording su
 flowchart TD
     A[User selects recording] --> B{Check storageFormat}
 
-    B -->|protobuf / flatbuffers| C[Streaming Mode]
+    B -->|protobuf| C[Streaming Mode]
     B -->|json or empty| D[Legacy Mode]
 
     subgraph Legacy[Legacy Mode - small recordings]
@@ -59,15 +59,12 @@ flowchart TD
         G --> H[Read JSON.gz]
         H --> I[Parse entities and frames]
         I --> J[Split into chunks]
-        J --> K{Target format?}
-        K -->|Protobuf| L[Encode as .pb files]
-        K -->|FlatBuffers| M[Encode as .fb files]
+        J --> L[Encode as .pb files]
         L --> N[Write manifest + chunks]
-        M --> N
     end
 
     N --> O[Update database]
-    O --> P[storageFormat = protobuf/flatbuffers]
+    O --> P[storageFormat = protobuf]
     P --> Q[Streaming playback available]
 
     subgraph Manual[Manual Conversion via CLI]

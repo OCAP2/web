@@ -29,25 +29,24 @@ type Operation struct {
 	Filename string
 }
 
-// Worker handles background conversion of JSON recordings to binary format
+// Worker handles background conversion of JSON recordings to protobuf format
 type Worker struct {
-	repo          OperationRepo
-	dataDir       string
-	converter     *storage.Converter
-	interval      time.Duration
-	batchSize     int
-	storageFormat string
-	retryFailed   bool
+	repo        OperationRepo
+	dataDir     string
+	converter   *storage.Converter
+	engine      storage.Engine
+	interval    time.Duration
+	batchSize   int
+	retryFailed bool
 }
 
 // Config holds worker configuration
 type Config struct {
-	DataDir       string
-	Interval      time.Duration
-	BatchSize     int
-	ChunkSize     uint32
-	StorageFormat string // "protobuf" or "flatbuffers"
-	RetryFailed   bool
+	DataDir     string
+	Interval    time.Duration
+	BatchSize   int
+	ChunkSize   uint32
+	RetryFailed bool
 }
 
 // DefaultConfig returns default worker configuration
@@ -67,18 +66,15 @@ func NewWorker(repo OperationRepo, cfg Config) *Worker {
 	if cfg.BatchSize == 0 {
 		cfg.BatchSize = 1
 	}
-	if cfg.StorageFormat == "" {
-		cfg.StorageFormat = "protobuf"
-	}
 
 	return &Worker{
-		repo:          repo,
-		dataDir:       cfg.DataDir,
-		converter:     storage.NewConverter(cfg.ChunkSize),
-		interval:      cfg.Interval,
-		batchSize:     cfg.BatchSize,
-		storageFormat: cfg.StorageFormat,
-		retryFailed:   cfg.RetryFailed,
+		repo:        repo,
+		dataDir:     cfg.DataDir,
+		converter:   storage.NewConverter(cfg.ChunkSize),
+		engine:      storage.NewProtobufEngine(cfg.DataDir),
+		interval:    cfg.Interval,
+		batchSize:   cfg.BatchSize,
+		retryFailed: cfg.RetryFailed,
 	}
 }
 
@@ -164,9 +160,9 @@ func (w *Worker) processOnce(ctx context.Context) {
 	}
 }
 
-// convertOperation converts a single operation from JSON to the configured format
+// convertOperation converts a single operation from JSON to protobuf format
 func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
-	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename, "format", w.storageFormat)
+	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename)
 
 	// Update status to converting
 	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "converting"); err != nil {
@@ -182,19 +178,13 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 		return fmt.Errorf("JSON file not found: %s", jsonPath)
 	}
 
-	// Get the appropriate storage engine
-	engine, err := storage.GetEngine(w.storageFormat)
-	if err != nil {
-		return fmt.Errorf("get storage engine: %w", err)
-	}
-
 	// Run conversion using the storage engine
-	if err := engine.Convert(ctx, jsonPath, outputPath); err != nil {
+	if err := w.engine.Convert(ctx, jsonPath, outputPath); err != nil {
 		return fmt.Errorf("conversion failed: %w", err)
 	}
 
 	// Read manifest to get duration info
-	manifest, err := engine.GetManifest(ctx, op.Filename)
+	manifest, err := w.engine.GetManifest(ctx, op.Filename)
 	if err != nil {
 		slog.Warn("failed to read manifest for duration", "error", err)
 	} else {
@@ -205,8 +195,8 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 		}
 	}
 
-	// Update database with the actual format used
-	if err := w.repo.UpdateStorageFormat(ctx, op.ID, w.storageFormat); err != nil {
+	// Update database format
+	if err := w.repo.UpdateStorageFormat(ctx, op.ID, "protobuf"); err != nil {
 		return fmt.Errorf("update storage format: %w", err)
 	}
 	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "completed"); err != nil {
