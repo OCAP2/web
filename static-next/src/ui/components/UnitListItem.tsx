@@ -26,11 +26,11 @@ export function UnitListItem(props: UnitListItemProps): JSX.Element {
 
   return (
     <div
-      class={`${styles.unitItem} ${props.unit.sideClass}${props.unit.isPlayer ? " player" : ""}${isFollowed() ? " followed" : ""}`}
+      class={`${styles.unitItem}${props.unit.isPlayer ? " player" : ""}${isFollowed() ? " followed" : ""}`}
       data-testid={`unit-item-${props.unit.id}`}
       onClick={handleClick}
     >
-      {props.unit.name}
+      {props.unit.name}{!props.unit.isPlayer && " [AI]"}
     </div>
   );
 }

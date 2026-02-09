@@ -177,14 +177,24 @@ describe("UnitListItem", () => {
     cleanup();
   });
 
-  it("renders unit name", () => {
-    const unit = createUnit(1, "John", "WEST");
+  it("renders player unit name without AI tag", () => {
+    const unit = createUnit(1, "John", "WEST", true);
     const { getByTestId } = render(() => (
       <EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
       </EngineProvider>
     ));
     expect(getByTestId("unit-item-1").textContent).toBe("John");
+  });
+
+  it("renders AI unit name with [AI] suffix", () => {
+    const unit = createUnit(1, "AI_Soldier", "WEST", false);
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <UnitListItem unit={unit} />
+      </EngineProvider>
+    ));
+    expect(getByTestId("unit-item-1").textContent).toBe("AI_Soldier [AI]");
   });
 
   it("player units have player class", () => {
@@ -205,27 +215,6 @@ describe("UnitListItem", () => {
       </EngineProvider>
     ));
     expect(getByTestId("unit-item-1").className).not.toContain("player");
-  });
-
-  it("applies side CSS class", () => {
-    const westUnit = createUnit(1, "John", "WEST");
-    const eastUnit = createUnit(2, "Ivan", "EAST");
-    const guerUnit = createUnit(3, "Stavros", "GUER");
-    const civUnit = createUnit(4, "Civilian", "CIV");
-
-    const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
-        <UnitListItem unit={westUnit} />
-        <UnitListItem unit={eastUnit} />
-        <UnitListItem unit={guerUnit} />
-        <UnitListItem unit={civUnit} />
-      </EngineProvider>
-    ));
-
-    expect(getByTestId("unit-item-1").className).toContain("blufor");
-    expect(getByTestId("unit-item-2").className).toContain("opfor");
-    expect(getByTestId("unit-item-3").className).toContain("ind");
-    expect(getByTestId("unit-item-4").className).toContain("civ");
   });
 
   it("calls engine.followEntity on click with correct ID", () => {
