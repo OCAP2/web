@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
+import { useI18n } from "../hooks/useLocale";
 import { useRenderer } from "../hooks/useRenderer";
 import styles from "./BottomPanel.module.css";
 
@@ -12,6 +13,7 @@ import styles from "./BottomPanel.module.css";
  */
 export function ToggleBar(): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
   const renderer = useRenderer();
 
   // Toggle state (fire lines & markers default on, grid defaults off — matching old frontend)
@@ -56,9 +58,9 @@ export function ToggleBar(): JSX.Element {
       {/* Time display mode */}
       <span class={`${styles.a3Select} ${styles.toggleTimeSelect}`}>
         <select data-testid="toggle-time">
-          <option value="elapsed">Recording Time Elapsed</option>
-          <option value="mission" disabled>In-Game World Time</option>
-          <option value="system" disabled>Server Time UTC</option>
+          <option value="elapsed">{t("time_elapsed")}</option>
+          <option value="mission" disabled>{t("time_mission")}</option>
+          <option value="system" disabled>{t("time_system")}</option>
         </select>
       </span>
 
@@ -67,7 +69,7 @@ export function ToggleBar(): JSX.Element {
         data-testid="toggle-grid"
         class={`${styles.toggleBtn} ${styles.toggleGridIcon} ${grid() ? "active" : "inactive"}`}
         onClick={toggleGrid}
-        title="Toggle grid"
+        title={t("grid")}
       />
 
       {/* Map markers */}
@@ -75,15 +77,15 @@ export function ToggleBar(): JSX.Element {
         data-testid="toggle-map-markers"
         class={`${styles.toggleBtn} ${styles.toggleMapIcon} ${mapMarkers() ? "active" : "inactive"}`}
         onClick={toggleMapMarkers}
-        title="Toggle map markers"
+        title={t("markers")}
       />
 
       {/* Unit names display mode */}
       <span class={`${styles.a3Select} ${styles.toggleNamesSelect}`}>
         <select data-testid="toggle-names">
-          <option value="players">Players Only</option>
-          <option value="all">All Names</option>
-          <option value="none">Hide All</option>
+          <option value="players">{t("names_players")}</option>
+          <option value="all">{t("names_all")}</option>
+          <option value="none">{t("names_none")}</option>
         </select>
       </span>
 
@@ -92,7 +94,7 @@ export function ToggleBar(): JSX.Element {
         data-testid="toggle-fire-lines"
         class={`${styles.toggleBtn} ${styles.toggleFirelinesIcon} ${fireLines() ? "active" : "inactive"}`}
         onClick={toggleFireLines}
-        title="Toggle fire lines"
+        title={t("line_fire")}
       />
 
       {/* Speed */}

@@ -3,6 +3,7 @@ import type { JSX } from "solid-js";
 import type { Side } from "../../data/types";
 import { SIDE_CLASS } from "../../config/side-colors";
 import { useEngine } from "../hooks/useEngine";
+import { useI18n } from "../hooks/useLocale";
 import { leftPanelVisible } from "../shortcuts";
 import { SideGroup } from "./SideGroup";
 import styles from "./LeftPanel.module.css";
@@ -25,6 +26,7 @@ const SIDE_LABEL: Record<Side, string> = {
  */
 export function LeftPanel(): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = createSignal<Side>("WEST");
 
   // Read endFrame to create reactive dependency — when loadOperation finishes
@@ -37,7 +39,7 @@ export function LeftPanel(): JSX.Element {
   return (
     <Show when={leftPanelVisible()}>
       <div class={styles.leftPanel} data-testid="left-panel">
-        <div class={styles.panelTitle} data-testid="left-panel-header">Players</div>
+        <div class={styles.panelTitle} data-testid="left-panel-header">{t("players")}</div>
         <div class={styles.panelContent} data-testid="left-panel-content">
           <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
         </div>

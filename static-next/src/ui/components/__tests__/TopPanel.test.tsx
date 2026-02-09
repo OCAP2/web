@@ -247,7 +247,7 @@ describe("MissionModal", () => {
     const onSelect = vi.fn();
 
     const { findByTestId } = render(() => (
-      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
     ));
 
     // Wait for fetch to complete
@@ -269,7 +269,7 @@ describe("MissionModal", () => {
     const onSelect = vi.fn();
 
     const { queryByTestId } = render(() => (
-      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
     ));
 
     expect(queryByTestId("mission-modal")).toBeNull();
@@ -281,7 +281,7 @@ describe("MissionModal", () => {
     const onSelect = vi.fn();
 
     const { findByTestId } = render(() => (
-      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
     ));
 
     const op1 = await findByTestId("operation-1");
@@ -301,7 +301,7 @@ describe("MissionModal", () => {
   it("has filter input and submit button", async () => {
     const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} />
+      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
     ));
 
     expect(getByTestId("filter-name-input")).toBeDefined();

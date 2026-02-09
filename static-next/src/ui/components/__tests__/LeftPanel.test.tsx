@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { PlaybackEngine } from "../../../playback/engine";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
+import { I18nProvider } from "../../hooks/useLocale";
 import { LeftPanel } from "../LeftPanel";
 import { UnitListItem } from "../UnitListItem";
 import { SideGroup } from "../SideGroup";
@@ -38,9 +39,9 @@ describe("LeftPanel", () => {
 
   it("renders when leftPanelVisible is true", () => {
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("left-panel")).toBeDefined();
   });
@@ -48,18 +49,18 @@ describe("LeftPanel", () => {
   it("is hidden when leftPanelVisible is false", () => {
     shortcuts.setLeftPanelVisible(false);
     const { queryByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(queryByTestId("left-panel")).toBeNull();
   });
 
   it("renders side tabs for all four sides", () => {
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("tab-WEST")).toBeDefined();
     expect(getByTestId("tab-EAST")).toBeDefined();
@@ -69,9 +70,9 @@ describe("LeftPanel", () => {
 
   it("side tabs show display names with side color classes", () => {
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("tab-WEST").textContent).toContain("BLUFOR");
     expect(getByTestId("tab-WEST").textContent).toContain("(0)");
@@ -86,9 +87,9 @@ describe("LeftPanel", () => {
 
   it("side tabs are at the bottom (after panel content in DOM)", () => {
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     const panel = getByTestId("left-panel");
     const content = getByTestId("left-panel-content");
@@ -99,9 +100,9 @@ describe("LeftPanel", () => {
 
   it("shows units after loadOperation without needing a tab click", () => {
     const { getByTestId, queryByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     // No units yet
@@ -136,9 +137,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     // Default tab is WEST, so we should see 2 unit items
@@ -157,9 +158,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId, queryByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     // Click EAST tab
@@ -181,9 +182,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId, queryByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("unit-item-1")).toBeDefined();

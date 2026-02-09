@@ -10,7 +10,16 @@ export { LOCALES };
  * Detect locale from navigator.language, falling back to 'en'.
  * Extracts the first two characters and checks against supported locales.
  */
+const STORAGE_KEY = "current_lang";
+
 export function detectLocale(): Locale {
+  // Check localStorage first (user's previous choice)
+  if (typeof localStorage !== "undefined") {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && LOCALES.includes(stored as Locale)) {
+      return stored as Locale;
+    }
+  }
   if (typeof navigator === "undefined" || !navigator.language) {
     return "en";
   }
@@ -32,9 +41,16 @@ export interface I18n {
  * Returns a reactive locale accessor, a setter, and a translation function.
  */
 export function createI18n(initialLocale?: Locale): I18n {
-  const [locale, setLocale] = createSignal<Locale>(
+  const [locale, rawSetLocale] = createSignal<Locale>(
     initialLocale ?? detectLocale(),
   );
+
+  function setLocale(loc: Locale) {
+    rawSetLocale(loc);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, loc);
+    }
+  }
 
   function t(key: string): string {
     const entry = translations[key];

@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import type { Accessor } from "solid-js";
 import { EngineProvider } from "../../hooks/useEngine";
+import { I18nProvider } from "../../hooks/useLocale";
 import { RightPanel } from "../RightPanel";
 import { EventItem } from "../EventItem";
 import { EventList } from "../EventList";
@@ -68,9 +69,9 @@ describe("RightPanel", () => {
   it("renders when rightPanelVisible is true", () => {
     const { engine } = createMockEngine();
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine as any}>
+      <I18nProvider locale="en"><EngineProvider engine={engine as any}>
         <RightPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("right-panel")).toBeDefined();
   });
@@ -79,9 +80,9 @@ describe("RightPanel", () => {
     setRightPanelVisible(false);
     const { engine } = createMockEngine();
     const { queryByTestId } = render(() => (
-      <EngineProvider engine={engine as any}>
+      <I18nProvider locale="en"><EngineProvider engine={engine as any}>
         <RightPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(queryByTestId("right-panel")).toBeNull();
   });
@@ -89,9 +90,9 @@ describe("RightPanel", () => {
   it("contains event list", () => {
     const { engine } = createMockEngine();
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine as any}>
+      <I18nProvider locale="en"><EngineProvider engine={engine as any}>
         <RightPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("event-list")).toBeDefined();
   });
@@ -99,9 +100,9 @@ describe("RightPanel", () => {
   it("contains header and filter sections", () => {
     const { engine } = createMockEngine();
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine as any}>
+      <I18nProvider locale="en"><EngineProvider engine={engine as any}>
         <RightPanel />
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
     expect(getByTestId("right-panel-header")).toBeDefined();
     expect(getByTestId("right-panel-filters")).toBeDefined();

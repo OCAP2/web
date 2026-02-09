@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { EngineProvider } from "../../hooks/useEngine";
+import { I18nProvider } from "../../hooks/useLocale";
 import { RendererProvider } from "../../hooks/useRenderer";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EventManager } from "../../../playback/event-manager";
@@ -262,11 +263,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("toggle-fire-lines")).toBeDefined();
@@ -279,11 +280,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("toggle-names")).toBeDefined();
@@ -295,11 +296,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("fullscreen-button")).toBeDefined();
@@ -310,11 +311,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("speed-label").textContent).toBe("10x");
@@ -326,11 +327,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     const slider = getByTestId("speed-slider") as HTMLInputElement;
@@ -344,11 +345,11 @@ describe("ToggleBar", () => {
     const spy = vi.spyOn(renderer, "setLayerVisible");
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     fireEvent.click(getByTestId("toggle-fire-lines"));
@@ -361,11 +362,11 @@ describe("ToggleBar", () => {
     const spy = vi.spyOn(renderer, "setLayerVisible");
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     fireEvent.click(getByTestId("toggle-map-markers"));
@@ -378,11 +379,11 @@ describe("ToggleBar", () => {
     const spy = vi.spyOn(renderer, "setLayerVisible");
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     // Grid starts off (inactive), clicking turns it on
@@ -395,11 +396,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     const slider = getByTestId("speed-slider");
@@ -415,11 +416,11 @@ describe("ToggleBar", () => {
     const spy = vi.spyOn(renderer, "setLayerVisible");
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     const toggle = getByTestId("toggle-fire-lines");
@@ -434,11 +435,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     const toggle = getByTestId("toggle-fire-lines");
@@ -453,11 +454,11 @@ describe("ToggleBar", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <ToggleBar />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     const toggle = getByTestId("toggle-grid");
@@ -473,11 +474,11 @@ describe("BottomPanel", () => {
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <I18nProvider locale="en"><EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <BottomPanel />
         </RendererProvider>
-      </EngineProvider>
+      </EngineProvider></I18nProvider>
     ));
 
     expect(getByTestId("bottom-panel")).toBeDefined();

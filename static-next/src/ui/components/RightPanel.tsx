@@ -1,5 +1,6 @@
 import { Show, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
+import { useI18n } from "../hooks/useLocale";
 import { rightPanelVisible } from "../shortcuts";
 import { EventList } from "./EventList";
 import styles from "./RightPanel.module.css";
@@ -12,6 +13,7 @@ import styles from "./RightPanel.module.css";
  * EventList.
  */
 export function RightPanel(): JSX.Element {
+  const { t } = useI18n();
   const [showHitEvents, setShowHitEvents] = createSignal(false);
   const [showConnectEvents, setShowConnectEvents] = createSignal(true);
   const [filterText, setFilterText] = createSignal("");
@@ -20,7 +22,7 @@ export function RightPanel(): JSX.Element {
     <Show when={rightPanelVisible()}>
       <div class={styles.rightPanel} data-testid="right-panel">
         <div class={styles.panelTitle} data-testid="right-panel-header">
-          Events
+          {t("events")}
         </div>
         <div class={styles.filterBox} data-testid="right-panel-filters">
           <div
@@ -39,7 +41,7 @@ export function RightPanel(): JSX.Element {
             type="text"
             class={styles.filterInput}
             data-testid="filter-events-input"
-            placeholder="Filter..."
+            placeholder={`${t("filter")}...`}
             value={filterText()}
             onInput={(e) => setFilterText(e.currentTarget.value)}
           />
