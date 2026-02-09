@@ -81,9 +81,9 @@ export function ToggleBar(): JSX.Element {
       {/* Unit names display mode */}
       <span class={`${styles.a3Select} ${styles.toggleNamesSelect}`}>
         <select data-testid="toggle-names">
-          <option value="players">Players</option>
-          <option value="all">All</option>
-          <option value="none">None</option>
+          <option value="players">Players Only</option>
+          <option value="all">All Names</option>
+          <option value="none">Hide All</option>
         </select>
       </span>
 

@@ -23,7 +23,7 @@ export function PlaybackControls(): JSX.Element {
         <span data-testid="timeline-current-time" class={styles.timecode}>
           {formatElapsedTime(engine.currentFrame(), engine.captureDelayMs())}
         </span>
-        <span class={styles.timecodeSeparator}>/</span>
+        <span class={styles.timecodeSeparator}> / </span>
         <span data-testid="timeline-end-time" class={styles.timecode}>
           {formatElapsedTime(engine.endFrame(), engine.captureDelayMs())}
         </span>

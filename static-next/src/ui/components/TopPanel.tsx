@@ -33,19 +33,20 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
       <span data-testid="mission-name" class={styles.missionName}>
         {props.missionName()}
       </span>
+      <div class={styles.spacer} />
       <Show when={props.operationId()}>
-        <div
-          data-testid="share-button"
-          class={`${styles.button} ${styles.shareButton}`}
-          title="Share"
-          onClick={handleShare}
-        />
         <a
           data-testid="download-button"
           class={`${styles.button} ${styles.downloadButton}`}
           title="Download"
           href={downloadHref()}
           download=""
+        />
+        <div
+          data-testid="share-button"
+          class={`${styles.button} ${styles.shareButton}`}
+          title="Share"
+          onClick={handleShare}
         />
       </Show>
     </div>
