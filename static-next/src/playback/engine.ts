@@ -210,8 +210,20 @@ export class PlaybackEngine {
   seekTo(frame: number): void {
     const clamped = Math.max(0, Math.min(frame, this._endFrame()));
     this._setCurrentFrame(clamped);
+
+    // Compute with whatever chunk data is already in memory
     this.computeSnapshots(clamped);
     this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
+
+    // If the needed chunk isn't loaded yet, load it then recompute
+    if (this.chunkManager) {
+      void this.chunkManager.ensureLoaded(clamped).then(() => {
+        if (this._currentFrame() === clamped) {
+          this.computeSnapshots(clamped);
+          this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
+        }
+      });
+    }
   }
 
   setSpeed(multiplier: number): void {
@@ -310,7 +322,6 @@ export class PlaybackEngine {
     const end = this._endFrame();
 
     if (frame >= end) {
-      // Auto-pause at end
       this._setIsPlaying(false);
       this.clearTimer();
       return;
@@ -333,7 +344,6 @@ export class PlaybackEngine {
       if (snap) {
         this.renderer.setView(snap.position);
       } else {
-        // Entity no longer exists, unfollow
         this._setFollowTarget(null);
       }
     }
@@ -343,6 +353,11 @@ export class PlaybackEngine {
       this._setIsPlaying(false);
       this.clearTimer();
       return;
+    }
+
+    // Trigger async prefetch for the next chunk (fire-and-forget)
+    if (this.chunkManager) {
+      void this.chunkManager.ensureLoaded(nextFrame);
     }
 
     // Schedule next tick

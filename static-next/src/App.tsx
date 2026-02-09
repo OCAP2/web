@@ -7,7 +7,7 @@ import { JsonDecoder } from "./data/decoders/json-decoder";
 import { ProtobufDecoder } from "./data/decoders/protobuf-decoder";
 import { FlatBuffersDecoder } from "./data/decoders/flatbuffers-decoder";
 import type { DecoderStrategy } from "./data/decoders/decoder.interface";
-import { Loader } from "./data/loaders/loader";
+import { ChunkManager } from "./data/chunk-manager";
 import { PlaybackEngine } from "./playback/engine";
 import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
@@ -109,18 +109,25 @@ export function App(): JSX.Element {
         decoder = op.storageFormat === "flatbuffers"
           ? new FlatBuffersDecoder()
           : new ProtobufDecoder();
-        const loader = new Loader(decoder);
-        const buffer = await api.getManifest(op.id);
-        manifest = loader.decode(buffer, "manifest") as Manifest;
+
+        // Create chunk manager for on-demand chunk loading
+        const chunkMgr = new ChunkManager(decoder, null, api);
+        manifest = await chunkMgr.loadManifest(op.id);
+
+        // Pre-load chunk 0 so initial frame has position data
+        await chunkMgr.loadChunk(0);
+
+        // 3. Load into playback engine with chunk manager
+        engine.loadOperation(manifest, chunkMgr);
       } else {
         decoder = new JsonDecoder();
         const filename = op.filename ?? `${op.id}.json`;
         const buffer = await api.getMissionData(filename);
         manifest = decoder.decodeManifest(buffer);
-      }
 
-      // 3. Load into playback engine
-      engine.loadOperation(manifest);
+        // 3. Load into playback engine (JSON has positions embedded)
+        engine.loadOperation(manifest);
+      }
 
       // 5. Update UI state
       setMissionName(op.missionName);
