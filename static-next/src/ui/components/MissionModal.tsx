@@ -65,14 +65,6 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
         <div class={styles.modalBase}>
           <div class={styles.modalHeader}>
             <span>{t("select_mission")}</span>
-            <button
-              data-testid="modal-close-button"
-              class={styles.modalButton}
-              onClick={() => props.onClose()}
-              style={{ "margin-left": "auto" }}
-            >
-              {t("close")}
-            </button>
           </div>
           <div class={styles.modalFilter}>
             <form

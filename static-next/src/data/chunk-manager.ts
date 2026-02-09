@@ -2,6 +2,7 @@ import type { ChunkData, Manifest } from "./types";
 import type { DecoderStrategy } from "./decoders/decoder.interface";
 import type { StorageBackend } from "./storage/storage.interface";
 import type { ApiClient } from "./api-client";
+import { stripVersionPrefix } from "./loaders/loader";
 
 // ─── Options & callbacks ───
 
@@ -75,7 +76,7 @@ export class ChunkManager {
     if (this.storage) {
       const cached = await this.storage.getManifest(missionId, "protobuf");
       if (cached) {
-        this.manifest = this.decoder.decodeManifest(cached);
+        this.manifest = this.decoder.decodeManifest(stripVersionPrefix(cached));
         return this.manifest;
       }
     }
@@ -90,7 +91,7 @@ export class ChunkManager {
         .catch(() => {});
     }
 
-    this.manifest = this.decoder.decodeManifest(buffer);
+    this.manifest = this.decoder.decodeManifest(stripVersionPrefix(buffer));
     return this.manifest;
   }
 
@@ -177,7 +178,7 @@ export class ChunkManager {
     if (this.storage) {
       const cached = await this.storage.getChunk(missionId, chunkIndex);
       if (cached) {
-        const chunk = this.decoder.decodeChunk(cached);
+        const chunk = this.decoder.decodeChunk(stripVersionPrefix(cached));
         this.storeInMemory(chunkIndex, chunk);
         return chunk;
       }
@@ -193,7 +194,7 @@ export class ChunkManager {
         .catch(() => {});
     }
 
-    const chunk = this.decoder.decodeChunk(buffer);
+    const chunk = this.decoder.decodeChunk(stripVersionPrefix(buffer));
     this.storeInMemory(chunkIndex, chunk);
     return chunk;
   }

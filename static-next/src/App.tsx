@@ -1,12 +1,13 @@
 import { onMount, onCleanup, createSignal, createEffect } from "solid-js";
 import type { JSX } from "solid-js";
-import type { WorldConfig, Operation } from "./data/types";
+import type { WorldConfig, Manifest, Operation } from "./data/types";
 import type { MarkerHandle } from "./renderers/renderer.types";
 import { ApiClient } from "./data/api-client";
 import { JsonDecoder } from "./data/decoders/json-decoder";
 import { ProtobufDecoder } from "./data/decoders/protobuf-decoder";
 import { FlatBuffersDecoder } from "./data/decoders/flatbuffers-decoder";
 import type { DecoderStrategy } from "./data/decoders/decoder.interface";
+import { Loader } from "./data/loaders/loader";
 import { PlaybackEngine } from "./playback/engine";
 import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
@@ -108,8 +109,9 @@ export function App(): JSX.Element {
         decoder = op.storageFormat === "flatbuffers"
           ? new FlatBuffersDecoder()
           : new ProtobufDecoder();
+        const loader = new Loader(decoder);
         const buffer = await api.getManifest(op.id);
-        manifest = decoder.decodeManifest(buffer);
+        manifest = loader.decode(buffer, "manifest") as Manifest;
       } else {
         decoder = new JsonDecoder();
         const filename = op.filename ?? `${op.id}.json`;
