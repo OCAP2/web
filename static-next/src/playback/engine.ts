@@ -11,6 +11,7 @@ import { EventManager } from "./event-manager";
 import { HitKilledEvent } from "./events/hit-killed-event";
 import { ConnectEvent } from "./events/connect-event";
 import { Unit } from "./entities/unit";
+import { Vehicle } from "./entities/vehicle";
 
 // ─── Event factory ───
 
@@ -222,7 +223,7 @@ export class PlaybackEngine {
   /**
    * Populate entities and events from a manifest, and wire up the chunk manager.
    */
-  loadOperation(manifest: Manifest, chunkManager: ChunkManager): void {
+  loadOperation(manifest: Manifest, chunkManager?: ChunkManager | null): void {
     // Reset state
     this.clearTimer();
     this._setIsPlaying(false);
@@ -232,7 +233,7 @@ export class PlaybackEngine {
     this.eventManager.clear();
 
     this.manifest = manifest;
-    this.chunkManager = chunkManager;
+    this.chunkManager = chunkManager ?? null;
 
     // Set signals from manifest
     this._setEndFrame(manifest.frameCount - 1);
@@ -337,7 +338,7 @@ export class PlaybackEngine {
   private computeSnapshots(frame: number): void {
     const snapshots = new Map<number, EntitySnapshot>();
 
-    if (!this.chunkManager || !this.manifest) {
+    if (!this.manifest) {
       this._setEntitySnapshots(snapshots);
       return;
     }
@@ -346,7 +347,7 @@ export class PlaybackEngine {
     const chunkIndex = Math.floor(frame / chunkSize);
     const frameInChunk = frame - chunkIndex * chunkSize;
 
-    const chunkData = this.chunkManager.getChunkForFrame(frame);
+    const chunkData = this.chunkManager?.getChunkForFrame(frame) ?? null;
 
     for (const entity of this.entityManager.getAll()) {
       // Check entity lifespan
@@ -359,8 +360,11 @@ export class PlaybackEngine {
         const states = chunkData.entities.get(entity.id);
         if (states && states[frameInChunk]) {
           const state = states[frameInChunk];
-          const side =
-            entity instanceof Unit ? entity.side : "CIV" as const;
+          let side: import("../data/types").Side | null = entity instanceof Unit ? entity.side : null;
+          if (entity instanceof Vehicle && state.crewIds?.length) {
+            entity.setCrew(state.crewIds);
+            side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
+          }
           snapshots.set(entity.id, {
             id: entity.id,
             position: state.position,
@@ -379,6 +383,14 @@ export class PlaybackEngine {
       const relativeFrame = entity.getRelativeFrameIndex(frame);
       const snap = entity.getStateAtFrame(relativeFrame);
       if (snap) {
+        // For vehicles, derive side from crew in the position data
+        if (entity instanceof Vehicle) {
+          const state = entity.positions?.[relativeFrame];
+          if (state?.crewIds?.length) {
+            entity.setCrew(state.crewIds);
+            snap.side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
+          }
+        }
         snapshots.set(entity.id, snap);
       }
     }

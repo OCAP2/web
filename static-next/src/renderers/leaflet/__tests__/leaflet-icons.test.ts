@@ -212,6 +212,27 @@ describe("entityIcon", () => {
     const result = entityIcon("bicycle", "CIV", 1);
     expect(result.icon.options.iconUrl).toBe("images/markers/unknown/civ.svg");
   });
+
+  it("uses dead variant for null side (empty vehicle)", () => {
+    const result = entityIcon("heli", null, 1);
+    expect(result.icon.options.iconUrl).toBe("images/markers/heli/dead.svg");
+    expect(result.opacity).toBe(1);
+  });
+
+  it("uses dead variant for null side across all vehicle types", () => {
+    const vehicleTypes = ["car", "tank", "apc", "truck", "ship", "heli", "plane"];
+    for (const type of vehicleTypes) {
+      const result = entityIcon(type, null, 1);
+      expect(result.icon.options.iconUrl).toContain("dead.svg");
+      expect(result.opacity).toBe(1);
+    }
+  });
+
+  it("uses dead variant with reduced opacity for dead + null side", () => {
+    const result = entityIcon("heli", null, 0);
+    expect(result.icon.options.iconUrl).toBe("images/markers/heli/dead.svg");
+    expect(result.opacity).toBe(0.4);
+  });
 });
 
 // --------------- hitIcon ---------------

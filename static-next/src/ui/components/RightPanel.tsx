@@ -14,13 +14,13 @@ export function RightPanel(): JSX.Element {
   return (
     <Show when={rightPanelVisible()}>
       <div class="right-panel" data-testid="right-panel">
-        <div class="right-panel-header" data-testid="right-panel-header">
-          <h3>Event Log</h3>
+        <div class="panel-title" data-testid="right-panel-header">
+          Event Log
         </div>
-        <div class="right-panel-filters" data-testid="right-panel-filters">
+        <div class="filter-box" data-testid="right-panel-filters">
           {/* Filter controls placeholder — expanded in later tasks */}
         </div>
-        <div class="right-panel-content" data-testid="right-panel-content">
+        <div class="panel-content" data-testid="right-panel-content">
           <EventList />
         </div>
       </div>

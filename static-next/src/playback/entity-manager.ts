@@ -30,6 +30,7 @@ export class EntityManager {
         def.isPlayer,
         def.groupName,
         def.role ?? "",
+        def.positions ?? null,
       );
     } else {
       entity = new Vehicle(
@@ -39,6 +40,8 @@ export class EntityManager {
         def.startFrame,
         def.endFrame,
         def.type, // vehicleType = EntityType string
+        def.positions ?? null,
+        def.type, // iconType = same as entity type
       );
     }
 

@@ -72,6 +72,43 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(entity.role).toBe("Rifleman");
   });
 
+  it("detects isInVehicle from vehicle entity ID (not just boolean 1)", () => {
+    // In legacy JSON, field[3] for units is 0 (not in vehicle)
+    // or a vehicle entity ID (e.g. 17) when riding in that vehicle
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "Pilot",
+          side: "WEST",
+          startFrameNum: 0,
+          positions: [
+            [[100, 200], 0, 1, 17, "Pilot", 1],   // in vehicle 17
+            [[100, 200], 0, 1, 0, "Pilot", 1],     // on foot
+            [[100, 200], 0, 1, 1, "Pilot", 1],     // in vehicle 1
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const positions = manifest.entities[0].positions!;
+
+    expect(positions[0].isInVehicle).toBe(true);
+    expect(positions[0].vehicleId).toBe(17);
+
+    expect(positions[1].isInVehicle).toBe(false);
+    expect(positions[1].vehicleId).toBeUndefined();
+
+    expect(positions[2].isInVehicle).toBe(true);
+    expect(positions[2].vehicleId).toBe(1);
+  });
+
   it("decodes vehicle entities as unknown type", () => {
     const data = {
       worldName: "Altis",
@@ -101,6 +138,109 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(entity.isPlayer).toBe(false);
     expect(entity.startFrame).toBe(5);
     expect(entity.endFrame).toBe(5);
+  });
+
+  it("maps vehicle type to correct entity type", () => {
+    const types = [
+      ["heli", "heli"],
+      ["tank", "tank"],
+      ["car", "car"],
+      ["apc", "apc"],
+      ["truck", "truck"],
+      ["sea", "ship"],
+      ["plane", "plane"],
+      ["parachute", "parachute"],
+      ["static-weapon", "staticWeapon"],
+      ["static-mortar", "staticMortar"],
+    ] as const;
+
+    for (const [rawType, expectedType] of types) {
+      const data = {
+        worldName: "Altis",
+        missionName: "Op",
+        endFrame: 10,
+        captureDelay: 1,
+        entities: [
+          {
+            id: 1,
+            type: rawType,
+            name: "Veh",
+            side: "WEST",
+            startFrameNum: 0,
+            positions: [[[0, 0], 0, 1, []]],
+          },
+        ],
+      };
+      const manifest = decoder.decodeManifest(toBuffer(data));
+      expect(manifest.entities[0].type).toBe(expectedType);
+    }
+  });
+
+  it("decodes vehicle positions with crew IDs", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 5,
+          type: "heli",
+          name: "UH-80 Ghost Hawk",
+          side: "WEST",
+          startFrameNum: 0,
+          class: "B_Heli_Transport_01_F",
+          positions: [
+            [[1000, 2000], 45, 1, [10, 11, 12]],
+            [[1010, 2010], 50, 1, [10, 11]],
+            [[1020, 2020], 55, 1, []],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const entity = manifest.entities[0];
+    expect(entity.type).toBe("heli");
+    expect(entity.positions).toHaveLength(3);
+    expect(entity.positions![0].crewIds).toEqual([10, 11, 12]);
+    expect(entity.positions![1].crewIds).toEqual([10, 11]);
+    expect(entity.positions![2].crewIds).toEqual([]);
+  });
+
+  it("uses raw.type not raw.class for entity type mapping", () => {
+    // In legacy JSON, raw.type carries the simplified vehicle class (e.g. "heli"),
+    // while raw.class carries the Arma classname (e.g. "O_Heli_Light_02_unarmed_F")
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "heli",
+          name: "Orca",
+          side: "EAST",
+          startFrameNum: 0,
+          class: "O_Heli_Light_02_unarmed_F",
+          positions: [[[0, 0], 0, 1, []]],
+        },
+        {
+          id: 2,
+          type: "car",
+          name: "Offroad",
+          side: "CIV",
+          startFrameNum: 0,
+          class: "C_Offroad_01_F",
+          positions: [[[0, 0], 0, 1, []]],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.entities[0].type).toBe("heli");
+    expect(manifest.entities[1].type).toBe("car");
   });
 
   it("decodes entity with framesFired", () => {

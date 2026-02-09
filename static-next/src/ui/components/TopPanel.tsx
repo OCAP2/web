@@ -24,7 +24,7 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
   const downloadHref = () => {
     const id = props.operationId();
     if (!id) return "#";
-    return `/aar/file/${encodeURIComponent(id)}`;
+    return `/file/${encodeURIComponent(id)}`;
   };
 
   return (

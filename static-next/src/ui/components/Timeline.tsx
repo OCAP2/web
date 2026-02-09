@@ -16,20 +16,20 @@ export function Timeline(): JSX.Element {
   };
 
   return (
-    <div data-testid="timeline" class="timeline">
-      <span data-testid="timeline-current-time" class="timeline-time">
+    <div data-testid="timeline" class="frame-slider-container">
+      <span data-testid="timeline-current-time" class="timecode">
         {formatElapsedTime(engine.currentFrame(), engine.captureDelayMs())}
       </span>
       <input
         type="range"
-        class="timeline-slider"
+        class="frame-slider"
         data-testid="timeline-slider"
         min={0}
         max={engine.endFrame()}
         value={engine.currentFrame()}
         onInput={handleInput}
       />
-      <span data-testid="timeline-end-time" class="timeline-time">
+      <span data-testid="timeline-end-time" class="timecode">
         {formatElapsedTime(engine.endFrame(), engine.captureDelayMs())}
       </span>
     </div>

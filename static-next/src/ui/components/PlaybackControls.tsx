@@ -17,15 +17,19 @@ export function PlaybackControls(): JSX.Element {
   };
 
   return (
-    <div data-testid="playback-controls" class="playback-controls">
+    <div data-testid="playback-controls" style={{ display: "flex", "align-items": "center", gap: "10px" }}>
       <button
         data-testid="play-pause-button"
-        class="play-pause-button"
+        class="play-pause-btn"
         onClick={() => engine.togglePlayPause()}
+        style={{ background: "none", border: "1px solid #888", color: "#f2f2f2", padding: "4px 12px", cursor: "pointer" }}
       >
         {engine.isPlaying() ? "Pause" : "Play"}
       </button>
-      <div class="speed-control">
+      <div class="speed-slider-container">
+        <span data-testid="speed-label" class="speed-value">
+          {engine.playbackSpeed()}x
+        </span>
         <input
           type="range"
           data-testid="speed-slider"
@@ -35,9 +39,6 @@ export function PlaybackControls(): JSX.Element {
           value={engine.playbackSpeed()}
           onInput={handleSpeedInput}
         />
-        <span data-testid="speed-label" class="speed-label">
-          {engine.playbackSpeed()}x
-        </span>
       </div>
     </div>
   );

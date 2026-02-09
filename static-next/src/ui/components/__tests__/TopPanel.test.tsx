@@ -73,7 +73,7 @@ describe("TopPanel", () => {
       <TopPanel missionName={name} operationId={opId} />
     ));
     const link = getByTestId("download-button") as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe("/aar/file/my-file");
+    expect(link.getAttribute("href")).toBe("/file/my-file");
     expect(link.hasAttribute("download")).toBe(true);
   });
 });

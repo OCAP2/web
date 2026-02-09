@@ -51,6 +51,7 @@ function mapOperation(raw: RawOperation): Operation {
     missionDuration: raw.mission_duration,
     date: raw.date,
     tag: raw.tag,
+    filename: raw.filename,
   };
 }
 
@@ -69,10 +70,10 @@ export class ApiClient {
   private readonly baseUrl: string;
 
   /**
-   * @param baseUrl - Base URL prefix for all API calls (default: "/aar/").
-   *   A trailing slash is normalised internally.
+   * @param baseUrl - Base URL prefix for all API calls (default: "").
+   *   Matches the Go server's prefixURL setting. A trailing slash is normalised internally.
    */
-  constructor(baseUrl = "/aar/") {
+  constructor(baseUrl = "") {
     // Ensure no trailing slash so we can append /api/... cleanly
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
@@ -124,12 +125,71 @@ export class ApiClient {
   }
 
   /**
-   * Fetch per-world map configuration.
-   * GET {baseUrl}/images/maps/{worldName}/map.json
+   * Probe for per-world map configuration with fallback chain:
+   * 1. Local server: /images/maps/{worldName}/map.json
+   * 2. PMTiles CDN: https://pmtiles.ocap2.com/{worldName}/map.json
+   * 3. Legacy raster CDN: https://maps.ocap2.com/{worldName}/map.json
+   * 4. Blank placeholder if nothing found
    */
   async getWorldConfig(worldName: string): Promise<WorldConfig> {
-    const url = `${this.baseUrl}/images/maps/${encodeURIComponent(worldName)}/map.json`;
-    return this.fetchJson<WorldConfig>(url);
+    const defaults: WorldConfig = {
+      worldName,
+      worldSize: 16384,
+      imageSize: 16384,
+      multiplier: 1,
+      maxZoom: 6,
+      minZoom: 0,
+    };
+
+    // 1. Try local map data
+    try {
+      const localUrl = `${this.baseUrl}/images/maps/${encodeURIComponent(worldName)}/map.json`;
+      const local = await this.fetchJson<Partial<WorldConfig>>(localUrl);
+      return {
+        ...defaults,
+        ...local,
+        tileBaseUrl: `${this.baseUrl}/images/maps/${encodeURIComponent(worldName)}`,
+      };
+    } catch {
+      // Local not available, try CDN
+    }
+
+    // 2. Try PMTiles CDN (MapLibre-capable)
+    try {
+      const pmtilesUrl = `https://pmtiles.ocap2.com/${encodeURIComponent(worldName)}/map.json`;
+      const res = await fetch(pmtilesUrl, { cache: "no-store" });
+      if (res.ok) {
+        const data = (await res.json()) as Partial<WorldConfig>;
+        return {
+          ...defaults,
+          ...data,
+          maplibre: true,
+          tileBaseUrl: `https://pmtiles.ocap2.com/${encodeURIComponent(worldName)}`,
+        };
+      }
+    } catch {
+      // PMTiles CDN not available
+    }
+
+    // 3. Try legacy raster CDN
+    try {
+      const rasterUrl = `https://maps.ocap2.com/${encodeURIComponent(worldName)}/map.json`;
+      const res = await fetch(rasterUrl, { cache: "no-store" });
+      if (res.ok) {
+        const data = (await res.json()) as Partial<WorldConfig>;
+        return {
+          ...defaults,
+          ...data,
+          tileBaseUrl: `https://maps.ocap2.com/${encodeURIComponent(worldName)}`,
+        };
+      }
+    } catch {
+      // Raster CDN not available
+    }
+
+    // 4. Fallback — blank placeholder
+    console.warn(`Map for world "${worldName}" not found locally or on CDN, using placeholder`);
+    return { ...defaults, worldSize: 30720, imageSize: 30720 };
   }
 
   /**

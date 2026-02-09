@@ -34,8 +34,8 @@ export function ToggleBar(): JSX.Element {
   };
 
   return (
-    <div data-testid="toggle-bar" class="toggle-bar">
-      <label class="toggle-label">
+    <div data-testid="toggle-bar" style={{ display: "flex", "align-items": "center", gap: "12px", "font-size": "12px", color: "#ccc" }}>
+      <label style={{ display: "flex", "align-items": "center", gap: "4px", cursor: "pointer" }}>
         <input
           type="checkbox"
           data-testid="toggle-fire-lines"
@@ -44,16 +44,16 @@ export function ToggleBar(): JSX.Element {
         />
         Fire Lines
       </label>
-      <label class="toggle-label">
+      <label style={{ display: "flex", "align-items": "center", gap: "4px", cursor: "pointer" }}>
         <input
           type="checkbox"
           data-testid="toggle-map-markers"
           checked={mapMarkers()}
           onChange={toggleMapMarkers}
         />
-        Map Markers
+        Markers
       </label>
-      <label class="toggle-label">
+      <label style={{ display: "flex", "align-items": "center", gap: "4px", cursor: "pointer" }}>
         <input
           type="checkbox"
           data-testid="toggle-grid"

@@ -33,6 +33,8 @@ export interface EntityDef {
   endFrame: number;
   role?: string;
   framesFired?: Array<[number, ArmaCoord]>;
+  /** Per-frame states, populated by JSON decoder (not used by streaming decoders). */
+  positions?: EntityState[];
 }
 
 /** Per-frame state of an entity within a chunk. */
@@ -122,6 +124,7 @@ export interface Operation {
   missionDuration: number;
   date: string;
   tag?: string;
+  filename?: string;
 }
 
 /** Per-world map configuration (from map.json). */
@@ -132,5 +135,9 @@ export interface WorldConfig {
   maxZoom: number;
   minZoom: number;
   tileSize?: number;
-  maplibreStyle?: string;
+  multiplier?: number;
+  /** True when MapLibre + PMTiles rendering is available for this world. */
+  maplibre?: boolean;
+  /** Base URL for tile assets (set during probing). */
+  tileBaseUrl?: string;
 }

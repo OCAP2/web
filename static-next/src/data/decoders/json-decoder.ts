@@ -3,6 +3,7 @@ import type {
   AliveState,
   ChunkData,
   EntityDef,
+  EntityState,
   EntityType,
   EventDef,
   Manifest,
@@ -78,8 +79,32 @@ const MARKER_SIDE_MAP: string[] = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];
 // ───────── Conversion helpers ─────────
 
 function mapEntityType(rawType: string): EntityType {
-  if (rawType === "unit") return "man";
-  return "unknown";
+  switch (rawType) {
+    case "unit":
+      return "man";
+    case "car":
+      return "car";
+    case "tank":
+      return "tank";
+    case "apc":
+      return "apc";
+    case "truck":
+      return "truck";
+    case "sea":
+      return "ship";
+    case "heli":
+      return "heli";
+    case "plane":
+      return "plane";
+    case "parachute":
+      return "parachute";
+    case "static-weapon":
+      return "staticWeapon";
+    case "static-mortar":
+      return "staticMortar";
+    default:
+      return "unknown";
+  }
 }
 
 function mapSide(rawSide: string): Side {
@@ -97,7 +122,41 @@ function mapSide(rawSide: string): Side {
   }
 }
 
+function convertUnitPosition(frame: unknown[]): EntityState {
+  const pos = frame[0] as number[];
+  const dir = (frame[1] as number) ?? 0;
+  const alive = (frame[2] as AliveState) ?? 1;
+  // field[3] is 0 when not in vehicle, or the vehicle entity ID when in one
+  const vehicleField = typeof frame[3] === "number" ? frame[3] : 0;
+  const isInVehicle = vehicleField !== 0;
+  const name = typeof frame[4] === "string" ? frame[4] : undefined;
+  const isPlayer = frame[5] === 1 || frame[5] === true;
+  return {
+    position: [pos[0], pos[1]] as ArmaCoord,
+    direction: dir,
+    alive,
+    isInVehicle,
+    vehicleId: isInVehicle ? vehicleField : undefined,
+    name: name || undefined,
+    isPlayer,
+  };
+}
+
+function convertVehiclePosition(frame: unknown[]): EntityState {
+  const pos = frame[0] as number[];
+  const dir = (frame[1] as number) ?? 0;
+  const alive = (frame[2] as AliveState) ?? 1;
+  const crewIds = Array.isArray(frame[3]) ? (frame[3] as number[]) : undefined;
+  return {
+    position: [pos[0], pos[1]] as ArmaCoord,
+    direction: dir,
+    alive,
+    crewIds,
+  };
+}
+
 function convertEntity(raw: RawJsonEntity): EntityDef {
+  const isUnit = raw.type === "unit";
   const def: EntityDef = {
     id: raw.id,
     type: mapEntityType(raw.type),
@@ -110,9 +169,12 @@ function convertEntity(raw: RawJsonEntity): EntityDef {
     role: raw.role,
   };
 
-  // Infer endFrame from positions array length + startFrame
+  // Parse positions into EntityState array
   if (raw.positions && raw.positions.length > 0) {
     def.endFrame = def.startFrame + raw.positions.length - 1;
+    def.positions = raw.positions.map((frame) =>
+      isUnit ? convertUnitPosition(frame) : convertVehiclePosition(frame),
+    );
   }
 
   // Convert framesFired: legacy format is [frameNum, [x, y]] or [frameNum, [x, y, z]]

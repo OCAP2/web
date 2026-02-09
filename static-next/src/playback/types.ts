@@ -7,7 +7,7 @@ export interface EntitySnapshot {
   position: ArmaCoord;
   direction: number;
   alive: AliveState;
-  side: Side;
+  side: Side | null;
   name: string;
   iconType: string;
   isInVehicle: boolean;

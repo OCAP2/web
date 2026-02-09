@@ -79,12 +79,12 @@ export interface EntityIcon {
  */
 export function entityIcon(
   iconType: string,
-  side: Side,
+  side: Side | null,
   alive: AliveState,
 ): EntityIcon {
   const type = ICON_PATHS[iconType] ? iconType : "unknown";
   const size = ICON_SIZES[type];
-  const style = sideStyle(side);
+  const style = side ? sideStyle(side) : { cssClass: "dead", colour: "#000000" };
   const variant = aliveVariant(alive, style.cssClass);
   const path = ICON_PATHS[type];
 

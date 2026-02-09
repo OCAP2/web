@@ -53,12 +53,12 @@ describe("ApiClient", () => {
   // ─── Constructor & URL construction ───
 
   describe("base URL handling", () => {
-    it("defaults to /aar/ prefix", async () => {
+    it("defaults to empty prefix", async () => {
       mockFetchJson([]);
       const client = new ApiClient();
       await client.getOperations();
       expect(fetch).toHaveBeenCalledWith(
-        "/aar/api/v1/operations",
+        "/api/v1/operations",
         expect.anything(),
       );
     });
@@ -73,7 +73,7 @@ describe("ApiClient", () => {
       );
     });
 
-    it("works with empty prefix", async () => {
+    it("works with slash prefix", async () => {
       mockFetchJson([]);
       const client = new ApiClient("/");
       await client.getOperations();
@@ -111,6 +111,7 @@ describe("ApiClient", () => {
         missionDuration: 3600.5,
         date: "2024-01-01",
         tag: "coop",
+        filename: "2024_01_01__op_thunder.json",
       });
     });
 

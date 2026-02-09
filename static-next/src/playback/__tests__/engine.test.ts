@@ -618,6 +618,146 @@ describe("PlaybackEngine", () => {
     });
   });
 
+  // ─── Vehicle side from crew ───
+
+  describe("vehicle side derived from crew", () => {
+    it("vehicle snapshot has null side when no crew", () => {
+      const manifest = makeManifest({
+        frameCount: 10,
+        entities: [
+          makeEntityDef({
+            id: 1,
+            type: "heli",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [] },
+            ],
+          }),
+        ],
+      });
+
+      engine.loadOperation(manifest);
+      engine.seekTo(0);
+
+      const snap = engine.entitySnapshots().get(1);
+      expect(snap).toBeDefined();
+      expect(snap!.side).toBeNull();
+      expect(snap!.iconType).toBe("heli");
+    });
+
+    it("vehicle derives side from first crew member", () => {
+      const manifest = makeManifest({
+        frameCount: 10,
+        entities: [
+          makeEntityDef({
+            id: 1,
+            name: "Pilot",
+            type: "man",
+            side: "WEST",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1, isInVehicle: true },
+            ],
+          }),
+          makeEntityDef({
+            id: 2,
+            type: "heli",
+            name: "Ghost Hawk",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [1] },
+            ],
+          }),
+        ],
+      });
+
+      engine.loadOperation(manifest);
+      engine.seekTo(0);
+
+      const snap = engine.entitySnapshots().get(2);
+      expect(snap).toBeDefined();
+      expect(snap!.side).toBe("WEST");
+    });
+
+    it("vehicle side changes when crew changes", () => {
+      const manifest = makeManifest({
+        frameCount: 10,
+        entities: [
+          makeEntityDef({
+            id: 1,
+            name: "BLUFOR Pilot",
+            type: "man",
+            side: "WEST",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 1 },
+            ],
+          }),
+          makeEntityDef({
+            id: 2,
+            name: "OPFOR Pilot",
+            type: "man",
+            side: "EAST",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 1 },
+            ],
+          }),
+          makeEntityDef({
+            id: 3,
+            type: "heli",
+            name: "Heli",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [1] },
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [2] },
+            ],
+          }),
+        ],
+      });
+
+      engine.loadOperation(manifest);
+
+      engine.seekTo(0);
+      expect(engine.entitySnapshots().get(3)!.side).toBe("WEST");
+
+      engine.seekTo(1);
+      expect(engine.entitySnapshots().get(3)!.side).toBe("EAST");
+    });
+
+    it("unit snapshots always use their own side", () => {
+      const manifest = makeManifest({
+        frameCount: 10,
+        entities: [
+          makeEntityDef({
+            id: 1,
+            type: "man",
+            side: "GUER",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+            ],
+          }),
+        ],
+      });
+
+      engine.loadOperation(manifest);
+      engine.seekTo(0);
+
+      const snap = engine.entitySnapshots().get(1);
+      expect(snap!.side).toBe("GUER");
+    });
+  });
+
   // ─── Events at frame ───
 
   describe("events at frame", () => {

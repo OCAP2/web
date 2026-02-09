@@ -23,20 +23,21 @@ export function LeftPanel(): JSX.Element {
   return (
     <Show when={leftPanelVisible()}>
       <div class="left-panel" data-testid="left-panel">
-        <div class="left-panel-tabs" data-testid="left-panel-tabs">
+        <div class="side-tabs" data-testid="left-panel-tabs">
           <For each={SIDES}>
             {(side) => (
-              <button
-                class={`left-panel-tab${activeTab() === side ? " active" : ""}`}
+              <div
+                class={`side-tab${activeTab() === side ? " active" : ""}`}
                 data-testid={`tab-${side}`}
                 onClick={() => setActiveTab(side)}
+                style={{ background: activeTab() === side ? "rgba(205, 134, 20, 0.6)" : "transparent" }}
               >
                 {side} ({unitsForSide(side).length})
-              </button>
+              </div>
             )}
           </For>
         </div>
-        <div class="left-panel-content" data-testid="left-panel-content">
+        <div class="panel-content" data-testid="left-panel-content">
           <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
         </div>
       </div>

@@ -131,8 +131,8 @@ export class LeafletRenderer implements MapRenderer {
     this.world = world;
     this.maxNativeZoom = world.maxZoom;
     this.imageSize = world.imageSize ?? world.worldSize;
-    this.multiplier = 1; // Default; legacy maps may use a different value
-    this.useMapLibreMode = Boolean(world.maplibreStyle);
+    this.multiplier = world.multiplier ?? 1;
+    this.useMapLibreMode = Boolean(world.maplibre);
 
     const maxZoom = this.maxNativeZoom + 2;
 
@@ -183,31 +183,48 @@ export class LeafletRenderer implements MapRenderer {
       preferCanvas: true,
     });
 
-    // Register PMTiles protocol (idempotent)
-    if (!(window as any)._pmtilesRegistered) {
-      try {
-        // Dynamic import — PMTiles and maplibre-gl must be available
-        const pmtiles = (window as any).pmtiles ?? (globalThis as any).pmtiles;
-        const maplibregl = (window as any).maplibregl ?? (globalThis as any).maplibregl;
-        const protocol = new pmtiles.Protocol();
-        maplibregl.addProtocol("pmtiles", protocol.tile);
-        (window as any)._pmtilesRegistered = true;
-      } catch {
-        // PMTiles not available — MapLibre may still work without PMTiles
-      }
-    }
+    // Add MapLibre GL basemap layer — style URL constructed from tileBaseUrl
+    const styleUrl = world.tileBaseUrl
+      ? `${world.tileBaseUrl}/styles/topo.json`
+      : null;
+    if (styleUrl) {
+      // Register PMTiles protocol and add the layer — must happen in order
+      void (async () => {
+        // 1. Register PMTiles protocol (idempotent)
+        if (!(window as any)._pmtilesRegistered) {
+          try {
+            const { Protocol } = await import("pmtiles");
+            const maplibregl = await import("maplibre-gl");
+            const protocol = new Protocol();
+            maplibregl.addProtocol("pmtiles", protocol.tile);
+            (window as any)._pmtilesRegistered = true;
+          } catch {
+            // PMTiles not available — MapLibre may still work without PMTiles
+          }
+        }
 
-    // Add MapLibre GL basemap layer
-    if (world.maplibreStyle) {
-      // The import of @maplibre/maplibre-gl-leaflet adds L.maplibreGL
-      import("@maplibre/maplibre-gl-leaflet").then(() => {
+        // 2. Add MapLibre basemap layer (after protocol is registered)
+        // Resolve font glyph base URL against page origin so it works
+        // regardless of where the style JSON is served from (local or CDN).
+        const fontsBaseURL = new URL("images/maps/fonts/", window.location.href).href;
+
+        await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
-          style: world.maplibreStyle,
+          style: styleUrl,
           interactive: false,
           renderWorldCopies: false,
+          // Rewrite font glyph requests to the Go server's font endpoint
+          transformRequest: (url: string, resourceType: string) => {
+            if (resourceType === "Glyphs") {
+              const match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
+              if (match) {
+                return { url: fontsBaseURL + match[1] + "/" + match[2] };
+              }
+            }
+          },
         });
         mlLayer.addTo(this.map);
-      });
+      })();
     }
 
     // Fit map to world bounds
@@ -267,9 +284,8 @@ export class LeafletRenderer implements MapRenderer {
       this.map.unproject([imgSize, 0], nz),
     );
 
-    // Add tile layer — expects tiles at {tileUrl}/{z}/{x}/{y}.png
-    // The tileUrl must be supplied externally (e.g. via world config extension)
-    const tileUrl = (world as any).tileUrl ?? (world as any)._baseUrl ?? "";
+    // Add tile layer — expects tiles at {tileBaseUrl}/{z}/{x}/{y}.png
+    const tileUrl = world.tileBaseUrl ?? "";
     if (tileUrl) {
       L.tileLayer(`${tileUrl}/{z}/{x}/{y}.png`, {
         maxNativeZoom: world.maxZoom,

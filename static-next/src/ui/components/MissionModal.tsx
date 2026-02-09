@@ -58,53 +58,69 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
 
   return (
     <Show when={props.open()}>
-      <div data-testid="mission-modal" class="mission-modal-overlay">
-        <div class="mission-modal">
-          <div class="mission-modal-header">
-            <h2>Select Mission</h2>
+      <div data-testid="mission-modal" class="modal-overlay">
+        <div class="modal-base">
+          <div class="modal-header">
+            <span>Select Mission</span>
             <button
               data-testid="modal-close-button"
-              class="modal-close-button"
+              class="modal-button"
               onClick={() => props.onClose()}
+              style={{ "margin-left": "auto" }}
             >
               Close
             </button>
           </div>
-          <form
-            data-testid="filter-form"
-            class="mission-filter-form"
-            onSubmit={handleSubmit}
-          >
-            <input
-              type="text"
-              data-testid="filter-name-input"
-              class="filter-name-input"
-              placeholder="Filter by name..."
-              value={nameFilter()}
-              onInput={(e) => setNameFilter(e.currentTarget.value)}
-            />
-            <button type="submit" data-testid="filter-submit-button">
-              Search
-            </button>
-          </form>
+          <div class="modal-filter">
+            <form
+              data-testid="filter-form"
+              onSubmit={handleSubmit}
+              style={{ display: "flex", gap: "4px", width: "100%" }}
+            >
+              <input
+                type="text"
+                data-testid="filter-name-input"
+                class="filter-input"
+                placeholder="Filter by name..."
+                value={nameFilter()}
+                onInput={(e) => setNameFilter(e.currentTarget.value)}
+                style={{ flex: "1", background: "rgba(255,255,255,0.1)", color: "#f2f2f2", border: "1px solid #555", padding: "4px 8px" }}
+              />
+              <button type="submit" data-testid="filter-submit-button" class="modal-button">
+                Search
+              </button>
+            </form>
+          </div>
           <Show when={loading()}>
-            <div data-testid="loading-indicator">Loading...</div>
+            <div data-testid="loading-indicator" style={{ padding: "20px", "text-align": "center", color: "#f2f2f2" }}>Loading...</div>
           </Show>
-          <div data-testid="operations-list" class="operations-list">
-            <For each={operations()}>
-              {(op) => (
-                <div
-                  data-testid={`operation-${op.id}`}
-                  class="operation-item"
-                  onClick={() => handleSelect(op)}
-                >
-                  <span class="op-name">{op.missionName}</span>
-                  <span class="op-world">{op.worldName}</span>
-                  <span class="op-duration">{formatDuration(op.missionDuration)}</span>
-                  <span class="op-date">{op.date}</span>
-                </div>
-              )}
-            </For>
+          <div class="modal-body" data-testid="operations-list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mission</th>
+                  <th>World</th>
+                  <th>Duration</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <For each={operations()}>
+                  {(op) => (
+                    <tr
+                      data-testid={`operation-${op.id}`}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSelect(op)}
+                    >
+                      <td>{op.missionName}</td>
+                      <td>{op.worldName}</td>
+                      <td>{formatDuration(op.missionDuration)}</td>
+                      <td>{op.date}</td>
+                    </tr>
+                  )}
+                </For>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

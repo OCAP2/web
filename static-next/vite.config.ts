@@ -5,8 +5,10 @@ export default defineConfig({
   plugins: [solidPlugin()],
   server: {
     proxy: {
-      "/api/": "http://localhost:5000",
-      "/images/": "http://localhost:5000",
+      "/api": "http://localhost:5000",
+      "/data": "http://localhost:5000",
+      "/file": "http://localhost:5000",
+      "/images": "http://localhost:5000",
     },
   },
   build: {

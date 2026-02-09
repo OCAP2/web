@@ -11,18 +11,9 @@ import { ToggleBar } from "./ToggleBar";
  */
 export function BottomPanel(): JSX.Element {
   return (
-    <div
-      data-testid="bottom-panel"
-      class="bottom-panel"
-      style={{
-        position: "absolute",
-        bottom: "0",
-        left: "0",
-        width: "100%",
-      }}
-    >
-      <Timeline />
+    <div data-testid="bottom-panel" class="bottom-panel">
       <PlaybackControls />
+      <Timeline />
       <ToggleBar />
     </div>
   );

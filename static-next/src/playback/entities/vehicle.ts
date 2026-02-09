@@ -56,7 +56,7 @@ export class Vehicle extends Entity {
       position: state.position,
       direction: state.direction,
       alive: state.alive,
-      side: "CIV", // vehicles derive side from crew at render time
+      side: null, // vehicles derive side from crew at render time
       name: state.name ?? this.name,
       iconType: this.iconType,
       isInVehicle: false,
