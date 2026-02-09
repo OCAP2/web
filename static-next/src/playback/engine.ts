@@ -120,7 +120,7 @@ export class PlaybackEngine {
     this._isPlaying = isPlaying;
     this._setIsPlaying = setIsPlaying;
 
-    const [playbackSpeed, setPlaybackSpeed] = createSignal(1);
+    const [playbackSpeed, setPlaybackSpeed] = createSignal(10);
     this._playbackSpeed = playbackSpeed;
     this._setPlaybackSpeed = setPlaybackSpeed;
 

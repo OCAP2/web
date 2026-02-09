@@ -184,6 +184,7 @@ describe("Integration: Full stack playback", () => {
     });
 
     engine.loadOperation(manifest, cm);
+    engine.setSpeed(1);
 
     // Start playback
     engine.play();
@@ -249,6 +250,7 @@ describe("Integration: Full stack playback", () => {
     });
 
     engine.loadOperation(manifest, cm);
+    engine.setSpeed(1);
 
     // Play for 3 ticks
     engine.play();
@@ -279,6 +281,7 @@ describe("Integration: Full stack playback", () => {
     });
 
     engine.loadOperation(manifest, cm);
+    engine.setSpeed(1);
     expect(engine.currentFrame()).toBe(0);
     expect(engine.endFrame()).toBe(9);
 

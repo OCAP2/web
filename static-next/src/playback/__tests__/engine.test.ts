@@ -163,6 +163,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager();
       engine.loadOperation(manifest, cm);
 
+      engine.setSpeed(1);
       engine.play();
       expect(engine.currentFrame()).toBe(0);
 
@@ -202,6 +203,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager();
       engine.loadOperation(manifest, cm);
 
+      engine.setSpeed(1);
       engine.play();
       vi.advanceTimersByTime(1000);
       expect(engine.currentFrame()).toBe(1);
@@ -316,6 +318,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager();
       engine.loadOperation(manifest, cm);
 
+      engine.setSpeed(1);
       engine.play();
 
       // At speed 1, interval is 1000ms
@@ -478,11 +481,12 @@ describe("PlaybackEngine", () => {
 
   describe("dispose()", () => {
     it("stops playback and clears state", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 100 });
+      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadOperation(manifest, cm);
 
       engine.play();
+      // Default speed 10: interval = 1000/10 = 100ms
       vi.advanceTimersByTime(100);
       expect(engine.currentFrame()).toBe(1);
 
@@ -521,6 +525,7 @@ describe("PlaybackEngine", () => {
 
       engine.loadOperation(manifest, cm);
       engine.followEntity(1);
+      engine.setSpeed(1);
 
       const setViewSpy = vi.spyOn(renderer, "setView");
 
@@ -557,6 +562,7 @@ describe("PlaybackEngine", () => {
 
       engine.loadOperation(manifest, cm);
       engine.followEntity(1);
+      engine.setSpeed(1);
 
       engine.play();
 

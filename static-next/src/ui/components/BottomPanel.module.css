@@ -241,18 +241,46 @@
 }
 
 .speedSlider {
+  -webkit-appearance: none;
+  appearance: none;
   width: 120px;
+  background: transparent;
   transform: rotate(270deg);
   transform-origin: center center;
   margin: 50px 0;
 }
 
+.speedSlider:focus {
+  outline: none;
+}
+
 .speedSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
   background-color: var(--range-speed-thumb-bg);
+  height: 20px;
+  width: 5px;
+  margin-top: -5px;
+}
+
+.speedSlider::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  background-color: var(--range-track-bg);
 }
 
 .speedSlider::-moz-range-thumb {
   background-color: var(--range-speed-thumb-bg);
+  height: 20px;
+  width: 5px;
+  border: none;
+  border-radius: 0;
+}
+
+.speedSlider::-moz-range-track {
+  height: 10px;
+  background-color: var(--range-track-bg);
 }
 
 .versionInfo {
