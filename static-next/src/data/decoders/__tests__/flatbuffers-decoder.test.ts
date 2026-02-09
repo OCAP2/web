@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as flatbuffers from "flatbuffers";
 import { FlatBuffersDecoder } from "../flatbuffers-decoder";
-import { stripVersionPrefix } from "../../loaders/loader";
+
 import { Manifest as FbManifest } from "../generated/fb/manifest";
 import { Chunk as FbChunk } from "../generated/fb/chunk";
 import { Frame as FbFrame } from "../generated/fb/frame";
@@ -66,7 +66,7 @@ describe("FlatBuffersDecoder.decodeManifest", () => {
 
   it("defaults missing fields to zero/empty", () => {
     // Need enough string data so the root offset exceeds 15 bytes,
-    // otherwise stripVersionPrefix misidentifies the root offset as a version prefix.
+    // Flatbuffers with minimal data have small root offsets (< 16 bytes).
     const builder = new flatbuffers.Builder(256);
     const wn = builder.createString("Altis");
     const mn = builder.createString("Minimal Test");
@@ -311,28 +311,6 @@ describe("FlatBuffersDecoder.decodeManifest", () => {
     expect(manifest.times[0].systemTimeUtc).toBe("2025-01-15T12:00:00Z");
   });
 
-  it("works with stripVersionPrefix from loader", () => {
-    const builder = new flatbuffers.Builder(256);
-    const wn = builder.createString("Tanoa");
-    const mn = builder.createString("PrefixTest");
-    const offset = FbManifest.createManifest(
-      builder, 3, wn, mn, 100, 50, 1000, 2, 0, 0, 0, 0, 0, 0,
-    );
-    builder.finish(offset);
-
-    const data = builder.asUint8Array();
-    // Prepend 4-byte version prefix: [5, 0, 0, 0]
-    const prefixed = new Uint8Array(4 + data.length);
-    prefixed[0] = 5;
-    prefixed.set(data, 4);
-
-    // Loader strips the prefix before passing to decoder
-    const stripped = stripVersionPrefix(prefixed.buffer);
-    const manifest = decoder.decodeManifest(stripped);
-    expect(manifest.version).toBe(3);
-    expect(manifest.worldName).toBe("Tanoa");
-    expect(manifest.missionName).toBe("PrefixTest");
-  });
 });
 
 // ─── FlatBuffersDecoder chunk tests ───

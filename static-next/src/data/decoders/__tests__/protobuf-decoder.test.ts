@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProtobufDecoder } from "../protobuf-decoder";
-import { stripVersionPrefix } from "../../loaders/loader";
+
 import {
   Manifest as PbManifest,
   Chunk as PbChunk,
@@ -345,29 +345,6 @@ describe("ProtobufDecoder.decodeManifest", () => {
     }
   });
 
-  it("works with stripVersionPrefix from loader", () => {
-    const data = PbManifest.encode(PbManifest.fromPartial({
-      version: 3,
-      worldName: "Tanoa",
-      missionName: "PrefixTest",
-      frameCount: 100,
-      chunkSize: 50,
-      captureDelayMs: 1000,
-      chunkCount: 2,
-    })).finish();
-
-    // Prepend 4-byte version prefix: [5, 0, 0, 0]
-    const prefixed = new Uint8Array(4 + data.length);
-    prefixed[0] = 5;
-    prefixed.set(data, 4);
-
-    // Loader strips the prefix before passing to decoder
-    const stripped = stripVersionPrefix(prefixed.buffer);
-    const manifest = decoder.decodeManifest(stripped);
-    expect(manifest.version).toBe(3);
-    expect(manifest.worldName).toBe("Tanoa");
-    expect(manifest.missionName).toBe("PrefixTest");
-  });
 });
 
 // ─── Chunk decoding tests ───
