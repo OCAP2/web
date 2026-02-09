@@ -23,11 +23,16 @@ import type { MarkerDef as FbMarkerDef } from "./generated/fb/marker-def";
 
 // ───────── Enum mapping ─────────
 
-const SIDE_MAP: Record<number, Side> = {
+const ENTITY_SIDE_MAP: Record<number, Side> = {
   [FbSide.West]: "WEST",
   [FbSide.East]: "EAST",
   [FbSide.Guer]: "GUER",
   [FbSide.Civ]: "CIV",
+};
+
+const MARKER_SIDE_MAP: Record<number, string> = {
+  ...ENTITY_SIDE_MAP,
+  [FbSide.Global]: "GLOBAL",
 };
 
 function mapVehicleClass(vehicleClass: string): EntityType {
@@ -65,7 +70,7 @@ function convertEntityDef(fb: FbEntityDef): AppEntityDef {
     id: fb.id(),
     type: entityType,
     name: fb.name() ?? "",
-    side: SIDE_MAP[fb.side()] ?? "CIV",
+    side: ENTITY_SIDE_MAP[fb.side()] ?? "CIV",
     groupName: fb.groupName() ?? "",
     isPlayer: fb.isPlayer(),
     startFrame: fb.startFrame(),
@@ -158,7 +163,7 @@ function convertMarkerDef(fb: FbMarkerDef): AppMarkerDef {
     sizeArr.push(fb.size(i)!);
   }
 
-  const side = SIDE_MAP[fb.side()] ?? String(fb.side());
+  const side = MARKER_SIDE_MAP[fb.side()] ?? String(fb.side());
 
   const marker: AppMarkerDef = {
     shape: (fb.shape() || "ICON") as AppMarkerDef["shape"],
@@ -168,6 +173,8 @@ function convertMarkerDef(fb: FbMarkerDef): AppMarkerDef {
     positions,
     player: fb.playerId(),
     alpha,
+    startFrame: fb.startFrame(),
+    endFrame: fb.endFrame(),
   };
   const text = fb.text();
   if (text) marker.text = text;

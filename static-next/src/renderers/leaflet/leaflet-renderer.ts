@@ -37,6 +37,8 @@ interface InternalMarkerHandle {
 
 interface InternalBriefingHandle {
   layer: L.Layer;
+  shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
+  size?: [number, number];
 }
 
 interface InternalLineHandle {
@@ -116,6 +118,9 @@ export class LeafletRenderer implements MapRenderer {
 
   private listeners = new Map<RendererEvent, Set<(...args: any[]) => void>>();
 
+  // SVG renderer for briefing marker shapes (avoids canvas zoom-animation scaling)
+  private svgRenderer!: L.SVG;
+
   // Smoothing state
   private smoothingEnabled = false;
   private smoothingSpeed = 1;
@@ -141,6 +146,11 @@ export class LeafletRenderer implements MapRenderer {
     } else {
       this.initLegacyMode(container, world, maxZoom);
     }
+
+    // SVG renderer for briefing marker shapes — avoids canvas bitmap scaling
+    // during zoom animation (the old frontend does the same: window.svgRenderer = L.svg())
+    this.svgRenderer = L.svg();
+    this.svgRenderer.addTo(this.map);
 
     // Add layer groups to map
     for (const group of Object.values(this.layers)) {
@@ -310,6 +320,10 @@ export class LeafletRenderer implements MapRenderer {
       this.map.removeLayer(group);
     }
 
+    if (this.svgRenderer) {
+      this.map.removeLayer(this.svgRenderer);
+    }
+
     this.listeners.clear();
     this.map.remove();
   }
@@ -433,43 +447,44 @@ export class LeafletRenderer implements MapRenderer {
   // ==================== Briefing markers ====================
 
   createBriefingMarker(def: BriefingMarkerDef): BriefingMarkerHandle {
-    // Create a placeholder layer; position will be set via update
     let layer: L.Layer;
+    const cssColor = `#${def.color}`;
 
     if (def.shape === "POLYLINE") {
       layer = L.polyline([], {
-        color: def.color,
-        weight: 2,
-      });
+        color: cssColor,
+        opacity: 1,
+        noClip: true,
+        interactive: false,
+        renderer: this.svgRenderer,
+      } as any);
     } else if (def.shape === "ELLIPSE" || def.shape === "RECTANGLE") {
-      // Use a rectangle as approximation for both
-      layer = L.rectangle(
-        [
-          [0, 0],
-          [0, 0],
-        ],
-        {
-          color: def.color,
-          weight: 2,
-          fillOpacity: 0.2,
-        },
-      );
+      // Build polygon options from brush type; use SVG renderer to avoid
+      // canvas bitmap scaling during zoom animation
+      const polygonOpts = this.buildShapeOptions(cssColor, def.brush);
+      layer = L.polygon([], { ...polygonOpts, noClip: false, interactive: false, renderer: this.svgRenderer } as any);
     } else {
-      // ICON shape — use a marker with a divIcon
-      const iconHtml = def.text
-        ? `<div class="briefing-marker-icon" style="color:${def.color}">${def.text}</div>`
-        : `<div class="briefing-marker-icon" style="color:${def.color}"></div>`;
+      // ICON shape — load actual marker image from server
+      const isMagIcon = def.type.indexOf("magIcons") > -1;
+      let iconUrl: string;
+      if (isMagIcon) {
+        iconUrl = `images/markers/${def.type.toLowerCase()}.png`;
+      } else {
+        iconUrl = `images/markers/${def.type}/${def.color}.png`;
+      }
+      const iconSize: [number, number] = def.size
+        ? [def.size[0] * 35, def.size[1] * 35]
+        : [35, 35];
+
       layer = L.marker([0, 0], {
-        icon: L.divIcon({
-          className: "briefing-marker",
-          html: iconHtml,
-          iconSize: def.size ?? [24, 24],
-        }),
-      });
+        icon: L.icon({ iconUrl, iconSize }),
+        interactive: false,
+        rotationOrigin: "50% 50%",
+      } as any);
     }
 
     layer.addTo(this.layers.briefingMarkers);
-    return wrapBriefing({ layer });
+    return wrapBriefing({ layer, shape: def.shape, size: def.size });
   }
 
   updateBriefingMarker(
@@ -479,28 +494,91 @@ export class LeafletRenderer implements MapRenderer {
     const internal = unwrapBriefing(handle);
     const layer = internal.layer;
 
-    if (layer instanceof L.Marker) {
-      layer.setLatLng(this.armaToLatLng(state.position));
-      layer.setOpacity(state.alpha);
-    } else if (layer instanceof L.Polyline && state.points) {
-      const latlngs = state.points.map((p) => this.armaToLatLng(p));
-      layer.setLatLngs(latlngs);
-    } else if (layer instanceof L.Rectangle) {
-      // Position the rectangle centered on the position
-      const center = this.armaToLatLng(state.position);
-      const offset = 0.001; // Small offset for visibility
-      layer.setBounds(
-        L.latLngBounds(
-          [center.lat - offset, center.lng - offset],
-          [center.lat + offset, center.lng + offset],
-        ),
+    if (internal.shape === "ICON") {
+      const marker = layer as L.Marker;
+      marker.setLatLng(this.armaToLatLng(state.position));
+      marker.setOpacity(state.alpha);
+      (marker as any).setRotationAngle?.(state.direction);
+    } else if (internal.shape === "ELLIPSE") {
+      const polygon = layer as L.Polygon;
+      const [cx, cy] = state.position;
+      const rx = internal.size?.[0] ?? 100;
+      const ry = internal.size?.[1] ?? 100;
+      const rad = state.direction * (Math.PI / 180);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Calculate 36 ellipse perimeter points, rotated in Arma coordinate space
+      const latlngs: L.LatLng[] = [];
+      for (let i = 0; i < 36; i++) {
+        const angle = (i / 36) * 2 * Math.PI;
+        const dx = rx * Math.cos(angle);
+        const dy = ry * Math.sin(angle);
+        // Rotate around center in Arma coords (zoom-independent)
+        latlngs.push(this.armaToLatLng([
+          cx + cos * dx - sin * dy,
+          cy + sin * dx + cos * dy,
+        ]));
+      }
+
+      polygon.setLatLngs(latlngs);
+      polygon.setStyle({
+        fillOpacity: Math.min(0.3, state.alpha),
+      });
+    } else if (internal.shape === "RECTANGLE") {
+      const polygon = layer as L.Polygon;
+      const [cx, cy] = state.position;
+      const sx = internal.size?.[0] ?? 100;
+      const sy = internal.size?.[1] ?? 100;
+      const rad = state.direction * (Math.PI / 180);
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Calculate 4 corner points, rotated in Arma coordinate space
+      const corners: [number, number][] = [
+        [-sx, +sy], [+sx, +sy], [+sx, -sy], [-sx, -sy],
+      ];
+      const latlngs = corners.map(([dx, dy]) =>
+        this.armaToLatLng([
+          cx + cos * dx - sin * dy,
+          cy + sin * dx + cos * dy,
+        ]),
       );
+
+      polygon.setLatLngs(latlngs);
+      polygon.setStyle({
+        fillOpacity: Math.min(0.3, state.alpha),
+      });
+    } else if (internal.shape === "POLYLINE" && state.points) {
+      const polyline = layer as L.Polyline;
+      const latlngs = state.points.map((p) => this.armaToLatLng(p));
+      polyline.setLatLngs(latlngs);
+      polyline.setStyle({ opacity: state.alpha });
     }
   }
 
   removeBriefingMarker(handle: BriefingMarkerHandle): void {
     const internal = unwrapBriefing(handle);
     this.layers.briefingMarkers.removeLayer(internal.layer);
+  }
+
+  // ==================== Briefing marker helpers ====================
+
+  private buildShapeOptions(
+    color: string,
+    brush?: string,
+  ): L.PolylineOptions {
+    switch (brush?.toLowerCase()) {
+      case "solidfull":
+        return { color, stroke: false, fill: true, fillOpacity: 0.8 };
+      case "border":
+        return { color, stroke: true, fill: false, fillOpacity: 0 };
+      case "solidborder":
+        return { color, stroke: true, fill: true, fillOpacity: 0.3 };
+      case "solid":
+      default:
+        return { color, stroke: false, fill: true, fillOpacity: 0.3 };
+    }
   }
 
   // ==================== Lines ====================

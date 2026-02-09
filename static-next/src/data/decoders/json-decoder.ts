@@ -318,6 +318,8 @@ function convertMarker(raw: RawJsonMarker): MarkerDef | null {
     positions,
     player,
     alpha,
+    startFrame,
+    endFrame,
   };
   if (text) marker.text = text;
   if (size) marker.size = size;

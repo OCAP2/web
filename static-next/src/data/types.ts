@@ -118,6 +118,8 @@ export interface MarkerDef {
   player: number;
   alpha: number;
   brush?: string;
+  startFrame: number;
+  endFrame: number;
 }
 
 // --------------- Top-level structures ---------------

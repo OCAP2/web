@@ -25,11 +25,16 @@ import {
 
 // ───────── Enum mapping ─────────
 
-const SIDE_MAP: Record<number, Side> = {
+const ENTITY_SIDE_MAP: Record<number, Side> = {
   [PbSide.SIDE_WEST]: "WEST",
   [PbSide.SIDE_EAST]: "EAST",
   [PbSide.SIDE_GUER]: "GUER",
   [PbSide.SIDE_CIV]: "CIV",
+};
+
+const MARKER_SIDE_MAP: Record<number, string> = {
+  ...ENTITY_SIDE_MAP,
+  [PbSide.SIDE_GLOBAL]: "GLOBAL",
 };
 
 function mapVehicleClass(vehicleClass: string): EntityType {
@@ -64,7 +69,7 @@ function convertEntityDef(pb: PbEntityDef): AppEntityDef {
     id: pb.id,
     type: entityType,
     name: pb.name,
-    side: SIDE_MAP[pb.side] ?? "CIV",
+    side: ENTITY_SIDE_MAP[pb.side] ?? "CIV",
     groupName: pb.groupName,
     isPlayer: pb.isPlayer,
     startFrame: pb.startFrame,
@@ -146,7 +151,7 @@ function convertMarkerPosition(pb: PbMarkerPosition): [number, ...any] {
 function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
   const positions = pb.positions.map(convertMarkerPosition);
   const alpha = pb.positions.length > 0 ? pb.positions[0].alpha : 1;
-  const side = SIDE_MAP[pb.side] ?? String(pb.side);
+  const side = MARKER_SIDE_MAP[pb.side] ?? String(pb.side);
 
   const marker: AppMarkerDef = {
     shape: (pb.shape || "ICON") as AppMarkerDef["shape"],
@@ -156,6 +161,8 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
     positions,
     player: pb.playerId,
     alpha,
+    startFrame: pb.startFrame,
+    endFrame: pb.endFrame,
   };
   if (pb.text) marker.text = pb.text;
   if (pb.size.length >= 2) marker.size = [pb.size[0], pb.size[1]];

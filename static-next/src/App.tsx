@@ -9,6 +9,7 @@ import { FlatBuffersDecoder } from "./data/decoders/flatbuffers-decoder";
 import type { DecoderStrategy } from "./data/decoders/decoder.interface";
 import { ChunkManager } from "./data/chunk-manager";
 import { PlaybackEngine } from "./playback/engine";
+import { MarkerManager } from "./playback/marker-manager";
 import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
 import { EngineProvider } from "./ui/hooks/useEngine";
@@ -80,6 +81,7 @@ export function App(): JSX.Element {
   const api = new ApiClient();
   const renderer: MapRenderer = new LeafletRenderer();
   const engine = new PlaybackEngine(renderer);
+  const markerManager = new MarkerManager(renderer);
   const [worldConfig, setWorldConfig] = createSignal<WorldConfig | undefined>(
     undefined,
   );
@@ -128,6 +130,9 @@ export function App(): JSX.Element {
         // 3. Load into playback engine (JSON has positions embedded)
         engine.loadOperation(manifest);
       }
+
+      // 4. Load briefing markers
+      markerManager.loadMarkers(manifest.markers);
 
       // 5. Update UI state
       setMissionName(op.missionName);
@@ -178,6 +183,13 @@ export function App(): JSX.Element {
     }
   });
 
+  // ─── Render bridge: sync engine frame → briefing markers ───
+  createEffect(() => {
+    const frame = engine.currentFrame();
+    markerManager.updateFrame(frame);
+  });
+
+
   onMount(() => {
     registerShortcuts(engine);
 
@@ -204,6 +216,7 @@ export function App(): JSX.Element {
 
   onCleanup(() => {
     unregisterShortcuts();
+    markerManager.clear();
     engine.dispose();
     renderer.dispose();
   });
