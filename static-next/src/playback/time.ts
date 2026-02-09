@@ -32,7 +32,7 @@ function msToHHMMSS(ms: number): string {
   const totalMinutes = Math.floor(totalSeconds / 60);
   const minutes = totalMinutes % 60;
   const hours = Math.floor(totalMinutes / 60);
-  return pad2(hours) + ":" + pad2(minutes) + ":" + pad2(seconds);
+  return hours + ":" + pad2(minutes) + ":" + pad2(seconds);
 }
 
 /**
@@ -40,7 +40,7 @@ function msToHHMMSS(ms: number): string {
  */
 function dateToHHMMSS(date: Date): string {
   return (
-    pad2(date.getUTCHours()) +
+    date.getUTCHours() +
     ":" +
     pad2(date.getUTCMinutes()) +
     ":" +
@@ -57,9 +57,9 @@ function dateToHHMMSS(date: Date): string {
  * @param captureDelayMs  Milliseconds between consecutive frames (e.g. 1000).
  *
  * @example
- *   formatElapsedTime(0, 1000)    // "00:00:00"
- *   formatElapsedTime(60, 1000)   // "00:01:00"
- *   formatElapsedTime(3661, 1000) // "01:01:01"
+ *   formatElapsedTime(0, 1000)    // "0:00:00"
+ *   formatElapsedTime(60, 1000)   // "0:01:00"
+ *   formatElapsedTime(3661, 1000) // "1:01:01"
  */
 export function formatElapsedTime(
   frame: number,
@@ -115,7 +115,7 @@ export function formatSystemTime(
   times: TimeSample[],
 ): string {
   if (times.length === 0) {
-    return "00:00:00";
+    return "0:00:00";
   }
 
   // Binary search: find the largest index whose frameNum <= frame.

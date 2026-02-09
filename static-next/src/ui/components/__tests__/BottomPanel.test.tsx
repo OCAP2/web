@@ -127,8 +127,8 @@ describe("PlaybackControls", () => {
       </EngineProvider>
     ));
 
-    expect(getByTestId("timeline-current-time").textContent).toBe("00:01:00");
-    expect(getByTestId("timeline-end-time").textContent).toBe("01:00:00");
+    expect(getByTestId("timeline-current-time").textContent).toBe("0:01:00");
+    expect(getByTestId("timeline-end-time").textContent).toBe("1:00:00");
   });
 });
 

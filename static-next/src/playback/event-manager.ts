@@ -79,14 +79,16 @@ export class EventManager {
       const victim = entityManager.getEntity(event.victimId);
       const causer = entityManager.getEntity(event.causedById);
 
-      // Only count kills on Unit victims (not vehicles)
+      // Only count kills on Unit victims (not vehicles), skip self-kills
       if (victim instanceof Unit && causer instanceof Unit) {
-        if (victim.side === causer.side) {
-          causer.teamKillCount++;
-        } else {
-          causer.killCount++;
+        if (event.victimId !== event.causedById) {
+          if (victim.side === causer.side) {
+            causer.teamKillCount++;
+          } else {
+            causer.killCount++;
+          }
         }
-        // Attach current score to the event
+        // Attach current score to the event (even for self-kills)
         event.causerKillScore = causer.killCount - causer.teamKillCount * 2;
       }
     }

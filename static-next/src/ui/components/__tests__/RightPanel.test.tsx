@@ -266,7 +266,7 @@ describe("EventItem", () => {
       expect(getByTestId("event-causer").textContent).toBe("AttackerPlayer");
       expect(getByTestId("event-action").textContent).toBe(" killed by ");
       // Details line: time - distance - weapon
-      expect(getByTestId("event-details").textContent).toBe("00:01:00 - 251m - M4A1");
+      expect(getByTestId("event-details").textContent).toBe("0:01:00 - 251m - M4A1");
     });
 
     it("renders hit event with correct action text", () => {
@@ -349,7 +349,7 @@ describe("EventItem", () => {
 
       expect(getByTestId("event-unit-name").textContent).toContain("connected");
       expect(getByTestId("event-unit-name").textContent).toContain("JohnDoe");
-      expect(getByTestId("event-details").textContent).toBe("00:00:15");
+      expect(getByTestId("event-details").textContent).toBe("0:00:15");
     });
 
     it("renders disconnected event correctly", () => {

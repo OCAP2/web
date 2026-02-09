@@ -11,21 +11,21 @@ import {
 // formatElapsedTime
 // ---------------------------------------------------------------------------
 describe("formatElapsedTime", () => {
-  it("frame 0 → 00:00:00", () => {
-    expect(formatElapsedTime(0, 1000)).toBe("00:00:00");
+  it("frame 0 → 0:00:00", () => {
+    expect(formatElapsedTime(0, 1000)).toBe("0:00:00");
   });
 
-  it("frame 60 with 1000ms delay → 00:01:00", () => {
-    expect(formatElapsedTime(60, 1000)).toBe("00:01:00");
+  it("frame 60 with 1000ms delay → 0:01:00", () => {
+    expect(formatElapsedTime(60, 1000)).toBe("0:01:00");
   });
 
-  it("frame 3661 with 1000ms delay → 01:01:01", () => {
-    expect(formatElapsedTime(3661, 1000)).toBe("01:01:01");
+  it("frame 3661 with 1000ms delay → 1:01:01", () => {
+    expect(formatElapsedTime(3661, 1000)).toBe("1:01:01");
   });
 
   it("respects non-default capture delay", () => {
     // 500ms delay: frame 120 = 60 000ms = 1 minute
-    expect(formatElapsedTime(120, 500)).toBe("00:01:00");
+    expect(formatElapsedTime(120, 500)).toBe("0:01:00");
   });
 
   it("handles large frame counts (> 24 hours)", () => {
@@ -34,7 +34,7 @@ describe("formatElapsedTime", () => {
   });
 
   it("handles zero capture delay", () => {
-    expect(formatElapsedTime(9999, 0)).toBe("00:00:00");
+    expect(formatElapsedTime(9999, 0)).toBe("0:00:00");
   });
 });
 
@@ -45,28 +45,28 @@ describe("formatMissionTime", () => {
   const baseDate = "2035-06-10T05:30:00Z";
 
   it("frame 0 returns the mission start time", () => {
-    expect(formatMissionTime(0, baseDate, 1, 1000)).toBe("05:30:00");
+    expect(formatMissionTime(0, baseDate, 1, 1000)).toBe("5:30:00");
   });
 
   it("advances by real time with multiplier 1", () => {
-    // 3600 frames × 1000ms × 1 = 1 hour → 06:30:00
-    expect(formatMissionTime(3600, baseDate, 1, 1000)).toBe("06:30:00");
+    // 3600 frames × 1000ms × 1 = 1 hour → 6:30:00
+    expect(formatMissionTime(3600, baseDate, 1, 1000)).toBe("6:30:00");
   });
 
   it("applies time multiplier correctly", () => {
-    // 3600 frames × 1000ms × 4 = 4 hours → 09:30:00
-    expect(formatMissionTime(3600, baseDate, 4, 1000)).toBe("09:30:00");
+    // 3600 frames × 1000ms × 4 = 4 hours → 9:30:00
+    expect(formatMissionTime(3600, baseDate, 4, 1000)).toBe("9:30:00");
   });
 
   it("wraps past midnight", () => {
-    // Start at 23:00, advance 2 hours → 01:00:00 next day
+    // Start at 23:00, advance 2 hours → 1:00:00 next day
     const lateDate = "2035-06-10T23:00:00Z";
-    expect(formatMissionTime(7200, lateDate, 1, 1000)).toBe("01:00:00");
+    expect(formatMissionTime(7200, lateDate, 1, 1000)).toBe("1:00:00");
   });
 
   it("handles fractional multipliers", () => {
-    // 7200 frames × 1000ms × 0.5 = 3600s = 1 hour → 06:30:00
-    expect(formatMissionTime(7200, baseDate, 0.5, 1000)).toBe("06:30:00");
+    // 7200 frames × 1000ms × 0.5 = 3600s = 1 hour → 6:30:00
+    expect(formatMissionTime(7200, baseDate, 0.5, 1000)).toBe("6:30:00");
   });
 
   it("handles non-UTC date strings (treated as UTC by the parser)", () => {
@@ -83,8 +83,8 @@ describe("formatMissionTime", () => {
 // formatSystemTime
 // ---------------------------------------------------------------------------
 describe("formatSystemTime", () => {
-  it("returns 00:00:00 for empty times array", () => {
-    expect(formatSystemTime(0, [])).toBe("00:00:00");
+  it("returns 0:00:00 for empty times array", () => {
+    expect(formatSystemTime(0, [])).toBe("0:00:00");
   });
 
   it("single entry, frame 0 returns that entry's time", () => {
@@ -195,12 +195,12 @@ describe("formatTime", () => {
 
   it("defaults missionTimeMultiplier to 1 when not provided", () => {
     const partial = { captureDelayMs: 1000, missionDate: "2035-06-10T05:30:00Z" };
-    expect(formatTime(3600, "mission", partial)).toBe("06:30:00");
+    expect(formatTime(3600, "mission", partial)).toBe("6:30:00");
   });
 
   it("defaults times to empty array when not provided", () => {
     const partial = { captureDelayMs: 1000 };
-    expect(formatTime(0, "system", partial)).toBe("00:00:00");
+    expect(formatTime(0, "system", partial)).toBe("0:00:00");
   });
 
   it("exhaustive: TypeScript prevents unknown modes at compile time", () => {
