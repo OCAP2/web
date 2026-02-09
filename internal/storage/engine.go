@@ -105,9 +105,6 @@ type Engine interface {
 	// GetChunkReader returns a reader for raw chunk data (for streaming to client)
 	GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error)
 
-	// ChunkCount returns the total number of chunks
-	ChunkCount(ctx context.Context, filename string) (int, error)
-
 	// Convert transforms from JSON to this engine's format
 	Convert(ctx context.Context, jsonPath, outputPath string) error
 }

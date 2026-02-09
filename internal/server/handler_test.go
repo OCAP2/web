@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -83,6 +82,7 @@ func TestGetOperationFormat(t *testing.T) {
 		Tag:              "coop",
 		StorageFormat:    "json",
 		ConversionStatus: "completed",
+		ChunkCount:       1,
 	}
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
@@ -150,6 +150,7 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 		Tag:              "coop",
 		StorageFormat:    "protobuf",
 		ConversionStatus: "completed",
+		ChunkCount:       5,
 	}
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
@@ -163,7 +164,7 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 		setting:       Setting{Data: dataDir},
 	}
 
-	// Test: Get format for protobuf operation (without actual files, ChunkCount will be 0)
+	// Test: Get format for protobuf operation (ChunkCount comes from DB now)
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
 	rec := httptest.NewRecorder()
@@ -179,6 +180,7 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &formatInfo)
 	assert.NoError(t, err)
 	assert.Equal(t, "protobuf", formatInfo.Format)
+	assert.Equal(t, 5, formatInfo.ChunkCount)
 	assert.True(t, formatInfo.SupportsStreaming)
 }
 
@@ -1312,18 +1314,6 @@ func TestNewHandlerWithOptions(t *testing.T) {
 
 	// Routes should still be registered
 	assert.NotEmpty(t, e.Routes())
-}
-
-// Helper to read gzipped response body
-func readGzippedBody(t *testing.T, body io.Reader) string {
-	t.Helper()
-	gr, err := gzip.NewReader(body)
-	require.NoError(t, err)
-	defer gr.Close()
-
-	data, err := io.ReadAll(gr)
-	require.NoError(t, err)
-	return string(data)
 }
 
 func TestGetOperationFormat_EmptyStorageFormat(t *testing.T) {

@@ -129,27 +129,6 @@ func (e *ProtobufEngine) GetChunkReader(ctx context.Context, filename string, ch
 	return os.Open(path)
 }
 
-func (e *ProtobufEngine) ChunkCount(ctx context.Context, filename string) (int, error) {
-	path := filepath.Join(e.dataDir, filename, "manifest.pb")
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return 0, err
-	}
-
-	var manifest pbv1.Manifest
-	if err := proto.Unmarshal(data, &manifest); err != nil {
-		return 0, err
-	}
-
-	return int(manifest.ChunkCount), nil
-}
-
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
 	converter := NewConverter(DefaultChunkSize)
 	return converter.Convert(ctx, jsonPath, outputPath, "protobuf")

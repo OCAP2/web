@@ -20,6 +20,7 @@ type Operation struct {
 	StorageFormat    string  `json:"storageFormat"`
 	ConversionStatus string  `json:"conversionStatus"`
 	SchemaVersion    uint32  `json:"schemaVersion"`
+	ChunkCount       int     `json:"chunkCount"`
 }
 
 type Filter struct {
@@ -153,6 +154,18 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 6 {
+		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN chunk_count INTEGER DEFAULT 0`)
+		if err != nil {
+			return fmt.Errorf("merge db to v6 failed (chunk_count): %w", err)
+		}
+
+		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (6)`)
+		if err != nil {
+			return fmt.Errorf("failed to increase version 6: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -196,9 +209,9 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 
 	query := `
 		INSERT INTO operations
-			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version)
+			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	result, err := r.db.ExecContext(
 		ctx,
@@ -212,6 +225,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		storageFormat,
 		conversionStatus,
 		schemaVersion,
+		operation.ChunkCount,
 	)
 	if err != nil {
 		return err
@@ -240,7 +254,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 
 	query := `
 		SELECT
-			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		FROM
 			operations
 		WHERE
@@ -282,6 +296,7 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 			&o.StorageFormat,
 			&o.ConversionStatus,
 			&o.SchemaVersion,
+			&o.ChunkCount,
 		)
 		if err != nil {
 			return nil, err
@@ -294,12 +309,12 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 // GetByID retrieves a single operation by its ID
 func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		 FROM operations WHERE id = ?`, id)
 
 	var op Operation
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
-		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion)
+		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount)
 	if err != nil {
 		return nil, err
 	}
@@ -309,12 +324,12 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 // GetByFilename retrieves a single operation by its filename
 func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		 FROM operations WHERE filename = ?`, filename)
 
 	var op Operation
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
-		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion)
+		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +339,7 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 // SelectPending returns operations with pending conversion status
 func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		 FROM operations
 		 WHERE conversion_status = 'pending'
 		 ORDER BY id ASC
@@ -340,7 +355,7 @@ func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operati
 // SelectAll returns all operations for conversion
 func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		 FROM operations
 		 ORDER BY id ASC`)
 	if err != nil {
@@ -354,7 +369,7 @@ func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 // SelectByStatus returns operations with a specific conversion status
 func (r *RepoOperation) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count
 		 FROM operations
 		 WHERE conversion_status = ?
 		 ORDER BY id ASC`, status)
@@ -401,6 +416,13 @@ func (r *RepoOperation) UpdateSchemaVersion(ctx context.Context, id int64, versi
 func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE operations SET mission_duration = ? WHERE id = ?`, duration, id)
+	return err
+}
+
+// UpdateChunkCount updates the chunk count for an operation
+func (r *RepoOperation) UpdateChunkCount(ctx context.Context, id int64, count int) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET chunk_count = ? WHERE id = ?`, count, id)
 	return err
 }
 

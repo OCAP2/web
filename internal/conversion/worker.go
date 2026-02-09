@@ -21,6 +21,7 @@ type OperationRepo interface {
 	UpdateStorageFormat(ctx context.Context, id int64, format string) error
 	UpdateMissionDuration(ctx context.Context, id int64, duration float64) error
 	UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error
+	UpdateChunkCount(ctx context.Context, id int64, count int) error
 }
 
 // Operation represents a minimal operation for conversion
@@ -202,6 +203,9 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 		durationSeconds := float64(manifest.FrameCount) * float64(manifest.CaptureDelayMs) / 1000.0
 		if err := w.repo.UpdateMissionDuration(ctx, op.ID, durationSeconds); err != nil {
 			slog.Warn("failed to update mission duration", "error", err)
+		}
+		if err := w.repo.UpdateChunkCount(ctx, op.ID, int(manifest.ChunkCount)); err != nil {
+			slog.Warn("failed to update chunk count", "error", err)
 		}
 	}
 

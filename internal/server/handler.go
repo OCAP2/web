@@ -250,14 +250,10 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 		format = "json"
 	}
 
-	engine, err := storage.GetEngine(format)
-	if err != nil {
+	if _, err := storage.GetEngine(format); err != nil {
 		// Fallback to json if unknown format
-		engine, _ = storage.GetEngine("json")
 		format = "json"
 	}
-
-	chunkCount, _ := engine.ChunkCount(c.Request().Context(), op.Filename)
 
 	// Default schema version to 1 for legacy recordings
 	schemaVersion := op.SchemaVersion
@@ -267,8 +263,8 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, FormatInfo{
 		Format:            format,
-		ChunkCount:        chunkCount,
-		SupportsStreaming: engine.SupportsStreaming(),
+		ChunkCount:        op.ChunkCount,
+		SupportsStreaming: format == "protobuf" || format == "flatbuffers",
 		SchemaVersion:     schemaVersion,
 	})
 }

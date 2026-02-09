@@ -17,10 +17,6 @@ func TestJSONEngineBasics(t *testing.T) {
 
 	assert.Equal(t, "json", engine.Name())
 	assert.False(t, engine.SupportsStreaming())
-
-	count, err := engine.ChunkCount(context.Background(), "test")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count)
 }
 
 func TestJSONEngineGetManifest(t *testing.T) {

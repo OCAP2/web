@@ -193,22 +193,6 @@ func TestProtobufEngineGetChunkMissingFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "read chunk 99")
 }
 
-func TestProtobufEngineChunkCount(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	require.NoError(t, os.MkdirAll(missionDir, 0755))
-
-	pbManifest := &pbv1.Manifest{ChunkCount: 5}
-	data, err := proto.Marshal(pbManifest)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), data, 0644))
-
-	engine := NewProtobufEngine(dir)
-	count, err := engine.ChunkCount(context.Background(), "test_mission")
-	require.NoError(t, err)
-	assert.Equal(t, 5, count)
-}
-
 func TestProtobufEngineGetChunkReader(t *testing.T) {
 	dir := t.TempDir()
 	missionDir := filepath.Join(dir, "test_mission")
@@ -371,15 +355,3 @@ func TestProtobufEngineFullEntityDef(t *testing.T) {
 	assert.Empty(t, ent.VehicleClass)
 }
 
-func TestProtobufEngineChunkCountInvalidManifest(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_invalid")
-	require.NoError(t, os.MkdirAll(missionDir, 0755))
-
-	// Write invalid protobuf data
-	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), []byte("invalid protobuf data"), 0644))
-
-	engine := NewProtobufEngine(dir)
-	_, err := engine.ChunkCount(context.Background(), "test_invalid")
-	require.Error(t, err)
-}

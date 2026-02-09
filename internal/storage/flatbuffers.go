@@ -80,15 +80,6 @@ func (e *FlatBuffersEngine) GetChunkReader(ctx context.Context, filename string,
 	return os.Open(path)
 }
 
-// ChunkCount returns the number of chunks by reading manifest
-func (e *FlatBuffersEngine) ChunkCount(ctx context.Context, filename string) (int, error) {
-	manifest, err := e.GetManifest(ctx, filename)
-	if err != nil {
-		return 0, err
-	}
-	return int(manifest.ChunkCount), nil
-}
-
 // Convert transforms a JSON recording to FlatBuffers format
 func (e *FlatBuffersEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
 	converter := NewConverter(DefaultChunkSize)

@@ -77,10 +77,6 @@ func (e *JSONEngine) GetChunkReader(ctx context.Context, filename string, chunkI
 	return nil, fmt.Errorf("JSON engine does not support chunked loading")
 }
 
-func (e *JSONEngine) ChunkCount(ctx context.Context, filename string) (int, error) {
-	return 1, nil // JSON is always single "chunk"
-}
-
 func (e *JSONEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
 	return fmt.Errorf("JSON engine does not support conversion")
 }

@@ -178,6 +178,8 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		require.NoError(t, err)
 		err = repo.UpdateConversionStatus(ctx, 1, "completed")
 		require.NoError(t, err)
+		err = repo.UpdateChunkCount(ctx, 1, 2) // 10 frames / 5 per chunk = 2 chunks
+		require.NoError(t, err)
 	})
 
 	// Test 4: Get format info (Protobuf)

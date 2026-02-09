@@ -233,6 +233,10 @@ func (a *repoAdapter) SelectByStatus(ctx context.Context, status string) ([]conv
 	return result, nil
 }
 
+func (a *repoAdapter) UpdateChunkCount(ctx context.Context, id int64, count int) error {
+	return a.repo.UpdateChunkCount(ctx, id, count)
+}
+
 func (a *repoAdapter) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
 	return a.repo.ResetConversionStatus(ctx, fromStatus, toStatus)
 }

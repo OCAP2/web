@@ -291,31 +291,6 @@ func TestFlatBuffersEngineGetChunkMissingFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "read chunk 99")
 }
 
-func TestFlatBuffersEngineChunkCount(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	require.NoError(t, os.MkdirAll(missionDir, 0755))
-
-	// Create manifest with chunk count
-	builder := flatbuffers.NewBuilder(256)
-	worldName := builder.CreateString("test")
-	missionName := builder.CreateString("test")
-
-	fbv1.ManifestStart(builder)
-	fbv1.ManifestAddWorldName(builder, worldName)
-	fbv1.ManifestAddMissionName(builder, missionName)
-	fbv1.ManifestAddChunkCount(builder, 5)
-	manifestOff := fbv1.ManifestEnd(builder)
-
-	builder.Finish(manifestOff)
-	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.fb"), builder.FinishedBytes(), 0644))
-
-	engine := NewFlatBuffersEngine(dir)
-	count, err := engine.ChunkCount(context.Background(), "test_mission")
-	require.NoError(t, err)
-	assert.Equal(t, 5, count)
-}
-
 func TestFlatBuffersEngineGetChunkReader(t *testing.T) {
 	dir := t.TempDir()
 	missionDir := filepath.Join(dir, "test_mission")
@@ -512,16 +487,6 @@ func TestFlatBuffersEngineConvertMissingFile(t *testing.T) {
 	err := engine.Convert(context.Background(), "nonexistent.json", "output")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "load JSON")
-}
-
-func TestFlatBuffersEngineChunkCountError(t *testing.T) {
-	dir := t.TempDir()
-	engine := NewFlatBuffersEngine(dir)
-
-	// ChunkCount should fail when GetManifest fails (no manifest file)
-	_, err := engine.ChunkCount(context.Background(), "nonexistent")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "read manifest")
 }
 
 func TestFlatBuffersEngineConvertInvalidJSON(t *testing.T) {
