@@ -494,6 +494,16 @@ export class FlatBuffersDecoder implements DecoderStrategy {
 
     const events = rawEvents.map(rawEventToEventDef).filter((e): e is EventDef => e !== null);
 
+    // Read extension_version (index 11)
+    let extensionVersion: string | undefined;
+    fieldOffset = reader.getFieldOffset(rootOffset, 11);
+    if (fieldOffset) extensionVersion = reader.readString(rootOffset + fieldOffset);
+
+    // Read addon_version (index 12)
+    let addonVersion: string | undefined;
+    fieldOffset = reader.getFieldOffset(rootOffset, 12);
+    if (fieldOffset) addonVersion = reader.readString(rootOffset + fieldOffset);
+
     return {
       version,
       worldName,
@@ -506,6 +516,8 @@ export class FlatBuffersDecoder implements DecoderStrategy {
       events,
       markers: [],
       times,
+      extensionVersion,
+      addonVersion,
     };
   }
 

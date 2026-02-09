@@ -6,6 +6,7 @@ import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
 import { TopPanel } from "../TopPanel";
 import { AboutModal } from "../AboutModal";
+import { I18nProvider } from "../../hooks/useLocale";
 import { MissionModal } from "../MissionModal";
 import { CounterDisplay } from "../CounterDisplay";
 import { Hint, showHint, hintVisible } from "../Hint";
@@ -118,7 +119,7 @@ describe("AboutModal", () => {
   it("renders when open", () => {
     const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <AboutModal open={open} onClose={() => {}} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
     ));
     expect(getByTestId("about-modal")).toBeDefined();
   });
@@ -126,7 +127,7 @@ describe("AboutModal", () => {
   it("does not render when closed", () => {
     const [open] = createSignal(false);
     const { queryByTestId } = render(() => (
-      <AboutModal open={open} onClose={() => {}} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
     ));
     expect(queryByTestId("about-modal")).toBeNull();
   });
@@ -135,7 +136,7 @@ describe("AboutModal", () => {
     const [open] = createSignal(true);
     const onClose = vi.fn();
     const { getByTestId } = render(() => (
-      <AboutModal open={open} onClose={onClose} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={onClose} /></I18nProvider>
     ));
     fireEvent.click(getByTestId("about-close-button"));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -144,7 +145,7 @@ describe("AboutModal", () => {
   it("shows OCAP title and GitHub link", () => {
     const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <AboutModal open={open} onClose={() => {}} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
     ));
     const modal = getByTestId("about-modal");
     expect(modal.textContent).toContain("Operation Capture And Playback");
@@ -154,21 +155,46 @@ describe("AboutModal", () => {
   it("shows keyboard shortcuts", () => {
     const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <AboutModal open={open} onClose={() => {}} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
     ));
     const modal = getByTestId("about-modal");
-    expect(modal.textContent).toContain("Space: Play / Pause");
-    expect(modal.textContent).toContain("E: Show / Hide left panel");
-    expect(modal.textContent).toContain("R: Show / Hide right panel");
+    expect(modal.textContent).toContain("Play/pause: space");
+    expect(modal.textContent).toContain("Show/Hide left panel: E");
+    expect(modal.textContent).toContain("Show/Hide right panel: R");
   });
 
   it("shows server version after fetch", async () => {
     const [open] = createSignal(true);
     const { findByText } = render(() => (
-      <AboutModal open={open} onClose={() => {}} />
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
     ));
     const versionEl = await findByText(/v1\.2\.3/);
     expect(versionEl).toBeDefined();
+  });
+
+  it("shows extension and addon versions when provided", () => {
+    const [open] = createSignal(true);
+    const [extVer] = createSignal<string | undefined>("0.0.1");
+    const [addonVer] = createSignal<string | undefined>("1.2.0");
+    const { getByTestId } = render(() => (
+      <I18nProvider locale="en">
+        <AboutModal open={open} onClose={() => {}} extensionVersion={extVer} addonVersion={addonVer} />
+      </I18nProvider>
+    ));
+    const modal = getByTestId("about-modal");
+    expect(modal.textContent).toContain("Extension version: 0.0.1");
+    expect(modal.textContent).toContain("Addon version: 1.2.0");
+  });
+
+  it("has language selector", () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <I18nProvider locale="en"><AboutModal open={open} onClose={() => {}} /></I18nProvider>
+    ));
+    const select = getByTestId("language-select") as HTMLSelectElement;
+    expect(select).toBeDefined();
+    expect(select.value).toBe("en");
+    expect(select.options.length).toBe(5);
   });
 });
 

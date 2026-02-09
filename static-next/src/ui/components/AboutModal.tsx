@@ -1,24 +1,29 @@
-import { createSignal, Show, onMount } from "solid-js";
+import { createSignal, Show, onMount, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { ApiClient, type BuildInfo } from "../../data/api-client";
+import { useI18n } from "../hooks/useLocale";
+import { LOCALES } from "../i18n/i18n";
+import type { Locale } from "../i18n/i18n";
 import styles from "./MissionModal.module.css";
+
+const LOCALE_LABELS: Record<Locale, string> = {
+  ru: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
+  en: "English",
+  de: "Deutsch",
+  cs: "\u010ce\u0161tina",
+  it: "Italiano",
+};
 
 export interface AboutModalProps {
   open: Accessor<boolean>;
   onClose: () => void;
+  extensionVersion?: Accessor<string | undefined>;
+  addonVersion?: Accessor<string | undefined>;
 }
 
-/**
- * About/Information modal matching the old frontend's "i" button behavior.
- *
- * Shows:
- * - OCAP logo and title
- * - GitHub link
- * - Server version info (fetched from /api/version)
- * - Keyboard shortcuts
- */
 export function AboutModal(props: AboutModalProps): JSX.Element {
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
+  const { t, locale, setLocale } = useI18n();
 
   onMount(async () => {
     try {
@@ -43,18 +48,40 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
       }}>
         <div class={styles.modalBase}>
           <div class={styles.modalHeader}>
-            <span>Information</span>
+            <span>{t("info")}</span>
           </div>
           <div class={styles.modalBody} style={{ "min-width": "0", "min-height": "0", padding: "10px 15px" }}>
             <img src="/images/ocap-logo.png" height="60" alt="OCAP" />
             <h4 style={{ "line-height": "0" }}>Operation Capture And Playback</h4>
             <a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
             <br />
-            <span>Server version: {serverVersion()}</span>
-            <br /><br /><br />
-            <span>Space: Play / Pause</span><br />
-            <span>E: Show / Hide left panel</span><br />
-            <span>R: Show / Hide right panel</span>
+            <span>{t("version-server")}{serverVersion()}</span>
+            <br />
+            <Show when={props.extensionVersion?.()}>
+              <span>{t("version-extension")}{props.extensionVersion!()}</span>
+              <br />
+            </Show>
+            <Show when={props.addonVersion?.()}>
+              <span>{t("version-addon")}{props.addonVersion!()}</span>
+              <br />
+            </Show>
+            <br /><br />
+            <span>{t("play-pause")}</span><br />
+            <span>{t("show-hide-left-panel")}</span><br />
+            <span>{t("show-hide-right-panel")}</span>
+            <br /><br />
+            <label>
+              {t("language")}{" "}
+              <select
+                data-testid="language-select"
+                value={locale()}
+                onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+              >
+                <For each={LOCALES}>
+                  {(loc) => <option value={loc}>{LOCALE_LABELS[loc]}</option>}
+                </For>
+              </select>
+            </label>
           </div>
           <div class={styles.modalFooter}>
             <button
@@ -62,7 +89,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               class={styles.modalButton}
               onClick={() => props.onClose()}
             >
-              Close
+              {t("close")}
             </button>
           </div>
         </div>

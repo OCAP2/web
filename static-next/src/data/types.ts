@@ -135,6 +135,8 @@ export interface Manifest {
   events: EventDef[];
   markers: MarkerDef[];
   times: Array<{ frameNum: number; systemTimeUtc: string }>;
+  extensionVersion?: string;
+  addonVersion?: string;
 }
 
 /** A decoded chunk: entity ID -> array of states for this chunk's frames. */

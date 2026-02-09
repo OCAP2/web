@@ -605,6 +605,8 @@ export class ProtobufDecoder implements DecoderStrategy {
     let chunkSize = 300;
     let captureDelayMs = 1000;
     let chunkCount = 0;
+    let extensionVersion: string | undefined;
+    let addonVersion: string | undefined;
     const entities: EntityDef[] = [];
     const rawTimes: RawTimeSample[] = [];
     const rawEvents: RawEvent[] = [];
@@ -645,8 +647,8 @@ export class ProtobufDecoder implements DecoderStrategy {
           markers.push(decodeMarkerDef(reader, end));
           break;
         }
-        case 12: reader.readString(); break; // extensionVersion
-        case 13: reader.readString(); break; // addonVersion
+        case 12: extensionVersion = reader.readString(); break;
+        case 13: addonVersion = reader.readString(); break;
         default: reader.skip(tag.wireType);
       }
     }
@@ -669,6 +671,8 @@ export class ProtobufDecoder implements DecoderStrategy {
       events,
       markers,
       times,
+      extensionVersion,
+      addonVersion,
     };
   }
 

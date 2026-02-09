@@ -9,6 +9,7 @@ import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
 import { EngineProvider } from "./ui/hooks/useEngine";
 import { RendererProvider } from "./ui/hooks/useRenderer";
+import { I18nProvider } from "./ui/hooks/useLocale";
 import { MapContainer } from "./ui/components/MapContainer";
 import { TopPanel } from "./ui/components/TopPanel";
 import { LeftPanel } from "./ui/components/LeftPanel";
@@ -82,6 +83,8 @@ export function App(): JSX.Element {
   const [operationId, setOperationId] = createSignal<string | null>(null);
   const [modalOpen, setModalOpen] = createSignal(true);
   const [aboutOpen, setAboutOpen] = createSignal(false);
+  const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
+  const [addonVersion, setAddonVersion] = createSignal<string | undefined>(undefined);
 
   /**
    * Load an operation: fetch world config, then fetch + decode mission data,
@@ -109,6 +112,8 @@ export function App(): JSX.Element {
       // 5. Update UI state
       setMissionName(op.missionName);
       setOperationId(op.id);
+      setExtensionVersion(manifest.extensionVersion);
+      setAddonVersion(manifest.addonVersion);
     } catch (err) {
       console.error("Failed to load operation:", err);
       showHint("Failed to load operation");
@@ -184,25 +189,32 @@ export function App(): JSX.Element {
   });
 
   return (
-    <EngineProvider engine={engine}>
-      <RendererProvider renderer={renderer}>
-        <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-        <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
-        <LeftPanel />
-        <RightPanel />
-        <BottomPanel />
-        <CounterDisplay />
-        <MissionModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSelectOperation={(op) => {
-            setModalOpen(false);
-            void loadOperation(op);
-          }}
-        />
-        <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
-        <Hint message={hintMessage} visible={hintVisible} />
-      </RendererProvider>
-    </EngineProvider>
+    <I18nProvider>
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <MapContainer renderer={renderer} worldConfig={worldConfig()} />
+          <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
+          <LeftPanel />
+          <RightPanel />
+          <BottomPanel />
+          <CounterDisplay />
+          <MissionModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onSelectOperation={(op) => {
+              setModalOpen(false);
+              void loadOperation(op);
+            }}
+          />
+          <AboutModal
+            open={aboutOpen}
+            onClose={() => setAboutOpen(false)}
+            extensionVersion={extensionVersion}
+            addonVersion={addonVersion}
+          />
+          <Hint message={hintMessage} visible={hintVisible} />
+        </RendererProvider>
+      </EngineProvider>
+    </I18nProvider>
   );
 }

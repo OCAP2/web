@@ -357,6 +357,8 @@ export class JsonDecoder implements DecoderStrategy {
       events,
       markers,
       times,
+      extensionVersion: data.extensionVersion,
+      addonVersion: data.addonVersion,
     };
   }
 
