@@ -1,8 +1,5 @@
 import { render } from "solid-js/web";
-
-function App() {
-  return <h1>OCAP2</h1>;
-}
+import { App } from "./App";
 
 const root = document.getElementById("root");
 if (root) {
