@@ -1,6 +1,7 @@
 import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Side } from "../../data/types";
+import { SIDE_CLASS } from "../../config/side-colors";
 import { useEngine } from "../hooks/useEngine";
 import { leftPanelVisible } from "../shortcuts";
 import { SideGroup } from "./SideGroup";
@@ -8,12 +9,19 @@ import styles from "./LeftPanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
 
+const SIDE_LABEL: Record<Side, string> = {
+  WEST: "BLUFOR",
+  EAST: "OPFOR",
+  GUER: "IND",
+  CIV: "CIV",
+};
+
 /**
- * Collapsible left panel showing units grouped by side.
+ * Collapsible left panel showing units grouped by side and squad.
  *
  * - Visibility controlled by `leftPanelVisible` signal (toggled via 'e' key).
- * - Side tabs let the user switch between WEST/EAST/GUER/CIV.
- * - Each tab header shows the unit count for that side.
+ * - Side tabs at the bottom let the user switch between WEST/EAST/GUER/CIV.
+ * - Units are grouped by group/squad name within each side.
  */
 export function LeftPanel(): JSX.Element {
   const engine = useEngine();
@@ -24,22 +32,22 @@ export function LeftPanel(): JSX.Element {
   return (
     <Show when={leftPanelVisible()}>
       <div class={styles.leftPanel} data-testid="left-panel">
+        <div class={styles.panelContent} data-testid="left-panel-content">
+          <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
+        </div>
         <div class={styles.sideTabs} data-testid="left-panel-tabs">
           <For each={SIDES}>
             {(side) => (
               <div
-                class={`${styles.sideTab}${activeTab() === side ? " active" : ""}`}
+                class={`${styles.sideTab} ${SIDE_CLASS[side]} ${styles.sideTitle}`}
                 data-testid={`tab-${side}`}
                 onClick={() => setActiveTab(side)}
-                style={{ background: activeTab() === side ? "rgba(205, 134, 20, 0.6)" : "transparent" }}
+                style={{ "background-color": activeTab() === side ? "rgba(255, 183, 38, 0.3)" : "rgba(255, 183, 38, 0.1)" }}
               >
-                {side} ({unitsForSide(side).length})
+                {SIDE_LABEL[side]}
               </div>
             )}
           </For>
-        </div>
-        <div class={styles.panelContent} data-testid="left-panel-content">
-          <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
         </div>
       </div>
     </Show>

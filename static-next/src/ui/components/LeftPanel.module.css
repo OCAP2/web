@@ -27,7 +27,7 @@
   overflow-y: auto;
   overflow-x: auto;
   padding: 10px;
-  height: calc(100% - 10px - 10px - 50px - 40px);
+  height: calc(100% - 50px);
 }
 
 .unitList {

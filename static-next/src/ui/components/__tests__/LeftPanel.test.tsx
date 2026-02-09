@@ -18,8 +18,9 @@ function createUnit(
   name: string,
   side: "WEST" | "EAST" | "GUER" | "CIV",
   isPlayer: boolean = false,
+  groupName: string = "Alpha",
 ): Unit {
-  return new Unit(id, name, "man", 0, 100, side, isPlayer, "Alpha");
+  return new Unit(id, name, "man", 0, 100, side, isPlayer, groupName);
 }
 
 describe("LeftPanel", () => {
@@ -66,31 +67,33 @@ describe("LeftPanel", () => {
     expect(getByTestId("tab-CIV")).toBeDefined();
   });
 
-  it("shows correct unit counts per side tab", () => {
-    // Add units to different sides
-    engine.entityManager.addEntity({
-      id: 1, type: "man", name: "Alpha1", side: "WEST",
-      groupName: "Alpha", isPlayer: true, startFrame: 0, endFrame: 100,
-    });
-    engine.entityManager.addEntity({
-      id: 2, type: "man", name: "Alpha2", side: "WEST",
-      groupName: "Alpha", isPlayer: false, startFrame: 0, endFrame: 100,
-    });
-    engine.entityManager.addEntity({
-      id: 3, type: "man", name: "Bravo1", side: "EAST",
-      groupName: "Bravo", isPlayer: false, startFrame: 0, endFrame: 100,
-    });
-
+  it("side tabs show display names with side color classes", () => {
     const { getByTestId } = render(() => (
       <EngineProvider engine={engine}>
         <LeftPanel />
       </EngineProvider>
     ));
+    expect(getByTestId("tab-WEST").textContent).toBe("BLUFOR");
+    expect(getByTestId("tab-WEST").className).toContain("blufor");
+    expect(getByTestId("tab-EAST").textContent).toBe("OPFOR");
+    expect(getByTestId("tab-EAST").className).toContain("opfor");
+    expect(getByTestId("tab-GUER").textContent).toBe("IND");
+    expect(getByTestId("tab-GUER").className).toContain("ind");
+    expect(getByTestId("tab-CIV").textContent).toBe("CIV");
+    expect(getByTestId("tab-CIV").className).toContain("civ");
+  });
 
-    expect(getByTestId("tab-WEST").textContent).toContain("2");
-    expect(getByTestId("tab-EAST").textContent).toContain("1");
-    expect(getByTestId("tab-GUER").textContent).toContain("0");
-    expect(getByTestId("tab-CIV").textContent).toContain("0");
+  it("side tabs are at the bottom (after panel content in DOM)", () => {
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <LeftPanel />
+      </EngineProvider>
+    ));
+    const panel = getByTestId("left-panel");
+    const content = getByTestId("left-panel-content");
+    const tabs = getByTestId("left-panel-tabs");
+    const children = Array.from(panel.children);
+    expect(children.indexOf(content)).toBeLessThan(children.indexOf(tabs));
   });
 
   it("renders correct number of units for the active side tab", () => {
@@ -278,10 +281,11 @@ describe("SideGroup", () => {
     cleanup();
   });
 
-  it("renders side header with unit count", () => {
+  it("groups units by groupName", () => {
     const units = [
-      createUnit(1, "Alpha1", "WEST"),
-      createUnit(2, "Alpha2", "WEST"),
+      createUnit(1, "Alpha1", "WEST", false, "Alpha"),
+      createUnit(2, "Alpha2", "WEST", false, "Alpha"),
+      createUnit(3, "Bravo1", "WEST", false, "Bravo"),
     ];
 
     const { getByTestId } = render(() => (
@@ -290,16 +294,17 @@ describe("SideGroup", () => {
       </EngineProvider>
     ));
 
-    const header = getByTestId("side-group-header-WEST");
-    expect(header.textContent).toContain("WEST");
-    expect(header.textContent).toContain("2");
+    expect(getByTestId("group-Alpha")).toBeDefined();
+    expect(getByTestId("group-Bravo")).toBeDefined();
+    expect(getByTestId("group-Alpha").textContent).toContain("Alpha");
+    expect(getByTestId("group-Bravo").textContent).toContain("Bravo");
   });
 
-  it("renders a UnitListItem for each unit", () => {
+  it("renders a UnitListItem for each unit under its group", () => {
     const units = [
-      createUnit(1, "Alpha1", "WEST"),
-      createUnit(2, "Alpha2", "WEST"),
-      createUnit(3, "Alpha3", "WEST"),
+      createUnit(1, "Alpha1", "WEST", false, "Alpha"),
+      createUnit(2, "Alpha2", "WEST", false, "Alpha"),
+      createUnit(3, "Bravo1", "WEST", false, "Bravo"),
     ];
 
     const { getByTestId } = render(() => (
@@ -311,6 +316,30 @@ describe("SideGroup", () => {
     expect(getByTestId("unit-item-1")).toBeDefined();
     expect(getByTestId("unit-item-2")).toBeDefined();
     expect(getByTestId("unit-item-3")).toBeDefined();
+    // Alpha units should be inside the Alpha group
+    expect(getByTestId("group-Alpha").contains(getByTestId("unit-item-1"))).toBe(true);
+    expect(getByTestId("group-Alpha").contains(getByTestId("unit-item-2"))).toBe(true);
+    expect(getByTestId("group-Bravo").contains(getByTestId("unit-item-3"))).toBe(true);
+  });
+
+  it("sorts groups alphabetically", () => {
+    const units = [
+      createUnit(1, "Charlie1", "WEST", false, "Charlie"),
+      createUnit(2, "Alpha1", "WEST", false, "Alpha"),
+      createUnit(3, "Bravo1", "WEST", false, "Bravo"),
+    ];
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <SideGroup side="WEST" units={units} />
+      </EngineProvider>
+    ));
+
+    const sideGroup = getByTestId("side-group-WEST");
+    const groups = sideGroup.querySelectorAll("[data-testid^='group-']");
+    expect(groups[0].getAttribute("data-testid")).toBe("group-Alpha");
+    expect(groups[1].getAttribute("data-testid")).toBe("group-Bravo");
+    expect(groups[2].getAttribute("data-testid")).toBe("group-Charlie");
   });
 
   it("renders empty list when no units", () => {
@@ -320,7 +349,7 @@ describe("SideGroup", () => {
       </EngineProvider>
     ));
 
-    const header = getByTestId("side-group-header-EAST");
-    expect(header.textContent).toContain("0");
+    const sideGroup = getByTestId("side-group-EAST");
+    expect(sideGroup.children.length).toBe(0);
   });
 });

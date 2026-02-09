@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import type { Unit } from "../../playback/entities/unit";
 import { useEngine } from "../hooks/useEngine";
+import styles from "./LeftPanel.module.css";
 
 export interface UnitListItemProps {
   unit: Unit;
@@ -25,13 +26,11 @@ export function UnitListItem(props: UnitListItemProps): JSX.Element {
 
   return (
     <div
-      class={`unit-list-item ${props.unit.sideClass}${props.unit.isPlayer ? " player" : ""}${isFollowed() ? " followed" : ""}`}
+      class={`${styles.unitItem} ${props.unit.sideClass}${props.unit.isPlayer ? " player" : ""}${isFollowed() ? " followed" : ""}`}
       data-testid={`unit-item-${props.unit.id}`}
       onClick={handleClick}
     >
-      <span class={props.unit.isPlayer ? "unit-name player" : "unit-name"}>
-        {props.unit.name}
-      </span>
+      {props.unit.name}
     </div>
   );
 }

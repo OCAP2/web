@@ -3,6 +3,7 @@ import type { JSX } from "solid-js";
 import type { Side } from "../../data/types";
 import type { Unit } from "../../playback/entities/unit";
 import { UnitListItem } from "./UnitListItem";
+import styles from "./LeftPanel.module.css";
 
 export interface SideGroupProps {
   side: Side;
@@ -10,21 +11,39 @@ export interface SideGroupProps {
 }
 
 /**
- * Displays the unit list for a single side.
+ * Displays the unit list for a single side, grouped by squad/group name.
  *
- * Shows alive/total count in a header and renders a UnitListItem for each unit.
+ * Matches the old frontend: group name as a bold header, units indented below.
+ * Groups are sorted alphabetically.
  */
 export function SideGroup(props: SideGroupProps): JSX.Element {
+  const grouped = () => {
+    const groups = new Map<string, Unit[]>();
+    for (const unit of props.units) {
+      const key = unit.groupName || "Ungrouped";
+      const list = groups.get(key);
+      if (list) {
+        list.push(unit);
+      } else {
+        groups.set(key, [unit]);
+      }
+    }
+    // Sort groups alphabetically
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+
   return (
-    <div class="side-group" data-testid={`side-group-${props.side}`}>
-      <div class="side-group-header" data-testid={`side-group-header-${props.side}`}>
-        {props.side} ({props.units.length})
-      </div>
-      <div class="side-group-list">
-        <For each={props.units}>
-          {(unit) => <UnitListItem unit={unit} />}
-        </For>
-      </div>
-    </div>
+    <ul class={styles.unitList} data-testid={`side-group-${props.side}`}>
+      <For each={grouped()}>
+        {([groupName, units]) => (
+          <li class={styles.groupItem} data-testid={`group-${groupName}`}>
+            <div class={styles.sideTitle}>{groupName}</div>
+            <For each={units}>
+              {(unit) => <UnitListItem unit={unit} />}
+            </For>
+          </li>
+        )}
+      </For>
+    </ul>
   );
 }
