@@ -44,27 +44,26 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
         <div class={styles.modalBase}>
           <div class={styles.modalHeader}>
             <span>Information</span>
+          </div>
+          <div class={styles.modalBody} style={{ "min-width": "0", "min-height": "0", padding: "10px 15px" }}>
+            <img src="/images/ocap-logo.png" height="60" alt="OCAP" />
+            <h4 style={{ "line-height": "0" }}>Operation Capture And Playback</h4>
+            <a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
+            <br />
+            <span>Server version: {serverVersion()}</span>
+            <br /><br /><br />
+            <span>Space: Play / Pause</span><br />
+            <span>E: Show / Hide left panel</span><br />
+            <span>R: Show / Hide right panel</span>
+          </div>
+          <div class={styles.modalFooter}>
             <button
               data-testid="about-close-button"
               class={styles.modalButton}
               onClick={() => props.onClose()}
-              style={{ "margin-left": "auto" }}
             >
               Close
             </button>
-          </div>
-          <div class={styles.modalBody} style={{ "min-width": "400px", "min-height": "auto" }}>
-            <div style={{ padding: "15px" }}>
-              <img src="/images/ocap-logo.png" height="60" alt="OCAP" />
-              <h4 style={{ "line-height": "0" }}>Operation Capture And Playback</h4>
-              <a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
-              <br />
-              <span>Server version: {serverVersion()}</span>
-              <br /><br /><br />
-              <span>Space: Play / Pause</span><br />
-              <span>E: Show / Hide left panel</span><br />
-              <span>R: Show / Hide right panel</span>
-            </div>
           </div>
         </div>
       </div>

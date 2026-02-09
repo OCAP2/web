@@ -187,7 +187,7 @@ export function App(): JSX.Element {
     <EngineProvider engine={engine}>
       <RendererProvider renderer={renderer}>
         <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-        <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => setAboutOpen(true)} />
+        <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
         <LeftPanel />
         <RightPanel />
         <BottomPanel />
