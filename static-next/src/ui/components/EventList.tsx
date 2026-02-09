@@ -4,6 +4,7 @@ import { useEngine } from "../hooks/useEngine";
 import { HitKilledEvent } from "../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../playback/events/connect-event";
 import { EventItem } from "./EventItem";
+import styles from "./RightPanel.module.css";
 
 export interface EventListProps {
   showHitEvents: boolean;
@@ -45,7 +46,7 @@ export function EventList(props: EventListProps): JSX.Element {
   };
 
   return (
-    <ul class="event-list" data-testid="event-list">
+    <ul class={styles.eventList} data-testid="event-list">
       <For each={filteredEvents()}>
         {(event) => <EventItem event={event} engine={engine} />}
       </For>

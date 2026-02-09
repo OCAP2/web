@@ -38,16 +38,16 @@
 
 /* ---------- Side colour utilities ---------- */
 
-.side-blufor { color: #004D99; }
-.side-opfor  { color: #800000; }
-.side-ind    { color: #007F00; }
-.side-civ    { color: #650080; }
+.side-blufor { color: var(--side-blufor-dark); }
+.side-opfor  { color: var(--side-opfor-dark); }
+.side-ind    { color: var(--side-ind-dark); }
+.side-civ    { color: var(--side-civ-dark); }
 
-.side-bg-blufor { background-color: #004D99; }
-.side-bg-opfor  { background-color: #800000; }
-.side-bg-ind    { background-color: #007F00; }
-.side-bg-civ    { background-color: #650080; }
+.side-bg-blufor { background-color: var(--side-blufor-dark); }
+.side-bg-opfor  { background-color: var(--side-opfor-dark); }
+.side-bg-ind    { background-color: var(--side-ind-dark); }
+.side-bg-civ    { background-color: var(--side-civ-dark); }
 
 /* Dead / hit state colours (for markers) */
-.side-dead { color: #333333; }
-.side-hit  { color: #FF8800; }
+.side-dead { color: var(--color-dead); }
+.side-hit  { color: var(--color-hit); }

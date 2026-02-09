@@ -1,0 +1,23 @@
+.hint {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 100px;
+  min-height: 30px;
+  width: 350px;
+  text-align: center;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 500;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.hintVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hintHidden {
+  opacity: 0;
+}

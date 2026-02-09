@@ -1,36 +1,7 @@
 /* ==========================================================================
-   OCAP2 Layout & Panel Styles
-   Ported from static/style/index.css, adapted for SolidJS component structure.
+   OCAP2 Component Styles
+   Component-specific styles to be migrated to CSS Modules in Phase 2.
    ========================================================================== */
-
-/* ---------- Reset & Base ---------- */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: Roboto, Arial, sans-serif;
-  color: #f2f2f2;
-  overflow: hidden;
-  font-size: 14px;
-  cursor: default;
-}
-
-/* ---------- Map container ---------- */
-
-.map-container {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
 
 /* ---------- Top panel ---------- */
 
@@ -39,8 +10,8 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 40px;
-  background-color: #343434;
+  height: var(--top-panel-height);
+  background-color: var(--bg-dark);
   z-index: 1;
   display: flex;
   align-items: center;
@@ -61,7 +32,7 @@ body {
   display: inline-block;
   padding-right: 15px;
   font-size: 24px;
-  color: #a4a4a4;
+  color: var(--text-muted);
   margin: 6px;
 }
 
@@ -73,8 +44,8 @@ body {
   font-size: 18px;
   margin: 10px 15px;
   padding-left: 15px;
-  border-left: 1px solid #666;
-  color: #f2f2f2;
+  border-left: 1px solid var(--text-dim);
+  color: var(--text-primary);
 }
 
 .counter-display .side-score {
@@ -91,8 +62,8 @@ body {
 .left-panel,
 .right-panel {
   position: absolute;
-  top: 40px;
-  background-color: rgba(0, 0, 0, 0.75);
+  top: var(--top-panel-height);
+  background-color: var(--bg-panel);
   font-size: 14px;
   z-index: 1;
   transition: transform 0.3s ease;
@@ -100,8 +71,8 @@ body {
 
 .left-panel {
   left: 0;
-  width: 350px;
-  height: calc(100% - 40px - 60px);
+  width: var(--left-panel-width);
+  height: calc(100% - var(--top-panel-height) - var(--bottom-panel-height));
 }
 
 .left-panel.collapsed {
@@ -110,7 +81,7 @@ body {
 
 .right-panel {
   right: 0;
-  width: 300px;
+  width: var(--right-panel-width);
   height: 50%;
 }
 
@@ -120,7 +91,7 @@ body {
 
 /* Panel title bar */
 .panel-title {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--bg-panel-header);
   width: 100%;
   height: 30px;
   text-align: center;
@@ -147,7 +118,7 @@ body {
 .side-tabs {
   display: flex;
   height: 50px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--bg-panel-header);
 }
 
 .side-tab {
@@ -160,7 +131,7 @@ body {
 /* ---------- Filter input ---------- */
 
 .filter-box {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: var(--bg-filter);
   width: 100%;
   height: 25px;
   padding-top: 4px;
@@ -176,12 +147,12 @@ body {
   margin: 0 5px;
   flex: 1;
   background: none;
-  color: #f2f2f2;
+  color: var(--text-primary);
   font-family: Roboto, sans-serif;
 }
 
 .filter-input::placeholder {
-  color: #666;
+  color: var(--text-dim);
 }
 
 .filter-input:focus {
@@ -207,29 +178,12 @@ body {
 }
 
 .unit-item:hover {
-  background-color: rgba(205, 134, 20, 0.9);
+  background-color: var(--highlight);
 }
 
 .side-title {
   text-shadow: 1px 1px #000;
   font-weight: bold;
-}
-
-/* Side colour classes (unit list, event list, counter) */
-.blufor {
-  color: #00a8ff;
-}
-
-.opfor {
-  color: #ff0000;
-}
-
-.ind {
-  color: #00cc00;
-}
-
-.civ {
-  color: #c900ff;
 }
 
 /* ---------- Event filter controls ---------- */
@@ -270,20 +224,10 @@ body {
   margin-top: 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-  opacity: 0;
-}
-
-.event-item.reveal {
-  opacity: 1;
-  transition: opacity 1s;
-}
-
-.event-item.action {
-  cursor: pointer;
 }
 
 .event-details {
-  color: #9a9a9a;
+  color: var(--text-details);
 }
 
 /* ---------- Bottom panel (playback controls) ---------- */
@@ -293,8 +237,8 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 60px;
-  background-color: rgba(0, 0, 0, 0.8);
+  height: var(--bottom-panel-height);
+  background-color: var(--bg-panel-overlay);
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -320,7 +264,7 @@ body {
   pointer-events: none;
   height: 10px;
   width: 100%;
-  background-color: #6e6e6e;
+  background-color: var(--event-timeline-bg);
   position: relative;
   margin: 2px;
 }
@@ -391,48 +335,6 @@ body {
   gap: 10px;
 }
 
-/* ---------- Range inputs (shared) ---------- */
-
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  background: transparent;
-}
-
-input[type="range"]:focus {
-  outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  background: #f2f2f2;
-  height: 20px;
-  width: 5px;
-  margin-top: -5px;
-}
-
-input[type="range"]::-webkit-slider-runnable-track {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 10px;
-  background-color: #808080;
-}
-
-input[type="range"]::-moz-range-thumb {
-  background: #f2f2f2;
-  height: 20px;
-  width: 5px;
-  border: none;
-  border-radius: 0;
-}
-
-input[type="range"]::-moz-range-track {
-  height: 10px;
-  background-color: #808080;
-}
-
 /* Timeline slider overlay on the event-timeline */
 .frame-slider {
   width: 100%;
@@ -488,11 +390,11 @@ input[type="range"]::-moz-range-track {
 }
 
 .speed-slider::-webkit-slider-thumb {
-  background-color: #404040;
+  background-color: var(--range-speed-thumb-bg);
 }
 
 .speed-slider::-moz-range-thumb {
-  background-color: #404040;
+  background-color: var(--range-speed-thumb-bg);
 }
 
 /* ---------- Toggle buttons (bottom bar) ---------- */
@@ -586,7 +488,7 @@ input[type="range"]::-moz-range-track {
 /* Version info */
 .version-info {
   font-size: 11px;
-  color: #a4a4a4;
+  color: var(--text-muted);
   text-align: right;
   flex-shrink: 0;
 }
@@ -615,7 +517,7 @@ input[type="range"]::-moz-range-track {
 }
 
 .modal-header {
-  background-color: rgba(155, 0, 0, 0.9);
+  background-color: var(--bg-modal-header);
   margin-bottom: 3px;
   color: white;
   border-bottom: 1px solid black;
@@ -625,7 +527,7 @@ input[type="range"]::-moz-range-track {
 }
 
 .modal-body {
-  background-color: #000000ed;
+  background-color: var(--bg-modal);
   overflow-y: auto;
   min-width: 800px;
   min-height: 400px;
@@ -666,7 +568,7 @@ input[type="range"]::-moz-range-track {
 }
 
 .modal-body tr:hover {
-  background-color: rgba(205, 134, 20, 0.9);
+  background-color: var(--highlight);
 }
 
 .modal-footer {
@@ -709,50 +611,6 @@ input[type="range"]::-moz-range-track {
   gap: 4px;
 }
 
-/* ---------- Hint toast ---------- */
-
-.hint-toast {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 100px;
-  min-height: 30px;
-  width: 350px;
-  text-align: center;
-  padding: 12px;
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 500;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-}
-
-.hint-toast.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* ---------- Extra info box ---------- */
-
-.extra-info-box {
-  background-color: rgba(0, 0, 0, 0.75);
-  position: absolute;
-  right: 0;
-  bottom: 60px;
-  color: #f2f2f2;
-  width: 300px;
-  display: none;
-  z-index: 1;
-}
-
-.extra-info-box.visible {
-  display: block;
-}
-
-.extra-info-content {
-  padding: 5px;
-}
-
 /* ---------- Stats table ---------- */
 
 .stats .name {
@@ -764,188 +622,4 @@ input[type="range"]::-moz-range-track {
 .stats .deaths {
   width: 70px;
   text-align: right;
-}
-
-/* ---------- Loading indicator ---------- */
-
-.loading-indicator {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.85);
-  border-radius: 8px;
-  padding: 20px 30px;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-  z-index: 10000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.loading-indicator.visible {
-  display: flex;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #4caf50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-message {
-  color: #f2f2f2;
-  font-size: 14px;
-  text-align: center;
-}
-
-/* ---------- Leaflet overrides ---------- */
-
-.leaflet-left {
-  left: 360px;
-  top: 50px;
-}
-
-.leaflet-bottom {
-  bottom: 65px;
-}
-
-.leaflet-popup {
-  pointer-events: none;
-}
-
-.leaflet-popup-content-wrapper {
-  background: none;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
-}
-
-.leaflet-popup-tip {
-  display: none;
-}
-
-.leaflet-popup-content {
-  color: white;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-    1px 1px 0 #000;
-  padding: 0;
-  margin: 0;
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.leaflet-div-icon {
-  background: none;
-  border: none;
-}
-
-.leaflet-popup-vehicle .leaflet-popup-content-wrapper {
-  text-align: left;
-}
-
-.leaflet-popup-unit .leaflet-popup-content-wrapper {
-  text-align: center;
-}
-
-/* Scale ruler dark theme */
-.leaflet-control-scale-line {
-  background: rgba(0, 0, 0, 0.7);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #fff;
-  font-size: 11px;
-  line-height: 1.2;
-  padding: 2px 5px;
-}
-
-/* Streaming indicator */
-.streaming-indicator {
-  display: none;
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: help;
-}
-
-/* ---------- Utility ---------- */
-
-.bold {
-  font-weight: bold;
-}
-
-.medium {
-  font-weight: 500;
-}
-
-/* ---------- Responsive ---------- */
-
-@media (max-width: 768px) {
-  .left-panel {
-    width: 100%;
-    height: calc(50% - 40px - 60px);
-  }
-
-  .right-panel {
-    width: 100%;
-    height: 40%;
-    top: auto;
-    bottom: 60px;
-  }
-
-  .modal-body {
-    min-width: auto;
-    max-width: 95vw;
-  }
-
-  .leaflet-left {
-    left: 10px;
-    top: 50px;
-  }
-
-  .mission-name {
-    font-size: 16px;
-  }
-
-  .counter-display {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .top-panel {
-    height: 32px;
-  }
-
-  .left-panel,
-  .right-panel {
-    top: 32px;
-  }
-
-  .bottom-panel {
-    height: 50px;
-    padding: 0 5px;
-    gap: 5px;
-  }
-
-  .speed-slider-container {
-    display: none;
-  }
-
-  .version-info {
-    display: none;
-  }
 }

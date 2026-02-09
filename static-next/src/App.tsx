@@ -21,8 +21,12 @@ import { hintMessage, hintVisible } from "./ui/components/Hint";
 import { registerShortcuts, unregisterShortcuts } from "./ui/shortcuts";
 import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
-import "./ui/styles/index.css";
+import "./ui/styles/variables.css";
+import "./ui/styles/base.css";
+import "./ui/styles/global.css";
 import "./ui/styles/entities.css";
+import "./ui/styles/leaflet.css";
+import "./ui/styles/responsive.css";
 
 /**
  * Parse URL parameters for operation loading and initial view.

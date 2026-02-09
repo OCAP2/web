@@ -2,6 +2,7 @@ import { createSignal, Show, For, onMount } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import type { Operation } from "../../data/types";
 import { ApiClient, type OperationFilters } from "../../data/api-client";
+import styles from "./MissionModal.module.css";
 
 export interface MissionModalProps {
   open: Accessor<boolean>;
@@ -58,20 +59,20 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
 
   return (
     <Show when={props.open()}>
-      <div data-testid="mission-modal" class="modal-overlay">
-        <div class="modal-base">
-          <div class="modal-header">
+      <div data-testid="mission-modal" class={styles.modalOverlay}>
+        <div class={styles.modalBase}>
+          <div class={styles.modalHeader}>
             <span>Select Mission</span>
             <button
               data-testid="modal-close-button"
-              class="modal-button"
+              class={styles.modalButton}
               onClick={() => props.onClose()}
               style={{ "margin-left": "auto" }}
             >
               Close
             </button>
           </div>
-          <div class="modal-filter">
+          <div class={styles.modalFilter}>
             <form
               data-testid="filter-form"
               onSubmit={handleSubmit}
@@ -86,7 +87,7 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
                 onInput={(e) => setNameFilter(e.currentTarget.value)}
                 style={{ flex: "1", background: "rgba(255,255,255,0.1)", color: "#f2f2f2", border: "1px solid #555", padding: "4px 8px" }}
               />
-              <button type="submit" data-testid="filter-submit-button" class="modal-button">
+              <button type="submit" data-testid="filter-submit-button" class={styles.modalButton}>
                 Search
               </button>
             </form>
@@ -94,7 +95,7 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
           <Show when={loading()}>
             <div data-testid="loading-indicator" style={{ padding: "20px", "text-align": "center", color: "#f2f2f2" }}>Loading...</div>
           </Show>
-          <div class="modal-body" data-testid="operations-list">
+          <div class={styles.modalBody} data-testid="operations-list">
             <table>
               <thead>
                 <tr>

@@ -1,22 +1,7 @@
 import type { EntityState, EntityType, Side } from "../../data/types";
 import type { EntitySnapshot } from "../types";
 import { Entity } from "./entity";
-
-/** Side CSS class map. */
-const SIDE_CLASS: Record<Side, string> = {
-  WEST: "blufor",
-  EAST: "opfor",
-  GUER: "ind",
-  CIV: "civ",
-};
-
-/** Side colour map. */
-const SIDE_COLOUR: Record<Side, string> = {
-  WEST: "#004D99",
-  EAST: "#800000",
-  GUER: "#007F00",
-  CIV: "#650080",
-};
+import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/side-colors";
 
 /**
  * A human unit entity -- pure data, NO DOM, NO Leaflet, NO map dependencies.
@@ -60,7 +45,7 @@ export class Unit extends Entity {
 
   /** Hex colour for the unit's side. */
   get sideColour(): string {
-    return SIDE_COLOUR[this.side] ?? "#000000";
+    return SIDE_COLORS_DARK[this.side] ?? "#000000";
   }
 
   override getStateAtFrame(relativeFrame: number): EntitySnapshot | null {

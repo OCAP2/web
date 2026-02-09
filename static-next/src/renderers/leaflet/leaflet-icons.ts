@@ -1,5 +1,6 @@
 import L from "leaflet";
 import type { Side, AliveState } from "../../data/types";
+import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/side-colors";
 
 // --------------- Side → CSS class / colour mapping ---------------
 
@@ -8,15 +9,11 @@ export interface SideStyle {
   colour: string;
 }
 
-const SIDE_STYLES: Record<Side, SideStyle> = {
-  WEST: { cssClass: "blufor", colour: "#004d99" },
-  EAST: { cssClass: "opfor", colour: "#800000" },
-  GUER: { cssClass: "ind", colour: "#007f00" },
-  CIV: { cssClass: "civ", colour: "#650080" },
-};
-
 export function sideStyle(side: Side): SideStyle {
-  return SIDE_STYLES[side] ?? { cssClass: "unknown", colour: "#b29900" };
+  return {
+    cssClass: SIDE_CLASS[side] ?? "unknown",
+    colour: SIDE_COLORS_DARK[side] ?? "#b29900",
+  };
 }
 
 // --------------- Icon sizes per entity type ---------------

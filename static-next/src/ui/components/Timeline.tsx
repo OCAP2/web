@@ -1,6 +1,7 @@
 import { For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
+import styles from "./BottomPanel.module.css";
 
 /**
  * Full-width timeline slider row.
@@ -24,8 +25,8 @@ export function Timeline(): JSX.Element {
   };
 
   return (
-    <div data-testid="timeline" class="frame-slider-container">
-      <div class="event-timeline">
+    <div data-testid="timeline" class={styles.frameSliderContainer}>
+      <div class={styles.eventTimeline} data-testid="event-timeline">
         <For each={eventFrames()}>
           {(frameNum) => {
             const end = engine.endFrame();
@@ -33,7 +34,8 @@ export function Timeline(): JSX.Element {
             const width = end > 0 ? (1 / end) * 100 : 0;
             return (
               <div
-                class="event-timeline-tick"
+                class={styles.eventTimelineTick}
+                data-testid="event-tick"
                 style={{ left: `${pct}%`, width: `${Math.max(width, 0.2)}%` }}
               />
             );
@@ -42,7 +44,7 @@ export function Timeline(): JSX.Element {
       </div>
       <input
         type="range"
-        class="frame-slider"
+        class={styles.frameSlider}
         data-testid="timeline-slider"
         min={0}
         max={engine.endFrame()}

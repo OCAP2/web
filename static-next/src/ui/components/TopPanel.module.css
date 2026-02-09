@@ -1,0 +1,42 @@
+.topPanel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--top-panel-height);
+  background-color: var(--bg-dark);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.topPanel .button {
+  height: 25px;
+  width: 25px;
+  margin: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.missionName {
+  display: inline-block;
+  padding-right: 15px;
+  font-size: 24px;
+  color: var(--text-muted);
+  margin: 6px;
+}
+
+@media (max-width: 768px) {
+  .missionName {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topPanel {
+    height: 32px;
+  }
+}

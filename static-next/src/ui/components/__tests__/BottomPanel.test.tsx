@@ -75,8 +75,7 @@ describe("PlaybackControls", () => {
     ));
 
     const button = getByTestId("play-pause-button");
-    expect(button.className).toContain("play-pause-btn");
-    expect(button.className).not.toContain("playing");
+    expect(button.dataset.playing).toBe("false");
   });
 
   it("renders pause button when playing", () => {
@@ -92,7 +91,7 @@ describe("PlaybackControls", () => {
     ));
 
     const button = getByTestId("play-pause-button");
-    expect(button.className).toContain("playing");
+    expect(button.dataset.playing).toBe("true");
   });
 
   it("calls engine.togglePlayPause when play button is clicked", () => {
@@ -186,7 +185,7 @@ describe("Timeline", () => {
       </EngineProvider>
     ));
 
-    const ticks = container.querySelectorAll(".event-timeline-tick");
+    const ticks = container.querySelectorAll('[data-testid="event-tick"]');
     expect(ticks.length).toBe(2);
   });
 
@@ -207,7 +206,7 @@ describe("Timeline", () => {
       </EngineProvider>
     ));
 
-    const tick = container.querySelector(".event-timeline-tick") as HTMLElement;
+    const tick = container.querySelector('[data-testid="event-tick"]') as HTMLElement;
     expect(tick).toBeDefined();
     expect(tick.style.left).toBe("25%");
   });
@@ -229,7 +228,7 @@ describe("Timeline", () => {
       </EngineProvider>
     ));
 
-    const ticks = container.querySelectorAll(".event-timeline-tick");
+    const ticks = container.querySelectorAll('[data-testid="event-tick"]');
     expect(ticks.length).toBe(0);
   });
 
@@ -250,8 +249,8 @@ describe("Timeline", () => {
       </EngineProvider>
     ));
 
-    const tick = container.querySelector(".event-timeline-tick");
-    expect(tick?.parentElement?.classList.contains("event-timeline")).toBe(true);
+    const tick = container.querySelector('[data-testid="event-tick"]');
+    expect(tick?.parentElement?.getAttribute("data-testid")).toBe("event-timeline");
   });
 });
 
@@ -404,10 +403,10 @@ describe("ToggleBar", () => {
     ));
 
     const slider = getByTestId("speed-slider");
-    // Slider should be inside a .speed-slider-popup div
-    expect(slider.parentElement?.classList.contains("speed-slider-popup")).toBe(true);
-    // Popup should be inside .speed-slider-container
-    expect(slider.parentElement?.parentElement?.classList.contains("speed-slider-container")).toBe(true);
+    // Slider should be inside the speed-slider-popup div
+    expect(slider.parentElement?.getAttribute("data-testid")).toBe("speed-slider-popup");
+    // Popup should be inside speed-slider-container
+    expect(slider.parentElement?.parentElement?.getAttribute("data-testid")).toBe("speed-slider-container");
   });
 
   it("toggles back to visible on second click", () => {

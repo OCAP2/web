@@ -1,5 +1,6 @@
 import { createSignal, Show, onCleanup } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
+import styles from "./Hint.module.css";
 
 // ─── Module-level hint state for external use ───
 
@@ -56,7 +57,7 @@ export function Hint(props?: HintProps): JSX.Element {
     <Show when={vis()}>
       <div
         data-testid="hint"
-        class={`hint ${vis() ? "hint-visible" : "hint-hidden"}`}
+        class={`${styles.hint} ${vis() ? styles.hintVisible : styles.hintHidden}`}
       >
         {msg()}
       </div>

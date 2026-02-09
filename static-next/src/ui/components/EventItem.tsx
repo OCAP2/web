@@ -4,6 +4,7 @@ import { GameEvent } from "../../playback/events/game-event";
 import { HitKilledEvent } from "../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../playback/events/connect-event";
 import { formatElapsedTime } from "../../playback/time";
+import styles from "./RightPanel.module.css";
 
 export interface EventItemProps {
   event: GameEvent;
@@ -53,7 +54,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
 
     return (
       <li
-        class="event-item reveal action"
+        class={`${styles.eventItem} reveal action`}
         data-testid="event-item"
         data-event-type={event.type}
         onClick={() => {
@@ -68,7 +69,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
         <span class={`${causerClass} medium`} data-testid="event-causer">
           {event.causerName ?? `Unit #${event.causedById}`}
         </span>
-        <div class="event-details" data-testid="event-details">
+        <div class={styles.eventDetails} data-testid="event-details">
           {`${time} - ${Math.round(event.distance)}m - ${event.weapon}`}
         </div>
       </li>
@@ -78,7 +79,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
   if (event instanceof ConnectEvent) {
     return (
       <li
-        class="event-item reveal"
+        class={`${styles.eventItem} reveal`}
         data-testid="event-item"
         data-event-type={event.type}
       >
@@ -86,7 +87,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
           {event.type === "connected" ? "connected " : "disconnected "}
           {event.unitName}
         </span>
-        <div class="event-details" data-testid="event-details">
+        <div class={styles.eventDetails} data-testid="event-details">
           {time}
         </div>
       </li>
@@ -95,9 +96,9 @@ export function EventItem(props: EventItemProps): JSX.Element {
 
   // Fallback for unknown event types
   return (
-    <li class="event-item reveal" data-testid="event-item" data-event-type={event.type}>
+    <li class={`${styles.eventItem} reveal`} data-testid="event-item" data-event-type={event.type}>
       <span>{event.type}</span>
-      <div class="event-details">{time}</div>
+      <div class={styles.eventDetails}>{time}</div>
     </li>
   );
 }

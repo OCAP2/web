@@ -190,9 +190,9 @@ describe("Unit", () => {
   });
 
   describe("sideColour", () => {
-    it("WEST -> #004D99", () => {
+    it("WEST -> #004d99", () => {
       const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1");
-      expect(u.sideColour).toBe("#004D99");
+      expect(u.sideColour).toBe("#004d99");
     });
 
     it("EAST -> #800000", () => {
@@ -200,9 +200,9 @@ describe("Unit", () => {
       expect(u.sideColour).toBe("#800000");
     });
 
-    it("GUER -> #007F00", () => {
+    it("GUER -> #007f00", () => {
       const u = new Unit(1, "Test", "man", 0, 10, "GUER", true, "G1");
-      expect(u.sideColour).toBe("#007F00");
+      expect(u.sideColour).toBe("#007f00");
     });
 
     it("CIV -> #650080", () => {

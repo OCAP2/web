@@ -1,0 +1,24 @@
+.counterDisplay {
+  display: inline-flex;
+  align-items: center;
+  font-size: 18px;
+  margin: 10px 15px;
+  padding-left: 15px;
+  border-left: 1px solid var(--text-dim);
+  color: var(--text-primary);
+}
+
+.sideScore {
+  margin: 0 6px;
+}
+
+.separator {
+  margin: 0 4px;
+  color: #888;
+}
+
+@media (max-width: 768px) {
+  .counterDisplay {
+    font-size: 14px;
+  }
+}

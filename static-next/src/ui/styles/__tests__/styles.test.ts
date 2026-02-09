@@ -1,108 +1,104 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const stylesDir = resolve(__dirname, "..");
+const componentsDir = resolve(__dirname, "..", "..", "components");
 
 describe("CSS style files", () => {
-  describe("index.css", () => {
-    const css = readFileSync(resolve(stylesDir, "index.css"), "utf-8");
+  describe("variables.css", () => {
+    const css = readFileSync(resolve(stylesDir, "variables.css"), "utf-8");
 
     it("exists and is non-empty", () => {
       expect(css.length).toBeGreaterThan(0);
     });
 
+    it("defines panel dimension custom properties", () => {
+      expect(css).toContain("--top-panel-height");
+      expect(css).toContain("--bottom-panel-height");
+      expect(css).toContain("--left-panel-width");
+      expect(css).toContain("--right-panel-width");
+    });
+
+    it("defines base color custom properties", () => {
+      expect(css).toContain("--bg-dark");
+      expect(css).toContain("--bg-panel");
+      expect(css).toContain("--text-primary");
+      expect(css).toContain("--text-muted");
+      expect(css).toContain("--highlight");
+    });
+
+    it("defines bright side color custom properties", () => {
+      expect(css).toContain("--side-blufor: #00a8ff");
+      expect(css).toContain("--side-opfor: #ff0000");
+      expect(css).toContain("--side-ind: #00cc00");
+      expect(css).toContain("--side-civ: #c900ff");
+    });
+
+    it("defines dark side color custom properties", () => {
+      expect(css).toContain("--side-blufor-dark: #004D99");
+      expect(css).toContain("--side-opfor-dark: #800000");
+      expect(css).toContain("--side-ind-dark: #007F00");
+      expect(css).toContain("--side-civ-dark: #650080");
+    });
+
+    it("defines state color custom properties", () => {
+      expect(css).toContain("--color-dead");
+      expect(css).toContain("--color-hit");
+    });
+  });
+
+  describe("base.css", () => {
+    const css = readFileSync(resolve(stylesDir, "base.css"), "utf-8");
+
+    it("exists and is non-empty", () => {
+      expect(css.length).toBeGreaterThan(0);
+    });
+
+    it("contains reset styles", () => {
+      expect(css).toContain("box-sizing: border-box");
+    });
+
     it("contains map container styles", () => {
       expect(css).toContain(".map-container");
     });
+  });
 
-    it("contains top panel styles", () => {
-      expect(css).toContain(".top-panel");
+  describe("global.css", () => {
+    const css = readFileSync(resolve(stylesDir, "global.css"), "utf-8");
+
+    it("exists and is non-empty", () => {
+      expect(css.length).toBeGreaterThan(0);
     });
 
-    it("contains left panel styles", () => {
-      expect(css).toContain(".left-panel");
-    });
-
-    it("contains right panel styles", () => {
-      expect(css).toContain(".right-panel");
-    });
-
-    it("contains bottom panel styles", () => {
-      expect(css).toContain(".bottom-panel");
-    });
-
-    it("contains panel collapsing transitions", () => {
-      expect(css).toContain(".collapsed");
-      expect(css).toContain("transition");
-    });
-
-    it("contains unit list styling", () => {
-      expect(css).toContain(".unit-list");
-      expect(css).toContain(".unit-item");
-      expect(css).toContain(".group-item");
-    });
-
-    it("contains side colour classes for event log text (matching old frontend)", () => {
-      // Bright colours for event log readability on dark background
-      // These match the old frontend's static/style/index.css
+    it("contains side colour classes using custom properties", () => {
       expect(css).toContain(".blufor");
-      expect(css).toMatch(/\.blufor\s*\{[^}]*color:\s*#00a8ff/i);
+      expect(css).toMatch(/\.blufor\s*\{[^}]*var\(--side-blufor\)/);
 
       expect(css).toContain(".opfor");
-      expect(css).toMatch(/\.opfor\s*\{[^}]*color:\s*#ff0000/i);
+      expect(css).toMatch(/\.opfor\s*\{[^}]*var\(--side-opfor\)/);
 
       expect(css).toContain(".ind");
-      expect(css).toMatch(/\.ind\s*\{[^}]*color:\s*#00cc00/i);
+      expect(css).toMatch(/\.ind\s*\{[^}]*var\(--side-ind\)/);
 
       expect(css).toContain(".civ");
-      expect(css).toMatch(/\.civ\s*\{[^}]*color:\s*#c900ff/i);
+      expect(css).toMatch(/\.civ\s*\{[^}]*var\(--side-civ\)/);
     });
 
-    it("contains event list styling", () => {
-      expect(css).toContain(".event-item");
-      expect(css).toContain(".event-details");
+    it("contains utility text weight classes", () => {
+      expect(css).toContain(".bold");
+      expect(css).toContain(".medium");
     });
 
-    it("contains playback control styles", () => {
-      expect(css).toContain(".play-pause-btn");
-      expect(css).toContain(".timecode");
-      expect(css).toContain(".frame-slider");
-    });
-
-    it("contains modal overlay styles", () => {
-      expect(css).toContain(".modal-overlay");
-      expect(css).toContain(".modal-header");
-      expect(css).toContain(".modal-body");
-    });
-
-    it("contains speed slider styles", () => {
-      expect(css).toContain(".speed-slider");
-      expect(css).toContain(".speed-value");
-    });
-
-    it("contains counter display styles", () => {
-      expect(css).toContain(".counter-display");
+    it("contains event item state classes", () => {
+      expect(css).toContain(".reveal");
+      expect(css).toContain(".action");
     });
 
     it("contains hint toast styles", () => {
       expect(css).toContain(".hint-toast");
-    });
-
-    it("contains responsive breakpoints", () => {
-      expect(css).toContain("@media");
-      expect(css).toContain("max-width");
-    });
-
-    it("contains range input styling", () => {
-      expect(css).toContain('input[type="range"]');
-    });
-
-    it("contains event timeline styles", () => {
-      expect(css).toContain(".event-timeline");
-      expect(css).toContain(".event-timeline-tick");
     });
 
     it("contains loading indicator styles", () => {
@@ -110,9 +106,99 @@ describe("CSS style files", () => {
       expect(css).toContain(".loading-spinner");
     });
 
+    it("contains range input styling", () => {
+      expect(css).toContain('input[type="range"]');
+    });
+  });
+
+  describe("leaflet.css", () => {
+    const css = readFileSync(resolve(stylesDir, "leaflet.css"), "utf-8");
+
+    it("exists and is non-empty", () => {
+      expect(css.length).toBeGreaterThan(0);
+    });
+
     it("contains leaflet overrides", () => {
       expect(css).toContain(".leaflet-popup");
       expect(css).toContain(".leaflet-div-icon");
+    });
+  });
+
+  describe("responsive.css", () => {
+    const css = readFileSync(resolve(stylesDir, "responsive.css"), "utf-8");
+
+    it("exists and is non-empty", () => {
+      expect(css.length).toBeGreaterThan(0);
+    });
+
+    it("contains responsive breakpoints", () => {
+      expect(css).toContain("@media");
+      expect(css).toContain("max-width");
+    });
+  });
+
+  describe("CSS Modules", () => {
+    const moduleFiles = [
+      "TopPanel.module.css",
+      "MissionModal.module.css",
+      "Hint.module.css",
+      "CounterDisplay.module.css",
+      "LeftPanel.module.css",
+      "RightPanel.module.css",
+      "BottomPanel.module.css",
+    ];
+
+    for (const file of moduleFiles) {
+      it(`${file} exists and is non-empty`, () => {
+        const path = resolve(componentsDir, file);
+        expect(existsSync(path)).toBe(true);
+        const content = readFileSync(path, "utf-8");
+        expect(content.length).toBeGreaterThan(0);
+      });
+    }
+
+    it("BottomPanel.module.css uses custom properties", () => {
+      const css = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
+      expect(css).toContain("var(--bottom-panel-height)");
+      expect(css).toContain("var(--bg-panel-overlay)");
+      expect(css).toContain("var(--event-timeline-bg)");
+    });
+
+    it("BottomPanel.module.css contains toggle active/inactive rules", () => {
+      const css = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
+      expect(css).toContain(":global(.active)");
+      expect(css).toContain(":global(.inactive)");
+    });
+
+    it("LeftPanel.module.css uses custom properties", () => {
+      const css = readFileSync(resolve(componentsDir, "LeftPanel.module.css"), "utf-8");
+      expect(css).toContain("var(--top-panel-height)");
+      expect(css).toContain("var(--left-panel-width)");
+      expect(css).toContain("var(--bg-panel)");
+    });
+
+    it("RightPanel.module.css uses custom properties", () => {
+      const css = readFileSync(resolve(componentsDir, "RightPanel.module.css"), "utf-8");
+      expect(css).toContain("var(--top-panel-height)");
+      expect(css).toContain("var(--right-panel-width)");
+      expect(css).toContain("var(--bg-panel)");
+    });
+
+    it("TopPanel.module.css uses custom properties", () => {
+      const css = readFileSync(resolve(componentsDir, "TopPanel.module.css"), "utf-8");
+      expect(css).toContain("var(--top-panel-height)");
+      expect(css).toContain("var(--bg-dark)");
+    });
+
+    it("module files contain responsive breakpoints", () => {
+      const leftCss = readFileSync(resolve(componentsDir, "LeftPanel.module.css"), "utf-8");
+      const rightCss = readFileSync(resolve(componentsDir, "RightPanel.module.css"), "utf-8");
+      const bottomCss = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
+      const topCss = readFileSync(resolve(componentsDir, "TopPanel.module.css"), "utf-8");
+      expect(leftCss).toContain("@media");
+      expect(rightCss).toContain("@media");
+      expect(bottomCss).toContain("@media");
+      expect(topCss).toContain("@media");
     });
   });
 
@@ -144,7 +230,6 @@ describe("CSS style files", () => {
     });
 
     it("has correct speed durations", () => {
-      // speed-1 = 1s, speed-2 = 0.9s, ..., speed-10 = 0.15s
       expect(css).toMatch(/\.speed-1\s*\{[^}]*--marker-speed:\s*1s/);
       expect(css).toMatch(/\.speed-2\s*\{[^}]*--marker-speed:\s*0\.9s/);
       expect(css).toMatch(/\.speed-5\s*\{[^}]*--marker-speed:\s*0\.6s/);
@@ -152,12 +237,11 @@ describe("CSS style files", () => {
       expect(css).toMatch(/\.speed-10\s*\{[^}]*--marker-speed:\s*0\.15s/);
     });
 
-    it("contains side colour utilities matching unit.ts SIDE_COLOUR values", () => {
-      // WEST -> #004D99, EAST -> #800000, GUER -> #007F00, CIV -> #650080
-      expect(css).toMatch(/\.side-blufor\s*\{[^}]*color:\s*#004D99/i);
-      expect(css).toMatch(/\.side-opfor\s*\{[^}]*color:\s*#800000/i);
-      expect(css).toMatch(/\.side-ind\s*\{[^}]*color:\s*#007F00/i);
-      expect(css).toMatch(/\.side-civ\s*\{[^}]*color:\s*#650080/i);
+    it("contains side colour utilities using custom properties", () => {
+      expect(css).toMatch(/\.side-blufor\s*\{[^}]*var\(--side-blufor-dark\)/);
+      expect(css).toMatch(/\.side-opfor\s*\{[^}]*var\(--side-opfor-dark\)/);
+      expect(css).toMatch(/\.side-ind\s*\{[^}]*var\(--side-ind-dark\)/);
+      expect(css).toMatch(/\.side-civ\s*\{[^}]*var\(--side-civ-dark\)/);
     });
 
     it("contains side background colour utilities", () => {
@@ -167,9 +251,29 @@ describe("CSS style files", () => {
       expect(css).toContain(".side-bg-civ");
     });
 
-    it("contains dead and hit state colours", () => {
-      expect(css).toContain(".side-dead");
-      expect(css).toContain(".side-hit");
+    it("contains dead and hit state colours using custom properties", () => {
+      expect(css).toMatch(/\.side-dead\s*\{[^}]*var\(--color-dead\)/);
+      expect(css).toMatch(/\.side-hit\s*\{[^}]*var\(--color-hit\)/);
     });
+  });
+
+  describe("all partial files exist", () => {
+    const partials = [
+      "variables.css",
+      "base.css",
+      "global.css",
+      "entities.css",
+      "leaflet.css",
+      "responsive.css",
+    ];
+
+    for (const file of partials) {
+      it(`${file} exists and is non-empty`, () => {
+        const path = resolve(stylesDir, file);
+        expect(existsSync(path)).toBe(true);
+        const content = readFileSync(path, "utf-8");
+        expect(content.length).toBeGreaterThan(0);
+      });
+    }
   });
 });

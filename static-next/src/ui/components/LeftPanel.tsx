@@ -4,6 +4,7 @@ import type { Side } from "../../data/types";
 import { useEngine } from "../hooks/useEngine";
 import { leftPanelVisible } from "../shortcuts";
 import { SideGroup } from "./SideGroup";
+import styles from "./LeftPanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
 
@@ -22,12 +23,12 @@ export function LeftPanel(): JSX.Element {
 
   return (
     <Show when={leftPanelVisible()}>
-      <div class="left-panel" data-testid="left-panel">
-        <div class="side-tabs" data-testid="left-panel-tabs">
+      <div class={styles.leftPanel} data-testid="left-panel">
+        <div class={styles.sideTabs} data-testid="left-panel-tabs">
           <For each={SIDES}>
             {(side) => (
               <div
-                class={`side-tab${activeTab() === side ? " active" : ""}`}
+                class={`${styles.sideTab}${activeTab() === side ? " active" : ""}`}
                 data-testid={`tab-${side}`}
                 onClick={() => setActiveTab(side)}
                 style={{ background: activeTab() === side ? "rgba(205, 134, 20, 0.6)" : "transparent" }}
@@ -37,7 +38,7 @@ export function LeftPanel(): JSX.Element {
             )}
           </For>
         </div>
-        <div class="panel-content" data-testid="left-panel-content">
+        <div class={styles.panelContent} data-testid="left-panel-content">
           <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import type { JSX, Accessor } from "solid-js";
 import { Show } from "solid-js";
+import styles from "./TopPanel.module.css";
 
 export interface TopPanelProps {
   missionName: Accessor<string>;
@@ -28,8 +29,8 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
   };
 
   return (
-    <div data-testid="top-panel" class="top-panel">
-      <span data-testid="mission-name" class="mission-name">
+    <div data-testid="top-panel" class={styles.topPanel}>
+      <span data-testid="mission-name" class={styles.missionName}>
         {props.missionName()}
       </span>
       <Show when={props.operationId()}>

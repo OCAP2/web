@@ -2,6 +2,7 @@ import { Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
 import { getCounterStateAtFrame } from "../../playback/events/counter-event";
+import styles from "./CounterDisplay.module.css";
 
 /**
  * Counter display component showing side-colored ticket counts.
@@ -21,7 +22,7 @@ export function CounterDisplay(): JSX.Element {
   return (
     <Show when={engine.counterState()}>
       {(state) => (
-        <div data-testid="counter-display" class="counter-display">
+        <div data-testid="counter-display" class={styles.counterDisplay}>
           <span data-testid="counter-label" class="counter-label">
             {state().type}
           </span>

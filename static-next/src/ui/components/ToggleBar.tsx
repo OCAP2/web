@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
 import { useRenderer } from "../hooks/useRenderer";
+import styles from "./BottomPanel.module.css";
 
 /**
  * Right side of the controls row.
@@ -51,9 +52,9 @@ export function ToggleBar(): JSX.Element {
   };
 
   return (
-    <div data-testid="toggle-bar" class="toggle-bar">
+    <div data-testid="toggle-bar" class={styles.toggleBar}>
       {/* Time display mode */}
-      <span class="a3-select toggle-time-select">
+      <span class={`${styles.a3Select} ${styles.toggleTimeSelect}`}>
         <select data-testid="toggle-time">
           <option value="elapsed">Elapsed</option>
           <option value="mission" disabled>Mission</option>
@@ -64,7 +65,7 @@ export function ToggleBar(): JSX.Element {
       {/* Grid */}
       <span
         data-testid="toggle-grid"
-        class={`toggle-btn toggle-grid-icon ${grid() ? "active" : "inactive"}`}
+        class={`${styles.toggleBtn} ${styles.toggleGridIcon} ${grid() ? "active" : "inactive"}`}
         onClick={toggleGrid}
         title="Toggle grid"
       />
@@ -72,13 +73,13 @@ export function ToggleBar(): JSX.Element {
       {/* Map markers */}
       <span
         data-testid="toggle-map-markers"
-        class={`toggle-btn toggle-map-icon ${mapMarkers() ? "active" : "inactive"}`}
+        class={`${styles.toggleBtn} ${styles.toggleMapIcon} ${mapMarkers() ? "active" : "inactive"}`}
         onClick={toggleMapMarkers}
         title="Toggle map markers"
       />
 
       {/* Unit names display mode */}
-      <span class="a3-select toggle-names-select">
+      <span class={`${styles.a3Select} ${styles.toggleNamesSelect}`}>
         <select data-testid="toggle-names">
           <option value="players">Players</option>
           <option value="all">All</option>
@@ -89,25 +90,25 @@ export function ToggleBar(): JSX.Element {
       {/* Fire lines */}
       <span
         data-testid="toggle-fire-lines"
-        class={`toggle-btn toggle-firelines-icon ${fireLines() ? "active" : "inactive"}`}
+        class={`${styles.toggleBtn} ${styles.toggleFirelinesIcon} ${fireLines() ? "active" : "inactive"}`}
         onClick={toggleFireLines}
         title="Toggle fire lines"
       />
 
       {/* Speed */}
-      <div class="speed-slider-container">
-        <div class="speed-slider-popup">
+      <div class={styles.speedSliderContainer} data-testid="speed-slider-container">
+        <div class={styles.speedSliderPopup} data-testid="speed-slider-popup">
           <input
             type="range"
             data-testid="speed-slider"
-            class="speed-slider"
+            class={styles.speedSlider}
             min={1}
             max={60}
             value={engine.playbackSpeed()}
             onInput={handleSpeedInput}
           />
         </div>
-        <span data-testid="speed-label" class="speed-value">
+        <span data-testid="speed-label" class={styles.speedValue}>
           {engine.playbackSpeed()}x
         </span>
       </div>
@@ -115,7 +116,7 @@ export function ToggleBar(): JSX.Element {
       {/* Fullscreen */}
       <span
         data-testid="fullscreen-button"
-        class="toggle-btn fullscreen-icon"
+        class={`${styles.toggleBtn} ${styles.fullscreenIcon}`}
         onClick={goFullscreen}
         title="Toggle fullscreen"
       />

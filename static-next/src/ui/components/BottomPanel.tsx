@@ -2,6 +2,7 @@ import type { JSX } from "solid-js";
 import { Timeline } from "./Timeline";
 import { PlaybackControls } from "./PlaybackControls";
 import { ToggleBar } from "./ToggleBar";
+import styles from "./BottomPanel.module.css";
 
 /**
  * Bottom panel containing all playback controls.
@@ -12,9 +13,9 @@ import { ToggleBar } from "./ToggleBar";
  */
 export function BottomPanel(): JSX.Element {
   return (
-    <div data-testid="bottom-panel" class="bottom-panel">
+    <div data-testid="bottom-panel" class={styles.bottomPanel}>
       <Timeline />
-      <div class="bottom-panel-controls">
+      <div class={styles.bottomPanelControls}>
         <PlaybackControls />
         <ToggleBar />
       </div>

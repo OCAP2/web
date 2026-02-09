@@ -1,0 +1,60 @@
+/* ==========================================================================
+   Leaflet Overrides
+   ========================================================================== */
+
+.leaflet-left {
+  left: 360px;
+  top: 50px;
+}
+
+.leaflet-bottom {
+  bottom: 65px;
+}
+
+.leaflet-popup {
+  pointer-events: none;
+}
+
+.leaflet-popup-content-wrapper {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+
+.leaflet-popup-tip {
+  display: none;
+}
+
+.leaflet-popup-content {
+  color: white;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+    1px 1px 0 #000;
+  padding: 0;
+  margin: 0;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.leaflet-div-icon {
+  background: none;
+  border: none;
+}
+
+.leaflet-popup-vehicle .leaflet-popup-content-wrapper {
+  text-align: left;
+}
+
+.leaflet-popup-unit .leaflet-popup-content-wrapper {
+  text-align: center;
+}
+
+/* Scale ruler dark theme */
+.leaflet-control-scale-line {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 5px;
+}

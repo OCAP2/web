@@ -2,6 +2,7 @@ import { Show, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { rightPanelVisible } from "../shortcuts";
 import { EventList } from "./EventList";
+import styles from "./RightPanel.module.css";
 
 /**
  * Collapsible right panel containing the event log.
@@ -17,33 +18,33 @@ export function RightPanel(): JSX.Element {
 
   return (
     <Show when={rightPanelVisible()}>
-      <div class="right-panel" data-testid="right-panel">
-        <div class="panel-title" data-testid="right-panel-header">
+      <div class={styles.rightPanel} data-testid="right-panel">
+        <div class={styles.panelTitle} data-testid="right-panel-header">
           Events
         </div>
-        <div class="filter-box" data-testid="right-panel-filters">
+        <div class={styles.filterBox} data-testid="right-panel-filters">
           <div
-            class={`filter-hit ${showHitEvents() ? "" : "filter-disabled"}`}
+            class={`${styles.filterHit} ${showHitEvents() ? "" : styles.filterDisabled}`}
             data-testid="filter-hit-button"
             title="Toggle kill/hit events"
             onClick={() => setShowHitEvents(!showHitEvents())}
           />
           <div
-            class={`filter-connect ${showConnectEvents() ? "" : "filter-disabled"}`}
+            class={`${styles.filterConnect} ${showConnectEvents() ? "" : styles.filterDisabled}`}
             data-testid="filter-connect-button"
             title="Toggle connect/disconnect events"
             onClick={() => setShowConnectEvents(!showConnectEvents())}
           />
           <input
             type="text"
-            class="filter-input"
+            class={styles.filterInput}
             data-testid="filter-events-input"
             placeholder="Filter..."
             value={filterText()}
             onInput={(e) => setFilterText(e.currentTarget.value)}
           />
         </div>
-        <div class="panel-content" data-testid="right-panel-content">
+        <div class={styles.panelContent} data-testid="right-panel-content">
           <EventList
             showHitEvents={showHitEvents()}
             showConnectEvents={showConnectEvents()}

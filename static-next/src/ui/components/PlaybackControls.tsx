@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
 import { formatElapsedTime } from "../../playback/time";
+import styles from "./BottomPanel.module.css";
 
 /**
  * Play/pause button and timecode display.
@@ -11,18 +12,19 @@ export function PlaybackControls(): JSX.Element {
   const engine = useEngine();
 
   return (
-    <div data-testid="playback-controls" class="playback-controls">
+    <div data-testid="playback-controls" class={styles.playbackControls}>
       <div
         data-testid="play-pause-button"
-        class={`play-pause-btn ${engine.isPlaying() ? "playing" : ""}`}
+        class={`${styles.playPauseBtn} ${engine.isPlaying() ? styles.playing : ""}`}
+        data-playing={engine.isPlaying()}
         onClick={() => engine.togglePlayPause()}
       />
-      <div data-testid="timecode-container" class="timecode-container">
-        <span data-testid="timeline-current-time" class="timecode">
+      <div data-testid="timecode-container" class={styles.timecodeContainer}>
+        <span data-testid="timeline-current-time" class={styles.timecode}>
           {formatElapsedTime(engine.currentFrame(), engine.captureDelayMs())}
         </span>
-        <span class="timecode-separator">/</span>
-        <span data-testid="timeline-end-time" class="timecode">
+        <span class={styles.timecodeSeparator}>/</span>
+        <span data-testid="timeline-end-time" class={styles.timecode}>
           {formatElapsedTime(engine.endFrame(), engine.captureDelayMs())}
         </span>
       </div>
