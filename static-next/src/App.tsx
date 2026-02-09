@@ -15,6 +15,7 @@ import { LeftPanel } from "./ui/components/LeftPanel";
 import { RightPanel } from "./ui/components/RightPanel";
 import { BottomPanel } from "./ui/components/BottomPanel";
 import { MissionModal } from "./ui/components/MissionModal";
+import { AboutModal } from "./ui/components/AboutModal";
 import { CounterDisplay } from "./ui/components/CounterDisplay";
 import { Hint, showHint } from "./ui/components/Hint";
 import { hintMessage, hintVisible } from "./ui/components/Hint";
@@ -80,6 +81,7 @@ export function App(): JSX.Element {
   const [missionName, setMissionName] = createSignal("");
   const [operationId, setOperationId] = createSignal<string | null>(null);
   const [modalOpen, setModalOpen] = createSignal(true);
+  const [aboutOpen, setAboutOpen] = createSignal(false);
 
   /**
    * Load an operation: fetch world config, then fetch + decode mission data,
@@ -185,7 +187,7 @@ export function App(): JSX.Element {
     <EngineProvider engine={engine}>
       <RendererProvider renderer={renderer}>
         <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-        <TopPanel missionName={missionName} operationId={operationId} />
+        <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => setAboutOpen(true)} />
         <LeftPanel />
         <RightPanel />
         <BottomPanel />
@@ -198,6 +200,7 @@ export function App(): JSX.Element {
             void loadOperation(op);
           }}
         />
+        <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
         <Hint message={hintMessage} visible={hintVisible} />
       </RendererProvider>
     </EngineProvider>

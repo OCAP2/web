@@ -5,6 +5,7 @@ import { PlaybackEngine } from "../../../playback/engine";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
 import { TopPanel } from "../TopPanel";
+import { AboutModal } from "../AboutModal";
 import { MissionModal } from "../MissionModal";
 import { CounterDisplay } from "../CounterDisplay";
 import { Hint, showHint, hintVisible } from "../Hint";
@@ -35,6 +36,27 @@ describe("TopPanel", () => {
       <TopPanel missionName={name} operationId={opId} />
     ));
     expect(getByTestId("mission-name").textContent).toBe("Operation Thunder");
+  });
+
+  it("renders info button always", () => {
+    const [name] = createSignal("Test");
+    const [opId] = createSignal<string | null>(null);
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} />
+    ));
+    expect(getByTestId("info-button")).toBeDefined();
+    expect(getByTestId("info-button").textContent).toBe("i");
+  });
+
+  it("calls onInfoClick when info button clicked", () => {
+    const [name] = createSignal("Test");
+    const [opId] = createSignal<string | null>(null);
+    const onInfo = vi.fn();
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} onInfoClick={onInfo} />
+    ));
+    fireEvent.click(getByTestId("info-button"));
+    expect(onInfo).toHaveBeenCalledTimes(1);
   });
 
   it("share button copies URL with ?op= param to clipboard", async () => {
@@ -75,6 +97,78 @@ describe("TopPanel", () => {
     const link = getByTestId("download-button") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toBe("/file/my-file");
     expect(link.hasAttribute("download")).toBe(true);
+  });
+});
+
+// ─── AboutModal ───
+
+describe("AboutModal", () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ BuildVersion: "v1.2.3", BuildCommit: "abc123", BuildDate: "2026-01-01" }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("renders when open", () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <AboutModal open={open} onClose={() => {}} />
+    ));
+    expect(getByTestId("about-modal")).toBeDefined();
+  });
+
+  it("does not render when closed", () => {
+    const [open] = createSignal(false);
+    const { queryByTestId } = render(() => (
+      <AboutModal open={open} onClose={() => {}} />
+    ));
+    expect(queryByTestId("about-modal")).toBeNull();
+  });
+
+  it("calls onClose when close button clicked", () => {
+    const [open] = createSignal(true);
+    const onClose = vi.fn();
+    const { getByTestId } = render(() => (
+      <AboutModal open={open} onClose={onClose} />
+    ));
+    fireEvent.click(getByTestId("about-close-button"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows OCAP title and GitHub link", () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <AboutModal open={open} onClose={() => {}} />
+    ));
+    const modal = getByTestId("about-modal");
+    expect(modal.textContent).toContain("Operation Capture And Playback");
+    expect(modal.textContent).toContain("GitHub Link");
+  });
+
+  it("shows keyboard shortcuts", () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <AboutModal open={open} onClose={() => {}} />
+    ));
+    const modal = getByTestId("about-modal");
+    expect(modal.textContent).toContain("Space: Play / Pause");
+    expect(modal.textContent).toContain("E: Show / Hide left panel");
+    expect(modal.textContent).toContain("R: Show / Hide right panel");
+  });
+
+  it("shows server version after fetch", async () => {
+    const [open] = createSignal(true);
+    const { findByText } = render(() => (
+      <AboutModal open={open} onClose={() => {}} />
+    ));
+    const versionEl = await findByText(/v1\.2\.3/);
+    expect(versionEl).toBeDefined();
   });
 });
 

@@ -5,13 +5,15 @@ import styles from "./TopPanel.module.css";
 export interface TopPanelProps {
   missionName: Accessor<string>;
   operationId: Accessor<string | null>;
+  onInfoClick?: () => void;
 }
 
 /**
- * Top panel displaying the mission name and action buttons (Share, Download).
+ * Top panel displaying the mission name and action buttons (Download, Info, Share).
  *
- * - Share copies the current URL with `?op=<id>` to the clipboard.
  * - Download triggers a file download via the server's file endpoint.
+ * - Info opens the about modal with version and shortcut info.
+ * - Share copies the current URL with `?op=<id>` to the clipboard.
  */
 export function TopPanel(props: TopPanelProps): JSX.Element {
   const handleShare = () => {
@@ -42,6 +44,16 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
           href={downloadHref()}
           download=""
         />
+      </Show>
+      <div
+        data-testid="info-button"
+        class={`${styles.button} ${styles.infoButton}`}
+        title="Information"
+        onClick={() => props.onInfoClick?.()}
+      >
+        i
+      </div>
+      <Show when={props.operationId()}>
         <div
           data-testid="share-button"
           class={`${styles.button} ${styles.shareButton}`}
