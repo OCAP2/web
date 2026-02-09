@@ -24,3 +24,7 @@ docs/plans/
 cover.out
 coverage.out
 coverage.html
+
+# Frontend (static-next)
+static-next/node_modules/
+static-next/dist/
