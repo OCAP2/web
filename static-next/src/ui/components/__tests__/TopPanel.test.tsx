@@ -1,0 +1,277 @@
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
+import { PlaybackEngine } from "../../../playback/engine";
+import { MockRenderer } from "../../../renderers/mock-renderer";
+import { EngineProvider } from "../../hooks/useEngine";
+import { TopPanel } from "../TopPanel";
+import { MissionModal } from "../MissionModal";
+import { CounterDisplay } from "../CounterDisplay";
+import { Hint, showHint, hintVisible } from "../Hint";
+import type { Operation } from "../../../data/types";
+import type { CounterState } from "../../../playback/events/counter-event";
+
+// ─── Helpers ───
+
+function createEngine(): PlaybackEngine {
+  return new PlaybackEngine(new MockRenderer());
+}
+
+function withEngine(engine: PlaybackEngine, ui: () => any) {
+  return () => <EngineProvider engine={engine}>{ui()}</EngineProvider>;
+}
+
+// ─── TopPanel ───
+
+describe("TopPanel", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders mission name", () => {
+    const [name] = createSignal("Operation Thunder");
+    const [opId] = createSignal<string | null>("123");
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} />
+    ));
+    expect(getByTestId("mission-name").textContent).toBe("Operation Thunder");
+  });
+
+  it("share button copies URL with ?op= param to clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    const [name] = createSignal("Test Mission");
+    const [opId] = createSignal<string | null>("op-42");
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} />
+    ));
+
+    fireEvent.click(getByTestId("share-button"));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const calledUrl = writeText.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("?op=op-42");
+  });
+
+  it("hides share and download buttons when no operationId", () => {
+    const [name] = createSignal("No Op");
+    const [opId] = createSignal<string | null>(null);
+    const { queryByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} />
+    ));
+    expect(queryByTestId("share-button")).toBeNull();
+    expect(queryByTestId("download-button")).toBeNull();
+  });
+
+  it("download button has correct href", () => {
+    const [name] = createSignal("DL Mission");
+    const [opId] = createSignal<string | null>("my-file");
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} />
+    ));
+    const link = getByTestId("download-button") as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("/aar/file/my-file");
+    expect(link.hasAttribute("download")).toBe(true);
+  });
+});
+
+// ─── MissionModal ───
+
+describe("MissionModal", () => {
+  const mockOperations: Operation[] = [
+    {
+      id: "1",
+      worldName: "Altis",
+      missionName: "Op Alpha",
+      missionDuration: 3600,
+      date: "2024-01-01",
+    },
+    {
+      id: "2",
+      worldName: "Stratis",
+      missionName: "Op Bravo",
+      missionDuration: 1800,
+      date: "2024-02-01",
+    },
+  ];
+
+  beforeEach(() => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          mockOperations.map((op) => ({
+            id: Number(op.id),
+            world_name: op.worldName,
+            mission_name: op.missionName,
+            mission_duration: op.missionDuration,
+            filename: `${op.id}.json`,
+            date: op.date,
+            tag: op.tag,
+          })),
+        ),
+    } as Response);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("renders operations list when open", async () => {
+    const [open] = createSignal(true);
+    const onClose = vi.fn();
+    const onSelect = vi.fn();
+
+    const { findByTestId } = render(() => (
+      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+    ));
+
+    // Wait for fetch to complete
+    const list = await findByTestId("operations-list");
+    expect(list).toBeDefined();
+
+    // Verify operations appear
+    const op1 = await findByTestId("operation-1");
+    const op2 = await findByTestId("operation-2");
+    expect(op1.textContent).toContain("Op Alpha");
+    expect(op1.textContent).toContain("Altis");
+    expect(op2.textContent).toContain("Op Bravo");
+    expect(op2.textContent).toContain("Stratis");
+  });
+
+  it("does not render when closed", () => {
+    const [open] = createSignal(false);
+    const onClose = vi.fn();
+    const onSelect = vi.fn();
+
+    const { queryByTestId } = render(() => (
+      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+    ));
+
+    expect(queryByTestId("mission-modal")).toBeNull();
+  });
+
+  it("calls onSelectOperation when clicking an operation", async () => {
+    const [open] = createSignal(true);
+    const onClose = vi.fn();
+    const onSelect = vi.fn();
+
+    const { findByTestId } = render(() => (
+      <MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} />
+    ));
+
+    const op1 = await findByTestId("operation-1");
+    fireEvent.click(op1);
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "1",
+        missionName: "Op Alpha",
+        worldName: "Altis",
+      }),
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("has filter input and submit button", async () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} />
+    ));
+
+    expect(getByTestId("filter-name-input")).toBeDefined();
+    expect(getByTestId("filter-submit-button")).toBeDefined();
+  });
+});
+
+// ─── CounterDisplay ───
+
+describe("CounterDisplay", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("is hidden when counterState is null", () => {
+    const engine = createEngine();
+    // counterState defaults to null
+    const { queryByTestId } = render(withEngine(engine, () => <CounterDisplay />));
+    expect(queryByTestId("counter-display")).toBeNull();
+  });
+
+  it("shows counter values when counterState is present", () => {
+    const engine = createEngine();
+
+    // Build a minimal manifest with counter events to trigger counterState
+    const manifest = {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Test",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      entities: [],
+      events: [
+        { frameNum: 0, type: "counterInit" as const, data: [100, 80] },
+      ],
+      markers: [],
+      times: [],
+    };
+
+    // Use loadOperation to set up counter state (requires a mock chunk manager)
+    const mockChunkManager = { getChunkForFrame: () => null } as any;
+    engine.loadOperation(manifest, mockChunkManager);
+
+    const { getByTestId } = render(withEngine(engine, () => <CounterDisplay />));
+    expect(getByTestId("counter-display")).toBeDefined();
+    expect(getByTestId("counter-label").textContent).toBe("counterInit");
+    expect(getByTestId("counter-side-0").textContent).toContain("100");
+    expect(getByTestId("counter-side-1").textContent).toContain("80");
+  });
+});
+
+// ─── Hint ───
+
+describe("Hint", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("shows message when visible", () => {
+    const [msg] = createSignal("Copied to clipboard!");
+    const [vis] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <Hint message={msg} visible={vis} />
+    ));
+    expect(getByTestId("hint").textContent).toBe("Copied to clipboard!");
+  });
+
+  it("is hidden when not visible", () => {
+    const [msg] = createSignal("Hidden msg");
+    const [vis] = createSignal(false);
+    const { queryByTestId } = render(() => (
+      <Hint message={msg} visible={vis} />
+    ));
+    expect(queryByTestId("hint")).toBeNull();
+  });
+
+  it("showHint auto-dismisses after timeout", async () => {
+    vi.useFakeTimers();
+
+    render(() => <Hint />);
+
+    showHint("Auto dismiss test");
+    expect(hintVisible()).toBe(true);
+
+    vi.advanceTimersByTime(2000);
+    expect(hintVisible()).toBe(false);
+
+    vi.useRealTimers();
+  });
+});
