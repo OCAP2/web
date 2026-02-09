@@ -1,0 +1,400 @@
+import { describe, expect, it } from "vitest";
+import { JsonDecoder } from "../json-decoder";
+
+/** Convert a JSON object to an ArrayBuffer. */
+function toBuffer(obj: unknown): ArrayBuffer {
+  const text = JSON.stringify(obj);
+  return new TextEncoder().encode(text).buffer;
+}
+
+describe("JsonDecoder.decodeManifest", () => {
+  const decoder = new JsonDecoder();
+
+  it("decodes a minimal operation", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Test Op",
+      endFrame: 500,
+      captureDelay: 1,
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+
+    expect(manifest.version).toBe(0);
+    expect(manifest.worldName).toBe("Altis");
+    expect(manifest.missionName).toBe("Test Op");
+    expect(manifest.frameCount).toBe(500);
+    expect(manifest.captureDelayMs).toBe(1000);
+    expect(manifest.chunkSize).toBe(500);
+    expect(manifest.chunkCount).toBe(1);
+    expect(manifest.entities).toEqual([]);
+    expect(manifest.events).toEqual([]);
+    expect(manifest.markers).toEqual([]);
+    expect(manifest.times).toEqual([]);
+  });
+
+  it("decodes unit entities", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "Player1",
+          side: "WEST",
+          group: "Alpha 1",
+          isPlayer: 1,
+          startFrameNum: 0,
+          role: "Rifleman",
+          positions: [
+            [[100, 200], 90, 1, 0, "Player1", 1],
+            [[105, 205], 95, 1, 0, "Player1", 1],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.entities).toHaveLength(1);
+
+    const entity = manifest.entities[0];
+    expect(entity.id).toBe(1);
+    expect(entity.type).toBe("man");
+    expect(entity.name).toBe("Player1");
+    expect(entity.side).toBe("WEST");
+    expect(entity.groupName).toBe("Alpha 1");
+    expect(entity.isPlayer).toBe(true);
+    expect(entity.startFrame).toBe(0);
+    expect(entity.endFrame).toBe(1); // startFrame + positions.length - 1
+    expect(entity.role).toBe("Rifleman");
+  });
+
+  it("decodes vehicle entities as unknown type", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 50,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 10,
+          type: "vehicle",
+          name: "Humvee",
+          side: "WEST",
+          group: "Alpha",
+          isPlayer: 0,
+          startFrameNum: 5,
+          class: "B_MRAP_01_F",
+          positions: [
+            [[300, 400], 180, 1, []],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const entity = manifest.entities[0];
+    expect(entity.type).toBe("unknown");
+    expect(entity.isPlayer).toBe(false);
+    expect(entity.startFrame).toBe(5);
+    expect(entity.endFrame).toBe(5);
+  });
+
+  it("decodes entity with framesFired", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "Shooter",
+          side: "EAST",
+          group: "Bravo",
+          isPlayer: 1,
+          startFrameNum: 0,
+          positions: [[[100, 200], 90, 1, 0, "Shooter", 1]],
+          framesFired: [
+            [50, [100.5, 200.5]],
+            [75, [110.0, 210.0, 5.0]],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const entity = manifest.entities[0];
+    expect(entity.framesFired).toHaveLength(2);
+    expect(entity.framesFired![0][0]).toBe(50);
+    expect(entity.framesFired![0][1]).toEqual([100.5, 200.5]);
+    expect(entity.framesFired![1][0]).toBe(75);
+    expect(entity.framesFired![1][1]).toEqual([110.0, 210.0]);
+  });
+
+  it("decodes hit/killed events", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [100, "killed", 2, [1, "AK-47"], 150],
+        [50, "hit", 3, [1, "M4A1"], 75.5],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.frameNum).toBe(100);
+    expect(evt0.type).toBe("killed");
+    if (evt0.type === "killed") {
+      expect(evt0.victimId).toBe(2);
+      expect(evt0.causedById).toBe(1);
+      expect(evt0.weapon).toBe("AK-47");
+      expect(evt0.distance).toBe(150);
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("hit");
+    if (evt1.type === "hit") {
+      expect(evt1.victimId).toBe(3);
+      expect(evt1.distance).toBe(75.5);
+    }
+  });
+
+  it("decodes connected/disconnected events", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [10, "connected", "PlayerA"],
+        [200, "disconnected", "PlayerB"],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("connected");
+    if (evt0.type === "connected") {
+      expect(evt0.unitName).toBe("PlayerA");
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("disconnected");
+    if (evt1.type === "disconnected") {
+      expect(evt1.unitName).toBe("PlayerB");
+    }
+  });
+
+  it("decodes counter events", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [30, "counterInit", [10, 20, 30]],
+        [50, "respawnTickets", [5, 3]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("counterInit");
+    if (evt0.type === "counterInit") {
+      expect(evt0.data).toEqual([10, 20, 30]);
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("respawnTickets");
+    if (evt1.type === "respawnTickets") {
+      expect(evt1.data).toEqual([5, 3]);
+    }
+  });
+
+  it("decodes markers", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      Markers: [
+        [
+          "mil_dot",
+          "HQ",
+          10,
+          500,
+          -1,
+          "#FF0000",
+          1, // side index (1+1=2 → "GUER" in MARKER_SIDE_MAP)
+          [[10, 500, 600]],
+          [100, 100],
+          "ICON",
+          "Solid",
+        ],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.markers).toHaveLength(1);
+
+    const marker = manifest.markers[0];
+    expect(marker.type).toBe("mil_dot");
+    expect(marker.text).toBe("HQ");
+    expect(marker.shape).toBe("ICON");
+    expect(marker.color).toBe("#FF0000");
+    expect(marker.player).toBe(-1);
+    expect(marker.size).toEqual([100, 100]);
+    expect(marker.brush).toBe("Solid");
+    expect(marker.positions).toHaveLength(1);
+  });
+
+  it("decodes markers with minimal fields", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      Markers: [
+        [
+          "mil_dot",
+          "",
+          0,
+          100,
+          -1,
+          "ColorBlue",
+          0, // side index (0+1=1 → "EAST")
+          [[0, 100, 200]],
+        ],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.markers).toHaveLength(1);
+
+    const marker = manifest.markers[0];
+    expect(marker.shape).toBe("ICON"); // default
+    expect(marker.side).toBe("EAST");
+    expect(marker.size).toBeUndefined();
+  });
+
+  it("decodes time samples", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      times: [
+        { frameNum: 0, systemTimeUtc: "2025-01-15T12:00:00Z" },
+        { frameNum: 100, systemTimeUtc: "2025-01-15T12:05:00Z" },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.times).toHaveLength(2);
+    expect(manifest.times[0]).toEqual({
+      frameNum: 0,
+      systemTimeUtc: "2025-01-15T12:00:00Z",
+    });
+  });
+
+  it("maps sides correctly", () => {
+    const sides = ["WEST", "EAST", "GUER", "CIV"];
+    for (const side of sides) {
+      const data = {
+        worldName: "W",
+        missionName: "M",
+        endFrame: 1,
+        captureDelay: 1,
+        entities: [
+          {
+            id: 1,
+            type: "unit",
+            name: "T",
+            side,
+            group: "G",
+            isPlayer: 0,
+            startFrameNum: 0,
+            positions: [[[0, 0], 0, 1, 0, "T", 0]],
+          },
+        ],
+      };
+
+      const manifest = decoder.decodeManifest(toBuffer(data));
+      expect(manifest.entities[0].side).toBe(side);
+    }
+  });
+
+  it("handles missing optional fields gracefully", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      // No entities, events, Markers, or times
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.entities).toEqual([]);
+    expect(manifest.events).toEqual([]);
+    expect(manifest.markers).toEqual([]);
+    expect(manifest.times).toEqual([]);
+  });
+
+  it("sets captureDelayMs to captureDelay * 1000", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 0.5,
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.captureDelayMs).toBe(500);
+  });
+
+  it("includes missionAuthor when present", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      missionAuthor: "TestAuthor",
+      endFrame: 100,
+      captureDelay: 1,
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.missionAuthor).toBe("TestAuthor");
+  });
+});
+
+describe("JsonDecoder.decodeChunk", () => {
+  const decoder = new JsonDecoder();
+
+  it("throws an error since JSON does not support chunked loading", () => {
+    const buffer = new ArrayBuffer(0);
+    expect(() => decoder.decodeChunk(buffer)).toThrow(
+      "JSON decoder does not support chunked loading",
+    );
+  });
+});
+
+describe("JsonDecoder - DecoderStrategy interface", () => {
+  it("has both required methods", () => {
+    const decoder = new JsonDecoder();
+    expect(typeof decoder.decodeManifest).toBe("function");
+    expect(typeof decoder.decodeChunk).toBe("function");
+  });
+});
