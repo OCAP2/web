@@ -553,7 +553,7 @@
 }
 
 .modal-body th {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--bg-modal);
   padding: 3px;
   font-weight: 500;
 }
@@ -580,7 +580,7 @@
 .modal-button {
   display: inline-block;
   min-width: 100px;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--bg-modal);
   margin-right: 10px;
   padding: 5px;
   text-transform: uppercase;

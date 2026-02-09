@@ -16,7 +16,7 @@
   --text-dim: #666;
   --highlight: rgba(205, 134, 20, 0.9);
   --highlight-tab: rgba(205, 134, 20, 0.6);
-  --bg-modal: #000000ed;
+  --bg-modal: rgba(0, 0, 0, 0.7);
   --bg-modal-header: rgba(155, 0, 0, 0.9);
   --text-details: #9a9a9a;
   --range-thumb-bg: #f2f2f2;

@@ -51,7 +51,7 @@
 
 /* Scale ruler dark theme */
 .leaflet-control-scale-line {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--bg-modal);
   border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
   font-size: 11px;

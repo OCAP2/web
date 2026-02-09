@@ -52,7 +52,7 @@
 }
 
 .modalBody th {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--bg-modal);
   padding: 3px;
   font-weight: 500;
 }
@@ -79,7 +79,7 @@
 .modalButton {
   display: inline-block;
   min-width: 100px;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--bg-modal);
   color: var(--text-primary);
   border: none;
   margin-right: 10px;
