@@ -177,24 +177,35 @@ describe("UnitListItem", () => {
     cleanup();
   });
 
-  it("renders player unit name without AI tag", () => {
+  it("renders player unit name with kill count", () => {
     const unit = createUnit(1, "John", "WEST", true);
     const { getByTestId } = render(() => (
       <EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
       </EngineProvider>
     ));
-    expect(getByTestId("unit-item-1").textContent).toBe("John");
+    expect(getByTestId("unit-item-1").textContent).toBe("John (0)");
   });
 
-  it("renders AI unit name with [AI] suffix", () => {
+  it("renders AI unit name with [AI] suffix and kill count", () => {
     const unit = createUnit(1, "AI_Soldier", "WEST", false);
     const { getByTestId } = render(() => (
       <EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
       </EngineProvider>
     ));
-    expect(getByTestId("unit-item-1").textContent).toBe("AI_Soldier [AI]");
+    expect(getByTestId("unit-item-1").textContent).toBe("AI_Soldier [AI] (0)");
+  });
+
+  it("shows updated kill count", () => {
+    const unit = createUnit(1, "John", "WEST", true);
+    unit.killCount = 3;
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <UnitListItem unit={unit} />
+      </EngineProvider>
+    ));
+    expect(getByTestId("unit-item-1").textContent).toBe("John (3)");
   });
 
   it("player units have player class", () => {

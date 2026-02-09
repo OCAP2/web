@@ -15,6 +15,10 @@ export class HitKilledEvent extends GameEvent {
   causerName?: string;
   victimSide?: string;
   causerSide?: string;
+  /** Causer's kill score at the time of this event: killCount - (teamKillCount * 2). */
+  causerKillScore?: number;
+  /** True if victim is a vehicle (no kill score shown for vehicle kills). */
+  victimIsVehicle?: boolean;
 
   constructor(
     frameNum: number,

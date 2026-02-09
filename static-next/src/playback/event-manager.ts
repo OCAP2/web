@@ -1,5 +1,6 @@
 import type { EntityManager } from "./entity-manager";
 import { Unit } from "./entities/unit";
+import { Vehicle } from "./entities/vehicle";
 import { GameEvent } from "./events/game-event";
 import { HitKilledEvent } from "./events/hit-killed-event";
 
@@ -41,15 +42,20 @@ export class EventManager {
 
   /**
    * Resolve entity references on HitKilledEvent instances.
-   * Populates victimName, causerName, victimSide, and causerSide
-   * from the EntityManager.
+   * Populates names, sides, and computes kill counts.
+   *
+   * Kill score formula (matching old frontend):
+   *   killCount - (teamKillCount * 2)
+   * Only "killed" events with a Unit victim (not Vehicle) increment counts.
    */
   resolveReferences(entityManager: EntityManager): void {
+    // First pass: resolve names/sides
     for (const event of this.events) {
       if (event instanceof HitKilledEvent) {
         const victim = entityManager.getEntity(event.victimId);
         if (victim) {
           event.victimName = victim.name;
+          event.victimIsVehicle = victim instanceof Vehicle;
           if (victim instanceof Unit) {
             event.victimSide = victim.side;
           }
@@ -62,6 +68,26 @@ export class EventManager {
             event.causerSide = causer.side;
           }
         }
+      }
+    }
+
+    // Second pass: compute kill counts (events are already sorted by frame)
+    for (const event of this.events) {
+      if (!(event instanceof HitKilledEvent)) continue;
+      if (event.type !== "killed") continue;
+
+      const victim = entityManager.getEntity(event.victimId);
+      const causer = entityManager.getEntity(event.causedById);
+
+      // Only count kills on Unit victims (not vehicles)
+      if (victim instanceof Unit && causer instanceof Unit) {
+        if (victim.side === causer.side) {
+          causer.teamKillCount++;
+        } else {
+          causer.killCount++;
+        }
+        // Attach current score to the event
+        event.causerKillScore = causer.killCount - causer.teamKillCount * 2;
       }
     }
   }

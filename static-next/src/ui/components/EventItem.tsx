@@ -69,6 +69,9 @@ export function EventItem(props: EventItemProps): JSX.Element {
         <span class={`${causerClass} medium`} data-testid="event-causer">
           {event.causerName ?? `Unit #${event.causedById}`}
         </span>
+        {event.causerKillScore != null && !event.victimIsVehicle && (
+          <span data-testid="event-kill-score"> ({event.causerKillScore} kills)</span>
+        )}
         <div class={styles.eventDetails} data-testid="event-details">
           {`${time} - ${Math.round(event.distance)}m - ${event.weapon}`}
         </div>

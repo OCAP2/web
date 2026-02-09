@@ -404,6 +404,92 @@ describe("EventItem", () => {
     });
   });
 
+  describe("kill score display", () => {
+    it("shows kill score after attacker name for non-vehicle kills", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Victim";
+      event.causerName = "Attacker";
+      event.causerKillScore = 3;
+      event.victimIsVehicle = false;
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-kill-score").textContent).toBe(" (3 kills)");
+    });
+
+    it("shows negative kill score for team killers", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Victim";
+      event.causerName = "TeamKiller";
+      event.causerKillScore = -2;
+      event.victimIsVehicle = false;
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-kill-score").textContent).toBe(" (-2 kills)");
+    });
+
+    it("does not show kill score for vehicle kills", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Humvee";
+      event.causerName = "Attacker";
+      event.causerKillScore = 5;
+      event.victimIsVehicle = true;
+
+      const { engine } = createMockEngine();
+      const { queryByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(queryByTestId("event-kill-score")).toBeNull();
+    });
+
+    it("does not show kill score when causerKillScore is not set", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Victim";
+      event.causerName = "Attacker";
+      // causerKillScore not set
+
+      const { engine } = createMockEngine();
+      const { queryByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(queryByTestId("event-kill-score")).toBeNull();
+    });
+
+    it("shows zero kill score", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Victim";
+      event.causerName = "Attacker";
+      event.causerKillScore = 0;
+      event.victimIsVehicle = false;
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-kill-score").textContent).toBe(" (0 kills)");
+    });
+  });
+
   describe("side class mapping", () => {
     it("maps GUER to ind class", () => {
       const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");

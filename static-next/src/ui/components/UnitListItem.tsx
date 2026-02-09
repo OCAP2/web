@@ -30,7 +30,7 @@ export function UnitListItem(props: UnitListItemProps): JSX.Element {
       data-testid={`unit-item-${props.unit.id}`}
       onClick={handleClick}
     >
-      {props.unit.name}{!props.unit.isPlayer && " [AI]"}
+      {props.unit.name}{!props.unit.isPlayer && " [AI]"} ({props.unit.killCount})
     </div>
   );
 }
