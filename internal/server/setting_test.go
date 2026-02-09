@@ -20,7 +20,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		configContent := `{
 			"listen": "0.0.0.0:8080",
 			"secret": "my-secure-secret-123",
-			"prefixURL": "/aar/",
+			"prefixURL": "/sub/",
 			"db": "custom.db",
 			"logger": true
 		}`
@@ -35,7 +35,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 
 		assert.Equal(t, "0.0.0.0:8080", setting.Listen)
 		assert.Equal(t, "my-secure-secret-123", setting.Secret)
-		assert.Equal(t, "/aar/", setting.PrefixURL)
+		assert.Equal(t, "/sub/", setting.PrefixURL)
 		assert.Equal(t, "custom.db", setting.DB)
 		assert.True(t, setting.Logger)
 	})

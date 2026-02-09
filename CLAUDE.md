@@ -45,7 +45,7 @@ Entry point: `cmd/ocap-webserver/main.go` initializes repositories and starts th
 
 Each schema package has a `generate.go` with `//go:generate` directives. Run `go generate ./pkg/schemas/...` after modifying `.proto` or `.fbs` files.
 
-**API Endpoints (all under configurable `prefixURL`, default `/aar/`):**
+**API Endpoints (all under configurable `prefixURL`, default `/`):**
 - `GET /api/v1/operations` - Query missions with filters
 - `POST /api/v1/operations/add` - Upload mission (requires `secret`)
 - `GET /api/v1/customize` - UI customization settings
@@ -83,7 +83,7 @@ Settings loaded via Viper with priority: environment variables → config files 
 ```json
 {
   "listen": "127.0.0.1:5000",
-  "prefixURL": "/aar/",
+  "prefixURL": "/",
   "secret": "same-secret",
   "logger": true
 }

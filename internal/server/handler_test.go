@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/OCAP2/web/internal/storage"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1256,7 +1256,7 @@ func TestNewHandler(t *testing.T) {
 
 	setting := Setting{
 		Listen:    "127.0.0.1:5000",
-		PrefixURL: "/aar/",
+		PrefixURL: "/sub/",
 		Secret:    "test-secret",
 		Data:      dataDir,
 		Markers:   markerDir,
@@ -1277,9 +1277,9 @@ func TestNewHandler(t *testing.T) {
 	for i, r := range routes {
 		routePaths[i] = r.Path
 	}
-	assert.Contains(t, routePaths, "/aar/api/v1/operations")
-	assert.Contains(t, routePaths, "/aar/api/v1/operations/add")
-	assert.Contains(t, routePaths, "/aar/api/version")
+	assert.Contains(t, routePaths, "/sub/api/v1/operations")
+	assert.Contains(t, routePaths, "/sub/api/v1/operations/add")
+	assert.Contains(t, routePaths, "/sub/api/version")
 }
 
 func TestNewHandlerWithOptions(t *testing.T) {
