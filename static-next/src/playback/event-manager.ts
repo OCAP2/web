@@ -79,13 +79,15 @@ export class EventManager {
       const victim = entityManager.getEntity(event.victimId);
       const causer = entityManager.getEntity(event.causedById);
 
-      // Only count kills on Unit victims (not vehicles), skip self-kills
+      // Only count kills on Unit victims (not vehicles), skip self-kills.
+      // killCount tracks ALL non-self kills (including team kills).
+      // teamKillCount additionally tracks same-side kills.
+      // Score = killCount - teamKillCount * 2 (matching old frontend).
       if (victim instanceof Unit && causer instanceof Unit) {
         if (event.victimId !== event.causedById) {
+          causer.killCount++;
           if (victim.side === causer.side) {
             causer.teamKillCount++;
-          } else {
-            causer.killCount++;
           }
         }
         // Attach current score to the event (even for self-kills)

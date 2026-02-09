@@ -30,7 +30,7 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
     setLoading(true);
     try {
       const ops = await api.getOperations(filters);
-      setOperations(ops);
+      setOperations(ops.reverse());
     } catch {
       setOperations([]);
     } finally {

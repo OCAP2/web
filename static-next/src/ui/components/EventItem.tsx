@@ -54,7 +54,9 @@ export function EventItem(props: EventItemProps): JSX.Element {
   if (event instanceof HitKilledEvent) {
     const victimClass = sideClass(event.victimSide);
     const causerClass = sideClass(event.causerSide);
-    const actionText = event.type === "killed" ? " killed by " : " hit by ";
+    const actionText = event.type === "killed"
+      ? (event.victimIsVehicle ? " destroyed by " : " killed by ")
+      : " hit by ";
 
     return (
       <li
