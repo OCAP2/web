@@ -8,6 +8,10 @@ import { EventItem } from "../EventItem";
 import { EventList } from "../EventList";
 import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../../playback/events/connect-event";
+import { EndMissionEvent } from "../../../playback/events/end-mission-event";
+import { GeneralMissionEvent } from "../../../playback/events/general-event";
+import { CapturedEvent } from "../../../playback/events/captured-event";
+import { TerminalHackEvent } from "../../../playback/events/terminal-hack-event";
 import { GameEvent } from "../../../playback/events/game-event";
 import { setRightPanelVisible } from "../../shortcuts";
 
@@ -179,10 +183,11 @@ describe("EventList", () => {
     expect(queryAllByTestId("event-item")).toHaveLength(1);
   });
 
-  it("filters out hit events when showHitEvents is false", () => {
+  it("filters out hit events when showHitEvents is false but keeps killed events", () => {
     const events: GameEvent[] = [
-      new HitKilledEvent(10, "killed", 0, 1, 2, 150, "M4A1"),
-      new ConnectEvent(5, "connected", 1, "Player1"),
+      new HitKilledEvent(10, "hit", 0, 1, 2, 150, "M4A1"),
+      new HitKilledEvent(15, "killed", 1, 3, 4, 200, "AK47"),
+      new ConnectEvent(5, "connected", 2, "Player1"),
     ];
     const { engine } = createMockEngine(events);
     const { getAllByTestId } = render(() => (
@@ -191,8 +196,12 @@ describe("EventList", () => {
       </EngineProvider>
     ));
     const items = getAllByTestId("event-item");
-    expect(items).toHaveLength(1);
-    expect(items[0].getAttribute("data-event-type")).toBe("connected");
+    // "hit" event filtered out, but "killed" and "connected" remain
+    expect(items).toHaveLength(2);
+    const types = items.map((i) => i.getAttribute("data-event-type"));
+    expect(types).toContain("killed");
+    expect(types).toContain("connected");
+    expect(types).not.toContain("hit");
   });
 
   it("filters out connect events when showConnectEvents is false", () => {
@@ -507,6 +516,100 @@ describe("EventItem", () => {
 
       expect(getByTestId("event-victim").classList.contains("ind")).toBe(true);
       expect(getByTestId("event-causer").classList.contains("civ")).toBe(true);
+    });
+  });
+
+  describe("EndMissionEvent rendering", () => {
+    it("renders end mission with side and message", () => {
+      const event = new EndMissionEvent(100, 0, "EAST", "OPFOR wins!");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").getAttribute("data-event-type")).toBe("endMission");
+      expect(getByTestId("event-side").textContent).toContain("EAST");
+      expect(getByTestId("event-side").classList.contains("opfor")).toBe(true);
+      expect(getByTestId("event-message").textContent).toBe("OPFOR wins!");
+    });
+  });
+
+  describe("GeneralMissionEvent rendering", () => {
+    it("renders general event with message", () => {
+      const event = new GeneralMissionEvent(50, 0, "Mission has started!");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").getAttribute("data-event-type")).toBe("generalEvent");
+      expect(getByTestId("event-message").textContent).toBe("Mission has started!");
+    });
+  });
+
+  describe("CapturedEvent rendering", () => {
+    it("renders flag capture event", () => {
+      const event = new CapturedEvent(30, "capturedFlag", 0, "John", "flag");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").getAttribute("data-event-type")).toBe("capturedFlag");
+      expect(getByTestId("event-unit-name").textContent).toBe("John");
+      expect(getByTestId("event-item").textContent).toContain("captured the flag");
+    });
+
+    it("renders object capture event", () => {
+      const event = new CapturedEvent(30, "captured", 0, "John", "radio");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").textContent).toContain("captured radio");
+    });
+  });
+
+  describe("TerminalHackEvent rendering", () => {
+    it("renders terminal hack started event", () => {
+      const event = new TerminalHackEvent(40, "terminalHackStarted", 0, "Hacker");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").getAttribute("data-event-type")).toBe("terminalHackStarted");
+      expect(getByTestId("event-unit-name").textContent).toBe("Hacker");
+      expect(getByTestId("event-item").textContent).toContain("is hacking terminal");
+    });
+
+    it("renders terminal hack canceled event", () => {
+      const event = new TerminalHackEvent(45, "terminalHackCanceled", 0, "Hacker");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      expect(getByTestId("event-item").textContent).toContain("interrupted hack");
     });
   });
 });

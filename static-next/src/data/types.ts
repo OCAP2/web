@@ -73,10 +73,36 @@ export interface CounterEventDef {
   data: number[];
 }
 
+export interface EndMissionEventDef {
+  type: "endMission";
+  side: string;
+  message: string;
+}
+
+export interface GeneralEventDef {
+  type: "generalEvent";
+  message: string;
+}
+
+export interface CapturedEventDef {
+  type: "captured" | "capturedFlag";
+  unitName: string;
+  objectType: string;
+}
+
+export interface TerminalHackEventDef {
+  type: "terminalHackStarted" | "terminalHackCanceled";
+  unitName: string;
+}
+
 export type EventDef = { frameNum: number } & (
   | HitKilledEventDef
   | ConnectEventDef
   | CounterEventDef
+  | EndMissionEventDef
+  | GeneralEventDef
+  | CapturedEventDef
+  | TerminalHackEventDef
 );
 
 // --------------- Markers ---------------

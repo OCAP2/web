@@ -3,6 +3,10 @@ import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
 import { HitKilledEvent } from "../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../playback/events/connect-event";
+import { EndMissionEvent } from "../../playback/events/end-mission-event";
+import { GeneralMissionEvent } from "../../playback/events/general-event";
+import { CapturedEvent } from "../../playback/events/captured-event";
+import { TerminalHackEvent } from "../../playback/events/terminal-hack-event";
 import { EventItem } from "./EventItem";
 import styles from "./RightPanel.module.css";
 
@@ -27,8 +31,8 @@ export function EventList(props: EventListProps): JSX.Element {
     const text = props.filterText.toLowerCase();
 
     return all.filter((event) => {
-      // Type filter
-      if (!props.showHitEvents && (event instanceof HitKilledEvent)) return false;
+      // Type filter: hit filter only hides "hit" events, not "killed"
+      if (!props.showHitEvents && event instanceof HitKilledEvent && event.type === "hit") return false;
       if (!props.showConnectEvents && (event instanceof ConnectEvent)) return false;
 
       // Text filter
@@ -37,6 +41,14 @@ export function EventList(props: EventListProps): JSX.Element {
           const haystack = `${event.victimName ?? ""} ${event.causerName ?? ""} ${event.weapon}`.toLowerCase();
           if (!haystack.includes(text)) return false;
         } else if (event instanceof ConnectEvent) {
+          if (!event.unitName.toLowerCase().includes(text)) return false;
+        } else if (event instanceof EndMissionEvent) {
+          if (!`${event.side} ${event.message}`.toLowerCase().includes(text)) return false;
+        } else if (event instanceof GeneralMissionEvent) {
+          if (!event.message.toLowerCase().includes(text)) return false;
+        } else if (event instanceof CapturedEvent) {
+          if (!`${event.unitName} ${event.objectType}`.toLowerCase().includes(text)) return false;
+        } else if (event instanceof TerminalHackEvent) {
           if (!event.unitName.toLowerCase().includes(text)) return false;
         }
       }

@@ -12,7 +12,7 @@ import styles from "./RightPanel.module.css";
  * EventList.
  */
 export function RightPanel(): JSX.Element {
-  const [showHitEvents, setShowHitEvents] = createSignal(true);
+  const [showHitEvents, setShowHitEvents] = createSignal(false);
   const [showConnectEvents, setShowConnectEvents] = createSignal(true);
   const [filterText, setFilterText] = createSignal("");
 

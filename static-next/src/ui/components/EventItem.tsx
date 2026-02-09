@@ -3,6 +3,10 @@ import type { PlaybackEngine } from "../../playback/engine";
 import { GameEvent } from "../../playback/events/game-event";
 import { HitKilledEvent } from "../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../playback/events/connect-event";
+import { EndMissionEvent } from "../../playback/events/end-mission-event";
+import { GeneralMissionEvent } from "../../playback/events/general-event";
+import { CapturedEvent } from "../../playback/events/captured-event";
+import { TerminalHackEvent } from "../../playback/events/terminal-hack-event";
 import { formatElapsedTime } from "../../playback/time";
 import styles from "./RightPanel.module.css";
 
@@ -89,6 +93,76 @@ export function EventItem(props: EventItemProps): JSX.Element {
         <span class="medium" data-testid="event-unit-name">
           {event.type === "connected" ? "connected " : "disconnected "}
           {event.unitName}
+        </span>
+        <div class={styles.eventDetails} data-testid="event-details">
+          {time}
+        </div>
+      </li>
+    );
+  }
+
+  if (event instanceof EndMissionEvent) {
+    const sc = sideClass(event.side);
+    return (
+      <li
+        class={`${styles.eventItem} reveal`}
+        data-testid="event-item"
+        data-event-type={event.type}
+      >
+        <span class={`${sc} bold`} data-testid="event-side">
+          {event.side}.
+        </span>{" "}
+        <span class="medium" data-testid="event-message">{event.message}</span>
+        <div class={styles.eventDetails} data-testid="event-details">
+          {time}
+        </div>
+      </li>
+    );
+  }
+
+  if (event instanceof GeneralMissionEvent) {
+    return (
+      <li
+        class={`${styles.eventItem} reveal`}
+        data-testid="event-item"
+        data-event-type={event.type}
+      >
+        <span class="medium" data-testid="event-message">{event.message}</span>
+        <div class={styles.eventDetails} data-testid="event-details">
+          {time}
+        </div>
+      </li>
+    );
+  }
+
+  if (event instanceof CapturedEvent) {
+    return (
+      <li
+        class={`${styles.eventItem} reveal`}
+        data-testid="event-item"
+        data-event-type={event.type}
+      >
+        <span class="bold" data-testid="event-unit-name">{event.unitName}</span>{" "}
+        <span class="medium">
+          {event.objectType === "flag" ? "captured the flag" : `captured ${event.objectType}`}
+        </span>
+        <div class={styles.eventDetails} data-testid="event-details">
+          {time}
+        </div>
+      </li>
+    );
+  }
+
+  if (event instanceof TerminalHackEvent) {
+    return (
+      <li
+        class={`${styles.eventItem} reveal`}
+        data-testid="event-item"
+        data-event-type={event.type}
+      >
+        <span class="bold" data-testid="event-unit-name">{event.unitName}</span>{" "}
+        <span class="medium">
+          {event.type === "terminalHackStarted" ? "is hacking terminal" : "interrupted hack"}
         </span>
         <div class={styles.eventDetails} data-testid="event-details">
           {time}

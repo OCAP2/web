@@ -10,6 +10,10 @@ import { EntityManager } from "./entity-manager";
 import { EventManager } from "./event-manager";
 import { HitKilledEvent } from "./events/hit-killed-event";
 import { ConnectEvent } from "./events/connect-event";
+import { EndMissionEvent } from "./events/end-mission-event";
+import { GeneralMissionEvent } from "./events/general-event";
+import { CapturedEvent } from "./events/captured-event";
+import { TerminalHackEvent } from "./events/terminal-hack-event";
 import { Unit } from "./entities/unit";
 import { Vehicle } from "./entities/vehicle";
 
@@ -34,6 +38,16 @@ function createGameEvent(def: EventDef): GameEvent | null {
     case "connected":
     case "disconnected":
       return new ConnectEvent(def.frameNum, def.type, id, def.unitName);
+    case "endMission":
+      return new EndMissionEvent(def.frameNum, id, def.side, def.message);
+    case "generalEvent":
+      return new GeneralMissionEvent(def.frameNum, id, def.message);
+    case "captured":
+    case "capturedFlag":
+      return new CapturedEvent(def.frameNum, def.type, id, def.unitName, def.objectType);
+    case "terminalHackStarted":
+    case "terminalHackCanceled":
+      return new TerminalHackEvent(def.frameNum, def.type, id, def.unitName);
     case "respawnTickets":
     case "counterInit":
     case "counterSet":

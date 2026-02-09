@@ -225,16 +225,54 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
         type,
         data: Array.isArray(raw[2]) ? (raw[2] as number[]) : [],
       };
-    default:
-      // Unknown event types: return as hit-shaped fallback
+    case "endMission": {
+      const endData = raw[2] as [string, string] | undefined;
       return {
         frameNum,
-        type: "hit",
-        victimId: typeof raw[2] === "number" ? raw[2] : 0,
-        causedById: 0,
-        distance: 0,
-        weapon: "",
+        type,
+        side: endData?.[0] ?? "",
+        message: endData?.[1] ?? "",
       };
+    }
+    case "generalEvent":
+      return {
+        frameNum,
+        type,
+        message: (raw[2] as string) ?? "",
+      };
+    case "capturedFlag": {
+      // deprecated: [frameNum, "capturedFlag", [unitName, unitColor, objectPos, unitPos]]
+      const capData = raw[2] as string[] | undefined;
+      return {
+        frameNum,
+        type,
+        unitName: capData?.[0] ?? "",
+        objectType: "flag",
+      };
+    }
+    case "captured": {
+      // [frameNum, "captured", [unitName, unitColor, objectType, objectColor, objectPos, unitPos]]
+      const capData = raw[2] as string[] | undefined;
+      return {
+        frameNum,
+        type,
+        unitName: capData?.[0] ?? "",
+        objectType: capData?.[2] ?? "",
+      };
+    }
+    case "terminalHackStarted":
+    case "terminalHackCanceled": {
+      // [frameNum, type, [unitName, unitColor, terminalColor, terminalID, ...]]
+      const hackData = raw[2] as string[] | undefined;
+      return {
+        frameNum,
+        type,
+        unitName: hackData?.[0] ?? "",
+      };
+    }
+    default:
+      // Unknown event types: skip
+      return null;
   }
 }
 

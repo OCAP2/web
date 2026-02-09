@@ -197,7 +197,7 @@ interface RawTimeSample {
 
 // ───────── Conversion helpers ─────────
 
-function rawEventToEventDef(raw: RawEvent): EventDef {
+function rawEventToEventDef(raw: RawEvent): EventDef | null {
   const { frameNum, type } = raw;
 
   switch (type) {
@@ -226,17 +226,16 @@ function rawEventToEventDef(raw: RawEvent): EventDef {
         type,
         data: raw.message ? raw.message.split(",").map(Number) : [],
       };
-    default:
-      // Fallback: treat unrecognised types as hit/killed shape with empty
-      // fields so callers always get a valid EventDef.
+    case "endMission":
       return {
         frameNum,
-        type: "hit",
-        victimId: raw.targetId,
-        causedById: raw.sourceId,
-        distance: raw.distance,
-        weapon: raw.weapon,
+        type,
+        side: raw.message?.split(",")[0] ?? "",
+        message: raw.message?.split(",").slice(1).join(",") ?? "",
       };
+    default:
+      // Unknown event types: skip
+      return null;
   }
 }
 
@@ -656,7 +655,7 @@ export class ProtobufDecoder implements DecoderStrategy {
       frameNum: t.frameNum,
       systemTimeUtc: t.systemTimeUtc,
     }));
-    const events = rawEvents.map(rawEventToEventDef);
+    const events = rawEvents.map(rawEventToEventDef).filter((e): e is EventDef => e !== null);
 
     return {
       version,
