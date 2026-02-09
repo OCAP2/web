@@ -45,20 +45,20 @@ describe("CSS style files", () => {
       expect(css).toContain(".group-item");
     });
 
-    it("contains side colour classes matching unit.ts SIDE_COLOUR values", () => {
-      // These must match the SIDE_COLOUR map in src/playback/entities/unit.ts
-      // WEST -> #004D99, EAST -> #800000, GUER -> #007F00, CIV -> #650080
+    it("contains side colour classes for event log text (matching old frontend)", () => {
+      // Bright colours for event log readability on dark background
+      // These match the old frontend's static/style/index.css
       expect(css).toContain(".blufor");
-      expect(css).toMatch(/\.blufor\s*\{[^}]*color:\s*#004d99/i);
+      expect(css).toMatch(/\.blufor\s*\{[^}]*color:\s*#00a8ff/i);
 
       expect(css).toContain(".opfor");
-      expect(css).toMatch(/\.opfor\s*\{[^}]*color:\s*#800000/i);
+      expect(css).toMatch(/\.opfor\s*\{[^}]*color:\s*#ff0000/i);
 
       expect(css).toContain(".ind");
-      expect(css).toMatch(/\.ind\s*\{[^}]*color:\s*#007f00/i);
+      expect(css).toMatch(/\.ind\s*\{[^}]*color:\s*#00cc00/i);
 
       expect(css).toContain(".civ");
-      expect(css).toMatch(/\.civ\s*\{[^}]*color:\s*#650080/i);
+      expect(css).toMatch(/\.civ\s*\{[^}]*color:\s*#c900ff/i);
     });
 
     it("contains event list styling", () => {

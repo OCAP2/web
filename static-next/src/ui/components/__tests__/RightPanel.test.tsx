@@ -117,7 +117,7 @@ describe("EventList", () => {
     const { engine } = createMockEngine(events);
     const { getAllByTestId } = render(() => (
       <EngineProvider engine={engine as any}>
-        <EventList />
+        <EventList showHitEvents={true} showConnectEvents={true} filterText="" />
       </EngineProvider>
     ));
     const items = getAllByTestId("event-item");
@@ -135,7 +135,7 @@ describe("EventList", () => {
     const { engine } = createMockEngine(events);
     const { getAllByTestId } = render(() => (
       <EngineProvider engine={engine as any}>
-        <EventList />
+        <EventList showHitEvents={true} showConnectEvents={true} filterText="" />
       </EngineProvider>
     ));
 
@@ -154,7 +154,7 @@ describe("EventList", () => {
     const { engine } = createMockEngine([]);
     const { getByTestId, queryAllByTestId } = render(() => (
       <EngineProvider engine={engine as any}>
-        <EventList />
+        <EventList showHitEvents={true} showConnectEvents={true} filterText="" />
       </EngineProvider>
     ));
     expect(getByTestId("event-list")).toBeDefined();
@@ -165,7 +165,7 @@ describe("EventList", () => {
     const { engine, setActiveEvents } = createMockEngine([]);
     const { queryAllByTestId } = render(() => (
       <EngineProvider engine={engine as any}>
-        <EventList />
+        <EventList showHitEvents={true} showConnectEvents={true} filterText="" />
       </EngineProvider>
     ));
 
@@ -178,6 +178,58 @@ describe("EventList", () => {
 
     expect(queryAllByTestId("event-item")).toHaveLength(1);
   });
+
+  it("filters out hit events when showHitEvents is false", () => {
+    const events: GameEvent[] = [
+      new HitKilledEvent(10, "killed", 0, 1, 2, 150, "M4A1"),
+      new ConnectEvent(5, "connected", 1, "Player1"),
+    ];
+    const { engine } = createMockEngine(events);
+    const { getAllByTestId } = render(() => (
+      <EngineProvider engine={engine as any}>
+        <EventList showHitEvents={false} showConnectEvents={true} filterText="" />
+      </EngineProvider>
+    ));
+    const items = getAllByTestId("event-item");
+    expect(items).toHaveLength(1);
+    expect(items[0].getAttribute("data-event-type")).toBe("connected");
+  });
+
+  it("filters out connect events when showConnectEvents is false", () => {
+    const kill = new HitKilledEvent(10, "killed", 0, 1, 2, 150, "M4A1");
+    kill.victimName = "V";
+    kill.causerName = "A";
+    const events: GameEvent[] = [
+      kill,
+      new ConnectEvent(5, "connected", 1, "Player1"),
+    ];
+    const { engine } = createMockEngine(events);
+    const { getAllByTestId } = render(() => (
+      <EngineProvider engine={engine as any}>
+        <EventList showHitEvents={true} showConnectEvents={false} filterText="" />
+      </EngineProvider>
+    ));
+    const items = getAllByTestId("event-item");
+    expect(items).toHaveLength(1);
+    expect(items[0].getAttribute("data-event-type")).toBe("killed");
+  });
+
+  it("filters events by text search", () => {
+    const kill = new HitKilledEvent(10, "killed", 0, 1, 2, 150, "M4A1");
+    kill.victimName = "AlphaPlayer";
+    kill.causerName = "BravoPlayer";
+    const connect = new ConnectEvent(5, "connected", 1, "CharliePlayer");
+    const events: GameEvent[] = [kill, connect];
+    const { engine } = createMockEngine(events);
+    const { getAllByTestId, queryAllByTestId } = render(() => (
+      <EngineProvider engine={engine as any}>
+        <EventList showHitEvents={true} showConnectEvents={true} filterText="charlie" />
+      </EngineProvider>
+    ));
+    const items = queryAllByTestId("event-item");
+    expect(items).toHaveLength(1);
+    expect(items[0].getAttribute("data-event-type")).toBe("connected");
+  });
 });
 
 describe("EventItem", () => {
@@ -186,7 +238,7 @@ describe("EventItem", () => {
   });
 
   describe("HitKilledEvent rendering", () => {
-    it("renders killed event with victim, attacker, weapon, distance, and time", () => {
+    it("renders killed event with victim, attacker, and details line", () => {
       const event = new HitKilledEvent(60, "killed", 0, 1, 2, 250.7, "M4A1");
       event.victimName = "VictimPlayer";
       event.causerName = "AttackerPlayer";
@@ -200,11 +252,11 @@ describe("EventItem", () => {
         </EngineProvider>
       ));
 
-      expect(getByTestId("event-time").textContent).toBe("00:01:00");
       expect(getByTestId("event-victim").textContent).toBe("VictimPlayer");
       expect(getByTestId("event-causer").textContent).toBe("AttackerPlayer");
       expect(getByTestId("event-action").textContent).toBe(" killed by ");
-      expect(getByTestId("event-details").textContent).toBe(" (M4A1, 251m)");
+      // Details line: time - distance - weapon
+      expect(getByTestId("event-details").textContent).toBe("00:01:00 - 251m - M4A1");
     });
 
     it("renders hit event with correct action text", () => {
@@ -222,7 +274,7 @@ describe("EventItem", () => {
       expect(getByTestId("event-action").textContent).toBe(" hit by ");
     });
 
-    it("applies side CSS classes to names", () => {
+    it("applies side CSS classes to names (no side- prefix)", () => {
       const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
       event.victimName = "BluforUnit";
       event.causerName = "OpforUnit";
@@ -236,8 +288,8 @@ describe("EventItem", () => {
         </EngineProvider>
       ));
 
-      expect(getByTestId("event-victim").classList.contains("side-blufor")).toBe(true);
-      expect(getByTestId("event-causer").classList.contains("side-opfor")).toBe(true);
+      expect(getByTestId("event-victim").classList.contains("blufor")).toBe(true);
+      expect(getByTestId("event-causer").classList.contains("opfor")).toBe(true);
     });
 
     it("calls seekTo and followEntity on click", () => {
@@ -285,9 +337,9 @@ describe("EventItem", () => {
         </EngineProvider>
       ));
 
-      expect(getByTestId("event-time").textContent).toBe("00:00:15");
-      expect(getByTestId("event-unit-name").textContent).toBe("JohnDoe");
-      expect(getByTestId("event-connect-type").textContent).toBe(" connected");
+      expect(getByTestId("event-unit-name").textContent).toContain("connected");
+      expect(getByTestId("event-unit-name").textContent).toContain("JohnDoe");
+      expect(getByTestId("event-details").textContent).toBe("00:00:15");
     });
 
     it("renders disconnected event correctly", () => {
@@ -300,10 +352,10 @@ describe("EventItem", () => {
         </EngineProvider>
       ));
 
-      expect(getByTestId("event-connect-type").textContent).toBe(" disconnected");
+      expect(getByTestId("event-unit-name").textContent).toContain("disconnected");
     });
 
-    it("calls seekTo on click (no followEntity)", () => {
+    it("does not call seekTo or followEntity on click (connect events are not clickable)", () => {
       const event = new ConnectEvent(25, "connected", 0, "Player");
 
       const { engine } = createMockEngine();
@@ -315,7 +367,7 @@ describe("EventItem", () => {
 
       fireEvent.click(getByTestId("event-item"));
 
-      expect(engine.seekTo).toHaveBeenCalledWith(25);
+      expect(engine.seekTo).not.toHaveBeenCalled();
       expect(engine.followEntity).not.toHaveBeenCalled();
     });
   });
@@ -353,7 +405,7 @@ describe("EventItem", () => {
   });
 
   describe("side class mapping", () => {
-    it("maps GUER to side-ind", () => {
+    it("maps GUER to ind class", () => {
       const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
       event.victimName = "IndUnit";
       event.victimSide = "GUER";
@@ -367,8 +419,8 @@ describe("EventItem", () => {
         </EngineProvider>
       ));
 
-      expect(getByTestId("event-victim").classList.contains("side-ind")).toBe(true);
-      expect(getByTestId("event-causer").classList.contains("side-civ")).toBe(true);
+      expect(getByTestId("event-victim").classList.contains("ind")).toBe(true);
+      expect(getByTestId("event-causer").classList.contains("civ")).toBe(true);
     });
   });
 });

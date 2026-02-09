@@ -11,24 +11,24 @@ export interface EventItemProps {
 }
 
 /**
- * Map a side string to a CSS class for coloring.
+ * Map a side string to the old frontend's CSS class.
  */
 function sideClass(side?: string): string {
   if (!side) return "";
   switch (side.toLowerCase()) {
     case "west":
     case "blufor":
-      return "side-blufor";
+      return "blufor";
     case "east":
     case "opfor":
-      return "side-opfor";
+      return "opfor";
     case "guer":
     case "ind":
     case "independent":
-      return "side-ind";
+      return "ind";
     case "civ":
     case "civilian":
-      return "side-civ";
+      return "civ";
     default:
       return "";
   }
@@ -37,11 +37,9 @@ function sideClass(side?: string): string {
 /**
  * Renders a single event item in the event log.
  *
- * Uses instanceof to determine event type:
- * - HitKilledEvent: shows victim, attacker, distance, weapon, time
- * - ConnectEvent: shows unit name + connected/disconnected
- *
- * Clicking an event seeks playback to that frame.
+ * Layout matches old frontend:
+ *   Line 1: VictimName  killed by  AttackerName
+ *   Line 2: time - distance - weapon  (gray, smaller)
  */
 export function EventItem(props: EventItemProps): JSX.Element {
   const event = props.event;
@@ -51,10 +49,11 @@ export function EventItem(props: EventItemProps): JSX.Element {
   if (event instanceof HitKilledEvent) {
     const victimClass = sideClass(event.victimSide);
     const causerClass = sideClass(event.causerSide);
+    const actionText = event.type === "killed" ? " killed by " : " hit by ";
 
     return (
-      <div
-        class="event-item event-hit-killed reveal"
+      <li
+        class="event-item reveal action"
         data-testid="event-item"
         data-event-type={event.type}
         onClick={() => {
@@ -62,55 +61,43 @@ export function EventItem(props: EventItemProps): JSX.Element {
           engine.followEntity(event.victimId);
         }}
       >
-        <span class="event-time" data-testid="event-time">
-          {time}
-        </span>
-        <span class={`event-victim ${victimClass}`} data-testid="event-victim">
+        <span class={`${victimClass} bold`} data-testid="event-victim">
           {event.victimName ?? `Unit #${event.victimId}`}
         </span>
-        <span class="event-action" data-testid="event-action">
-          {event.type === "killed" ? " killed by " : " hit by "}
-        </span>
-        <span class={`event-causer ${causerClass}`} data-testid="event-causer">
+        <span data-testid="event-action">{actionText}</span>
+        <span class={`${causerClass} medium`} data-testid="event-causer">
           {event.causerName ?? `Unit #${event.causedById}`}
         </span>
-        <span class="event-details" data-testid="event-details">
-          {` (${event.weapon}, ${Math.round(event.distance)}m)`}
-        </span>
-      </div>
+        <div class="event-details" data-testid="event-details">
+          {`${time} - ${Math.round(event.distance)}m - ${event.weapon}`}
+        </div>
+      </li>
     );
   }
 
   if (event instanceof ConnectEvent) {
     return (
-      <div
-        class="event-item event-connect reveal"
+      <li
+        class="event-item reveal"
         data-testid="event-item"
         data-event-type={event.type}
-        onClick={() => {
-          engine.seekTo(event.frameNum);
-        }}
       >
-        <span class="event-time" data-testid="event-time">
-          {time}
-        </span>
-        <span class="event-unit-name" data-testid="event-unit-name">
+        <span class="medium" data-testid="event-unit-name">
+          {event.type === "connected" ? "connected " : "disconnected "}
           {event.unitName}
         </span>
-        <span class="event-connect-type" data-testid="event-connect-type">
-          {event.type === "connected" ? " connected" : " disconnected"}
-        </span>
-      </div>
+        <div class="event-details" data-testid="event-details">
+          {time}
+        </div>
+      </li>
     );
   }
 
   // Fallback for unknown event types
   return (
-    <div class="event-item reveal" data-testid="event-item" data-event-type={event.type}>
-      <span class="event-time" data-testid="event-time">
-        {time}
-      </span>
+    <li class="event-item reveal" data-testid="event-item" data-event-type={event.type}>
       <span>{event.type}</span>
-    </div>
+      <div class="event-details">{time}</div>
+    </li>
   );
 }
