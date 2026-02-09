@@ -1,0 +1,440 @@
+import { createSignal, type Accessor } from "solid-js";
+
+import type { Manifest, EntityDef, EventDef } from "../data/types";
+import type { ChunkManager } from "../data/chunk-manager";
+import type { MapRenderer } from "../renderers/renderer.interface";
+import type { EntitySnapshot } from "./types";
+import type { GameEvent } from "./events/game-event";
+import type { CounterState } from "./events/counter-event";
+import { EntityManager } from "./entity-manager";
+import { EventManager } from "./event-manager";
+import { HitKilledEvent } from "./events/hit-killed-event";
+import { ConnectEvent } from "./events/connect-event";
+import { Unit } from "./entities/unit";
+
+// ─── Event factory ───
+
+let nextEventId = 0;
+
+function createGameEvent(def: EventDef): GameEvent | null {
+  const id = nextEventId++;
+  switch (def.type) {
+    case "hit":
+    case "killed":
+      return new HitKilledEvent(
+        def.frameNum,
+        def.type,
+        id,
+        def.victimId,
+        def.causedById,
+        def.distance,
+        def.weapon,
+      );
+    case "connected":
+    case "disconnected":
+      return new ConnectEvent(def.frameNum, def.type, id, def.unitName);
+    case "respawnTickets":
+    case "counterInit":
+    case "counterSet":
+      // Counter events are handled separately via CounterState
+      return null;
+    default:
+      return null;
+  }
+}
+
+// ─── PlaybackEngine ───
+
+/**
+ * Central playback coordinator.
+ *
+ * Ties together EntityManager, EventManager, ChunkManager, and the
+ * MapRenderer interface. Uses SolidJS signals for reactive state.
+ *
+ * Pure data orchestration -- the engine never imports Leaflet or any
+ * map library. It calls renderer methods during the playback loop.
+ */
+export class PlaybackEngine {
+  // ─── Managers ───
+  readonly entityManager = new EntityManager();
+  readonly eventManager = new EventManager();
+
+  private renderer: MapRenderer;
+  private chunkManager: ChunkManager | null = null;
+  private manifest: Manifest | null = null;
+
+  // ─── Signals (reactive state) ───
+  private _currentFrame: Accessor<number>;
+  private _setCurrentFrame: (v: number) => void;
+
+  private _isPlaying: Accessor<boolean>;
+  private _setIsPlaying: (v: boolean) => void;
+
+  private _playbackSpeed: Accessor<number>;
+  private _setPlaybackSpeed: (v: number) => void;
+
+  private _entitySnapshots: Accessor<Map<number, EntitySnapshot>>;
+  private _setEntitySnapshots: (v: Map<number, EntitySnapshot>) => void;
+
+  private _activeEvents: Accessor<GameEvent[]>;
+  private _setActiveEvents: (v: GameEvent[]) => void;
+
+  private _followTarget: Accessor<number | null>;
+  private _setFollowTarget: (v: number | null) => void;
+
+  private _counterState: Accessor<CounterState | null>;
+  private _setCounterState: (v: CounterState | null) => void;
+
+  private _endFrame: Accessor<number>;
+  private _setEndFrame: (v: number) => void;
+
+  private _captureDelayMs: Accessor<number>;
+  private _setCaptureDelayMs: (v: number) => void;
+
+  // ─── Playback loop state ───
+  private playbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(renderer: MapRenderer) {
+    this.renderer = renderer;
+
+    const [currentFrame, setCurrentFrame] = createSignal(0);
+    this._currentFrame = currentFrame;
+    this._setCurrentFrame = setCurrentFrame;
+
+    const [isPlaying, setIsPlaying] = createSignal(false);
+    this._isPlaying = isPlaying;
+    this._setIsPlaying = setIsPlaying;
+
+    const [playbackSpeed, setPlaybackSpeed] = createSignal(1);
+    this._playbackSpeed = playbackSpeed;
+    this._setPlaybackSpeed = setPlaybackSpeed;
+
+    const [entitySnapshots, setEntitySnapshots] = createSignal<
+      Map<number, EntitySnapshot>
+    >(new Map());
+    this._entitySnapshots = entitySnapshots;
+    this._setEntitySnapshots = setEntitySnapshots;
+
+    const [activeEvents, setActiveEvents] = createSignal<GameEvent[]>([]);
+    this._activeEvents = activeEvents;
+    this._setActiveEvents = setActiveEvents;
+
+    const [followTarget, setFollowTarget] = createSignal<number | null>(null);
+    this._followTarget = followTarget;
+    this._setFollowTarget = setFollowTarget;
+
+    const [counterState, setCounterState] = createSignal<CounterState | null>(
+      null,
+    );
+    this._counterState = counterState;
+    this._setCounterState = setCounterState;
+
+    const [endFrame, setEndFrame] = createSignal(0);
+    this._endFrame = endFrame;
+    this._setEndFrame = setEndFrame;
+
+    const [captureDelayMs, setCaptureDelayMs] = createSignal(1000);
+    this._captureDelayMs = captureDelayMs;
+    this._setCaptureDelayMs = setCaptureDelayMs;
+  }
+
+  // ─── Public signal accessors ───
+
+  get currentFrame(): Accessor<number> {
+    return this._currentFrame;
+  }
+  get isPlaying(): Accessor<boolean> {
+    return this._isPlaying;
+  }
+  get playbackSpeed(): Accessor<number> {
+    return this._playbackSpeed;
+  }
+  get entitySnapshots(): Accessor<Map<number, EntitySnapshot>> {
+    return this._entitySnapshots;
+  }
+  get activeEvents(): Accessor<GameEvent[]> {
+    return this._activeEvents;
+  }
+  get followTarget(): Accessor<number | null> {
+    return this._followTarget;
+  }
+  get counterState(): Accessor<CounterState | null> {
+    return this._counterState;
+  }
+  get endFrame(): Accessor<number> {
+    return this._endFrame;
+  }
+  get captureDelayMs(): Accessor<number> {
+    return this._captureDelayMs;
+  }
+
+  // ─── Commands ───
+
+  play(): void {
+    if (this._isPlaying()) return;
+    // Don't play past the end
+    if (this._currentFrame() >= this._endFrame()) return;
+    this._setIsPlaying(true);
+    this.scheduleNextTick();
+  }
+
+  pause(): void {
+    if (!this._isPlaying()) return;
+    this._setIsPlaying(false);
+    this.clearTimer();
+  }
+
+  togglePlayPause(): void {
+    if (this._isPlaying()) {
+      this.pause();
+    } else {
+      this.play();
+    }
+  }
+
+  seekTo(frame: number): void {
+    const clamped = Math.max(0, Math.min(frame, this._endFrame()));
+    this._setCurrentFrame(clamped);
+    this.computeSnapshots(clamped);
+    this._setActiveEvents(this.eventManager.getEventsAtFrame(clamped));
+  }
+
+  setSpeed(multiplier: number): void {
+    const clamped = Math.max(1, Math.min(60, multiplier));
+    this._setPlaybackSpeed(clamped);
+    // Restart timer with new interval if playing
+    if (this._isPlaying()) {
+      this.clearTimer();
+      this.scheduleNextTick();
+    }
+  }
+
+  followEntity(id: number): void {
+    this._setFollowTarget(id);
+  }
+
+  unfollowEntity(): void {
+    this._setFollowTarget(null);
+  }
+
+  // ─── Lifecycle ───
+
+  /**
+   * Populate entities and events from a manifest, and wire up the chunk manager.
+   */
+  loadOperation(manifest: Manifest, chunkManager: ChunkManager): void {
+    // Reset state
+    this.clearTimer();
+    this._setIsPlaying(false);
+    this._setCurrentFrame(0);
+    this._setFollowTarget(null);
+    this.entityManager.clear();
+    this.eventManager.clear();
+
+    this.manifest = manifest;
+    this.chunkManager = chunkManager;
+
+    // Set signals from manifest
+    this._setEndFrame(manifest.frameCount - 1);
+    this._setCaptureDelayMs(manifest.captureDelayMs);
+
+    // Populate entities
+    for (const def of manifest.entities) {
+      this.entityManager.addEntity(def);
+    }
+
+    // Populate events
+    nextEventId = 0;
+    for (const def of manifest.events) {
+      const event = createGameEvent(def);
+      if (event) {
+        this.eventManager.addEvent(event);
+      }
+    }
+
+    // Resolve entity references on hit/killed events
+    this.eventManager.resolveReferences(this.entityManager);
+
+    // Build counter state from counter events
+    this.buildCounterState(manifest.events);
+
+    // Initial snapshot computation
+    this.computeSnapshots(0);
+    this._setActiveEvents(this.eventManager.getEventsAtFrame(0));
+  }
+
+  dispose(): void {
+    this.clearTimer();
+    this._setIsPlaying(false);
+    this.entityManager.clear();
+    this.eventManager.clear();
+    this.chunkManager = null;
+    this.manifest = null;
+  }
+
+  // ─── Playback loop ───
+
+  private scheduleNextTick(): void {
+    const interval = this._captureDelayMs() / this._playbackSpeed();
+    this.playbackTimer = setTimeout(() => this.tick(), interval);
+  }
+
+  private clearTimer(): void {
+    if (this.playbackTimer !== null) {
+      clearTimeout(this.playbackTimer);
+      this.playbackTimer = null;
+    }
+  }
+
+  private tick(): void {
+    if (!this._isPlaying()) return;
+
+    const frame = this._currentFrame();
+    const end = this._endFrame();
+
+    if (frame >= end) {
+      // Auto-pause at end
+      this._setIsPlaying(false);
+      this.clearTimer();
+      return;
+    }
+
+    const nextFrame = frame + 1;
+    this._setCurrentFrame(nextFrame);
+
+    // Compute entity snapshots
+    this.computeSnapshots(nextFrame);
+
+    // Update events
+    this._setActiveEvents(this.eventManager.getEventsAtFrame(nextFrame));
+
+    // Handle camera follow
+    const target = this._followTarget();
+    if (target !== null) {
+      const snapshots = this._entitySnapshots();
+      const snap = snapshots.get(target);
+      if (snap) {
+        this.renderer.setView(snap.position);
+      } else {
+        // Entity no longer exists, unfollow
+        this._setFollowTarget(null);
+      }
+    }
+
+    // Auto-pause at endFrame
+    if (nextFrame >= end) {
+      this._setIsPlaying(false);
+      this.clearTimer();
+      return;
+    }
+
+    // Schedule next tick
+    this.scheduleNextTick();
+  }
+
+  // ─── Snapshot computation ───
+
+  private computeSnapshots(frame: number): void {
+    const snapshots = new Map<number, EntitySnapshot>();
+
+    if (!this.chunkManager || !this.manifest) {
+      this._setEntitySnapshots(snapshots);
+      return;
+    }
+
+    const chunkSize = this.manifest.chunkSize || 300;
+    const chunkIndex = Math.floor(frame / chunkSize);
+    const frameInChunk = frame - chunkIndex * chunkSize;
+
+    const chunkData = this.chunkManager.getChunkForFrame(frame);
+
+    for (const entity of this.entityManager.getAll()) {
+      // Check entity lifespan
+      if (frame < entity.startFrame || frame > entity.endFrame) {
+        continue;
+      }
+
+      // Try chunk data first
+      if (chunkData) {
+        const states = chunkData.entities.get(entity.id);
+        if (states && states[frameInChunk]) {
+          const state = states[frameInChunk];
+          const side =
+            entity instanceof Unit ? entity.side : "CIV" as const;
+          snapshots.set(entity.id, {
+            id: entity.id,
+            position: state.position,
+            direction: state.direction,
+            alive: state.alive,
+            side,
+            name: state.name ?? entity.name,
+            iconType: entity.iconType,
+            isInVehicle: state.isInVehicle ?? false,
+          });
+          continue;
+        }
+      }
+
+      // Fallback to entity's own positions (if loaded)
+      const relativeFrame = entity.getRelativeFrameIndex(frame);
+      const snap = entity.getStateAtFrame(relativeFrame);
+      if (snap) {
+        snapshots.set(entity.id, snap);
+      }
+    }
+
+    this._setEntitySnapshots(snapshots);
+  }
+
+  // ─── Counter state ───
+
+  private buildCounterState(eventDefs: EventDef[]): void {
+    const counterEvents = eventDefs.filter(
+      (e) =>
+        e.type === "respawnTickets" ||
+        e.type === "counterInit" ||
+        e.type === "counterSet",
+    );
+
+    if (counterEvents.length === 0) {
+      this._setCounterState(null);
+      return;
+    }
+
+    // Extract sides and build events list
+    const sides = new Set<string>();
+    const events: Array<{ frameNum: number; values: Record<string, number> }> =
+      [];
+
+    for (const def of counterEvents) {
+      if (
+        def.type === "respawnTickets" ||
+        def.type === "counterInit" ||
+        def.type === "counterSet"
+      ) {
+        // data is an array of alternating side values
+        // Build values from the data array
+        const values: Record<string, number> = {};
+        const data = def.data;
+        // Assume data is pairs of [sideIndex, value] or just an array of values per side
+        // For simplicity, store as indexed values
+        for (let i = 0; i < data.length; i++) {
+          const key = String(i);
+          values[key] = data[i];
+          sides.add(key);
+        }
+        events.push({ frameNum: def.frameNum, values });
+      }
+    }
+
+    // Sort events by frame
+    events.sort((a, b) => a.frameNum - b.frameNum);
+
+    this._setCounterState({
+      active: true,
+      type: counterEvents[0].type,
+      sides: Array.from(sides),
+      events,
+    });
+  }
+}
