@@ -27,7 +27,12 @@ export function LeftPanel(): JSX.Element {
   const engine = useEngine();
   const [activeTab, setActiveTab] = createSignal<Side>("WEST");
 
-  const unitsForSide = (side: Side) => engine.entityManager.getBySide(side);
+  // Read endFrame to create reactive dependency — when loadOperation finishes
+  // populating entities it sets endFrame as the last signal, triggering re-eval.
+  const unitsForSide = (side: Side) => {
+    engine.endFrame();
+    return engine.entityManager.getBySide(side);
+  };
 
   return (
     <Show when={leftPanelVisible()}>

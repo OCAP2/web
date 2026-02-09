@@ -96,6 +96,30 @@ describe("LeftPanel", () => {
     expect(children.indexOf(content)).toBeLessThan(children.indexOf(tabs));
   });
 
+  it("shows units after loadOperation without needing a tab click", () => {
+    const { getByTestId, queryByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <LeftPanel />
+      </EngineProvider>
+    ));
+
+    // No units yet
+    expect(queryByTestId("unit-item-1")).toBeNull();
+
+    // Load operation (adds entities + sets endFrame signal)
+    engine.loadOperation({
+      worldName: "test", missionName: "test", captureDelayMs: 1000,
+      frameCount: 101, chunkSize: 300,
+      entities: [
+        { id: 1, type: "man", name: "Alpha1", side: "WEST", groupName: "Alpha", isPlayer: true, startFrame: 0, endFrame: 100 },
+      ],
+      events: [],
+    });
+
+    // Unit should appear reactively without clicking any tab
+    expect(getByTestId("unit-item-1")).toBeDefined();
+  });
+
   it("renders correct number of units for the active side tab", () => {
     engine.entityManager.addEntity({
       id: 1, type: "man", name: "Alpha1", side: "WEST",
