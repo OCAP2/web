@@ -587,13 +587,13 @@ describe("Integration: Event resolution", () => {
     const cm = makeMockChunkManager();
     engine.loadOperation(manifest, cm);
 
-    // Two events at frame 5
+    // Two events at frame 5 (cumulative: 2)
     engine.seekTo(5);
     expect(engine.activeEvents()).toHaveLength(2);
 
-    // One event at frame 15
+    // Frame 15 has all events up to and including frame 15 (cumulative: 3)
     engine.seekTo(15);
-    expect(engine.activeEvents()).toHaveLength(1);
+    expect(engine.activeEvents()).toHaveLength(3);
 
     // No events at frame 0
     engine.seekTo(0);

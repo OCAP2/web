@@ -197,7 +197,7 @@ export class PlaybackEngine {
     const clamped = Math.max(0, Math.min(frame, this._endFrame()));
     this._setCurrentFrame(clamped);
     this.computeSnapshots(clamped);
-    this._setActiveEvents(this.eventManager.getEventsAtFrame(clamped));
+    this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
   }
 
   setSpeed(multiplier: number): void {
@@ -235,8 +235,6 @@ export class PlaybackEngine {
     this.manifest = manifest;
     this.chunkManager = chunkManager ?? null;
 
-    // Set signals from manifest
-    this._setEndFrame(manifest.frameCount - 1);
     this._setCaptureDelayMs(manifest.captureDelayMs);
 
     // Populate entities
@@ -259,9 +257,13 @@ export class PlaybackEngine {
     // Build counter state from counter events
     this.buildCounterState(manifest.events);
 
+    // Set endFrame AFTER events are populated so reactive computations
+    // (e.g. timeline event ticks) see the events when they re-run.
+    this._setEndFrame(manifest.frameCount - 1);
+
     // Initial snapshot computation
     this.computeSnapshots(0);
-    this._setActiveEvents(this.eventManager.getEventsAtFrame(0));
+    this._setActiveEvents(this.eventManager.getActiveEvents(0));
   }
 
   dispose(): void {
@@ -307,7 +309,7 @@ export class PlaybackEngine {
     this.computeSnapshots(nextFrame);
 
     // Update events
-    this._setActiveEvents(this.eventManager.getEventsAtFrame(nextFrame));
+    this._setActiveEvents(this.eventManager.getActiveEvents(nextFrame));
 
     // Handle camera follow
     const target = this._followTarget();

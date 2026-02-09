@@ -4,6 +4,8 @@ import { createSignal } from "solid-js";
 import { EngineProvider } from "../../hooks/useEngine";
 import { RendererProvider } from "../../hooks/useRenderer";
 import { MockRenderer } from "../../../renderers/mock-renderer";
+import { EventManager } from "../../../playback/event-manager";
+import { GameEvent } from "../../../playback/events/game-event";
 import { PlaybackControls } from "../PlaybackControls";
 import { Timeline } from "../Timeline";
 import { ToggleBar } from "../ToggleBar";
@@ -19,6 +21,7 @@ function createMockEngine(overrides?: {
   playbackSpeed?: number;
   endFrame?: number;
   captureDelayMs?: number;
+  events?: Array<{ frameNum: number; type: string }>;
 }) {
   const [currentFrame] = createSignal(overrides?.currentFrame ?? 0);
   const [isPlaying] = createSignal(overrides?.isPlaying ?? false);
@@ -26,12 +29,20 @@ function createMockEngine(overrides?: {
   const [endFrame] = createSignal(overrides?.endFrame ?? 100);
   const [captureDelayMs] = createSignal(overrides?.captureDelayMs ?? 1000);
 
+  const eventManager = new EventManager();
+  if (overrides?.events) {
+    overrides.events.forEach((ev, i) => {
+      eventManager.addEvent(new GameEvent(ev.frameNum, ev.type, i));
+    });
+  }
+
   return {
     currentFrame,
     isPlaying,
     playbackSpeed,
     endFrame,
     captureDelayMs,
+    eventManager,
     togglePlayPause: vi.fn(),
     seekTo: vi.fn(),
     setSpeed: vi.fn(),
@@ -64,7 +75,8 @@ describe("PlaybackControls", () => {
     ));
 
     const button = getByTestId("play-pause-button");
-    expect(button.textContent).toBe("Play");
+    expect(button.className).toContain("play-pause-btn");
+    expect(button.className).not.toContain("playing");
   });
 
   it("renders pause button when playing", () => {
@@ -80,7 +92,7 @@ describe("PlaybackControls", () => {
     ));
 
     const button = getByTestId("play-pause-button");
-    expect(button.textContent).toBe("Pause");
+    expect(button.className).toContain("playing");
   });
 
   it("calls engine.togglePlayPause when play button is clicked", () => {
@@ -99,8 +111,12 @@ describe("PlaybackControls", () => {
     expect(engine.togglePlayPause).toHaveBeenCalledOnce();
   });
 
-  it("displays current speed label", () => {
-    const engine = createMockEngine({ playbackSpeed: 10 });
+  it("displays formatted timecode", () => {
+    const engine = createMockEngine({
+      currentFrame: 60,
+      endFrame: 3600,
+      captureDelayMs: 1000,
+    });
     const renderer = new MockRenderer();
 
     const { getByTestId } = render(() => (
@@ -111,24 +127,8 @@ describe("PlaybackControls", () => {
       </EngineProvider>
     ));
 
-    expect(getByTestId("speed-label").textContent).toBe("10x");
-  });
-
-  it("calls engine.setSpeed when speed slider changes", () => {
-    const engine = createMockEngine({ playbackSpeed: 1 });
-    const renderer = new MockRenderer();
-
-    const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
-        <RendererProvider renderer={renderer}>
-          <PlaybackControls />
-        </RendererProvider>
-      </EngineProvider>
-    ));
-
-    const slider = getByTestId("speed-slider") as HTMLInputElement;
-    fireEvent.input(slider, { target: { value: "15" } });
-    expect(engine.setSpeed).toHaveBeenCalledWith(15);
+    expect(getByTestId("timeline-current-time").textContent).toBe("00:01:00");
+    expect(getByTestId("timeline-end-time").textContent).toBe("01:00:00");
   });
 });
 
@@ -149,28 +149,6 @@ describe("Timeline", () => {
 
     expect(getByTestId("timeline")).toBeDefined();
     expect(getByTestId("timeline-slider")).toBeDefined();
-    expect(getByTestId("timeline-current-time")).toBeDefined();
-    expect(getByTestId("timeline-end-time")).toBeDefined();
-  });
-
-  it("displays formatted elapsed time", () => {
-    const engine = createMockEngine({
-      currentFrame: 60,
-      endFrame: 3600,
-      captureDelayMs: 1000,
-    });
-    const renderer = new MockRenderer();
-
-    const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
-        <RendererProvider renderer={renderer}>
-          <Timeline />
-        </RendererProvider>
-      </EngineProvider>
-    ));
-
-    expect(getByTestId("timeline-current-time").textContent).toBe("00:01:00");
-    expect(getByTestId("timeline-end-time").textContent).toBe("01:00:00");
   });
 
   it("calls engine.seekTo when slider is moved", () => {
@@ -189,12 +167,98 @@ describe("Timeline", () => {
     fireEvent.input(slider, { target: { value: "250" } });
     expect(engine.seekTo).toHaveBeenCalledWith(250);
   });
+
+  it("renders event tick marks", () => {
+    const engine = createMockEngine({
+      endFrame: 1000,
+      events: [
+        { frameNum: 100, type: "killed" },
+        { frameNum: 500, type: "killed" },
+      ],
+    });
+    const renderer = new MockRenderer();
+
+    const { container } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <Timeline />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const ticks = container.querySelectorAll(".event-timeline-tick");
+    expect(ticks.length).toBe(2);
+  });
+
+  it("positions event ticks as percentage of endFrame", () => {
+    const engine = createMockEngine({
+      endFrame: 1000,
+      events: [
+        { frameNum: 250, type: "killed" },
+      ],
+    });
+    const renderer = new MockRenderer();
+
+    const { container } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <Timeline />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const tick = container.querySelector(".event-timeline-tick") as HTMLElement;
+    expect(tick).toBeDefined();
+    expect(tick.style.left).toBe("25%");
+  });
+
+  it("renders no ticks when endFrame is 0", () => {
+    const engine = createMockEngine({
+      endFrame: 0,
+      events: [
+        { frameNum: 10, type: "killed" },
+      ],
+    });
+    const renderer = new MockRenderer();
+
+    const { container } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <Timeline />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const ticks = container.querySelectorAll(".event-timeline-tick");
+    expect(ticks.length).toBe(0);
+  });
+
+  it("event ticks are inside the event-timeline container", () => {
+    const engine = createMockEngine({
+      endFrame: 500,
+      events: [
+        { frameNum: 100, type: "killed" },
+      ],
+    });
+    const renderer = new MockRenderer();
+
+    const { container } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <Timeline />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const tick = container.querySelector(".event-timeline-tick");
+    expect(tick?.parentElement?.classList.contains("event-timeline")).toBe(true);
+  });
 });
 
 // ─── ToggleBar ───
 
 describe("ToggleBar", () => {
-  it("renders all toggle checkboxes", () => {
+  it("renders all toggle buttons", () => {
     const engine = createMockEngine();
     const renderer = new MockRenderer();
 
@@ -211,6 +275,70 @@ describe("ToggleBar", () => {
     expect(getByTestId("toggle-grid")).toBeDefined();
   });
 
+  it("renders dropdowns", () => {
+    const engine = createMockEngine();
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    expect(getByTestId("toggle-names")).toBeDefined();
+    expect(getByTestId("toggle-time")).toBeDefined();
+  });
+
+  it("renders fullscreen button", () => {
+    const engine = createMockEngine();
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    expect(getByTestId("fullscreen-button")).toBeDefined();
+  });
+
+  it("renders speed label and slider", () => {
+    const engine = createMockEngine({ playbackSpeed: 10 });
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    expect(getByTestId("speed-label").textContent).toBe("10x");
+    expect(getByTestId("speed-slider")).toBeDefined();
+  });
+
+  it("calls engine.setSpeed when speed slider changes", () => {
+    const engine = createMockEngine({ playbackSpeed: 1 });
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const slider = getByTestId("speed-slider") as HTMLInputElement;
+    fireEvent.input(slider, { target: { value: "15" } });
+    expect(engine.setSpeed).toHaveBeenCalledWith(15);
+  });
+
   it("calls renderer.setLayerVisible for fire lines toggle", () => {
     const engine = createMockEngine();
     const renderer = new MockRenderer();
@@ -224,7 +352,7 @@ describe("ToggleBar", () => {
       </EngineProvider>
     ));
 
-    fireEvent.change(getByTestId("toggle-fire-lines"));
+    fireEvent.click(getByTestId("toggle-fire-lines"));
     expect(spy).toHaveBeenCalledWith("projectileMarkers", false);
   });
 
@@ -241,11 +369,11 @@ describe("ToggleBar", () => {
       </EngineProvider>
     ));
 
-    fireEvent.change(getByTestId("toggle-map-markers"));
+    fireEvent.click(getByTestId("toggle-map-markers"));
     expect(spy).toHaveBeenCalledWith("briefingMarkers", false);
   });
 
-  it("calls renderer.setLayerVisible for grid toggle", () => {
+  it("calls renderer.setLayerVisible for grid toggle (starts inactive)", () => {
     const engine = createMockEngine();
     const renderer = new MockRenderer();
     const spy = vi.spyOn(renderer, "setLayerVisible");
@@ -258,8 +386,28 @@ describe("ToggleBar", () => {
       </EngineProvider>
     ));
 
-    fireEvent.change(getByTestId("toggle-grid"));
-    expect(spy).toHaveBeenCalledWith("grid", false);
+    // Grid starts off (inactive), clicking turns it on
+    fireEvent.click(getByTestId("toggle-grid"));
+    expect(spy).toHaveBeenCalledWith("grid", true);
+  });
+
+  it("speed slider is inside a popup wrapper for hover access", () => {
+    const engine = createMockEngine();
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const slider = getByTestId("speed-slider");
+    // Slider should be inside a .speed-slider-popup div
+    expect(slider.parentElement?.classList.contains("speed-slider-popup")).toBe(true);
+    // Popup should be inside .speed-slider-container
+    expect(slider.parentElement?.parentElement?.classList.contains("speed-slider-container")).toBe(true);
   });
 
   it("toggles back to visible on second click", () => {
@@ -276,10 +424,45 @@ describe("ToggleBar", () => {
     ));
 
     const toggle = getByTestId("toggle-fire-lines");
-    fireEvent.change(toggle);
-    fireEvent.change(toggle);
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenLastCalledWith("projectileMarkers", true);
+  });
+
+  it("shows active/inactive state via CSS class", () => {
+    const engine = createMockEngine();
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const toggle = getByTestId("toggle-fire-lines");
+    expect(toggle.className).toContain("active");
+
+    fireEvent.click(toggle);
+    expect(toggle.className).toContain("inactive");
+  });
+
+  it("grid starts inactive (matching old frontend)", () => {
+    const engine = createMockEngine();
+    const renderer = new MockRenderer();
+
+    const { getByTestId } = render(() => (
+      <EngineProvider engine={engine}>
+        <RendererProvider renderer={renderer}>
+          <ToggleBar />
+        </RendererProvider>
+      </EngineProvider>
+    ));
+
+    const toggle = getByTestId("toggle-grid");
+    expect(toggle.className).toContain("inactive");
   });
 });
 

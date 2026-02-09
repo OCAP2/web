@@ -6,15 +6,18 @@ import { ToggleBar } from "./ToggleBar";
 /**
  * Bottom panel containing all playback controls.
  *
- * Positioned at the bottom of the viewport, renders the
- * Timeline, PlaybackControls, and ToggleBar components.
+ * Two-row layout matching the old frontend:
+ *   Row 1: Full-width timeline slider (with event tick overlay)
+ *   Row 2: Play/pause + timecode (left) | toggles + speed (right)
  */
 export function BottomPanel(): JSX.Element {
   return (
     <div data-testid="bottom-panel" class="bottom-panel">
-      <PlaybackControls />
       <Timeline />
-      <ToggleBar />
+      <div class="bottom-panel-controls">
+        <PlaybackControls />
+        <ToggleBar />
+      </div>
     </div>
   );
 }

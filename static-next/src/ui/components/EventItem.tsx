@@ -54,7 +54,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
 
     return (
       <div
-        class="event-item event-hit-killed"
+        class="event-item event-hit-killed reveal"
         data-testid="event-item"
         data-event-type={event.type}
         onClick={() => {
@@ -84,7 +84,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
   if (event instanceof ConnectEvent) {
     return (
       <div
-        class="event-item event-connect"
+        class="event-item event-connect reveal"
         data-testid="event-item"
         data-event-type={event.type}
         onClick={() => {
@@ -106,7 +106,7 @@ export function EventItem(props: EventItemProps): JSX.Element {
 
   // Fallback for unknown event types
   return (
-    <div class="event-item" data-testid="event-item" data-event-type={event.type}>
+    <div class="event-item reveal" data-testid="event-item" data-event-type={event.type}>
       <span class="event-time" data-testid="event-time">
         {time}
       </span>

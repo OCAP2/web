@@ -1,12 +1,13 @@
+import { For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../hooks/useEngine";
-import { formatElapsedTime } from "../../playback/time";
 
 /**
- * Timeline slider showing current playback position.
+ * Full-width timeline slider row.
  *
- * Displays a range input from 0 to endFrame with the current
- * frame position, plus formatted elapsed time at both ends.
+ * Renders a range input spanning the entire bottom panel width,
+ * with an event timeline bar behind it. Kill/hit events are shown
+ * as red tick marks on the bar.
  */
 export function Timeline(): JSX.Element {
   const engine = useEngine();
@@ -15,11 +16,30 @@ export function Timeline(): JSX.Element {
     engine.seekTo(parseInt(e.currentTarget.value, 10));
   };
 
+  const eventFrames = () => {
+    const end = engine.endFrame();
+    if (end === 0) return [];
+    const events = engine.eventManager.getAll();
+    return events.map((ev) => ev.frameNum);
+  };
+
   return (
     <div data-testid="timeline" class="frame-slider-container">
-      <span data-testid="timeline-current-time" class="timecode">
-        {formatElapsedTime(engine.currentFrame(), engine.captureDelayMs())}
-      </span>
+      <div class="event-timeline">
+        <For each={eventFrames()}>
+          {(frameNum) => {
+            const end = engine.endFrame();
+            const pct = end > 0 ? (frameNum / end) * 100 : 0;
+            const width = end > 0 ? (1 / end) * 100 : 0;
+            return (
+              <div
+                class="event-timeline-tick"
+                style={{ left: `${pct}%`, width: `${Math.max(width, 0.2)}%` }}
+              />
+            );
+          }}
+        </For>
+      </div>
       <input
         type="range"
         class="frame-slider"
@@ -29,9 +49,6 @@ export function Timeline(): JSX.Element {
         value={engine.currentFrame()}
         onInput={handleInput}
       />
-      <span data-testid="timeline-end-time" class="timecode">
-        {formatElapsedTime(engine.endFrame(), engine.captureDelayMs())}
-      </span>
     </div>
   );
 }

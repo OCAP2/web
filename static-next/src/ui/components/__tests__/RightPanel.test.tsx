@@ -320,6 +320,38 @@ describe("EventItem", () => {
     });
   });
 
+  describe("event item visibility", () => {
+    it("event items have reveal class for visibility", () => {
+      const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");
+      event.victimName = "Victim";
+      event.causerName = "Attacker";
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      const item = getByTestId("event-item");
+      expect(item.classList.contains("reveal")).toBe(true);
+    });
+
+    it("connect event items have reveal class", () => {
+      const event = new ConnectEvent(10, "connected", 0, "Player1");
+
+      const { engine } = createMockEngine();
+      const { getByTestId } = render(() => (
+        <EngineProvider engine={engine as any}>
+          <EventItem event={event} engine={engine as any} />
+        </EngineProvider>
+      ));
+
+      const item = getByTestId("event-item");
+      expect(item.classList.contains("reveal")).toBe(true);
+    });
+  });
+
   describe("side class mapping", () => {
     it("maps GUER to side-ind", () => {
       const event = new HitKilledEvent(10, "killed", 0, 1, 2, 50, "AK47");

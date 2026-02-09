@@ -795,6 +795,43 @@ describe("PlaybackEngine", () => {
       engine.seekTo(5);
       expect(engine.activeEvents()).toHaveLength(0);
     });
+
+    it("returns cumulative events (all events up to current frame)", () => {
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [
+          makeEntityDef({ id: 1 }),
+          makeEntityDef({ id: 2, name: "Enemy", side: "EAST" }),
+        ],
+        events: [
+          { frameNum: 5, type: "connected", unitName: "Player1" },
+          { frameNum: 10, type: "killed", victimId: 1, causedById: 2, distance: 100, weapon: "AK" },
+          { frameNum: 20, type: "connected", unitName: "Player2" },
+        ],
+      });
+      const cm = makeMockChunkManager();
+      engine.loadOperation(manifest, cm);
+
+      // At frame 5: only the connected event
+      engine.seekTo(5);
+      expect(engine.activeEvents()).toHaveLength(1);
+
+      // At frame 10: connected + killed = 2
+      engine.seekTo(10);
+      expect(engine.activeEvents()).toHaveLength(2);
+
+      // At frame 15: still 2 (no event at 15, but cumulative from before)
+      engine.seekTo(15);
+      expect(engine.activeEvents()).toHaveLength(2);
+
+      // At frame 20: all 3 events
+      engine.seekTo(20);
+      expect(engine.activeEvents()).toHaveLength(3);
+
+      // Back to frame 0: none
+      engine.seekTo(0);
+      expect(engine.activeEvents()).toHaveLength(0);
+    });
   });
 
   // ─── Playback speed and timer interval ───
