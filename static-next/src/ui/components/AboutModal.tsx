@@ -83,7 +83,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               </select>
             </label>
           </div>
-          <div class={styles.modalFooter}>
+          <div class={styles.modalFooter} style={{ "background-color": "var(--bg-modal)", "margin-top": "0", "padding": "5px 10px" }}>
             <button
               data-testid="about-close-button"
               class={styles.modalButton}

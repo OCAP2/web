@@ -80,6 +80,8 @@
   display: inline-block;
   min-width: 100px;
   background-color: rgba(0, 0, 0, 0.7);
+  color: var(--text-primary);
+  border: none;
   margin-right: 10px;
   padding: 5px;
   text-transform: uppercase;
