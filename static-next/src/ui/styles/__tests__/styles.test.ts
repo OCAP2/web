@@ -106,8 +106,8 @@ describe("CSS style files", () => {
       expect(css).toContain(".loading-spinner");
     });
 
-    it("contains range input styling", () => {
-      expect(css).toContain('input[type="range"]');
+    it("contains streaming indicator styling", () => {
+      expect(css).toContain(".streaming-indicator");
     });
   });
 

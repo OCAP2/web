@@ -83,18 +83,46 @@
 }
 
 .frameSlider {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 10px;
+  background: transparent;
   position: relative;
   bottom: 14px;
   z-index: 1;
 }
 
+.frameSlider:focus {
+  outline: none;
+}
+
+.frameSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--range-thumb-bg);
+  height: 20px;
+  width: 5px;
+  margin-top: -5px;
+}
+
 .frameSlider::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
   background-color: transparent;
 }
 
+.frameSlider::-moz-range-thumb {
+  background: var(--range-thumb-bg);
+  height: 20px;
+  width: 5px;
+  border: none;
+  border-radius: 0;
+}
+
 .frameSlider::-moz-range-track {
+  height: 10px;
   background-color: transparent;
 }
 
