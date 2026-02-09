@@ -121,7 +121,7 @@ export function ToggleBar(): JSX.Element {
         class={`${styles.toggleBtn} ${styles.fullscreenIcon}`}
         onClick={goFullscreen}
         title="Toggle fullscreen"
-      />
+      >⛶</span>
     </div>
   );
 }

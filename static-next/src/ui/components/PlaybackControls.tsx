@@ -18,7 +18,9 @@ export function PlaybackControls(): JSX.Element {
         class={`${styles.playPauseBtn} ${engine.isPlaying() ? styles.playing : ""}`}
         data-playing={engine.isPlaying()}
         onClick={() => engine.togglePlayPause()}
-      />
+      >
+        {engine.isPlaying() ? "⏸" : "▶"}
+      </div>
       <div data-testid="timecode-container" class={styles.timecodeContainer}>
         <span data-testid="timeline-current-time" class={styles.timecode}>
           {formatElapsedTime(engine.currentFrame(), engine.captureDelayMs())}
