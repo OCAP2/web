@@ -73,13 +73,14 @@ describe("LeftPanel", () => {
         <LeftPanel />
       </EngineProvider>
     ));
-    expect(getByTestId("tab-WEST").textContent).toBe("BLUFOR");
+    expect(getByTestId("tab-WEST").textContent).toContain("BLUFOR");
+    expect(getByTestId("tab-WEST").textContent).toContain("(0)");
     expect(getByTestId("tab-WEST").className).toContain("blufor");
-    expect(getByTestId("tab-EAST").textContent).toBe("OPFOR");
+    expect(getByTestId("tab-EAST").textContent).toContain("OPFOR");
     expect(getByTestId("tab-EAST").className).toContain("opfor");
-    expect(getByTestId("tab-GUER").textContent).toBe("IND");
+    expect(getByTestId("tab-GUER").textContent).toContain("IND");
     expect(getByTestId("tab-GUER").className).toContain("ind");
-    expect(getByTestId("tab-CIV").textContent).toBe("CIV");
+    expect(getByTestId("tab-CIV").textContent).toContain("CIV");
     expect(getByTestId("tab-CIV").className).toContain("civ");
   });
 

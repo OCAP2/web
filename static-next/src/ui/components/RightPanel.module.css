@@ -16,6 +16,7 @@
   height: 30px;
   text-align: center;
   font-size: 16px;
+  font-weight: bold;
   padding-top: 10px;
 }
 
@@ -24,6 +25,20 @@
   overflow-x: auto;
   padding: 10px;
   height: calc(100% - 40px - 60px);
+}
+
+.panelContent::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.panelContent::-webkit-scrollbar-track,
+.panelContent::-webkit-scrollbar-corner {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.panelContent::-webkit-scrollbar-thumb {
+  background-color: #6e6e6e;
 }
 
 .filterBox {

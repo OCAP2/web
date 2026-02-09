@@ -37,6 +37,7 @@ export function LeftPanel(): JSX.Element {
   return (
     <Show when={leftPanelVisible()}>
       <div class={styles.leftPanel} data-testid="left-panel">
+        <div class={styles.panelTitle} data-testid="left-panel-header">Players</div>
         <div class={styles.panelContent} data-testid="left-panel-content">
           <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
         </div>
@@ -49,7 +50,7 @@ export function LeftPanel(): JSX.Element {
                 onClick={() => setActiveTab(side)}
                 style={{ "background-color": activeTab() === side ? "rgba(255, 183, 38, 0.3)" : "rgba(255, 183, 38, 0.1)" }}
               >
-                {SIDE_LABEL[side]}
+                {SIDE_LABEL[side]}{"\n"}({unitsForSide(side).length})
               </div>
             )}
           </For>
