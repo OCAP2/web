@@ -90,7 +90,7 @@ func app() error {
 		}
 
 		worker := conversion.NewWorker(
-			&repoAdapter{operation},
+			operation,
 			conversion.Config{
 				DataDir:     setting.Data,
 				Interval:    interval,

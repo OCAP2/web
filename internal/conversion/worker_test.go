@@ -9,34 +9,35 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OCAP2/web/internal/server"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 // mockRepo implements OperationRepo for testing
 type mockRepo struct {
-	pending       []Operation
+	pending       []server.Operation
 	status        map[int64]string
 	format        map[int64]string
 	duration      map[int64]float64
 	schemaVersion map[int64]uint32
 	chunkCount    map[int64]int
-	byStatus      map[string][]Operation
+	byStatus      map[string][]server.Operation
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		pending:       []Operation{},
+		pending:       []server.Operation{},
 		status:        make(map[int64]string),
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
 		schemaVersion: make(map[int64]uint32),
 		chunkCount:    make(map[int64]int),
-		byStatus:      make(map[string][]Operation),
+		byStatus:      make(map[string][]server.Operation),
 	}
 }
 
-func (m *mockRepo) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+func (m *mockRepo) SelectPending(ctx context.Context, limit int) ([]server.Operation, error) {
 	if len(m.pending) <= limit {
 		return m.pending, nil
 	}
@@ -63,7 +64,7 @@ func (m *mockRepo) UpdateSchemaVersion(ctx context.Context, id int64, version ui
 	return nil
 }
 
-func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]server.Operation, error) {
 	return m.byStatus[status], nil
 }
 
@@ -172,7 +173,7 @@ func TestWorker_ProcessOnce(t *testing.T) {
 
 	// Create mock repo with pending operations
 	repo := newMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 		{ID: 2, Filename: "mission2"},
 	}
@@ -383,7 +384,7 @@ func TestWorker_ContextCancellation(t *testing.T) {
 	}
 
 	repo := newMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "cancel_1"},
 		{ID: 2, Filename: "cancel_2"},
 		{ID: 3, Filename: "cancel_3"},
@@ -414,8 +415,8 @@ func TestWorker_ContextCancellation(t *testing.T) {
 
 // errorMockRepo is a mock that can return errors for testing error paths
 type errorMockRepo struct {
-	pending                  []Operation
-	byStatus                 map[string][]Operation
+	pending                  []server.Operation
+	byStatus                 map[string][]server.Operation
 	status                   map[int64]string
 	format                   map[int64]string
 	duration                 map[int64]float64
@@ -433,8 +434,8 @@ type errorMockRepo struct {
 
 func newErrorMockRepo() *errorMockRepo {
 	return &errorMockRepo{
-		pending:       []Operation{},
-		byStatus:      make(map[string][]Operation),
+		pending:       []server.Operation{},
+		byStatus:      make(map[string][]server.Operation),
 		status:        make(map[int64]string),
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
@@ -443,7 +444,7 @@ func newErrorMockRepo() *errorMockRepo {
 	}
 }
 
-func (m *errorMockRepo) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+func (m *errorMockRepo) SelectPending(ctx context.Context, limit int) ([]server.Operation, error) {
 	if m.selectPendingErr != nil {
 		return nil, m.selectPendingErr
 	}
@@ -491,7 +492,7 @@ func (m *errorMockRepo) UpdateChunkCount(ctx context.Context, id int64, count in
 	return nil
 }
 
-func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]server.Operation, error) {
 	if m.selectByStatusErr != nil {
 		return nil, m.selectByStatusErr
 	}
@@ -528,7 +529,7 @@ func TestProcessOnce_SelectPendingError(t *testing.T) {
 func TestProcessOnce_ConversionFailureStatusUpdateError(t *testing.T) {
 	dir := t.TempDir()
 	repo := newErrorMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "nonexistent"},
 	}
 	// Fail the "failed" status update after conversion error
@@ -701,11 +702,11 @@ func TestWorker_CleanupInterrupted(t *testing.T) {
 
 	// Create mock repo with converting operations
 	repo := newMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 		{ID: 2, Filename: "mission2"},
 	}
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 3, Filename: "mission3"},
 	}
 
@@ -735,10 +736,10 @@ func TestWorker_CleanupInterrupted_RetryFailed(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 2, Filename: "mission2"},
 		{ID: 3, Filename: "mission3"},
 	}
@@ -776,7 +777,7 @@ func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newErrorMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
 	repo.resetConversionStatusErr = fmt.Errorf("database error")
@@ -794,7 +795,7 @@ func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newErrorMockRepo()
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
 	repo.resetConversionStatusErr = fmt.Errorf("database error")

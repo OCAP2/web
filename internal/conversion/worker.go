@@ -9,25 +9,20 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/OCAP2/web/internal/server"
 	"github.com/OCAP2/web/internal/storage"
 )
 
 // OperationRepo defines the repository interface needed by the worker
 type OperationRepo interface {
-	SelectPending(ctx context.Context, limit int) ([]Operation, error)
-	SelectByStatus(ctx context.Context, status string) ([]Operation, error)
+	SelectPending(ctx context.Context, limit int) ([]server.Operation, error)
+	SelectByStatus(ctx context.Context, status string) ([]server.Operation, error)
 	ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error)
 	UpdateConversionStatus(ctx context.Context, id int64, status string) error
 	UpdateStorageFormat(ctx context.Context, id int64, format string) error
 	UpdateMissionDuration(ctx context.Context, id int64, duration float64) error
 	UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error
 	UpdateChunkCount(ctx context.Context, id int64, count int) error
-}
-
-// Operation represents a minimal operation for conversion
-type Operation struct {
-	ID       int64
-	Filename string
 }
 
 // Worker handles background conversion of JSON recordings to protobuf format
@@ -162,7 +157,7 @@ func (w *Worker) processOnce(ctx context.Context) {
 }
 
 // convertOperation converts a single operation from JSON to protobuf format
-func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
+func (w *Worker) convertOperation(ctx context.Context, op server.Operation) error {
 	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename)
 
 	// Update status to converting
@@ -213,7 +208,7 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 
 // ConvertOne converts a single operation by ID (for CLI/manual use)
 func (w *Worker) ConvertOne(ctx context.Context, id int64, filename string) error {
-	return w.convertOperation(ctx, Operation{ID: id, Filename: filename})
+	return w.convertOperation(ctx, server.Operation{ID: id, Filename: filename})
 }
 
 // TriggerConversion starts an async conversion for the given operation.
@@ -222,7 +217,7 @@ func (w *Worker) ConvertOne(ctx context.Context, id int64, filename string) erro
 func (w *Worker) TriggerConversion(id int64, filename string) {
 	go func() {
 		ctx := context.Background()
-		if err := w.convertOperation(ctx, Operation{ID: id, Filename: filename}); err != nil {
+		if err := w.convertOperation(ctx, server.Operation{ID: id, Filename: filename}); err != nil {
 			slog.Error("async conversion failed", "operation_id", id, "filename", filename, "error", err)
 			if err := w.repo.UpdateConversionStatus(ctx, id, "failed"); err != nil {
 				slog.Error("failed to update status", "operation_id", id, "error", err)

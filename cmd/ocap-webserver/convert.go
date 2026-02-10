@@ -112,7 +112,7 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 
 		// Use worker to ensure identical behavior as background conversion
 		worker := conversion.NewWorker(
-			&repoAdapter{repo},
+			repo,
 			conversion.Config{
 				DataDir:   dataDir,
 				ChunkSize: chunkSize,
@@ -152,7 +152,7 @@ func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.
 	log.Printf("Found %d operations to convert", len(operations))
 
 	worker := conversion.NewWorker(
-		&repoAdapter{repo},
+		repo,
 		conversion.Config{
 			DataDir:   setting.Data,
 			ChunkSize: chunkSize,
@@ -173,58 +173,3 @@ func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.
 	return showConversionStatus(ctx, repo)
 }
 
-// repoAdapter adapts server.RepoOperation to conversion.OperationRepo
-type repoAdapter struct {
-	repo *server.RepoOperation
-}
-
-func (a *repoAdapter) SelectPending(ctx context.Context, limit int) ([]conversion.Operation, error) {
-	ops, err := a.repo.SelectPending(ctx, limit)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]conversion.Operation, len(ops))
-	for i, op := range ops {
-		result[i] = conversion.Operation{
-			ID:       op.ID,
-			Filename: op.Filename,
-		}
-	}
-	return result, nil
-}
-
-func (a *repoAdapter) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
-	return a.repo.UpdateConversionStatus(ctx, id, status)
-}
-
-func (a *repoAdapter) UpdateStorageFormat(ctx context.Context, id int64, format string) error {
-	return a.repo.UpdateStorageFormat(ctx, id, format)
-}
-
-func (a *repoAdapter) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
-	return a.repo.UpdateMissionDuration(ctx, id, duration)
-}
-
-func (a *repoAdapter) UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error {
-	return a.repo.UpdateSchemaVersion(ctx, id, version)
-}
-
-func (a *repoAdapter) SelectByStatus(ctx context.Context, status string) ([]conversion.Operation, error) {
-	ops, err := a.repo.SelectByStatus(ctx, status)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]conversion.Operation, len(ops))
-	for i, op := range ops {
-		result[i] = conversion.Operation{ID: op.ID, Filename: op.Filename}
-	}
-	return result, nil
-}
-
-func (a *repoAdapter) UpdateChunkCount(ctx context.Context, id int64, count int) error {
-	return a.repo.UpdateChunkCount(ctx, id, count)
-}
-
-func (a *repoAdapter) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
-	return a.repo.ResetConversionStatus(ctx, fromStatus, toStatus)
-}
