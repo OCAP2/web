@@ -74,6 +74,7 @@ export class Unit extends Entity {
       side: this.side,
       name: state.name ?? this.name,
       iconType: this.iconType,
+      isPlayer: this.isPlayer,
       isInVehicle: state.isInVehicle ?? false,
     };
   }

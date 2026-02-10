@@ -53,6 +53,7 @@ export interface MapRenderer {
 
   // Settings
   setSmoothingEnabled(enabled: boolean): void;
+  setNameDisplayMode(mode: "players" | "all" | "none"): void;
 
   // Events
   on(event: RendererEvent, cb: (...args: any[]) => void): void;

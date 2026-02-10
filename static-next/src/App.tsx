@@ -170,10 +170,11 @@ export function App(): JSX.Element {
       let handle = markerHandles.get(id);
       if (!handle) {
         handle = renderer.createEntityMarker(id, {
+          position: snap.position,
           iconType: snap.iconType,
           side: snap.side,
           name: snap.name,
-          isPlayer: false,
+          isPlayer: snap.isPlayer,
         });
         markerHandles.set(id, handle);
       }
@@ -184,6 +185,7 @@ export function App(): JSX.Element {
         side: snap.side,
         name: snap.name,
         iconType: snap.iconType,
+        isPlayer: snap.isPlayer,
         isInVehicle: snap.isInVehicle,
       });
 

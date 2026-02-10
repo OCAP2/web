@@ -10,6 +10,7 @@ export interface EntitySnapshot {
   side: Side | null;
   name: string;
   iconType: string;
+  isPlayer: boolean;
   isInVehicle: boolean;
   /** If the unit fired this frame, the projectile target position. */
   firedTarget?: ArmaCoord;

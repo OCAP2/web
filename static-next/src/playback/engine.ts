@@ -392,9 +392,14 @@ export class PlaybackEngine {
         if (states && states[frameInChunk]) {
           const state = states[frameInChunk];
           let side: import("../data/types").Side | null = entity instanceof Unit ? entity.side : null;
+          let isPlayer = entity instanceof Unit ? entity.isPlayer : false;
           if (entity instanceof Vehicle && state.crewIds?.length) {
             entity.setCrew(state.crewIds);
             side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
+            isPlayer = state.crewIds.some((id) => {
+              const crew = this.entityManager.getEntity(id);
+              return crew instanceof Unit && crew.isPlayer;
+            });
           }
           const snapshot: EntitySnapshot = {
             id: entity.id,
@@ -404,6 +409,7 @@ export class PlaybackEngine {
             side,
             name: state.name ?? entity.name,
             iconType: entity.iconType,
+            isPlayer,
             isInVehicle: state.isInVehicle ?? false,
           };
           if (entity instanceof Unit) {
@@ -419,12 +425,16 @@ export class PlaybackEngine {
       const relativeFrame = entity.getRelativeFrameIndex(frame);
       const snap = entity.getStateAtFrame(relativeFrame);
       if (snap) {
-        // For vehicles, derive side from crew in the position data
+        // For vehicles, derive side and isPlayer from crew in the position data
         if (entity instanceof Vehicle) {
           const state = entity.positions?.[relativeFrame];
           if (state?.crewIds?.length) {
             entity.setCrew(state.crewIds);
             snap.side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
+            snap.isPlayer = state.crewIds.some((id) => {
+              const crew = this.entityManager.getEntity(id);
+              return crew instanceof Unit && crew.isPlayer;
+            });
           }
         }
         if (entity instanceof Unit) {

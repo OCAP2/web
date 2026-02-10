@@ -25,6 +25,7 @@ export type PulseHandle = { readonly _brand: typeof pulseBrand; _internal: unkno
 // --------------- Entity markers ---------------
 
 export interface EntityMarkerOpts {
+  position: ArmaCoord;
   iconType: string;
   side: Side | null;
   name: string;
@@ -38,6 +39,7 @@ export interface EntityMarkerState {
   side: Side | null;
   name: string;
   iconType: string;
+  isPlayer: boolean;
   isInVehicle: boolean;
 }
 

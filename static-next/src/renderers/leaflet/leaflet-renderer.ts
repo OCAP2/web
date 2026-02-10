@@ -47,6 +47,10 @@ interface InternalMarkerHandle {
   marker: L.Marker;
   id: number;
   lastDirection: number;
+  /** Track current icon key to avoid unnecessary setIcon calls (which rebind the popup). */
+  iconKey: string;
+  /** Track current popup name to avoid unnecessary setContent calls (which retrigger layout). */
+  popupName: string;
 }
 
 interface InternalBriefingHandle {
@@ -136,6 +140,8 @@ export class LeafletRenderer implements MapRenderer {
   private map!: L.Map;
   private world!: WorldConfig;
   private useMapLibreMode = false;
+
+  private nameDisplayMode: "players" | "all" | "none" = "players";
 
   private layers: Record<LayerGroupKey, L.LayerGroup> = {
     entities: L.layerGroup(),
@@ -519,15 +525,18 @@ export class LeafletRenderer implements MapRenderer {
 
   createEntityMarker(id: number, opts: EntityMarkerOpts): MarkerHandle {
     const { icon, opacity } = entityIcon(opts.iconType, opts.side, 1);
+    const latlng = this.armaToLatLng(opts.position);
 
-    const marker = L.marker([0, 0], {
+    const marker = L.marker(latlng, {
       icon,
       rotationOrigin: opts.iconType === "man" ? "50% 60%" : "50% 50%",
     } as any);
 
     marker.setOpacity(opacity);
 
-    // Bind popup with entity name
+    // Add to map, then bind and open popup (matching old frontend order)
+    marker.addTo(this.layers.entities);
+
     const popup = L.popup({
       autoPan: false,
       autoClose: false,
@@ -537,10 +546,8 @@ export class LeafletRenderer implements MapRenderer {
     popup.setContent(opts.name);
     marker.bindPopup(popup).openPopup();
 
-    // Add to entities layer group
-    marker.addTo(this.layers.entities);
-
-    return wrapMarker({ marker, id, lastDirection: 0 });
+    const iconKey = `${opts.iconType}:${opts.side}:1`;
+    return wrapMarker({ marker, id, lastDirection: 0, iconKey, popupName: opts.name });
   }
 
   updateEntityMarker(handle: MarkerHandle, state: EntityMarkerState): void {
@@ -556,23 +563,40 @@ export class LeafletRenderer implements MapRenderer {
     (marker as any).setRotationAngle(newAngle);
     internal.lastDirection = newAngle;
 
-    // Update icon based on alive state and side
+    // Only call setIcon when icon actually changes (avoids popup rebind)
+    const newIconKey = `${state.iconType}:${state.side}:${state.alive}`;
     const { icon, opacity } = entityIcon(state.iconType, state.side, state.alive);
-    marker.setIcon(icon);
+    if (newIconKey !== internal.iconKey) {
+      marker.setIcon(icon);
+      internal.iconKey = newIconKey;
+    }
     marker.setOpacity(opacity);
 
-    // Update popup text if name changed
+    // Update popup text and visibility via CSS display (matching old hideMarkerPopup).
     const popup = marker.getPopup();
     if (popup) {
-      const displayName = state.name;
-      popup.setContent(displayName);
+      if (state.name !== internal.popupName) {
+        popup.setContent(state.name);
+        internal.popupName = state.name;
+      }
+
+      const popupEl = popup.getElement();
+      if (popupEl) {
+        let display = "";
+        if (state.isInVehicle) {
+          display = "none";
+        } else if (this.nameDisplayMode === "none") {
+          display = "none";
+        } else if (this.nameDisplayMode === "players" && !state.isPlayer) {
+          display = "none";
+        }
+        popupEl.style.display = display;
+      }
     }
 
-    // Handle visibility: hide if in vehicle
+    // Handle marker visibility: hide if in vehicle
     if (state.isInVehicle) {
       marker.setOpacity(0);
-      const popupEl = popup?.getElement();
-      if (popupEl) popupEl.style.display = "none";
     }
   }
 
@@ -884,6 +908,10 @@ export class LeafletRenderer implements MapRenderer {
     } else {
       disableSmoothing(container);
     }
+  }
+
+  setNameDisplayMode(mode: "players" | "all" | "none"): void {
+    this.nameDisplayMode = mode;
   }
 
   // ==================== Events ====================
