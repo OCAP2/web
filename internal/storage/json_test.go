@@ -12,12 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestJSONEngineBasics(t *testing.T) {
-	engine := NewJSONEngine("/tmp")
-
-	assert.False(t, engine.SupportsStreaming())
-}
-
 func TestJSONEngineGetManifest(t *testing.T) {
 	dir := t.TempDir()
 
@@ -111,23 +105,6 @@ func TestJSONEngineNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "recording not found")
 }
 
-func TestJSONEngineChunkedNotSupported(t *testing.T) {
-	engine := NewJSONEngine(t.TempDir())
-	ctx := context.Background()
-
-	_, err := engine.GetChunk(ctx, "test", 0)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support")
-
-	_, err = engine.GetChunkReader(ctx, "test", 0)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support")
-
-	err = engine.Convert(ctx, "input", "output")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support")
-}
-
 func TestJSONEngineEmptyEntities(t *testing.T) {
 	dir := t.TempDir()
 
@@ -150,17 +127,6 @@ func TestJSONEngineEmptyEntities(t *testing.T) {
 	assert.Equal(t, "stratis", manifest.WorldName)
 	assert.Equal(t, uint32(50), manifest.FrameCount)
 	assert.Empty(t, manifest.Entities)
-}
-
-func TestJSONEngineGetManifestReader(t *testing.T) {
-	engine := NewJSONEngine(t.TempDir())
-	ctx := context.Background()
-
-	// JSON engine does not support raw manifest streaming
-	reader, err := engine.GetManifestReader(ctx, "test")
-	assert.Nil(t, reader)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support")
 }
 
 func TestHelperFunctions(t *testing.T) {

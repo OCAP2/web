@@ -91,9 +91,7 @@ func TestGetOperationFormat(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test: Get format for existing operation
@@ -159,9 +157,7 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"protobuf": storage.NewProtobufEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test: Get format for protobuf operation (ChunkCount comes from DB now)
@@ -242,9 +238,7 @@ func TestGetOperationManifest(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test: Get manifest for JSON operation
@@ -342,9 +336,7 @@ func TestGetOperationManifestProtobuf(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"protobuf": storage.NewProtobufEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test: Get manifest for protobuf operation
@@ -458,9 +450,7 @@ func TestGetOperationChunk(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"protobuf": storage.NewProtobufEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test: Get chunk 0 for protobuf operation
@@ -1346,9 +1336,7 @@ func TestGetOperationFormat_EmptyStorageFormat(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1397,9 +1385,7 @@ func TestGetOperationFormat_UnknownFormat(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1460,9 +1446,7 @@ func TestGetOperationManifest_JSONFormat(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1512,9 +1496,7 @@ func TestGetOperationChunk_EmptyStorageFormat(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1753,9 +1735,7 @@ func TestGetOperationManifest_JSONError(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1802,9 +1782,7 @@ func TestGetOperationManifest_ProtobufReadError(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"protobuf": storage.NewProtobufEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1851,9 +1829,7 @@ func TestGetOperationChunk_JSONNotSupported(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()
@@ -1943,9 +1919,7 @@ func TestGetOperationFormat_WithSchemaVersion(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json": storage.NewJSONEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	e := echo.New()

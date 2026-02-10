@@ -119,10 +119,7 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		engines: map[string]storage.Engine{
-			"json":     storage.NewJSONEngine(dataDir),
-			"protobuf": storage.NewProtobufEngine(dataDir),
-		},
+		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
 	// Test 1: Get format info (JSON)

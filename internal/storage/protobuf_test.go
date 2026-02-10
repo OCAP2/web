@@ -3,7 +3,6 @@ package storage
 
 import (
 	"context"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,12 +13,6 @@ import (
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
-
-func TestProtobufEngineBasics(t *testing.T) {
-	engine := NewProtobufEngine("/tmp")
-
-	assert.True(t, engine.SupportsStreaming())
-}
 
 func TestProtobufEngineGetManifest(t *testing.T) {
 	dir := t.TempDir()
@@ -89,168 +82,6 @@ func TestProtobufEngineGetManifestInvalidData(t *testing.T) {
 	_, err := engine.GetManifest(context.Background(), "test_mission")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unmarshal manifest")
-}
-
-func TestProtobufEngineGetChunk(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	chunksDir := filepath.Join(missionDir, "chunks")
-	require.NoError(t, os.MkdirAll(chunksDir, 0755))
-
-	// Create test chunk
-	pbChunk := &pbv1.Chunk{
-		Index:      0,
-		StartFrame: 0,
-		FrameCount: 2,
-		Frames: []*pbv1.Frame{
-			{
-				FrameNum: 0,
-				Entities: []*pbv1.EntityState{
-					{EntityId: 0, PosX: 100, PosY: 200, Direction: 45, Alive: 1},
-				},
-			},
-			{
-				FrameNum: 1,
-				Entities: []*pbv1.EntityState{
-					{EntityId: 0, PosX: 101, PosY: 201, Direction: 46, Alive: 1},
-				},
-			},
-		},
-	}
-
-	data, err := proto.Marshal(pbChunk)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.pb"), data, 0644))
-
-	engine := NewProtobufEngine(dir)
-	ctx := context.Background()
-
-	chunk, err := engine.GetChunk(ctx, "test_mission", 0)
-	require.NoError(t, err)
-
-	assert.Equal(t, uint32(0), chunk.Index)
-	assert.Equal(t, uint32(0), chunk.StartFrame)
-	assert.Equal(t, uint32(2), chunk.FrameCount)
-	assert.Len(t, chunk.Frames, 2)
-
-	// Check first frame
-	assert.Equal(t, uint32(0), chunk.Frames[0].FrameNum)
-	assert.Len(t, chunk.Frames[0].Entities, 1)
-	assert.Equal(t, float32(100), chunk.Frames[0].Entities[0].PosX)
-	assert.Equal(t, float32(200), chunk.Frames[0].Entities[0].PosY)
-}
-
-func TestProtobufEngineGetChunkWithCrew(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	chunksDir := filepath.Join(missionDir, "chunks")
-	require.NoError(t, os.MkdirAll(chunksDir, 0755))
-
-	// Create test chunk with vehicle crew
-	pbChunk := &pbv1.Chunk{
-		Index:      0,
-		StartFrame: 0,
-		FrameCount: 1,
-		Frames: []*pbv1.Frame{
-			{
-				FrameNum: 0,
-				Entities: []*pbv1.EntityState{
-					{EntityId: 5, PosX: 500, PosY: 600, Direction: 90, Alive: 1, CrewIds: []uint32{1, 2, 3}},
-					{EntityId: 1, PosX: 500, PosY: 600, Direction: 90, Alive: 1, VehicleId: 5, IsInVehicle: true},
-				},
-			},
-		},
-	}
-
-	data, err := proto.Marshal(pbChunk)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.pb"), data, 0644))
-
-	engine := NewProtobufEngine(dir)
-	chunk, err := engine.GetChunk(context.Background(), "test_mission", 0)
-	require.NoError(t, err)
-
-	// Check vehicle with crew
-	vehicleState := chunk.Frames[0].Entities[0]
-	assert.Equal(t, uint32(5), vehicleState.EntityID)
-	assert.Equal(t, []uint32{1, 2, 3}, vehicleState.CrewIDs)
-
-	// Check unit in vehicle
-	unitState := chunk.Frames[0].Entities[1]
-	assert.Equal(t, uint32(5), unitState.VehicleID)
-}
-
-func TestProtobufEngineGetChunkMissingFile(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	chunksDir := filepath.Join(missionDir, "chunks")
-	require.NoError(t, os.MkdirAll(chunksDir, 0755))
-
-	engine := NewProtobufEngine(dir)
-	_, err := engine.GetChunk(context.Background(), "test_mission", 99)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "read chunk 99")
-}
-
-func TestProtobufEngineGetChunkReader(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	chunksDir := filepath.Join(missionDir, "chunks")
-	require.NoError(t, os.MkdirAll(chunksDir, 0755))
-
-	// Create a chunk file with known content
-	testData := []byte("test chunk data")
-	require.NoError(t, os.WriteFile(filepath.Join(chunksDir, "0000.pb"), testData, 0644))
-
-	engine := NewProtobufEngine(dir)
-	reader, err := engine.GetChunkReader(context.Background(), "test_mission", 0)
-	require.NoError(t, err)
-	defer reader.Close()
-
-	data, err := io.ReadAll(reader)
-	require.NoError(t, err)
-	assert.Equal(t, testData, data)
-}
-
-func TestProtobufEngineGetChunkReaderMissingFile(t *testing.T) {
-	dir := t.TempDir()
-	engine := NewProtobufEngine(dir)
-
-	_, err := engine.GetChunkReader(context.Background(), "nonexistent", 0)
-	require.Error(t, err)
-}
-
-func TestProtobufEngineGetManifestReader(t *testing.T) {
-	dir := t.TempDir()
-	missionDir := filepath.Join(dir, "test_mission")
-	require.NoError(t, os.MkdirAll(missionDir, 0755))
-
-	// Create test manifest
-	pbManifest := &pbv1.Manifest{
-		Version:     1,
-		WorldName:   "altis",
-		MissionName: "Reader Test",
-	}
-	data, err := proto.Marshal(pbManifest)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(missionDir, "manifest.pb"), data, 0644))
-
-	engine := NewProtobufEngine(dir)
-	reader, err := engine.GetManifestReader(context.Background(), "test_mission")
-	require.NoError(t, err)
-	defer reader.Close()
-
-	readData, err := io.ReadAll(reader)
-	require.NoError(t, err)
-	assert.Equal(t, data, readData)
-}
-
-func TestProtobufEngineGetManifestReaderMissingFile(t *testing.T) {
-	dir := t.TempDir()
-	engine := NewProtobufEngine(dir)
-
-	_, err := engine.GetManifestReader(context.Background(), "nonexistent")
-	require.Error(t, err)
 }
 
 func TestProtobufEngineConvert(t *testing.T) {

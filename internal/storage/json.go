@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -20,8 +19,6 @@ type JSONEngine struct {
 func NewJSONEngine(dataDir string) *JSONEngine {
 	return &JSONEngine{dataDir: dataDir}
 }
-
-func (e *JSONEngine) SupportsStreaming() bool { return false }
 
 func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {
 	data, err := e.loadJSON(filename)
@@ -62,22 +59,6 @@ func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifes
 	}
 
 	return manifest, nil
-}
-
-func (e *JSONEngine) GetManifestReader(ctx context.Context, filename string) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("JSON engine does not support raw manifest streaming")
-}
-
-func (e *JSONEngine) GetChunk(ctx context.Context, filename string, chunkIndex int) (*Chunk, error) {
-	return nil, fmt.Errorf("JSON engine does not support chunked loading")
-}
-
-func (e *JSONEngine) GetChunkReader(ctx context.Context, filename string, chunkIndex int) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("JSON engine does not support chunked loading")
-}
-
-func (e *JSONEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
-	return fmt.Errorf("JSON engine does not support conversion")
 }
 
 func (e *JSONEngine) loadJSON(filename string) (map[string]interface{}, error) {

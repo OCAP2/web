@@ -13,9 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OCAP2/web/internal/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/OCAP2/web/internal/storage"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -36,7 +37,7 @@ type Handler struct {
 	repoMarker        *RepoMarker
 	repoAmmo          *RepoAmmo
 	setting           Setting
-	engines           map[string]storage.Engine
+	jsonEngine        *storage.JSONEngine
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
 }
 
@@ -71,10 +72,7 @@ func NewHandler(
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
 		setting:       setting,
-		engines: map[string]storage.Engine{
-			"json":     storage.NewJSONEngine(setting.Data),
-			"protobuf": storage.NewProtobufEngine(setting.Data),
-		},
+		jsonEngine:    storage.NewJSONEngine(setting.Data),
 	}
 
 	// Apply options
@@ -198,16 +196,15 @@ func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// resolveEngine returns the storage engine for the given format string,
-// falling back to "json" if the format is empty or unknown.
-func (h *Handler) resolveEngine(format string) (storage.Engine, string) {
-	if format == "" {
-		format = "json"
+// resolveFormat returns the canonical format string, falling back to "json"
+// if the format is empty or unknown.
+func resolveFormat(format string) string {
+	switch format {
+	case "protobuf":
+		return "protobuf"
+	default:
+		return "json"
 	}
-	if e, ok := h.engines[format]; ok {
-		return e, format
-	}
-	return h.engines["json"], "json"
 }
 
 func (h *Handler) GetOperations(c echo.Context) error {
@@ -256,7 +253,7 @@ func (h *Handler) GetOperationFormat(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	_, format := h.resolveEngine(op.StorageFormat)
+	format := resolveFormat(op.StorageFormat)
 
 	// Default schema version to 1 for legacy recordings
 	schemaVersion := op.SchemaVersion
@@ -280,21 +277,20 @@ func (h *Handler) GetOperationManifest(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	engine, format := h.resolveEngine(op.StorageFormat)
+	format := resolveFormat(op.StorageFormat)
 
-	// For protobuf format, stream raw binary file
+	// For protobuf format, serve raw binary file directly
 	if format == "protobuf" {
-		reader, err := engine.GetManifestReader(c.Request().Context(), op.Filename)
-		if err != nil {
+		manifestPath := filepath.Join(h.setting.Data, op.Filename, "manifest.pb")
+		if _, err := os.Stat(manifestPath); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
 		}
-		defer reader.Close()
-
-		return c.Stream(http.StatusOK, "application/x-protobuf", reader)
+		c.Response().Header().Set("Content-Type", "application/x-protobuf")
+		return c.File(manifestPath)
 	}
 
-	// For JSON format, return as JSON
-	manifest, err := engine.GetManifest(c.Request().Context(), op.Filename)
+	// For JSON format, parse and return as JSON
+	manifest, err := h.jsonEngine.GetManifest(c.Request().Context(), op.Filename)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
 	}
@@ -317,16 +313,13 @@ func (h *Handler) GetOperationChunk(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
 	}
 
-	engine, _ := h.resolveEngine(op.StorageFormat)
-
-	// Get chunk reader for streaming
-	reader, err := engine.GetChunkReader(c.Request().Context(), op.Filename, chunkIndex)
-	if err != nil {
+	// Serve chunk file directly
+	chunkPath := filepath.Join(h.setting.Data, op.Filename, "chunks", fmt.Sprintf("%04d.pb", chunkIndex))
+	if _, err := os.Stat(chunkPath); err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "chunk not found")
 	}
-	defer reader.Close()
-
-	return c.Stream(http.StatusOK, "application/x-protobuf", reader)
+	c.Response().Header().Set("Content-Type", "application/x-protobuf")
+	return c.File(chunkPath)
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {
