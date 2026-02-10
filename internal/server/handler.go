@@ -299,9 +299,9 @@ func (h *Handler) GetData(c echo.Context) error {
 		if err != nil {
 			return echo.ErrNotFound
 		}
+		defer f.Close()
 		var magic [2]byte
 		_, err = io.ReadFull(f, magic[:])
-		f.Close()
 		if err != nil {
 			return echo.ErrNotFound
 		}
