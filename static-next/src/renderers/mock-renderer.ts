@@ -113,6 +113,10 @@ export class MockRenderer implements MapRenderer {
     // no-op
   }
 
+  setNameDisplayMode(_mode: "players" | "all" | "none"): void {
+    // no-op
+  }
+
   on(event: RendererEvent, cb: (...args: any[]) => void): void {
     let set = this.listeners.get(event);
     if (!set) {

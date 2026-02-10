@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
 import { App } from "../../App";
+import type { MapRenderer } from "../../renderers/renderer.interface";
 
-// Mock LeafletRenderer to avoid Leaflet in jsdom
-vi.mock("../../renderers/leaflet/leaflet-renderer", () => ({
-  LeafletRenderer: vi.fn().mockImplementation(() => ({
+// Mock storage factory to avoid actual OPFS/IndexedDB access in tests
+vi.mock("../../data/storage/storage-factory", () => ({
+  createStorage: vi.fn().mockRejectedValue(new Error("not available in test")),
+}));
+
+function createMockRenderer(): MapRenderer {
+  return {
     init: vi.fn(),
     dispose: vi.fn(),
     getZoom: vi.fn().mockReturnValue(1),
@@ -23,16 +28,12 @@ vi.mock("../../renderers/leaflet/leaflet-renderer", () => ({
     removePulse: vi.fn(),
     setLayerVisible: vi.fn(),
     setSmoothingEnabled: vi.fn(),
+    setNameDisplayMode: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
     getControls: vi.fn().mockReturnValue({}),
-  })),
-}));
-
-// Mock storage factory to avoid actual OPFS/IndexedDB access in tests
-vi.mock("../../data/storage/storage-factory", () => ({
-  createStorage: vi.fn().mockRejectedValue(new Error("not available in test")),
-}));
+  };
+}
 
 describe("App", () => {
   afterEach(() => {
@@ -40,17 +41,17 @@ describe("App", () => {
   });
 
   it("renders without crashing", () => {
-    const { container } = render(() => <App />);
+    const { container } = render(() => <App renderer={createMockRenderer()} />);
     expect(container).toBeDefined();
   });
 
   it("renders the map container", () => {
-    const { getByTestId } = render(() => <App />);
+    const { getByTestId } = render(() => <App renderer={createMockRenderer()} />);
     expect(getByTestId("map-container")).toBeDefined();
   });
 
   it("renders panel components", () => {
-    const { container } = render(() => <App />);
+    const { container } = render(() => <App renderer={createMockRenderer()} />);
     // Panels are rendered (may be hidden depending on signal state)
     expect(container.innerHTML).toBeDefined();
     expect(container.innerHTML.length).toBeGreaterThan(0);

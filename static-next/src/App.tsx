@@ -10,7 +10,6 @@ import type { DecoderStrategy } from "./data/decoders/decoder.interface";
 import { ChunkManager } from "./data/chunk-manager";
 import { PlaybackEngine } from "./playback/engine";
 import { MarkerManager } from "./playback/marker-manager";
-import { LeafletRenderer } from "./renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "./renderers/renderer.interface";
 import { EngineProvider } from "./ui/hooks/useEngine";
 import { RendererProvider } from "./ui/hooks/useRenderer";
@@ -43,9 +42,10 @@ function parseUrlParams(): {
   zoom?: number;
   x?: number;
   y?: number;
+  renderer?: string;
 } {
   const params = new URLSearchParams(window.location.search);
-  const result: { op?: string; zoom?: number; x?: number; y?: number } = {};
+  const result: { op?: string; zoom?: number; x?: number; y?: number; renderer?: string } = {};
 
   const op = params.get("op");
   if (op) result.op = op;
@@ -68,6 +68,9 @@ function parseUrlParams(): {
     if (!Number.isNaN(n)) result.y = n;
   }
 
+  const renderer = params.get("renderer");
+  if (renderer) result.renderer = renderer;
+
   return result;
 }
 
@@ -77,9 +80,9 @@ function parseUrlParams(): {
  * Wires together the API client, playback engine, and renderer.
  * Renders the MapContainer filling the viewport with panel overlays.
  */
-export function App(): JSX.Element {
+export function App(props: { renderer: MapRenderer }): JSX.Element {
   const api = new ApiClient();
-  const renderer: MapRenderer = new LeafletRenderer();
+  const renderer = props.renderer;
   const engine = new PlaybackEngine(renderer);
   const markerManager = new MarkerManager(renderer);
   const [worldConfig, setWorldConfig] = createSignal<WorldConfig | undefined>(

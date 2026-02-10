@@ -16,19 +16,8 @@
  *   speed 10+ → 0.15 s   (the default `.marker-transition` rule)
  */
 
-// --------------- Speed → duration mapping ---------------
-
-/**
- * Return the CSS transition duration (in seconds) for a given playback speed.
- *
- * This is a pure function suitable for unit testing.
- */
-export function getTransitionDuration(speed: number): number {
-  if (speed >= 10) return 0.15;
-  if (speed < 1) return 1;
-  // speed 1 → 1.0, speed 2 → 0.9, …, speed 9 → 0.2
-  return Math.round((1.1 - speed * 0.1) * 100) / 100;
-}
+// Re-export from shared so existing consumers don't break
+export { getTransitionDuration } from "../shared/transitions";
 
 // --------------- Class manipulation ---------------
 
