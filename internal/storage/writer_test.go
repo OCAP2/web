@@ -352,9 +352,7 @@ func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
 	}
 }
 
-func TestProtobufWriterV1StringToEntityType(t *testing.T) {
-	w := &ProtobufWriterV1{}
-
+func TestStringToEntityType(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -371,7 +369,7 @@ func TestProtobufWriterV1StringToEntityType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := w.stringToEntityType(tt.input)
+			result := stringToEntityType(tt.input)
 			if result.String() != tt.expected {
 				t.Errorf("stringToEntityType(%q) = %v, want %v", tt.input, result, tt.expected)
 			}
@@ -379,9 +377,7 @@ func TestProtobufWriterV1StringToEntityType(t *testing.T) {
 	}
 }
 
-func TestProtobufWriterV1StringToSide(t *testing.T) {
-	w := &ProtobufWriterV1{}
-
+func TestStringToSide(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -402,7 +398,7 @@ func TestProtobufWriterV1StringToSide(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := w.stringToSide(tt.input)
+			result := stringToSide(tt.input)
 			if result.String() != tt.expected {
 				t.Errorf("stringToSide(%q) = %v, want %v", tt.input, result, tt.expected)
 			}

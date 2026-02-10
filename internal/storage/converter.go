@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
 // DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)
@@ -113,55 +111,6 @@ func (c *Converter) loadJSON(path string) (map[string]interface{}, error) {
 	}
 
 	return data, nil
-}
-
-// Helper functions for type conversion (used by other files)
-
-func stringToEntityType(s string) pbv1.EntityType {
-	switch s {
-	case "unit":
-		return pbv1.EntityType_ENTITY_TYPE_UNIT
-	case "vehicle":
-		return pbv1.EntityType_ENTITY_TYPE_VEHICLE
-	default:
-		return pbv1.EntityType_ENTITY_TYPE_UNKNOWN
-	}
-}
-
-func stringToSide(s string) pbv1.Side {
-	switch s {
-	case "WEST":
-		return pbv1.Side_SIDE_WEST
-	case "EAST":
-		return pbv1.Side_SIDE_EAST
-	case "GUER", "INDEPENDENT":
-		return pbv1.Side_SIDE_GUER
-	case "CIV", "CIVILIAN":
-		return pbv1.Side_SIDE_CIV
-	case "GLOBAL":
-		return pbv1.Side_SIDE_GLOBAL
-	default:
-		return pbv1.Side_SIDE_UNKNOWN
-	}
-}
-
-// sideIndexToSide converts a side index to protobuf Side enum
-// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
-func sideIndexToSide(idx int) pbv1.Side {
-	switch idx {
-	case 0:
-		return pbv1.Side_SIDE_EAST
-	case 1:
-		return pbv1.Side_SIDE_WEST
-	case 2:
-		return pbv1.Side_SIDE_GUER
-	case 3:
-		return pbv1.Side_SIDE_CIV
-	case -1:
-		return pbv1.Side_SIDE_GLOBAL
-	default:
-		return pbv1.Side_SIDE_UNKNOWN
-	}
 }
 
 func toFloat64(v interface{}) float64 {

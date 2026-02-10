@@ -74,30 +74,3 @@ func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath strin
 	return converter.Convert(ctx, jsonPath, outputPath, "protobuf")
 }
 
-func entityTypeToString(t pbv1.EntityType) string {
-	switch t {
-	case pbv1.EntityType_ENTITY_TYPE_UNIT:
-		return "unit"
-	case pbv1.EntityType_ENTITY_TYPE_VEHICLE:
-		return "vehicle"
-	default:
-		return "unknown"
-	}
-}
-
-func sideToString(s pbv1.Side) string {
-	switch s {
-	case pbv1.Side_SIDE_WEST:
-		return "WEST"
-	case pbv1.Side_SIDE_EAST:
-		return "EAST"
-	case pbv1.Side_SIDE_GUER:
-		return "GUER"
-	case pbv1.Side_SIDE_CIV:
-		return "CIV"
-	case pbv1.Side_SIDE_GLOBAL:
-		return "GLOBAL"
-	default:
-		return "UNKNOWN"
-	}
-}
