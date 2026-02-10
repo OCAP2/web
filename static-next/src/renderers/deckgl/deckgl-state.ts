@@ -98,6 +98,31 @@ export class DeckState {
     "projectileMarkers",
   ]);
 
+  // Per-collection revision counters. Bumped when data changes;
+  // used as deck.gl updateTriggers so it only diffs when needed.
+  entityRevision = 0;
+  lineRevision = 0;
+  briefingRevision = 0;
+  pulseRevision = 0;
+
+  // Cached data arrays — only rebuilt when the collection is dirty.
+  // deck.gl compares data by reference; reusing the same array avoids
+  // a full re-upload to the GPU.
+  private _entityArray: EntityData[] = [];
+  private _entityArrayDirty = true;
+  private _visibleEntityArray: EntityData[] = [];
+
+  private _lineArray: LineData[] = [];
+  private _lineArrayDirty = true;
+
+  private _briefingPolygonArray: BriefingPolygonData[] = [];
+  private _briefingPathArray: BriefingPathData[] = [];
+  private _briefingIconArray: BriefingIconData[] = [];
+  private _briefingArrayDirty = true;
+
+  private _pulseArray: PulseData[] = [];
+  private _pulseArrayDirty = true;
+
   private dirty = false;
   private scheduled = false;
   private flushCallback: FlushCallback;
@@ -108,7 +133,36 @@ export class DeckState {
     this.flushCallback = flushCallback;
   }
 
-  markDirty(): void {
+  /** Mark entity data as changed. */
+  dirtyEntities(): void {
+    this._entityArrayDirty = true;
+    this.entityRevision++;
+    this.scheduleDirty();
+  }
+
+  /** Mark line data as changed. */
+  dirtyLines(): void {
+    this._lineArrayDirty = true;
+    this.lineRevision++;
+    this.scheduleDirty();
+  }
+
+  /** Mark briefing data as changed. */
+  dirtyBriefing(): void {
+    this._briefingArrayDirty = true;
+    this.briefingRevision++;
+    this.scheduleDirty();
+  }
+
+  /** Mark pulse data as changed. */
+  dirtyPulses(): void {
+    this._pulseArrayDirty = true;
+    this.pulseRevision++;
+    this.scheduleDirty();
+  }
+
+  /** Schedule a flush on the next animation frame. */
+  private scheduleDirty(): void {
     this.dirty = true;
     if (!this.scheduled) {
       this.scheduled = true;
@@ -122,12 +176,86 @@ export class DeckState {
     }
   }
 
+  /** @deprecated Use dirtyEntities/dirtyLines/etc. for granular invalidation. */
+  markDirty(): void {
+    this.scheduleDirty();
+  }
+
   /** Force an immediate flush (e.g. after layer visibility toggle). */
   flushNow(): void {
     this.dirty = false;
     this.scheduled = false;
+    // Invalidate all caches so buildLayers picks up current state
+    this._entityArrayDirty = true;
+    this._lineArrayDirty = true;
+    this._briefingArrayDirty = true;
+    this._pulseArrayDirty = true;
     this.flushCallback(this.buildLayersFn());
   }
+
+  // --------------- Cached array accessors ---------------
+
+  getEntityArray(): EntityData[] {
+    if (this._entityArrayDirty) {
+      this._entityArray = Array.from(this.entities.values());
+      this._visibleEntityArray = this._entityArray.filter((e) => e.visible);
+      this._entityArrayDirty = false;
+    }
+    return this._entityArray;
+  }
+
+  getVisibleEntityArray(): EntityData[] {
+    if (this._entityArrayDirty) {
+      this.getEntityArray(); // rebuilds both
+    }
+    return this._visibleEntityArray;
+  }
+
+  getLineArray(): LineData[] {
+    if (this._lineArrayDirty) {
+      this._lineArray = Array.from(this.lines.values());
+      this._lineArrayDirty = false;
+    }
+    return this._lineArray;
+  }
+
+  getBriefingPolygonArray(): BriefingPolygonData[] {
+    if (this._briefingArrayDirty) {
+      this._rebuildBriefingArrays();
+    }
+    return this._briefingPolygonArray;
+  }
+
+  getBriefingPathArray(): BriefingPathData[] {
+    if (this._briefingArrayDirty) {
+      this._rebuildBriefingArrays();
+    }
+    return this._briefingPathArray;
+  }
+
+  getBriefingIconArray(): BriefingIconData[] {
+    if (this._briefingArrayDirty) {
+      this._rebuildBriefingArrays();
+    }
+    return this._briefingIconArray;
+  }
+
+  private _rebuildBriefingArrays(): void {
+    this._briefingPolygonArray = Array.from(this.briefingPolygons.values());
+    this._briefingPathArray = Array.from(this.briefingPaths.values());
+    this._briefingIconArray = Array.from(this.briefingIcons.values());
+    this._briefingArrayDirty = false;
+  }
+
+  getPulseArray(): PulseData[] {
+    if (this._pulseArrayDirty) {
+      this._pulseArray = Array.from(this.pulses.values());
+      this._pulseArrayDirty = false;
+    }
+    return this._pulseArray;
+  }
+
+  // --------------- ID allocators ---------------
 
   private nextLineId = 0;
   allocLineId(): number {

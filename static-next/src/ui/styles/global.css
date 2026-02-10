@@ -42,3 +42,33 @@
   cursor: pointer;
 }
 
+/* ---------- MapLibre GL control positioning (match Leaflet offsets) ---------- */
+
+.maplibregl-ctrl-bottom-left {
+  left: 360px;
+  bottom: 65px;
+}
+
+.maplibregl-ctrl-bottom-right {
+  bottom: 65px;
+}
+
+.maplibregl-ctrl-top-left {
+  left: 360px;
+  top: 50px;
+}
+
+.maplibregl-ctrl-top-right {
+  top: 50px;
+}
+
+/* Scale ruler dark theme (MapLibre) */
+.maplibregl-ctrl-scale {
+  background: var(--bg-modal);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 5px;
+}
+

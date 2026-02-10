@@ -142,6 +142,14 @@ export class DeckGLRenderer implements MapRenderer {
       }
     };
 
+    // Pad the world bounds so the user can't pan into empty space,
+    // and MapLibre doesn't load/render tiles outside the map area.
+    const pad = worldSizeDeg * 0.1;
+    const maxBounds: maplibregl.LngLatBoundsLike = [
+      [-pad, -pad],
+      [worldSizeDeg + pad, worldSizeDeg + pad],
+    ];
+
     // Create MapLibre map (standalone, no Leaflet)
     this.map = new maplibregl.Map({
       container,
@@ -154,6 +162,7 @@ export class DeckGLRenderer implements MapRenderer {
       zoom: 12,
       minZoom: 10,
       maxZoom: 20,
+      maxBounds,
       transformRequest,
       attributionControl: {},
       // Disable rotation/pitch: 2D icons have no height axis, so tilting
@@ -161,6 +170,14 @@ export class DeckGLRenderer implements MapRenderer {
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
+      // Don't render repeated world copies — our map is a small area at the equator
+      renderWorldCopies: false,
+      // Performance: skip tile cross-fade to reduce GPU draw calls per frame
+      fadeDuration: 0,
+      // Performance: cache more parsed tiles to avoid re-parsing on pan/zoom
+      maxTileCacheSize: 256,
+      // Performance: skip Resource Timing API entries for tile requests
+      collectResourceTiming: false,
     });
 
     // Initialize state and overlay
@@ -171,10 +188,11 @@ export class DeckGLRenderer implements MapRenderer {
 
     this.overlay = new MapboxOverlay({
       layers: [],
-      interleaved: false,
+      interleaved: true,
     });
 
     this.map.addControl(this.overlay as any);
+    this.map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
 
     // Build icon atlas async, then trigger first render
     void buildIconAtlas().then((atlas) => {
@@ -231,33 +249,35 @@ export class DeckGLRenderer implements MapRenderer {
     const s = this.state;
 
     if (s.enabledLayers.has("entities") && this.iconAtlas) {
-      const entities = Array.from(s.entities.values());
+      const visible = s.getVisibleEntityArray();
+      const rev = s.entityRevision;
       const transitions = this.smoothingEnabled
         ? { getPosition: { duration: getTransitionDuration(this.smoothingSpeed) * 1000 } }
         : undefined;
-      layers.push(buildEntityIconLayer(entities, this.iconAtlas, transitions));
-      layers.push(buildEntityLabelLayer(entities, this.nameDisplayMode));
+      layers.push(buildEntityIconLayer(visible, this.iconAtlas, rev, transitions));
+      layers.push(buildEntityLabelLayer(visible, this.nameDisplayMode, rev));
     }
 
     if (s.enabledLayers.has("projectileMarkers")) {
-      const lines = Array.from(s.lines.values());
+      const lines = s.getLineArray();
       if (lines.length > 0) {
-        layers.push(buildFireLineLayer(lines));
+        layers.push(buildFireLineLayer(lines, s.lineRevision));
       }
     }
 
     if (s.enabledLayers.has("briefingMarkers")) {
-      const polygons = Array.from(s.briefingPolygons.values());
-      const paths = Array.from(s.briefingPaths.values());
-      const icons = Array.from(s.briefingIcons.values());
-      if (polygons.length > 0) layers.push(buildBriefingPolygonLayer(polygons));
-      if (paths.length > 0) layers.push(buildBriefingPathLayer(paths));
-      if (icons.length > 0) layers.push(buildBriefingIconLayer(icons));
+      const polygons = s.getBriefingPolygonArray();
+      const paths = s.getBriefingPathArray();
+      const icons = s.getBriefingIconArray();
+      const rev = s.briefingRevision;
+      if (polygons.length > 0) layers.push(buildBriefingPolygonLayer(polygons, rev));
+      if (paths.length > 0) layers.push(buildBriefingPathLayer(paths, rev));
+      if (icons.length > 0) layers.push(buildBriefingIconLayer(icons, rev));
     }
 
-    const pulses = Array.from(s.pulses.values());
+    const pulses = s.getPulseArray();
     if (pulses.length > 0) {
-      layers.push(buildPulseLayer(pulses));
+      layers.push(buildPulseLayer(pulses, s.pulseRevision));
     }
 
     return layers;
@@ -318,7 +338,7 @@ export class DeckGLRenderer implements MapRenderer {
     };
 
     this.state.entities.set(id, entity);
-    this.state.markDirty();
+    this.state.dirtyEntities();
 
     return wrapMarker({ id, lastDirection: 0 });
   }
@@ -342,13 +362,13 @@ export class DeckGLRenderer implements MapRenderer {
     entity.isPlayer = state.isPlayer;
     entity.visible = !state.isInVehicle;
 
-    this.state.markDirty();
+    this.state.dirtyEntities();
   }
 
   removeEntityMarker(handle: MarkerHandle): void {
     const internal = unwrapMarker(handle);
     this.state.entities.delete(internal.id);
-    this.state.markDirty();
+    this.state.dirtyEntities();
   }
 
   // ==================== Briefing markers ====================
@@ -365,6 +385,7 @@ export class DeckGLRenderer implements MapRenderer {
         width: 2,
       };
       this.state.briefingPaths.set(id, pathData);
+      this.state.dirtyBriefing();
     } else if (def.shape === "ELLIPSE" || def.shape === "RECTANGLE") {
       const fillAlpha = this.getBrushFillAlpha(def.brush);
       const polyData: BriefingPolygonData = {
@@ -375,6 +396,7 @@ export class DeckGLRenderer implements MapRenderer {
         stroke: this.getBrushStroke(def.brush),
       };
       this.state.briefingPolygons.set(id, polyData);
+      this.state.dirtyBriefing();
     } else {
       // ICON
       const isMagIcon = def.type.indexOf("magIcons") > -1;
@@ -397,9 +419,9 @@ export class DeckGLRenderer implements MapRenderer {
         opacity: 1,
       };
       this.state.briefingIcons.set(id, iconData);
+      this.state.dirtyBriefing();
     }
 
-    this.state.markDirty();
     return wrapBriefing({ id, shape: def.shape, size: def.size });
   }
 
@@ -464,7 +486,7 @@ export class DeckGLRenderer implements MapRenderer {
       path.color[3] = Math.round(state.alpha * 255);
     }
 
-    this.state.markDirty();
+    this.state.dirtyBriefing();
   }
 
   removeBriefingMarker(handle: BriefingMarkerHandle): void {
@@ -472,7 +494,7 @@ export class DeckGLRenderer implements MapRenderer {
     this.state.briefingPolygons.delete(internal.id);
     this.state.briefingPaths.delete(internal.id);
     this.state.briefingIcons.delete(internal.id);
-    this.state.markDirty();
+    this.state.dirtyBriefing();
   }
 
   // ==================== Briefing helpers ====================
@@ -507,14 +529,14 @@ export class DeckGLRenderer implements MapRenderer {
       color: hexToRGBA(opts.color, opts.opacity),
       width: opts.weight,
     });
-    this.state.markDirty();
+    this.state.dirtyLines();
     return wrapLine({ id });
   }
 
   removeLine(handle: LineHandle): void {
     const internal = unwrapLine(handle);
     this.state.lines.delete(internal.id);
-    this.state.markDirty();
+    this.state.dirtyLines();
   }
 
   // ==================== Pulses ====================
@@ -545,18 +567,18 @@ export class DeckGLRenderer implements MapRenderer {
 
       if (iteration >= iterations) {
         this.state.pulses.delete(id);
-        this.state.markDirty();
+        this.state.dirtyPulses();
         return;
       }
 
       pulse.radius = cycleProgress * maxRadius;
       pulse.fillColor[3] = Math.round((1 - cycleProgress) * 128);
-      this.state.markDirty();
+      this.state.dirtyPulses();
       pulse.animFrameId = requestAnimationFrame(animate);
     };
     pulse.animFrameId = requestAnimationFrame(animate);
 
-    this.state.markDirty();
+    this.state.dirtyPulses();
     return wrapPulse({ id });
   }
 
@@ -565,7 +587,7 @@ export class DeckGLRenderer implements MapRenderer {
     const pulse = this.state.pulses.get(internal.id);
     if (pulse?.animFrameId) cancelAnimationFrame(pulse.animFrameId);
     this.state.pulses.delete(internal.id);
-    this.state.markDirty();
+    this.state.dirtyPulses();
   }
 
   // ==================== Layer visibility ====================
@@ -586,12 +608,12 @@ export class DeckGLRenderer implements MapRenderer {
     if (speed !== undefined) {
       this.smoothingSpeed = speed;
     }
-    this.state.markDirty();
+    this.state.dirtyEntities();
   }
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
     this.nameDisplayMode = mode;
-    this.state.markDirty();
+    this.state.dirtyEntities();
   }
 
   // ==================== Events ====================

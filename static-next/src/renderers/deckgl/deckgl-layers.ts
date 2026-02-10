@@ -13,15 +13,19 @@ import { ICON_SIZES } from "../shared/icon-constants";
 
 // --------------- Entity layers ---------------
 
+/**
+ * @param visibleEntities Pre-filtered array of visible entities (cached by DeckState).
+ * @param revision Monotonic counter — deck.gl only re-diffs accessors when this changes.
+ */
 export function buildEntityIconLayer(
-  entities: EntityData[],
+  visibleEntities: EntityData[],
   atlas: IconAtlas,
+  revision: number,
   transitions?: { getPosition?: { duration: number } },
 ): Layer {
-  const visible = entities.filter((e) => e.visible);
   return new IconLayer<EntityData>({
     id: "entity-icons",
-    data: visible,
+    data: visibleEntities,
     iconAtlas: atlas.atlasUrl,
     iconMapping: atlas.mapping,
     getIcon: (d) => d.iconKey,
@@ -37,32 +41,40 @@ export function buildEntityIconLayer(
     billboard: true,
     alphaCutoff: 0.05,
     pickable: true,
-    transitions: transitions,
+    transitions,
+    // Single revision counter — deck.gl only re-evaluates accessors when
+    // this value changes, instead of diffing N-element arrays every frame.
     updateTriggers: {
-      getIcon: visible.map((e) => e.iconKey),
-      getAngle: visible.map((e) => e.angle),
-      getSize: visible.map((e) => e.iconType),
-      getColor: visible.map((e) => e.opacity),
+      getIcon: revision,
+      getAngle: revision,
+      getSize: revision,
+      getColor: revision,
+      getPosition: revision,
     },
   });
 }
 
+/**
+ * @param visibleEntities Pre-filtered array of visible entities.
+ * @param revision Monotonic counter for updateTriggers.
+ */
 export function buildEntityLabelLayer(
-  entities: EntityData[],
+  visibleEntities: EntityData[],
   nameMode: "players" | "all" | "none",
+  revision: number,
 ): Layer {
-  let visible: EntityData[];
+  let data: EntityData[];
   if (nameMode === "none") {
-    visible = [];
+    data = [];
   } else if (nameMode === "players") {
-    visible = entities.filter((e) => e.visible && e.isPlayer);
+    data = visibleEntities.filter((e) => e.isPlayer);
   } else {
-    visible = entities.filter((e) => e.visible);
+    data = visibleEntities;
   }
 
   return new TextLayer<EntityData>({
     id: "entity-labels",
-    data: visible,
+    data,
     getPosition: (d) => d.position,
     getText: (d) => d.name,
     getColor: [255, 255, 255, 220],
@@ -78,12 +90,16 @@ export function buildEntityLabelLayer(
     getTextAnchor: "middle",
     getAlignmentBaseline: "center",
     pickable: false,
+    updateTriggers: {
+      getPosition: revision,
+      getText: revision,
+    },
   });
 }
 
 // --------------- Fire lines ---------------
 
-export function buildFireLineLayer(lines: LineData[]): Layer {
+export function buildFireLineLayer(lines: LineData[], revision: number): Layer {
   return new LineLayer<LineData>({
     id: "fire-lines",
     data: lines,
@@ -93,12 +109,17 @@ export function buildFireLineLayer(lines: LineData[]): Layer {
     getWidth: (d) => d.width,
     widthUnits: "pixels",
     pickable: false,
+    updateTriggers: {
+      getSourcePosition: revision,
+      getTargetPosition: revision,
+      getColor: revision,
+    },
   });
 }
 
 // --------------- Briefing layers ---------------
 
-export function buildBriefingPolygonLayer(polygons: BriefingPolygonData[]): Layer {
+export function buildBriefingPolygonLayer(polygons: BriefingPolygonData[], revision: number): Layer {
   return new PolygonLayer<BriefingPolygonData>({
     id: "briefing-polygons",
     data: polygons,
@@ -110,10 +131,15 @@ export function buildBriefingPolygonLayer(polygons: BriefingPolygonData[]): Laye
     stroked: true,
     filled: true,
     pickable: false,
+    updateTriggers: {
+      getPolygon: revision,
+      getFillColor: revision,
+      getLineColor: revision,
+    },
   });
 }
 
-export function buildBriefingPathLayer(paths: BriefingPathData[]): Layer {
+export function buildBriefingPathLayer(paths: BriefingPathData[], revision: number): Layer {
   return new PathLayer<BriefingPathData>({
     id: "briefing-paths",
     data: paths,
@@ -122,11 +148,14 @@ export function buildBriefingPathLayer(paths: BriefingPathData[]): Layer {
     getWidth: (d) => d.width,
     widthUnits: "pixels",
     pickable: false,
+    updateTriggers: {
+      getPath: revision,
+      getColor: revision,
+    },
   });
 }
 
-export function buildBriefingIconLayer(icons: BriefingIconData[]): Layer {
-  // Each briefing icon has a unique URL, so use individual icon atlases
+export function buildBriefingIconLayer(icons: BriefingIconData[], revision: number): Layer {
   return new IconLayer<BriefingIconData>({
     id: "briefing-icons",
     data: icons,
@@ -143,12 +172,18 @@ export function buildBriefingIconLayer(icons: BriefingIconData[]): Layer {
     sizeUnits: "pixels",
     billboard: true,
     pickable: false,
+    updateTriggers: {
+      getPosition: revision,
+      getIcon: revision,
+      getAngle: revision,
+      getColor: revision,
+    },
   });
 }
 
 // --------------- Pulse effects ---------------
 
-export function buildPulseLayer(pulses: PulseData[]): Layer {
+export function buildPulseLayer(pulses: PulseData[], revision: number): Layer {
   return new ScatterplotLayer<PulseData>({
     id: "pulse-effects",
     data: pulses,
@@ -162,5 +197,9 @@ export function buildPulseLayer(pulses: PulseData[]): Layer {
     stroked: true,
     filled: true,
     pickable: false,
+    updateTriggers: {
+      getRadius: revision,
+      getFillColor: revision,
+    },
   });
 }
