@@ -48,6 +48,7 @@ interface InternalBriefingHandle {
   shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
   size?: [number, number];
   patternId?: string;
+  shapeOpts?: { stroke: boolean; fill: boolean; fillOpacity: number };
 }
 
 interface ShapeResult {
@@ -473,6 +474,7 @@ export class LeafletRenderer implements MapRenderer {
   createBriefingMarker(def: BriefingMarkerDef): BriefingMarkerHandle {
     let layer: L.Layer;
     const cssColor = `#${def.color}`;
+    let shapeOpts: InternalBriefingHandle["shapeOpts"];
 
     if (def.shape === "POLYLINE") {
       layer = L.polyline([], {
@@ -487,6 +489,12 @@ export class LeafletRenderer implements MapRenderer {
       // canvas bitmap scaling during zoom animation
       const result = this.buildShapeOptions(cssColor, def.brush);
       const polygonOpts: any = { ...result.opts, noClip: false, interactive: false, renderer: this.svgRenderer };
+
+      shapeOpts = {
+        stroke: !!result.opts.stroke,
+        fill: !!result.opts.fill,
+        fillOpacity: result.opts.fillOpacity ?? 0.3,
+      };
 
       let patternId: string | undefined;
       if (result.patternType && result.patternParams) {
@@ -504,7 +512,7 @@ export class LeafletRenderer implements MapRenderer {
 
       if (patternId) {
         layer.addTo(this.layers.briefingMarkers);
-        return wrapBriefing({ layer, shape: def.shape, size: def.size, patternId });
+        return wrapBriefing({ layer, shape: def.shape, size: def.size, patternId, shapeOpts });
       }
     } else {
       // ICON shape — load actual marker image from server
@@ -527,7 +535,7 @@ export class LeafletRenderer implements MapRenderer {
     }
 
     layer.addTo(this.layers.briefingMarkers);
-    return wrapBriefing({ layer, shape: def.shape, size: def.size });
+    return wrapBriefing({ layer, shape: def.shape, size: def.size, shapeOpts });
   }
 
   updateBriefingMarker(
@@ -565,9 +573,7 @@ export class LeafletRenderer implements MapRenderer {
       }
 
       polygon.setLatLngs(latlngs);
-      if (!internal.patternId) {
-        polygon.setStyle({ fillOpacity: Math.min(0.3, state.alpha) });
-      }
+      this.applyPolygonOpacity(polygon, internal, state.alpha);
     } else if (internal.shape === "RECTANGLE") {
       const polygon = layer as L.Polygon;
       const [cx, cy] = state.position;
@@ -589,9 +595,7 @@ export class LeafletRenderer implements MapRenderer {
       );
 
       polygon.setLatLngs(latlngs);
-      if (!internal.patternId) {
-        polygon.setStyle({ fillOpacity: Math.min(0.3, state.alpha) });
-      }
+      this.applyPolygonOpacity(polygon, internal, state.alpha);
     } else if (internal.shape === "POLYLINE" && state.points) {
       const polyline = layer as L.Polyline;
       const latlngs = state.points.map((p) => this.armaToLatLng(p));
@@ -610,6 +614,29 @@ export class LeafletRenderer implements MapRenderer {
 
   // ==================== Briefing marker helpers ====================
 
+  /** Apply opacity to polygon matching old frontend setMarkerOpacity logic. */
+  private applyPolygonOpacity(
+    polygon: L.Polygon,
+    internal: InternalBriefingHandle,
+    alpha: number,
+  ): void {
+    const so = internal.shapeOpts;
+    if (!so) return;
+
+    let strokeOpacity: number;
+    let fillOpacity: number;
+
+    if (alpha > 0) {
+      strokeOpacity = so.stroke ? 1 : 0;
+      fillOpacity = so.fill ? Math.min(so.fillOpacity, alpha) : 0;
+    } else {
+      strokeOpacity = 0;
+      fillOpacity = 0;
+    }
+
+    polygon.setStyle({ opacity: strokeOpacity, fillOpacity });
+  }
+
   private buildShapeOptions(
     color: string,
     brush?: string,
@@ -625,13 +652,13 @@ export class LeafletRenderer implements MapRenderer {
         return {
           opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
           patternType: "stripe",
-          patternParams: { angle: 0, weight: 2, spaceWeight: 6, opacity: 1 },
+          patternParams: { angle: 0, weight: 2, spaceWeight: 4, opacity: 1 },
         };
       case "vertical":
         return {
           opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
           patternType: "stripe",
-          patternParams: { angle: 90, weight: 2, spaceWeight: 6, opacity: 1 },
+          patternParams: { angle: 90, weight: 2, spaceWeight: 4, opacity: 1 },
         };
       case "fdiagonal":
         return {

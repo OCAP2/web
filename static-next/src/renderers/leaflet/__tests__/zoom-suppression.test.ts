@@ -138,6 +138,104 @@ describe("briefing marker SVG renderer", () => {
     }
   });
 
+  it("solid brush stores shapeOpts with fillOpacity 0.3", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "solid",
+    });
+    const internal = getInternal(handle);
+    expect(internal.shapeOpts).toEqual({ stroke: false, fill: true, fillOpacity: 0.3 });
+  });
+
+  it("solidfull brush stores shapeOpts with fillOpacity 0.8", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "RECTANGLE", type: "mil_rectangle", color: "0000FF", side: "EAST",
+      size: [200, 150], brush: "solidfull",
+    });
+    const internal = getInternal(handle);
+    expect(internal.shapeOpts).toEqual({ stroke: false, fill: true, fillOpacity: 0.8 });
+  });
+
+  it("border brush stores shapeOpts with stroke and no fill", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "border",
+    });
+    const internal = getInternal(handle);
+    expect(internal.shapeOpts).toEqual({ stroke: true, fill: false, fillOpacity: 0 });
+  });
+
+  it("solidborder brush stores shapeOpts with stroke and fill", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "solidborder",
+    });
+    const internal = getInternal(handle);
+    expect(internal.shapeOpts).toEqual({ stroke: true, fill: true, fillOpacity: 0.3 });
+  });
+
+  it("pattern brushes also store shapeOpts", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "grid",
+    });
+    const internal = getInternal(handle);
+    expect(internal.shapeOpts).toEqual({ stroke: false, fill: true, fillOpacity: 1.0 });
+  });
+
+  it("updateBriefingMarker applies per-brush opacity for solidfull", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "solidfull",
+    });
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const setStyleSpy = vi.spyOn(polygon, "setStyle");
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000], direction: 0, alpha: 1,
+    });
+
+    // solidfull: fill=true, fillOpacity=0.8, stroke=false → opacity=0, fillOpacity=min(0.8, 1)=0.8
+    const lastCall = setStyleSpy.mock.calls[setStyleSpy.mock.calls.length - 1][0] as any;
+    expect(lastCall.fillOpacity).toBe(0.8);
+    expect(lastCall.opacity).toBe(0);
+  });
+
+  it("updateBriefingMarker applies zero opacity for border brush", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "border",
+    });
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const setStyleSpy = vi.spyOn(polygon, "setStyle");
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000], direction: 0, alpha: 1,
+    });
+
+    // border: fill=false, stroke=true → opacity=1, fillOpacity=0
+    const lastCall = setStyleSpy.mock.calls[setStyleSpy.mock.calls.length - 1][0] as any;
+    expect(lastCall.fillOpacity).toBe(0);
+    expect(lastCall.opacity).toBe(1);
+  });
+
+  it("updateBriefingMarker sets both opacities to 0 when alpha is 0", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE", type: "mil_circle", color: "FF0000", side: "WEST",
+      size: [100, 100], brush: "solidborder",
+    });
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const setStyleSpy = vi.spyOn(polygon, "setStyle");
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000], direction: 0, alpha: 0,
+    });
+
+    const lastCall = setStyleSpy.mock.calls[setStyleSpy.mock.calls.length - 1][0] as any;
+    expect(lastCall.fillOpacity).toBe(0);
+    expect(lastCall.opacity).toBe(0);
+  });
+
   it("removeBriefingMarker cleans up pattern from SVG defs", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ELLIPSE",
