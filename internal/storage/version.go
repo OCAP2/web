@@ -2,7 +2,7 @@ package storage
 
 import "fmt"
 
-// SchemaVersion represents the protobuf/flatbuffers schema version
+// SchemaVersion represents the protobuf schema version
 type SchemaVersion uint32
 
 const (

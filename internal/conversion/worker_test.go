@@ -13,12 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	// Register storage engines for tests
-	storage.RegisterEngine(storage.NewProtobufEngine("/tmp"))
-	storage.RegisterEngine(storage.NewFlatBuffersEngine("/tmp"))
-}
-
 // mockRepo implements OperationRepo for testing
 type mockRepo struct {
 	pending       []Operation
@@ -251,7 +245,6 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 1, cfg.BatchSize)
 	assert.Equal(t, uint32(storage.DefaultChunkSize), cfg.ChunkSize)
 	assert.Empty(t, cfg.DataDir)
-	assert.Empty(t, cfg.StorageFormat)
 }
 
 func TestNewWorker_Defaults(t *testing.T) {
@@ -274,24 +267,14 @@ func TestNewWorker_Defaults(t *testing.T) {
 		assert.Equal(t, 1, worker.batchSize)
 	})
 
-	t.Run("applies default storage format", func(t *testing.T) {
-		worker := NewWorker(repo, Config{
-			DataDir:       dir,
-			StorageFormat: "", // Empty should be replaced with default
-		})
-		assert.Equal(t, "protobuf", worker.storageFormat)
-	})
-
 	t.Run("respects custom values", func(t *testing.T) {
 		worker := NewWorker(repo, Config{
-			DataDir:       dir,
-			Interval:      10 * time.Minute,
-			BatchSize:     5,
-			StorageFormat: "flatbuffers",
+			DataDir:   dir,
+			Interval:  10 * time.Minute,
+			BatchSize: 5,
 		})
 		assert.Equal(t, 10*time.Minute, worker.interval)
 		assert.Equal(t, 5, worker.batchSize)
-		assert.Equal(t, "flatbuffers", worker.storageFormat)
 	})
 }
 
@@ -373,64 +356,6 @@ func TestTriggerConversion_Failure(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestWorker_FlatBuffersFormat(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create test JSON data
-	testData := `{
-		"worldName": "altis",
-		"missionName": "FlatBuffers Test",
-		"captureDelay": 1,
-		"endFrame": 5,
-		"entities": [
-			{
-				"id": 1,
-				"type": "unit",
-				"startFrameNum": 0,
-				"positions": [
-					[[100, 200], 45, 1, 0, "Player1", 1]
-				],
-				"framesFired": [],
-				"name": "Player1",
-				"group": "Alpha",
-				"side": "WEST",
-				"isPlayer": 1
-			}
-		],
-		"events": [],
-		"times": []
-	}`
-
-	// Write gzipped JSON file
-	jsonPath := filepath.Join(dir, "fb_test.json.gz")
-	f, err := os.Create(jsonPath)
-	assert.NoError(t, err)
-	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
-
-	repo := newMockRepo()
-	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		ChunkSize:     10,
-		StorageFormat: "flatbuffers",
-	})
-
-	ctx := context.Background()
-	err = worker.ConvertOne(ctx, 1, "fb_test")
-	assert.NoError(t, err)
-
-	// Verify flatbuffers format was used
-	assert.Equal(t, "completed", repo.status[1])
-	assert.Equal(t, "flatbuffers", repo.format[1])
-
-	// Verify output files exist
-	outputDir := filepath.Join(dir, "fb_test")
-	_, err = os.Stat(filepath.Join(outputDir, "manifest.fb"))
-	assert.NoError(t, err)
 }
 
 func TestWorker_ContextCancellation(t *testing.T) {
@@ -729,30 +654,6 @@ func TestConvertOperation_UpdateDurationError(t *testing.T) {
 	assert.Equal(t, "completed", repo.status[1])
 }
 
-func TestConvertOperation_InvalidStorageFormat(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create test JSON file
-	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
-	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
-
-	repo := newErrorMockRepo()
-	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "invalid_format",
-	})
-
-	ctx := context.Background()
-	err := worker.ConvertOne(ctx, 1, "test")
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "get storage engine")
-}
 
 func TestConvertOperation_JSONFileNotFound(t *testing.T) {
 	dir := t.TempDir()
@@ -809,9 +710,8 @@ func TestWorker_CleanupInterrupted(t *testing.T) {
 	}
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   false,
+		DataDir:     dir,
+		RetryFailed: false,
 	})
 
 	ctx := context.Background()
@@ -844,9 +744,8 @@ func TestWorker_CleanupInterrupted_RetryFailed(t *testing.T) {
 	}
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   true, // Enable retry of failed
+		DataDir:     dir,
+		RetryFailed: true, // Enable retry of failed
 	})
 
 	ctx := context.Background()
@@ -865,8 +764,7 @@ func TestWorker_CleanupInterrupted_SelectByStatusError(t *testing.T) {
 	repo.selectByStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
+		DataDir: dir,
 	})
 
 	ctx := context.Background()
@@ -884,8 +782,7 @@ func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
 	repo.resetConversionStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
+		DataDir: dir,
 	})
 
 	ctx := context.Background()
@@ -903,9 +800,8 @@ func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	repo.resetConversionStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   true,
+		DataDir:     dir,
+		RetryFailed: true,
 	})
 
 	ctx := context.Background()

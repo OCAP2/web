@@ -80,7 +80,7 @@ class Vehicle extends Entity {
 
 	/**
 	 * Update vehicle state from decoded EntityState (streaming mode)
-	 * @param {Object} state - Decoded EntityState from protobuf/flatbuffers
+	 * @param {Object} state - Decoded EntityState from protobuf
 	 */
 	updateFromState(state) {
 		// Call parent implementation for position, direction, alive

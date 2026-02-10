@@ -21,7 +21,6 @@ func NewJSONEngine(dataDir string) *JSONEngine {
 	return &JSONEngine{dataDir: dataDir}
 }
 
-func (e *JSONEngine) Name() string            { return "json" }
 func (e *JSONEngine) SupportsStreaming() bool { return false }
 
 func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifest, error) {

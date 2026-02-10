@@ -87,13 +87,13 @@ func TestGetOperationFormat(t *testing.T) {
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	// Test: Get format for existing operation
@@ -155,13 +155,13 @@ func TestGetOperationFormatProtobuf(t *testing.T) {
 	err = repo.Store(ctx, op)
 	assert.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"protobuf": storage.NewProtobufEngine(dataDir),
+		},
 	}
 
 	// Test: Get format for protobuf operation (ChunkCount comes from DB now)
@@ -238,13 +238,13 @@ func TestGetOperationManifest(t *testing.T) {
 	err = writeGzipped(testDataPath, []byte(testData))
 	assert.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	// Test: Get manifest for JSON operation
@@ -338,13 +338,13 @@ func TestGetOperationManifestProtobuf(t *testing.T) {
 	err = os.WriteFile(filepath.Join(missionDir, "manifest.pb"), pbData, 0644)
 	assert.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"protobuf": storage.NewProtobufEngine(dataDir),
+		},
 	}
 
 	// Test: Get manifest for protobuf operation
@@ -454,13 +454,13 @@ func TestGetOperationChunk(t *testing.T) {
 	err = os.WriteFile(filepath.Join(missionDir, "manifest.pb"), manifestData, 0644)
 	assert.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"protobuf": storage.NewProtobufEngine(dataDir),
+		},
 	}
 
 	// Test: Get chunk 0 for protobuf operation
@@ -1343,12 +1343,12 @@ func TestGetOperationFormat_EmptyStorageFormat(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1394,12 +1394,12 @@ func TestGetOperationFormat_UnknownFormat(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine as fallback
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1416,62 +1416,6 @@ func TestGetOperationFormat_UnknownFormat(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "json", result.Format) // Should fallback to json
-}
-
-func TestGetOperationManifest_FlatBuffers(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-	dataDir := filepath.Join(dir, "data")
-
-	repo, err := NewRepoOperation(pathDB)
-	require.NoError(t, err)
-	defer repo.db.Close()
-
-	ctx := context.Background()
-
-	// Store operation with flatbuffers format
-	op := &Operation{
-		WorldName:        "altis",
-		MissionName:      "FlatBuffers Manifest Test",
-		MissionDuration:  3600,
-		Filename:         "fb_manifest_test",
-		Date:             "2026-01-30",
-		Tag:              "coop",
-		StorageFormat:    "flatbuffers",
-		ConversionStatus: "completed",
-	}
-	err = repo.Store(ctx, op)
-	require.NoError(t, err)
-
-	// Create flatbuffers manifest file
-	missionDir := filepath.Join(dataDir, "fb_manifest_test")
-	err = os.MkdirAll(missionDir, 0755)
-	require.NoError(t, err)
-
-	// Write a simple test file (just raw bytes for testing content type)
-	manifestData := []byte("flatbuffers manifest data")
-	err = os.WriteFile(filepath.Join(missionDir, "manifest.fb"), manifestData, 0644)
-	require.NoError(t, err)
-
-	// Register FlatBuffers engine
-	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
-
-	hdlr := Handler{
-		repoOperation: repo,
-		setting:       Setting{Data: dataDir},
-	}
-
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("1")
-
-	err = hdlr.GetOperationManifest(c)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "application/x-flatbuffers", rec.Header().Get("Content-Type"))
 }
 
 func TestGetOperationManifest_JSONFormat(t *testing.T) {
@@ -1513,12 +1457,12 @@ func TestGetOperationManifest_JSONFormat(t *testing.T) {
 	err = writeGzipped(filepath.Join(dataDir, "json_manifest_test.json.gz"), []byte(testJSON))
 	require.NoError(t, err)
 
-	// Register JSON engine
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1538,63 +1482,6 @@ func TestGetOperationManifest_JSONFormat(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &manifest)
 	assert.NoError(t, err)
 	assert.Equal(t, "altis", manifest.WorldName)
-}
-
-func TestGetOperationChunk_FlatBuffers(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-	dataDir := filepath.Join(dir, "data")
-
-	repo, err := NewRepoOperation(pathDB)
-	require.NoError(t, err)
-	defer repo.db.Close()
-
-	ctx := context.Background()
-
-	// Store operation with flatbuffers format
-	op := &Operation{
-		WorldName:        "altis",
-		MissionName:      "FlatBuffers Chunk Test",
-		MissionDuration:  3600,
-		Filename:         "fb_chunk_test",
-		Date:             "2026-01-30",
-		Tag:              "coop",
-		StorageFormat:    "flatbuffers",
-		ConversionStatus: "completed",
-	}
-	err = repo.Store(ctx, op)
-	require.NoError(t, err)
-
-	// Create flatbuffers chunk file
-	missionDir := filepath.Join(dataDir, "fb_chunk_test")
-	chunksDir := filepath.Join(missionDir, "chunks")
-	err = os.MkdirAll(chunksDir, 0755)
-	require.NoError(t, err)
-
-	// Write test chunk file
-	chunkData := []byte("flatbuffers chunk data")
-	err = os.WriteFile(filepath.Join(chunksDir, "0000.fb"), chunkData, 0644)
-	require.NoError(t, err)
-
-	// Register FlatBuffers engine
-	storage.RegisterEngine(storage.NewFlatBuffersEngine(dataDir))
-
-	hdlr := Handler{
-		repoOperation: repo,
-		setting:       Setting{Data: dataDir},
-	}
-
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/0", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "index")
-	c.SetParamValues("1", "0")
-
-	err = hdlr.GetOperationChunk(c)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "application/x-flatbuffers", rec.Header().Get("Content-Type"))
 }
 
 func TestGetOperationChunk_EmptyStorageFormat(t *testing.T) {
@@ -1622,12 +1509,12 @@ func TestGetOperationChunk_EmptyStorageFormat(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1863,12 +1750,12 @@ func TestGetOperationManifest_JSONError(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine (but don't create the file)
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1912,12 +1799,12 @@ func TestGetOperationManifest_ProtobufReadError(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register protobuf engine (but don't create the manifest file)
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"protobuf": storage.NewProtobufEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -1961,12 +1848,12 @@ func TestGetOperationChunk_JSONNotSupported(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()
@@ -2053,12 +1940,12 @@ func TestGetOperationFormat_WithSchemaVersion(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register JSON engine
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json": storage.NewJSONEngine(dataDir),
+		},
 	}
 
 	e := echo.New()

@@ -115,14 +115,14 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register storage engines
-	storage.RegisterEngine(storage.NewJSONEngine(dataDir))
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
-
 	// Create handler
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
+		engines: map[string]storage.Engine{
+			"json":     storage.NewJSONEngine(dataDir),
+			"protobuf": storage.NewProtobufEngine(dataDir),
+		},
 	}
 
 	// Test 1: Get format info (JSON)

@@ -3,7 +3,6 @@ module github.com/OCAP2/web
 go 1.24.0
 
 require (
-	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/spf13/viper v1.21.0

@@ -8,13 +8,13 @@ import (
 // Writer writes ParseResult to a specific schema version
 type Writer interface {
 	Version() SchemaVersion
-	Format() string // "protobuf" or "flatbuffers"
+	Format() string // "protobuf"
 	WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error
 	WriteChunks(ctx context.Context, outputPath string, result *ParseResult) error
 }
 
 // writers is the registry of writers by format and version
-var writers = make(map[string]Writer) // key: "protobuf_v1", "flatbuffers_v1"
+var writers = make(map[string]Writer) // key: "protobuf_v1"
 
 // RegisterWriter registers a writer for its format and version
 func RegisterWriter(w Writer) {

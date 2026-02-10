@@ -21,18 +21,16 @@ func runConvert(args []string) error {
 	setFormat := fs.String("set-format", "", "Set storage format for an operation (use with --id)")
 	opID := fs.Int64("id", 0, "Operation ID (for --set-format)")
 	chunkSize := fs.Uint("chunk-size", 300, "Frames per chunk (default: 300)")
-	format := fs.String("format", "protobuf", "Output format: protobuf or flatbuffers")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s convert [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fs.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz                  Convert to protobuf\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz --format flatbuffers   Convert to flatbuffers\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --all                                     Convert all pending\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --status                                  Show conversion status\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --set-format flatbuffers --id 1          Set format for operation\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz       Convert to protobuf\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --all                         Convert all pending\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --status                      Show conversion status\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s convert --set-format protobuf --id 1  Set format for operation\n", os.Args[0])
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -51,10 +49,6 @@ func runConvert(args []string) error {
 
 	ctx := context.Background()
 
-	// Register storage engines for CLI commands that read data directly
-	storage.RegisterEngine(storage.NewProtobufEngine(setting.Data))
-	storage.RegisterEngine(storage.NewFlatBuffersEngine(setting.Data))
-
 	switch {
 	case *status:
 		return showConversionStatus(ctx, repo)
@@ -70,10 +64,10 @@ func runConvert(args []string) error {
 		return showConversionStatus(ctx, repo)
 
 	case *inputFile != "":
-		return convertSingleFile(ctx, repo, *inputFile, setting.Data, uint32(*chunkSize), *format)
+		return convertSingleFile(ctx, repo, *inputFile, setting.Data, uint32(*chunkSize))
 
 	case *all:
-		return convertAll(ctx, repo, setting, uint32(*chunkSize), *format)
+		return convertAll(ctx, repo, setting, uint32(*chunkSize))
 
 	default:
 		fs.Usage()
@@ -102,7 +96,7 @@ func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error
 	return nil
 }
 
-func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFile, dataDir string, chunkSize uint32, format string) error {
+func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFile, dataDir string, chunkSize uint32) error {
 	// Determine filename - strip .gz and .json to get base name
 	baseName := filepath.Base(inputFile)
 	if ext := filepath.Ext(baseName); ext == ".gz" {
@@ -114,15 +108,14 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 
 	// Check if operation exists in database - if so, use worker for consistent behavior
 	if op, err := repo.GetByFilename(ctx, baseName); err == nil && op != nil {
-		log.Printf("Converting operation %d: %s (format: %s)", op.ID, op.Filename, format)
+		log.Printf("Converting operation %d: %s", op.ID, op.Filename)
 
 		// Use worker to ensure identical behavior as background conversion
 		worker := conversion.NewWorker(
 			&repoAdapter{repo},
 			conversion.Config{
-				DataDir:       dataDir,
-				ChunkSize:     chunkSize,
-				StorageFormat: format,
+				DataDir:   dataDir,
+				ChunkSize: chunkSize,
 			},
 		)
 		if err := worker.ConvertOne(ctx, op.ID, op.Filename); err != nil {
@@ -134,13 +127,9 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 
 	// Standalone conversion (no database entry)
 	outputPath := filepath.Join(dataDir, baseName)
-	log.Printf("Converting %s to %s (format: %s, chunk size: %d)", inputFile, outputPath, format, chunkSize)
+	log.Printf("Converting %s to %s (chunk size: %d)", inputFile, outputPath, chunkSize)
 
-	engine, err := storage.GetEngine(format)
-	if err != nil {
-		return fmt.Errorf("unknown format %q: %w", format, err)
-	}
-
+	engine := storage.NewProtobufEngine(dataDir)
 	if err := engine.Convert(ctx, inputFile, outputPath); err != nil {
 		return fmt.Errorf("conversion failed: %w", err)
 	}
@@ -149,7 +138,7 @@ func convertSingleFile(ctx context.Context, repo *server.RepoOperation, inputFil
 	return nil
 }
 
-func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.Setting, chunkSize uint32, format string) error {
+func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.Setting, chunkSize uint32) error {
 	operations, err := repo.SelectAll(ctx)
 	if err != nil {
 		return fmt.Errorf("select operations: %w", err)
@@ -160,14 +149,13 @@ func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.
 		return nil
 	}
 
-	log.Printf("Found %d operations to convert (format: %s)", len(operations), format)
+	log.Printf("Found %d operations to convert", len(operations))
 
 	worker := conversion.NewWorker(
 		&repoAdapter{repo},
 		conversion.Config{
-			DataDir:       setting.Data,
-			ChunkSize:     chunkSize,
-			StorageFormat: format,
+			DataDir:   setting.Data,
+			ChunkSize: chunkSize,
 		},
 	)
 

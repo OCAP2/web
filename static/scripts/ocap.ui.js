@@ -549,32 +549,26 @@ class UI {
 	getOperationStatusInfo (op) {
 		const format = op.storageFormat || 'json';
 		const conversionStatus = op.conversionStatus || 'completed';
-		const targetFormat = format === 'flatbuffers' ? 'FlatBuffers' : 'Protobuf';
 
 		if (conversionStatus === 'pending') {
-			// Queued for conversion
 			return {
 				icon: '⏳',
-				tooltip: 'Converting (JSON → ' + targetFormat + ')'
+				tooltip: 'Converting (JSON → Protobuf)'
 			};
 		} else if (conversionStatus === 'converting') {
-			// Actively converting
 			return {
 				icon: '⚙️',
-				tooltip: 'Converting (JSON → ' + targetFormat + ')'
+				tooltip: 'Converting (JSON → Protobuf)'
 			};
 		} else if (conversionStatus === 'failed') {
-			// Conversion failed
 			return {
 				icon: '❌',
-				tooltip: 'Failed (JSON → ' + targetFormat + ')'
+				tooltip: 'Failed (JSON → Protobuf)'
 			};
-		} else if (format === 'protobuf' || format === 'flatbuffers') {
-			// Binary format = streaming
-			const formatName = format === 'protobuf' ? 'Protobuf' : 'FlatBuffers';
+		} else if (format === 'protobuf') {
 			return {
 				icon: '📡',
-				tooltip: 'Streaming (' + formatName + ')'
+				tooltip: 'Streaming (Protobuf)'
 			};
 		} else {
 			// JSON, completed (no conversion or conversion not enabled)

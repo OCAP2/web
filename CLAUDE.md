@@ -21,7 +21,7 @@ go test ./...
 # Run single test
 go test -run TestName ./internal/server
 
-# Regenerate protobuf/flatbuffers schemas
+# Regenerate protobuf schemas
 go generate ./pkg/schemas/...
 
 # Docker build
@@ -36,14 +36,13 @@ Entry point: `cmd/ocap-webserver/main.go` initializes repositories and starts th
 
 **Core packages in `internal/`:**
 - `server/` - HTTP endpoints, repositories (operation, marker, ammo), configuration
-- `storage/` - Storage engines (JSON, Protobuf, FlatBuffers)
+- `storage/` - Storage engines (JSON, Protobuf)
 - `conversion/` - Background format conversion worker
 
 **Public packages in `pkg/schemas/`:**
 - `protobuf/` - Protocol Buffers schema (`ocap.proto`) and generated Go code
-- `flatbuffers/` - FlatBuffers schema (`ocap.fbs`) and generated Go code
 
-Each schema package has a `generate.go` with `//go:generate` directives. Run `go generate ./pkg/schemas/...` after modifying `.proto` or `.fbs` files.
+Each schema package has a `generate.go` with `//go:generate` directives. Run `go generate ./pkg/schemas/...` after modifying `.proto` files.
 
 **API Endpoints (all under configurable `prefixURL`, default `/aar/`):**
 - `GET /api/v1/operations` - Query missions with filters
