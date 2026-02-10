@@ -9,38 +9,35 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OCAP2/web/internal/server"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	// Register storage engines for tests
-	storage.RegisterEngine(storage.NewProtobufEngine("/tmp"))
-	storage.RegisterEngine(storage.NewFlatBuffersEngine("/tmp"))
-}
-
 // mockRepo implements OperationRepo for testing
 type mockRepo struct {
-	pending       []Operation
+	pending       []server.Operation
 	status        map[int64]string
 	format        map[int64]string
 	duration      map[int64]float64
 	schemaVersion map[int64]uint32
-	byStatus      map[string][]Operation
+	chunkCount    map[int64]int
+	byStatus      map[string][]server.Operation
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		pending:       []Operation{},
+		pending:       []server.Operation{},
 		status:        make(map[int64]string),
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
 		schemaVersion: make(map[int64]uint32),
-		byStatus:      make(map[string][]Operation),
+		chunkCount:    make(map[int64]int),
+		byStatus:      make(map[string][]server.Operation),
 	}
 }
 
-func (m *mockRepo) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+func (m *mockRepo) SelectPending(ctx context.Context, limit int) ([]server.Operation, error) {
 	if len(m.pending) <= limit {
 		return m.pending, nil
 	}
@@ -67,8 +64,13 @@ func (m *mockRepo) UpdateSchemaVersion(ctx context.Context, id int64, version ui
 	return nil
 }
 
-func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]server.Operation, error) {
 	return m.byStatus[status], nil
+}
+
+func (m *mockRepo) UpdateChunkCount(ctx context.Context, id int64, count int) error {
+	m.chunkCount[id] = count
+	return nil
 }
 
 func (m *mockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
@@ -171,7 +173,7 @@ func TestWorker_ProcessOnce(t *testing.T) {
 
 	// Create mock repo with pending operations
 	repo := newMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 		{ID: 2, Filename: "mission2"},
 	}
@@ -244,7 +246,6 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 1, cfg.BatchSize)
 	assert.Equal(t, uint32(storage.DefaultChunkSize), cfg.ChunkSize)
 	assert.Empty(t, cfg.DataDir)
-	assert.Empty(t, cfg.StorageFormat)
 }
 
 func TestNewWorker_Defaults(t *testing.T) {
@@ -267,24 +268,14 @@ func TestNewWorker_Defaults(t *testing.T) {
 		assert.Equal(t, 1, worker.batchSize)
 	})
 
-	t.Run("applies default storage format", func(t *testing.T) {
-		worker := NewWorker(repo, Config{
-			DataDir:       dir,
-			StorageFormat: "", // Empty should be replaced with default
-		})
-		assert.Equal(t, "protobuf", worker.storageFormat)
-	})
-
 	t.Run("respects custom values", func(t *testing.T) {
 		worker := NewWorker(repo, Config{
-			DataDir:       dir,
-			Interval:      10 * time.Minute,
-			BatchSize:     5,
-			StorageFormat: "flatbuffers",
+			DataDir:   dir,
+			Interval:  10 * time.Minute,
+			BatchSize: 5,
 		})
 		assert.Equal(t, 10*time.Minute, worker.interval)
 		assert.Equal(t, 5, worker.batchSize)
-		assert.Equal(t, "flatbuffers", worker.storageFormat)
 	})
 }
 
@@ -368,64 +359,6 @@ func TestTriggerConversion_Failure(t *testing.T) {
 	}
 }
 
-func TestWorker_FlatBuffersFormat(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create test JSON data
-	testData := `{
-		"worldName": "altis",
-		"missionName": "FlatBuffers Test",
-		"captureDelay": 1,
-		"endFrame": 5,
-		"entities": [
-			{
-				"id": 1,
-				"type": "unit",
-				"startFrameNum": 0,
-				"positions": [
-					[[100, 200], 45, 1, 0, "Player1", 1]
-				],
-				"framesFired": [],
-				"name": "Player1",
-				"group": "Alpha",
-				"side": "WEST",
-				"isPlayer": 1
-			}
-		],
-		"events": [],
-		"times": []
-	}`
-
-	// Write gzipped JSON file
-	jsonPath := filepath.Join(dir, "fb_test.json.gz")
-	f, err := os.Create(jsonPath)
-	assert.NoError(t, err)
-	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
-
-	repo := newMockRepo()
-	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		ChunkSize:     10,
-		StorageFormat: "flatbuffers",
-	})
-
-	ctx := context.Background()
-	err = worker.ConvertOne(ctx, 1, "fb_test")
-	assert.NoError(t, err)
-
-	// Verify flatbuffers format was used
-	assert.Equal(t, "completed", repo.status[1])
-	assert.Equal(t, "flatbuffers", repo.format[1])
-
-	// Verify output files exist
-	outputDir := filepath.Join(dir, "fb_test")
-	_, err = os.Stat(filepath.Join(outputDir, "manifest.fb"))
-	assert.NoError(t, err)
-}
-
 func TestWorker_ContextCancellation(t *testing.T) {
 	dir := t.TempDir()
 
@@ -451,7 +384,7 @@ func TestWorker_ContextCancellation(t *testing.T) {
 	}
 
 	repo := newMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "cancel_1"},
 		{ID: 2, Filename: "cancel_2"},
 		{ID: 3, Filename: "cancel_3"},
@@ -482,12 +415,13 @@ func TestWorker_ContextCancellation(t *testing.T) {
 
 // errorMockRepo is a mock that can return errors for testing error paths
 type errorMockRepo struct {
-	pending                  []Operation
-	byStatus                 map[string][]Operation
+	pending                  []server.Operation
+	byStatus                 map[string][]server.Operation
 	status                   map[int64]string
 	format                   map[int64]string
 	duration                 map[int64]float64
 	schemaVersion            map[int64]uint32
+	chunkCount               map[int64]int
 	selectPendingErr         error
 	selectByStatusErr        error
 	resetConversionStatusErr error
@@ -500,16 +434,17 @@ type errorMockRepo struct {
 
 func newErrorMockRepo() *errorMockRepo {
 	return &errorMockRepo{
-		pending:       []Operation{},
-		byStatus:      make(map[string][]Operation),
+		pending:       []server.Operation{},
+		byStatus:      make(map[string][]server.Operation),
 		status:        make(map[int64]string),
 		format:        make(map[int64]string),
 		duration:      make(map[int64]float64),
 		schemaVersion: make(map[int64]uint32),
+		chunkCount:    make(map[int64]int),
 	}
 }
 
-func (m *errorMockRepo) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
+func (m *errorMockRepo) SelectPending(ctx context.Context, limit int) ([]server.Operation, error) {
 	if m.selectPendingErr != nil {
 		return nil, m.selectPendingErr
 	}
@@ -552,7 +487,12 @@ func (m *errorMockRepo) UpdateSchemaVersion(ctx context.Context, id int64, versi
 	return nil
 }
 
-func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
+func (m *errorMockRepo) UpdateChunkCount(ctx context.Context, id int64, count int) error {
+	m.chunkCount[id] = count
+	return nil
+}
+
+func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]server.Operation, error) {
 	if m.selectByStatusErr != nil {
 		return nil, m.selectByStatusErr
 	}
@@ -589,7 +529,7 @@ func TestProcessOnce_SelectPendingError(t *testing.T) {
 func TestProcessOnce_ConversionFailureStatusUpdateError(t *testing.T) {
 	dir := t.TempDir()
 	repo := newErrorMockRepo()
-	repo.pending = []Operation{
+	repo.pending = []server.Operation{
 		{ID: 1, Filename: "nonexistent"},
 	}
 	// Fail the "failed" status update after conversion error
@@ -715,30 +655,6 @@ func TestConvertOperation_UpdateDurationError(t *testing.T) {
 	assert.Equal(t, "completed", repo.status[1])
 }
 
-func TestConvertOperation_InvalidStorageFormat(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create test JSON file
-	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
-	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
-	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
-
-	repo := newErrorMockRepo()
-	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "invalid_format",
-	})
-
-	ctx := context.Background()
-	err := worker.ConvertOne(ctx, 1, "test")
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "get storage engine")
-}
 
 func TestConvertOperation_JSONFileNotFound(t *testing.T) {
 	dir := t.TempDir()
@@ -786,18 +702,17 @@ func TestWorker_CleanupInterrupted(t *testing.T) {
 
 	// Create mock repo with converting operations
 	repo := newMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 		{ID: 2, Filename: "mission2"},
 	}
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 3, Filename: "mission3"},
 	}
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   false,
+		DataDir:     dir,
+		RetryFailed: false,
 	})
 
 	ctx := context.Background()
@@ -821,18 +736,17 @@ func TestWorker_CleanupInterrupted_RetryFailed(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 2, Filename: "mission2"},
 		{ID: 3, Filename: "mission3"},
 	}
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   true, // Enable retry of failed
+		DataDir:     dir,
+		RetryFailed: true, // Enable retry of failed
 	})
 
 	ctx := context.Background()
@@ -851,8 +765,7 @@ func TestWorker_CleanupInterrupted_SelectByStatusError(t *testing.T) {
 	repo.selectByStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
+		DataDir: dir,
 	})
 
 	ctx := context.Background()
@@ -864,14 +777,13 @@ func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newErrorMockRepo()
-	repo.byStatus["converting"] = []Operation{
+	repo.byStatus["converting"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
 	repo.resetConversionStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
+		DataDir: dir,
 	})
 
 	ctx := context.Background()
@@ -883,15 +795,14 @@ func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newErrorMockRepo()
-	repo.byStatus["failed"] = []Operation{
+	repo.byStatus["failed"] = []server.Operation{
 		{ID: 1, Filename: "mission1"},
 	}
 	repo.resetConversionStatusErr = fmt.Errorf("database error")
 
 	worker := NewWorker(repo, Config{
-		DataDir:       dir,
-		StorageFormat: "protobuf",
-		RetryFailed:   true,
+		DataDir:     dir,
+		RetryFailed: true,
 	})
 
 	ctx := context.Background()

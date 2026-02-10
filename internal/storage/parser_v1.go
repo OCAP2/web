@@ -447,25 +447,6 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 	return data
 }
 
-// sideIndexToString converts a side index to side string
-// Old extension uses BIS_fnc_sideID: -1=global, 0=EAST, 1=WEST, 2=RESISTANCE, 3=CIVILIAN
-func sideIndexToString(idx int) string {
-	switch idx {
-	case 0:
-		return "EAST"
-	case 1:
-		return "WEST"
-	case 2:
-		return "GUER"
-	case 3:
-		return "CIV"
-	case -1:
-		return "GLOBAL"
-	default:
-		return ""
-	}
-}
-
 // parseFramesFired extracts fired frame data from an entity
 // Format: [[frameNum, [x, y, z]], ...]
 func (p *ParserV1) parseFramesFired(em map[string]interface{}) []FiredFrame {

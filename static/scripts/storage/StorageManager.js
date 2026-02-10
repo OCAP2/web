@@ -35,7 +35,7 @@ class StorageManager {
     /**
      * Check if manifest exists for a mission
      * @param {string} missionId
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<boolean>}
      */
     async hasManifest(missionId, format = 'protobuf') {
@@ -46,7 +46,7 @@ class StorageManager {
     /**
      * Get manifest for a mission
      * @param {string} missionId
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<ArrayBuffer|null>}
      */
     async getManifest(missionId, format = 'protobuf') {
@@ -58,7 +58,7 @@ class StorageManager {
      * Save manifest for a mission
      * @param {string} missionId
      * @param {ArrayBuffer} data
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<void>}
      */
     async saveManifest(missionId, data, format = 'protobuf') {
@@ -70,7 +70,7 @@ class StorageManager {
      * Check if chunk exists
      * @param {string} missionId
      * @param {number} chunkIndex
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<boolean>}
      */
     async hasChunk(missionId, chunkIndex, format = 'protobuf') {
@@ -82,7 +82,7 @@ class StorageManager {
      * Get chunk data
      * @param {string} missionId
      * @param {number} chunkIndex
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<ArrayBuffer|null>}
      */
     async getChunk(missionId, chunkIndex, format = 'protobuf') {
@@ -95,7 +95,7 @@ class StorageManager {
      * @param {string} missionId
      * @param {number} chunkIndex
      * @param {ArrayBuffer} data
-     * @param {string} format - Storage format ('protobuf' or 'flatbuffers')
+     * @param {string} format - Storage format ('protobuf')
      * @returns {Promise<void>}
      */
     async saveChunk(missionId, chunkIndex, data, format = 'protobuf') {
@@ -179,7 +179,7 @@ class OPFSStorage {
         try {
             const missionDir = await this._getMissionDir(missionId, false);
             if (!missionDir) return false;
-            const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+            const filename = 'manifest.pb';
             await missionDir.getFileHandle(filename);
             return true;
         } catch (e) {
@@ -191,7 +191,7 @@ class OPFSStorage {
         try {
             const missionDir = await this._getMissionDir(missionId, false);
             if (!missionDir) return null;
-            const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+            const filename = 'manifest.pb';
             const fileHandle = await missionDir.getFileHandle(filename);
             const file = await fileHandle.getFile();
             await this._updateAccessTime(missionId, 'manifest');
@@ -203,7 +203,7 @@ class OPFSStorage {
 
     async saveManifest(missionId, data, format = 'protobuf') {
         const missionDir = await this._getMissionDir(missionId, true);
-        const filename = format === 'flatbuffers' ? 'manifest.fb' : 'manifest.pb';
+        const filename = 'manifest.pb';
         const fileHandle = await missionDir.getFileHandle(filename, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(data);
@@ -318,7 +318,7 @@ class OPFSStorage {
     }
 
     _chunkFileName(index, format = 'protobuf') {
-        const ext = format === 'flatbuffers' ? '.fb' : '.pb';
+        const ext = '.pb';
         return String(index).padStart(4, '0') + ext;
     }
 
@@ -517,7 +517,7 @@ class IndexedDBStorage {
     }
 
     _chunkId(missionId, chunkIndex, format = 'protobuf') {
-        const ext = format === 'flatbuffers' ? 'fb' : 'pb';
+        const ext = 'pb';
         return `${missionId}:${String(chunkIndex).padStart(4, '0')}:${ext}`;
     }
 

@@ -9,45 +9,40 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/OCAP2/web/internal/server"
 	"github.com/OCAP2/web/internal/storage"
 )
 
 // OperationRepo defines the repository interface needed by the worker
 type OperationRepo interface {
-	SelectPending(ctx context.Context, limit int) ([]Operation, error)
-	SelectByStatus(ctx context.Context, status string) ([]Operation, error)
+	SelectPending(ctx context.Context, limit int) ([]server.Operation, error)
+	SelectByStatus(ctx context.Context, status string) ([]server.Operation, error)
 	ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error)
 	UpdateConversionStatus(ctx context.Context, id int64, status string) error
 	UpdateStorageFormat(ctx context.Context, id int64, format string) error
 	UpdateMissionDuration(ctx context.Context, id int64, duration float64) error
 	UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error
+	UpdateChunkCount(ctx context.Context, id int64, count int) error
 }
 
-// Operation represents a minimal operation for conversion
-type Operation struct {
-	ID       int64
-	Filename string
-}
-
-// Worker handles background conversion of JSON recordings to binary format
+// Worker handles background conversion of JSON recordings to protobuf format
 type Worker struct {
-	repo          OperationRepo
-	dataDir       string
-	converter     *storage.Converter
-	interval      time.Duration
-	batchSize     int
-	storageFormat string
-	retryFailed   bool
+	repo        OperationRepo
+	dataDir     string
+	converter   *storage.Converter
+	engine      storage.Engine
+	interval    time.Duration
+	batchSize   int
+	retryFailed bool
 }
 
 // Config holds worker configuration
 type Config struct {
-	DataDir       string
-	Interval      time.Duration
-	BatchSize     int
-	ChunkSize     uint32
-	StorageFormat string // "protobuf" or "flatbuffers"
-	RetryFailed   bool
+	DataDir     string
+	Interval    time.Duration
+	BatchSize   int
+	ChunkSize   uint32
+	RetryFailed bool
 }
 
 // DefaultConfig returns default worker configuration
@@ -67,18 +62,15 @@ func NewWorker(repo OperationRepo, cfg Config) *Worker {
 	if cfg.BatchSize == 0 {
 		cfg.BatchSize = 1
 	}
-	if cfg.StorageFormat == "" {
-		cfg.StorageFormat = "protobuf"
-	}
 
 	return &Worker{
-		repo:          repo,
-		dataDir:       cfg.DataDir,
-		converter:     storage.NewConverter(cfg.ChunkSize),
-		interval:      cfg.Interval,
-		batchSize:     cfg.BatchSize,
-		storageFormat: cfg.StorageFormat,
-		retryFailed:   cfg.RetryFailed,
+		repo:        repo,
+		dataDir:     cfg.DataDir,
+		converter:   storage.NewConverter(cfg.ChunkSize),
+		engine:      storage.NewProtobufEngine(cfg.DataDir),
+		interval:    cfg.Interval,
+		batchSize:   cfg.BatchSize,
+		retryFailed: cfg.RetryFailed,
 	}
 }
 
@@ -164,9 +156,9 @@ func (w *Worker) processOnce(ctx context.Context) {
 	}
 }
 
-// convertOperation converts a single operation from JSON to the configured format
-func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
-	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename, "format", w.storageFormat)
+// convertOperation converts a single operation from JSON to protobuf format
+func (w *Worker) convertOperation(ctx context.Context, op server.Operation) error {
+	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename)
 
 	// Update status to converting
 	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "converting"); err != nil {
@@ -182,19 +174,13 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 		return fmt.Errorf("JSON file not found: %s", jsonPath)
 	}
 
-	// Get the appropriate storage engine
-	engine, err := storage.GetEngine(w.storageFormat)
-	if err != nil {
-		return fmt.Errorf("get storage engine: %w", err)
-	}
-
 	// Run conversion using the storage engine
-	if err := engine.Convert(ctx, jsonPath, outputPath); err != nil {
+	if err := w.engine.Convert(ctx, jsonPath, outputPath); err != nil {
 		return fmt.Errorf("conversion failed: %w", err)
 	}
 
 	// Read manifest to get duration info
-	manifest, err := engine.GetManifest(ctx, op.Filename)
+	manifest, err := w.engine.GetManifest(ctx, op.Filename)
 	if err != nil {
 		slog.Warn("failed to read manifest for duration", "error", err)
 	} else {
@@ -203,10 +189,13 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 		if err := w.repo.UpdateMissionDuration(ctx, op.ID, durationSeconds); err != nil {
 			slog.Warn("failed to update mission duration", "error", err)
 		}
+		if err := w.repo.UpdateChunkCount(ctx, op.ID, int(manifest.ChunkCount)); err != nil {
+			slog.Warn("failed to update chunk count", "error", err)
+		}
 	}
 
-	// Update database with the actual format used
-	if err := w.repo.UpdateStorageFormat(ctx, op.ID, w.storageFormat); err != nil {
+	// Update database format
+	if err := w.repo.UpdateStorageFormat(ctx, op.ID, "protobuf"); err != nil {
 		return fmt.Errorf("update storage format: %w", err)
 	}
 	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "completed"); err != nil {
@@ -219,7 +208,7 @@ func (w *Worker) convertOperation(ctx context.Context, op Operation) error {
 
 // ConvertOne converts a single operation by ID (for CLI/manual use)
 func (w *Worker) ConvertOne(ctx context.Context, id int64, filename string) error {
-	return w.convertOperation(ctx, Operation{ID: id, Filename: filename})
+	return w.convertOperation(ctx, server.Operation{ID: id, Filename: filename})
 }
 
 // TriggerConversion starts an async conversion for the given operation.
@@ -228,7 +217,7 @@ func (w *Worker) ConvertOne(ctx context.Context, id int64, filename string) erro
 func (w *Worker) TriggerConversion(id int64, filename string) {
 	go func() {
 		ctx := context.Background()
-		if err := w.convertOperation(ctx, Operation{ID: id, Filename: filename}); err != nil {
+		if err := w.convertOperation(ctx, server.Operation{ID: id, Filename: filename}); err != nil {
 			slog.Error("async conversion failed", "operation_id", id, "filename", filename, "error", err)
 			if err := w.repo.UpdateConversionStatus(ctx, id, "failed"); err != nil {
 				slog.Error("failed to update status", "operation_id", id, "error", err)

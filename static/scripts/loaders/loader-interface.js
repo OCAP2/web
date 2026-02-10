@@ -39,16 +39,12 @@ function readVersionPrefix(buffer) {
     // - 0x08 (field 1, varint)
     // - 0x0A (field 1, length-delimited)
     //
-    // Legacy flatbuffers files start with a root table offset (4 bytes).
-    // The minimum offset is typically 16+ bytes.
-
     const byte0 = view.getUint8(0);
     const byte1 = view.getUint8(1);
     const byte2 = view.getUint8(2);
     const byte3 = view.getUint8(3);
 
     // For protobuf: check if bytes 2-4 are all zero (indicates version prefix)
-    // For flatbuffers: check if first byte < 16 AND bytes 2-4 are zero
     const hasVersionPrefix = byte0 < 16 && byte1 === 0 && byte2 === 0 && byte3 === 0;
 
     if (!hasVersionPrefix) {

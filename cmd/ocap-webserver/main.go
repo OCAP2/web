@@ -90,14 +90,13 @@ func app() error {
 		}
 
 		worker := conversion.NewWorker(
-			&repoAdapter{operation},
+			operation,
 			conversion.Config{
-				DataDir:       setting.Data,
-				Interval:      interval,
-				BatchSize:     setting.Conversion.BatchSize,
-				ChunkSize:     setting.Conversion.ChunkSize,
-				StorageFormat: setting.Conversion.StorageEngine,
-				RetryFailed:   setting.Conversion.RetryFailed,
+				DataDir:     setting.Data,
+				Interval:    interval,
+				BatchSize:   setting.Conversion.BatchSize,
+				ChunkSize:   setting.Conversion.ChunkSize,
+				RetryFailed: setting.Conversion.RetryFailed,
 			},
 		)
 

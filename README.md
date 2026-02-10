@@ -2,7 +2,7 @@
 
 ![Coverage](https://raw.githubusercontent.com/OCAP2/web/badges/.badges/main/coverage.svg)
 
-OCAP Web serves and plays back Arma 3 mission recordings. It supports both legacy JSON recordings and chunked binary formats (Protobuf/FlatBuffers) for efficient streaming of large recordings.
+OCAP Web serves and plays back Arma 3 mission recordings. It supports both legacy JSON recordings and chunked Protobuf format for efficient streaming of large recordings.
 
 ## Configuration
 
@@ -26,7 +26,6 @@ Large recordings can be automatically converted to chunked binary format for bet
 | `conversion.interval` | How often to check for pending conversions | `"5m"` |
 | `conversion.batchSize` | Max recordings to convert per interval | `10` |
 | `conversion.chunkSize` | Frames per chunk (~5 min at 1 fps) | `300` |
-| `conversion.storageEngine` | Target format: `"protobuf"` or `"flatbuffers"` | `"protobuf"` |
 
 Example `setting.json`:
 ```json
@@ -36,8 +35,7 @@ Example `setting.json`:
   "logger": true,
   "conversion": {
     "enabled": true,
-    "interval": "5m",
-    "storageEngine": "protobuf"
+    "interval": "5m"
   }
 }
 ```
@@ -48,7 +46,7 @@ Example `setting.json`:
 
 Traditional JSON recordings load entirely into browser memory, which causes crashes with large missions (500MB+). The chunked streaming system solves this by:
 
-1. Converting recordings to binary format (Protobuf or FlatBuffers)
+1. Converting recordings to binary format (Protobuf)
 2. Splitting into chunks (~5 minutes each)
 3. Loading only needed chunks during playback
 4. Caching chunks in browser storage (OPFS/IndexedDB)
@@ -59,7 +57,6 @@ Traditional JSON recordings load entirely into browser memory, which causes cras
 |--------|-----------|----------|-----------|-------------|
 | JSON | `.gz` | Legacy, small recordings | No | Baseline |
 | Protobuf | `.pb` | Default chunked format | Yes | Good |
-| FlatBuffers | `.fb` | Zero-copy reads | Yes | Best |
 
 ### Workflow
 
@@ -102,17 +99,14 @@ Convert recordings manually using the CLI:
 # Convert a single file
 ./ocap-webserver convert --input data/mission.json.gz
 
-# Convert to FlatBuffers instead of Protobuf
-./ocap-webserver convert --input data/mission.json.gz --format flatbuffers
-
 # Convert all pending recordings
 ./ocap-webserver convert --all
 
 # Show conversion status of all recordings
 ./ocap-webserver convert --status
 
-# Change storage format for an existing operation (for testing)
-./ocap-webserver convert --set-format flatbuffers --id 1
+# Change storage format for an existing operation
+./ocap-webserver convert --set-format protobuf --id 1
 ```
 
 ### File Structure After Conversion
@@ -142,7 +136,6 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
 | `OCAP_CONVERSION_ENABLED` | Enable automatic conversion | `false` |
 | `OCAP_CONVERSION_INTERVAL` | Conversion check interval | `5m` |
-| `OCAP_CONVERSION_STORAGEENGINE` | Format: `protobuf` or `flatbuffers` | `protobuf` |
 
 ### Volumes
 
@@ -228,7 +221,7 @@ Each archive contains the binary and required assets (markers, ammo, static file
 
 ### Build from source
 
-Requires [Go 1.24+](https://golang.org/dl/), [protoc](https://grpc.io/docs/protoc-installation/), and [flatc](https://flatbuffers.dev/flatbuffers_guide_building.html) (for schema changes only).
+Requires [Go 1.24+](https://golang.org/dl/) and [protoc](https://grpc.io/docs/protoc-installation/) (for schema changes only).
 
 ```bash
 # Linux / macOS
@@ -237,7 +230,7 @@ go build -o ocap-webserver ./cmd/ocap-webserver
 # Windows
 go build -o ocap-webserver.exe ./cmd/ocap-webserver
 
-# Regenerate protobuf/flatbuffers code (after modifying .proto or .fbs files)
+# Regenerate protobuf code (after modifying .proto files)
 go generate ./pkg/schemas/...
 
 # Docker

@@ -123,7 +123,6 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "5m", setting.Conversion.Interval)
 		assert.Equal(t, 1, setting.Conversion.BatchSize)
 		assert.Equal(t, uint32(300), setting.Conversion.ChunkSize)
-		assert.Equal(t, "protobuf", setting.Conversion.StorageEngine)
 	})
 
 	t.Run("customize defaults", func(t *testing.T) {
@@ -183,8 +182,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 				"enabled": true,
 				"interval": "10m",
 				"batchSize": 5,
-				"chunkSize": 500,
-				"storageEngine": "flatbuffers"
+				"chunkSize": 500
 			}
 		}`
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -200,7 +198,6 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "10m", setting.Conversion.Interval)
 		assert.Equal(t, 5, setting.Conversion.BatchSize)
 		assert.Equal(t, uint32(500), setting.Conversion.ChunkSize)
-		assert.Equal(t, "flatbuffers", setting.Conversion.StorageEngine)
 	})
 
 	t.Run("YAML config format", func(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -122,9 +121,9 @@ func (w *ProtobufWriterV1) toProtoManifest(result *ParseResult) *pbv1.Manifest {
 func (w *ProtobufWriterV1) toProtoEntityDef(e EntityDef) *pbv1.EntityDef {
 	def := &pbv1.EntityDef{
 		Id:           e.ID,
-		Type:         w.stringToEntityType(e.Type),
+		Type:         stringToEntityType(e.Type),
 		Name:         e.Name,
-		Side:         w.stringToSide(e.Side),
+		Side:         stringToSide(e.Side),
 		GroupName:    e.Group,
 		Role:         e.Role,
 		StartFrame:   e.StartFrame,
@@ -168,7 +167,7 @@ func (w *ProtobufWriterV1) toProtoMarker(m MarkerDef) *pbv1.MarkerDef {
 		EndFrame:   m.EndFrame,
 		PlayerId:   m.PlayerID,
 		Color:      m.Color,
-		Side:       w.stringToSide(m.Side),
+		Side:       stringToSide(m.Side),
 		Size:       m.Size,
 		Shape:      m.Shape,
 		Brush:      m.Brush,
@@ -273,32 +272,3 @@ func (w *ProtobufWriterV1) writeChunk(chunksDir string, index uint32, chunk *pbv
 	return nil
 }
 
-// stringToEntityType converts a string to pbv1.EntityType
-func (w *ProtobufWriterV1) stringToEntityType(s string) pbv1.EntityType {
-	switch strings.ToLower(s) {
-	case "unit":
-		return pbv1.EntityType_ENTITY_TYPE_UNIT
-	case "vehicle":
-		return pbv1.EntityType_ENTITY_TYPE_VEHICLE
-	default:
-		return pbv1.EntityType_ENTITY_TYPE_UNKNOWN
-	}
-}
-
-// stringToSide converts a string to pbv1.Side
-func (w *ProtobufWriterV1) stringToSide(s string) pbv1.Side {
-	switch strings.ToUpper(s) {
-	case "WEST":
-		return pbv1.Side_SIDE_WEST
-	case "EAST":
-		return pbv1.Side_SIDE_EAST
-	case "GUER", "INDEPENDENT":
-		return pbv1.Side_SIDE_GUER
-	case "CIV", "CIVILIAN":
-		return pbv1.Side_SIDE_CIV
-	case "GLOBAL":
-		return pbv1.Side_SIDE_GLOBAL
-	default:
-		return pbv1.Side_SIDE_UNKNOWN
-	}
-}

@@ -25,12 +25,11 @@ type Setting struct {
 }
 
 type Conversion struct {
-	Enabled       bool   `json:"enabled" yaml:"enabled"`
-	Interval      string `json:"interval" yaml:"interval"`
-	BatchSize     int    `json:"batchSize" yaml:"batchSize"`
-	ChunkSize     uint32 `json:"chunkSize" yaml:"chunkSize"`
-	StorageEngine string `json:"storageEngine" yaml:"storageEngine"` // "protobuf" or "flatbuffers"
-	RetryFailed   bool   `json:"retryFailed" yaml:"retryFailed"`
+	Enabled     bool   `json:"enabled" yaml:"enabled"`
+	Interval    string `json:"interval" yaml:"interval"`
+	BatchSize   int    `json:"batchSize" yaml:"batchSize"`
+	ChunkSize   uint32 `json:"chunkSize" yaml:"chunkSize"`
+	RetryFailed bool   `json:"retryFailed" yaml:"retryFailed"`
 }
 
 type Customize struct {
@@ -69,11 +68,11 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("conversion.interval", "5m")
 	viper.SetDefault("conversion.batchSize", 1)
 	viper.SetDefault("conversion.chunkSize", 300)
-	viper.SetDefault("conversion.storageEngine", "protobuf") // "protobuf" or "flatbuffers"
+
 	viper.SetDefault("conversion.retryFailed", false)
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.storageEngine", "conversion.retryFailed"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

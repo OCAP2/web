@@ -10,138 +10,9 @@ import (
 
 	"github.com/OCAP2/web/internal/conversion"
 	"github.com/OCAP2/web/internal/server"
-	"github.com/OCAP2/web/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestRepoAdapter_SelectPending(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-
-	repo, err := server.NewRepoOperation(pathDB)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// Store some operations with different statuses
-	ops := []*server.Operation{
-		{WorldName: "altis", MissionName: "Pending 1", Filename: "p1", Date: "2026-01-01", ConversionStatus: "pending"},
-		{WorldName: "altis", MissionName: "Completed", Filename: "c1", Date: "2026-01-02", ConversionStatus: "completed"},
-		{WorldName: "altis", MissionName: "Pending 2", Filename: "p2", Date: "2026-01-03", ConversionStatus: "pending"},
-	}
-	for _, op := range ops {
-		err = repo.Store(ctx, op)
-		require.NoError(t, err)
-	}
-
-	adapter := &repoAdapter{repo: repo}
-
-	// Test SelectPending
-	pending, err := adapter.SelectPending(ctx, 10)
-	require.NoError(t, err)
-	assert.Len(t, pending, 2)
-
-	// Verify conversion to conversion.Operation type
-	assert.Equal(t, "p1", pending[0].Filename)
-	assert.Equal(t, "p2", pending[1].Filename)
-}
-
-func TestRepoAdapter_UpdateConversionStatus(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-
-	repo, err := server.NewRepoOperation(pathDB)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// Store an operation
-	op := &server.Operation{
-		WorldName:        "altis",
-		MissionName:      "Test",
-		Filename:         "test",
-		Date:             "2026-01-01",
-		ConversionStatus: "pending",
-	}
-	err = repo.Store(ctx, op)
-	require.NoError(t, err)
-
-	adapter := &repoAdapter{repo: repo}
-
-	// Update status via adapter
-	err = adapter.UpdateConversionStatus(ctx, op.ID, "completed")
-	require.NoError(t, err)
-
-	// Verify update
-	updated, err := repo.GetByID(ctx, "1")
-	require.NoError(t, err)
-	assert.Equal(t, "completed", updated.ConversionStatus)
-}
-
-func TestRepoAdapter_UpdateStorageFormat(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-
-	repo, err := server.NewRepoOperation(pathDB)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// Store an operation
-	op := &server.Operation{
-		WorldName:     "altis",
-		MissionName:   "Test",
-		Filename:      "test",
-		Date:          "2026-01-01",
-		StorageFormat: "json",
-	}
-	err = repo.Store(ctx, op)
-	require.NoError(t, err)
-
-	adapter := &repoAdapter{repo: repo}
-
-	// Update format via adapter
-	err = adapter.UpdateStorageFormat(ctx, op.ID, "protobuf")
-	require.NoError(t, err)
-
-	// Verify update
-	updated, err := repo.GetByID(ctx, "1")
-	require.NoError(t, err)
-	assert.Equal(t, "protobuf", updated.StorageFormat)
-}
-
-func TestRepoAdapter_UpdateMissionDuration(t *testing.T) {
-	dir := t.TempDir()
-	pathDB := filepath.Join(dir, "test.db")
-
-	repo, err := server.NewRepoOperation(pathDB)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// Store an operation
-	op := &server.Operation{
-		WorldName:       "altis",
-		MissionName:     "Test",
-		Filename:        "test",
-		Date:            "2026-01-01",
-		MissionDuration: 100,
-	}
-	err = repo.Store(ctx, op)
-	require.NoError(t, err)
-
-	adapter := &repoAdapter{repo: repo}
-
-	// Update duration via adapter
-	err = adapter.UpdateMissionDuration(ctx, op.ID, 3600.5)
-	require.NoError(t, err)
-
-	// Verify update
-	updated, err := repo.GetByID(ctx, "1")
-	require.NoError(t, err)
-	assert.Equal(t, 3600.5, updated.MissionDuration)
-}
 
 func TestShowConversionStatus(t *testing.T) {
 	dir := t.TempDir()
@@ -275,10 +146,8 @@ func TestConvertSingleFile(t *testing.T) {
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
 
-	// Register engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 
-	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300, "protobuf")
+	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300)
 	require.NoError(t, err)
 
 	// Verify output was created
@@ -287,25 +156,6 @@ func TestConvertSingleFile(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestConvertSingleFile_InvalidFormat(t *testing.T) {
-	dir := t.TempDir()
-	inputPath := filepath.Join(dir, "test.json.gz")
-
-	// Create empty file
-	f, _ := os.Create(inputPath)
-	f.Close()
-
-	// Create test database
-	pathDB := filepath.Join(dir, "test.db")
-	repo, err := server.NewRepoOperation(pathDB)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	err = convertSingleFile(ctx, repo, inputPath, dir, 300, "invalid_format")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown format")
-}
 
 func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
 	dir := t.TempDir()
@@ -367,11 +217,9 @@ func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
 	err = repo.Store(ctx, op)
 	require.NoError(t, err)
 
-	// Register engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 
 	// Convert - should use worker path since operation exists
-	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300, "protobuf")
+	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300)
 	require.NoError(t, err)
 
 	// Verify output was created
@@ -402,7 +250,7 @@ func TestConvertAll_Empty(t *testing.T) {
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = convertAll(ctx, repo, setting, 300, "protobuf")
+	err = convertAll(ctx, repo, setting, 300)
 
 	w.Close()
 	os.Stdout = old
@@ -471,15 +319,13 @@ func TestConvertAll_WithOperations(t *testing.T) {
 
 	setting := server.Setting{Data: dataDir}
 
-	// Register engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 
 	// Capture stdout
 	old := os.Stdout
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = convertAll(ctx, repo, setting, 300, "protobuf")
+	err = convertAll(ctx, repo, setting, 300)
 
 	w.Close()
 	os.Stdout = old
@@ -517,15 +363,13 @@ func TestConvertAll_WithFailedOperation(t *testing.T) {
 
 	setting := server.Setting{Data: dataDir}
 
-	// Register engines
-	storage.RegisterEngine(storage.NewProtobufEngine(dataDir))
 
 	// Capture stdout
 	old := os.Stdout
 	_, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = convertAll(ctx, repo, setting, 300, "protobuf")
+	err = convertAll(ctx, repo, setting, 300)
 
 	w.Close()
 	os.Stdout = old
@@ -539,5 +383,5 @@ func TestConvertAll_WithFailedOperation(t *testing.T) {
 	assert.Equal(t, "failed", updated.ConversionStatus)
 }
 
-// Verify repoAdapter implements conversion.OperationRepo
-var _ conversion.OperationRepo = (*repoAdapter)(nil)
+// Verify *server.RepoOperation satisfies conversion.OperationRepo
+var _ conversion.OperationRepo = (*server.RepoOperation)(nil)
