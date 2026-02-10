@@ -38,8 +38,12 @@ describe("briefing marker SVG renderer", () => {
     document.body.removeChild(container);
   });
 
+  function getInternal(handle: BriefingMarkerHandle): any {
+    return (handle as any)._internal;
+  }
+
   function getInternalLayer(handle: BriefingMarkerHandle): L.Layer {
-    return (handle as any)._internal.layer;
+    return getInternal(handle).layer;
   }
 
   it("creates ELLIPSE polygons with the SVG renderer", () => {
@@ -94,5 +98,66 @@ describe("briefing marker SVG renderer", () => {
     // L.Marker doesn't use vector renderers at all
     const marker = getInternalLayer(handle) as any;
     expect(marker.options.renderer).toBeUndefined();
+  });
+
+  it("pattern brushes set _fillPatternId on the polygon", () => {
+    const brushes = ["horizontal", "vertical", "fdiagonal", "bdiagonal", "diaggrid", "grid", "cross"];
+    for (const brush of brushes) {
+      const handle = renderer.createBriefingMarker({
+        shape: "ELLIPSE",
+        type: "mil_circle",
+        color: "FF0000",
+        side: "WEST",
+        size: [100, 100],
+        brush,
+      });
+
+      const internal = getInternal(handle);
+      const polygon = internal.layer as any;
+      expect(polygon.options._fillPatternId).toBeTruthy();
+      expect(internal.patternId).toBe(polygon.options._fillPatternId);
+    }
+  });
+
+  it("solid brushes do NOT set _fillPatternId", () => {
+    const brushes = ["solid", "solidfull", "border", "solidborder", undefined];
+    for (const brush of brushes) {
+      const handle = renderer.createBriefingMarker({
+        shape: "ELLIPSE",
+        type: "mil_circle",
+        color: "FF0000",
+        side: "WEST",
+        size: [100, 100],
+        brush,
+      });
+
+      const internal = getInternal(handle);
+      const polygon = internal.layer as any;
+      expect(polygon.options._fillPatternId).toBeFalsy();
+      expect(internal.patternId).toBeUndefined();
+    }
+  });
+
+  it("removeBriefingMarker cleans up pattern from SVG defs", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE",
+      type: "mil_circle",
+      color: "FF0000",
+      side: "WEST",
+      size: [100, 100],
+      brush: "grid",
+    });
+
+    const internal = getInternal(handle);
+    const patternId = internal.patternId;
+    const svgDefs = (renderer as any).svgDefs as SVGDefsElement;
+
+    // Pattern should exist in defs
+    expect(svgDefs.querySelector(`#${patternId}`)).not.toBeNull();
+
+    renderer.removeBriefingMarker(handle);
+
+    // Pattern should be removed from defs
+    expect(svgDefs.querySelector(`#${patternId}`)).toBeNull();
   });
 });

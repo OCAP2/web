@@ -110,19 +110,19 @@ describe("ChunkManager", () => {
 
   describe("loadManifest", () => {
     it("fetches manifest from network and decodes it", async () => {
-      const manifest = await cm.loadManifest("op-1");
+      const manifest = await cm.loadManifest("op_mission");
 
-      expect(api.getManifest).toHaveBeenCalledWith("op-1");
+      expect(api.getManifest).toHaveBeenCalledWith("op_mission");
       expect(decoder.decodeManifest).toHaveBeenCalled();
       expect(manifest.worldName).toBe("altis");
       expect(cm.getManifest()).toBe(manifest);
     });
 
     it("saves manifest to storage after network fetch", async () => {
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
 
       expect(storage.saveManifest).toHaveBeenCalledWith(
-        "op-1",
+        "op_mission",
         "protobuf",
         expect.any(ArrayBuffer),
       );
@@ -132,7 +132,7 @@ describe("ChunkManager", () => {
       const cachedBuffer = new Uint8Array([99]).buffer;
       storage.getManifest = vi.fn().mockResolvedValue(cachedBuffer);
 
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
 
       expect(api.getManifest).not.toHaveBeenCalled();
       expect(decoder.decodeManifest).toHaveBeenCalledWith(cachedBuffer);
@@ -141,14 +141,14 @@ describe("ChunkManager", () => {
     it("falls back to network when storage returns null", async () => {
       storage.getManifest = vi.fn().mockResolvedValue(null);
 
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
 
-      expect(api.getManifest).toHaveBeenCalledWith("op-1");
+      expect(api.getManifest).toHaveBeenCalledWith("op_mission");
     });
 
     it("works without storage backend", async () => {
       const cm2 = new ChunkManager(decoder, null, api);
-      const manifest = await cm2.loadManifest("op-1");
+      const manifest = await cm2.loadManifest("op_mission");
 
       expect(manifest.worldName).toBe("altis");
       expect(api.getManifest).toHaveBeenCalled();
@@ -159,13 +159,13 @@ describe("ChunkManager", () => {
 
   describe("loadChunk", () => {
     beforeEach(async () => {
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
     });
 
     it("fetches chunk from network and decodes it", async () => {
       const chunk = await cm.loadChunk(0);
 
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 0);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
       expect(decoder.decodeChunk).toHaveBeenCalled();
       expect(chunk.entities).toBeInstanceOf(Map);
     });
@@ -174,7 +174,7 @@ describe("ChunkManager", () => {
       await cm.loadChunk(2);
 
       expect(storage.saveChunk).toHaveBeenCalledWith(
-        "op-1",
+        "op_mission",
         2,
         expect.any(ArrayBuffer),
       );
@@ -217,7 +217,7 @@ describe("ChunkManager", () => {
       // 5 chunks so we can test eviction of the max (3) capacity
       decoder = makeDecoder(makeManifest({ chunkCount: 5 }));
       cm = new ChunkManager(decoder, storage, api);
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
     });
 
     it("evicts oldest chunk when exceeding max capacity", async () => {
@@ -293,13 +293,13 @@ describe("ChunkManager", () => {
         makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
       );
       cm = new ChunkManager(decoder, storage, api);
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
     });
 
     it("loads the chunk containing the requested frame", async () => {
       await cm.ensureLoaded(150); // chunk index 1
 
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 1);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 1);
       expect(cm.getChunkForFrame(150)).not.toBeNull();
     });
 
@@ -319,7 +319,7 @@ describe("ChunkManager", () => {
         makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
       );
       cm = new ChunkManager(decoder, storage, api);
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
     });
 
     it("does NOT prefetch before 80% threshold", async () => {
@@ -327,7 +327,7 @@ describe("ChunkManager", () => {
 
       // Only the current chunk should have been fetched
       expect(api.getChunk).toHaveBeenCalledTimes(1);
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 0);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
     });
 
     it("triggers prefetch of next chunk at 80%", async () => {
@@ -338,8 +338,8 @@ describe("ChunkManager", () => {
         expect(api.getChunk).toHaveBeenCalledTimes(2);
       });
 
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 0);
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 1);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 1);
     });
 
     it("does not prefetch beyond last chunk", async () => {
@@ -349,7 +349,7 @@ describe("ChunkManager", () => {
       // Should only fetch chunk 4, no prefetch
       await new Promise((r) => setTimeout(r, 10));
       expect(api.getChunk).toHaveBeenCalledTimes(1);
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 4);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 4);
     });
 
     it("does not prefetch if next chunk already loaded", async () => {
@@ -369,7 +369,7 @@ describe("ChunkManager", () => {
 
   describe("getChunkForFrame", () => {
     beforeEach(async () => {
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
     });
 
     it("returns null for not-yet-loaded chunks", () => {
@@ -388,11 +388,11 @@ describe("ChunkManager", () => {
 
   describe("storage integration", () => {
     it("saves chunk to storage after network fetch", async () => {
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
       await cm.loadChunk(2);
 
       expect(storage.saveChunk).toHaveBeenCalledWith(
-        "op-1",
+        "op_mission",
         2,
         expect.any(ArrayBuffer),
       );
@@ -402,10 +402,10 @@ describe("ChunkManager", () => {
       const cachedBuf = new Uint8Array([77]).buffer;
       storage.getChunk = vi.fn().mockResolvedValue(cachedBuf);
 
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
       await cm.loadChunk(0);
 
-      expect(storage.getChunk).toHaveBeenCalledWith("op-1", 0);
+      expect(storage.getChunk).toHaveBeenCalledWith("op_mission", 0);
       expect(api.getChunk).not.toHaveBeenCalled();
       expect(decoder.decodeChunk).toHaveBeenCalledWith(cachedBuf);
     });
@@ -413,10 +413,10 @@ describe("ChunkManager", () => {
     it("falls back to network when storage has no chunk", async () => {
       storage.getChunk = vi.fn().mockResolvedValue(null);
 
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
       await cm.loadChunk(0);
 
-      expect(api.getChunk).toHaveBeenCalledWith("op-1", 0);
+      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
     });
 
     it("handles storage save failure gracefully", async () => {
@@ -424,7 +424,7 @@ describe("ChunkManager", () => {
         .fn()
         .mockRejectedValue(new Error("disk full"));
 
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
       // Should not throw even if storage save fails
       const chunk = await cm.loadChunk(0);
       expect(chunk.entities).toBeInstanceOf(Map);
@@ -435,7 +435,7 @@ describe("ChunkManager", () => {
 
   describe("clear", () => {
     it("removes all loaded chunks and resets state", async () => {
-      await cm.loadManifest("op-1");
+      await cm.loadManifest("op_mission");
       await cm.loadChunk(0);
       await cm.loadChunk(1);
 

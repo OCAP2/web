@@ -158,19 +158,19 @@ describe("ApiClient", () => {
       mockFetchBuffer(buf);
 
       const client = new ApiClient("/aar/");
-      const result = await client.getMissionData("my_mission.json");
+      const result = await client.getMissionData("my_mission");
 
-      expect(fetch).toHaveBeenCalledWith("/aar/data/my_mission.json");
+      expect(fetch).toHaveBeenCalledWith("/aar/data/my_mission.json.gz");
       expect(new Uint8Array(result)).toEqual(new Uint8Array([1, 2, 3, 4]));
     });
 
     it("encodes special characters in filename", async () => {
       mockFetchBuffer(new ArrayBuffer(0));
       const client = new ApiClient("/aar/");
-      await client.getMissionData("mission with spaces.json");
+      await client.getMissionData("mission with spaces");
 
       const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-      expect(url).toContain("mission%20with%20spaces.json");
+      expect(url).toContain("mission%20with%20spaces.json.gz");
     });
   });
 
@@ -247,7 +247,7 @@ describe("ApiClient", () => {
   // ─── getManifest / getChunk ───
 
   describe("getManifest", () => {
-    it("fetches manifest as ArrayBuffer", async () => {
+    it("fetches manifest as ArrayBuffer via static data path", async () => {
       const buf = new Uint8Array([10, 20, 30]).buffer;
       mockFetchBuffer(buf);
 
@@ -255,14 +255,14 @@ describe("ApiClient", () => {
       const result = await client.getManifest("op-123");
 
       expect(fetch).toHaveBeenCalledWith(
-        "/aar/api/v1/operations/op-123/manifest",
+        "/aar/data/op-123/manifest.pb",
       );
       expect(new Uint8Array(result)).toEqual(new Uint8Array([10, 20, 30]));
     });
   });
 
   describe("getChunk", () => {
-    it("fetches chunk as ArrayBuffer", async () => {
+    it("fetches chunk as ArrayBuffer via static data path with zero-padded index", async () => {
       const buf = new Uint8Array([0xaa, 0xbb]).buffer;
       mockFetchBuffer(buf);
 
@@ -270,7 +270,7 @@ describe("ApiClient", () => {
       const result = await client.getChunk("op-123", 5);
 
       expect(fetch).toHaveBeenCalledWith(
-        "/aar/api/v1/operations/op-123/chunk/5",
+        "/aar/data/op-123/chunks/0005.pb",
       );
       expect(new Uint8Array(result)).toEqual(new Uint8Array([0xaa, 0xbb]));
     });
@@ -306,7 +306,7 @@ describe("ApiClient", () => {
       mockFetchError(403, "Forbidden");
 
       const client = new ApiClient("/aar/");
-      await expect(client.getMissionData("x.json")).rejects.toThrow(ApiError);
+      await expect(client.getMissionData("x")).rejects.toThrow(ApiError);
     });
 
     it("propagates network errors as-is", async () => {

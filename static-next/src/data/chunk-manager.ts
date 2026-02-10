@@ -41,7 +41,7 @@ export class ChunkManager {
 
   /** Mission state (set after loadManifest). */
   private manifest: Manifest | null = null;
-  private missionId: string | null = null;
+  private filename: string | null = null;
 
   /** Optional callbacks. */
   private callbacks: ChunkManagerCallbacks = {};
@@ -68,12 +68,12 @@ export class ChunkManager {
    * Fetch and decode the manifest for a mission.
    * Must be called before any chunk operations.
    */
-  async loadManifest(missionId: string): Promise<Manifest> {
-    this.missionId = missionId;
+  async loadManifest(filename: string): Promise<Manifest> {
+    this.filename = filename;
 
     // Try storage first
     if (this.storage) {
-      const cached = await this.storage.getManifest(missionId, "protobuf");
+      const cached = await this.storage.getManifest(filename, "protobuf");
       if (cached) {
         this.manifest = this.decoder.decodeManifest(cached);
         return this.manifest;
@@ -81,12 +81,12 @@ export class ChunkManager {
     }
 
     // Network
-    const buffer = await this.api.getManifest(missionId);
+    const buffer = await this.api.getManifest(filename);
 
     // Save to storage (fire-and-forget)
     if (this.storage) {
       this.storage
-        .saveManifest(missionId, "protobuf", buffer)
+        .saveManifest(filename, "protobuf", buffer)
         .catch(() => {});
     }
 
@@ -153,7 +153,7 @@ export class ChunkManager {
     this.loadingChunks.clear();
     this.prefetchingChunk = null;
     this.manifest = null;
-    this.missionId = null;
+    this.filename = null;
   }
 
   /**
@@ -171,11 +171,11 @@ export class ChunkManager {
   }
 
   private async loadChunkInternal(chunkIndex: number): Promise<ChunkData> {
-    const missionId = this.missionId!;
+    const filename = this.filename!;
 
     // Try storage first
     if (this.storage) {
-      const cached = await this.storage.getChunk(missionId, chunkIndex);
+      const cached = await this.storage.getChunk(filename, chunkIndex);
       if (cached) {
         const chunk = this.decoder.decodeChunk(cached);
         this.storeInMemory(chunkIndex, chunk);
@@ -184,12 +184,12 @@ export class ChunkManager {
     }
 
     // Fetch from network
-    const buffer = await this.api.getChunk(missionId, chunkIndex);
+    const buffer = await this.api.getChunk(filename, chunkIndex);
 
     // Save to storage (fire-and-forget)
     if (this.storage) {
       this.storage
-        .saveChunk(missionId, chunkIndex, buffer)
+        .saveChunk(filename, chunkIndex, buffer)
         .catch(() => {});
     }
 

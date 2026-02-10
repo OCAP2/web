@@ -5,7 +5,6 @@ import type { MarkerHandle } from "./renderers/renderer.types";
 import { ApiClient } from "./data/api-client";
 import { JsonDecoder } from "./data/decoders/json-decoder";
 import { ProtobufDecoder } from "./data/decoders/protobuf-decoder";
-import { FlatBuffersDecoder } from "./data/decoders/flatbuffers-decoder";
 import type { DecoderStrategy } from "./data/decoders/decoder.interface";
 import { ChunkManager } from "./data/chunk-manager";
 import { PlaybackEngine } from "./playback/engine";
@@ -87,6 +86,7 @@ export function App(): JSX.Element {
   );
   const [missionName, setMissionName] = createSignal("");
   const [operationId, setOperationId] = createSignal<string | null>(null);
+  const [operationFilename, setOperationFilename] = createSignal<string | null>(null);
   const [modalOpen, setModalOpen] = createSignal(true);
   const [aboutOpen, setAboutOpen] = createSignal(false);
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
@@ -103,18 +103,16 @@ export function App(): JSX.Element {
       setWorldConfig(world);
 
       // 2. Choose decoder and fetch data based on storage format
-      const useStreaming = op.storageFormat === "protobuf" || op.storageFormat === "flatbuffers";
+      const filename = op.filename ?? String(op.id);
       let decoder: DecoderStrategy;
       let manifest;
 
-      if (useStreaming) {
-        decoder = op.storageFormat === "flatbuffers"
-          ? new FlatBuffersDecoder()
-          : new ProtobufDecoder();
+      if (op.storageFormat === "protobuf") {
+        decoder = new ProtobufDecoder();
 
         // Create chunk manager for on-demand chunk loading
         const chunkMgr = new ChunkManager(decoder, null, api);
-        manifest = await chunkMgr.loadManifest(op.id);
+        manifest = await chunkMgr.loadManifest(filename);
 
         // Pre-load chunk 0 so initial frame has position data
         await chunkMgr.loadChunk(0);
@@ -123,7 +121,6 @@ export function App(): JSX.Element {
         engine.loadOperation(manifest, chunkMgr);
       } else {
         decoder = new JsonDecoder();
-        const filename = op.filename ?? `${op.id}.json`;
         const buffer = await api.getMissionData(filename);
         manifest = decoder.decodeManifest(buffer);
 
@@ -137,6 +134,7 @@ export function App(): JSX.Element {
       // 5. Update UI state
       setMissionName(op.missionName);
       setOperationId(op.id);
+      setOperationFilename(filename);
       setExtensionVersion(manifest.extensionVersion);
       setAddonVersion(manifest.addonVersion);
     } catch (err) {
@@ -226,7 +224,7 @@ export function App(): JSX.Element {
       <EngineProvider engine={engine}>
         <RendererProvider renderer={renderer}>
           <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-          <TopPanel missionName={missionName} operationId={operationId} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
+          <TopPanel missionName={missionName} operationId={operationId} operationFilename={operationFilename} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
           <LeftPanel />
           <RightPanel />
           <BottomPanel />

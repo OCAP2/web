@@ -5,13 +5,14 @@ import styles from "./TopPanel.module.css";
 export interface TopPanelProps {
   missionName: Accessor<string>;
   operationId: Accessor<string | null>;
+  operationFilename?: Accessor<string | null>;
   onInfoClick?: () => void;
 }
 
 /**
  * Top panel displaying the mission name and action buttons (Download, Info, Share).
  *
- * - Download triggers a file download via the server's file endpoint.
+ * - Download triggers a file download via the server's data static file endpoint.
  * - Info opens the about modal with version and shortcut info.
  * - Share copies the current URL with `?op=<id>` to the clipboard.
  */
@@ -25,9 +26,9 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
   };
 
   const downloadHref = () => {
-    const id = props.operationId();
-    if (!id) return "#";
-    return `/file/${encodeURIComponent(id)}`;
+    const filename = props.operationFilename?.() ?? props.operationId();
+    if (!filename) return "#";
+    return `data/${encodeURIComponent(filename)}.json.gz`;
   };
 
   return (

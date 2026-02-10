@@ -41,6 +41,7 @@ interface RawOperation {
   storageFormat?: string;
   conversionStatus?: string;
   schemaVersion?: number;
+  chunkCount?: number;
 }
 
 function mapOperation(raw: RawOperation): Operation {
@@ -54,6 +55,7 @@ function mapOperation(raw: RawOperation): Operation {
     filename: raw.filename,
     storageFormat: raw.storageFormat,
     schemaVersion: raw.schemaVersion,
+    chunkCount: raw.chunkCount,
   };
 }
 
@@ -100,11 +102,11 @@ export class ApiClient {
   }
 
   /**
-   * Fetch raw mission data (gzipped JSON streamed by the server).
-   * GET {baseUrl}/data/{filename}
+   * Fetch raw mission data (gzipped JSON served as a static file).
+   * GET {baseUrl}/data/{filename}.json.gz
    */
   async getMissionData(filename: string): Promise<ArrayBuffer> {
-    const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}`;
+    const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}.json.gz`;
     return this.fetchBuffer(url);
   }
 
@@ -195,23 +197,24 @@ export class ApiClient {
   }
 
   /**
-   * Fetch a manifest as raw bytes.
-   * GET {baseUrl}/api/v1/operations/{missionId}/manifest
+   * Fetch a protobuf manifest as raw bytes (static file).
+   * GET {baseUrl}/data/{filename}/manifest.pb
    */
-  async getManifest(missionId: string): Promise<ArrayBuffer> {
-    const url = `${this.baseUrl}/api/v1/operations/${encodeURIComponent(missionId)}/manifest`;
+  async getManifest(filename: string): Promise<ArrayBuffer> {
+    const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}/manifest.pb`;
     return this.fetchBuffer(url);
   }
 
   /**
-   * Fetch a chunk as raw bytes.
-   * GET {baseUrl}/api/v1/operations/{missionId}/chunk/{chunkIndex}
+   * Fetch a protobuf chunk as raw bytes (static file).
+   * GET {baseUrl}/data/{filename}/chunks/{NNNN}.pb
    */
   async getChunk(
-    missionId: string,
+    filename: string,
     chunkIndex: number,
   ): Promise<ArrayBuffer> {
-    const url = `${this.baseUrl}/api/v1/operations/${encodeURIComponent(missionId)}/chunk/${chunkIndex}`;
+    const idx = String(chunkIndex).padStart(4, "0");
+    const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}/chunks/${idx}.pb`;
     return this.fetchBuffer(url);
   }
 

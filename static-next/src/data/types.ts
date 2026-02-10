@@ -157,6 +157,7 @@ export interface Operation {
   filename?: string;
   storageFormat?: string;
   schemaVersion?: number;
+  chunkCount?: number;
 }
 
 /** Per-world map configuration (from map.json). */

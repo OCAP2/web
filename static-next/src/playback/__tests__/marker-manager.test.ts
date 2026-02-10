@@ -10,7 +10,7 @@ import type { MapRenderer } from "../../renderers/renderer.interface";
 // ─── parseMarkerPosition ───
 
 describe("parseMarkerPosition", () => {
-  describe("protobuf/flatbuffers format", () => {
+  describe("protobuf format", () => {
     it("parses basic position", () => {
       const result = parseMarkerPosition([10, 500.0, 600.0, 0, 90, 0.8]);
       expect(result.frameNum).toBe(10);

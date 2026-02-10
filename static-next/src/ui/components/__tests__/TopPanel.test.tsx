@@ -89,14 +89,26 @@ describe("TopPanel", () => {
     expect(queryByTestId("download-button")).toBeNull();
   });
 
-  it("download button has correct href", () => {
+  it("download button has correct href using operationFilename", () => {
+    const [name] = createSignal("DL Mission");
+    const [opId] = createSignal<string | null>("42");
+    const [opFilename] = createSignal<string | null>("my_mission");
+    const { getByTestId } = render(() => (
+      <TopPanel missionName={name} operationId={opId} operationFilename={opFilename} />
+    ));
+    const link = getByTestId("download-button") as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("data/my_mission.json.gz");
+    expect(link.hasAttribute("download")).toBe(true);
+  });
+
+  it("download button falls back to operationId when no filename", () => {
     const [name] = createSignal("DL Mission");
     const [opId] = createSignal<string | null>("my-file");
     const { getByTestId } = render(() => (
       <TopPanel missionName={name} operationId={opId} />
     ));
     const link = getByTestId("download-button") as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe("/file/my-file");
+    expect(link.getAttribute("href")).toBe("data/my-file.json.gz");
     expect(link.hasAttribute("download")).toBe(true);
   });
 });

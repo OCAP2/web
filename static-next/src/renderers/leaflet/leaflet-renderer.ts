@@ -26,6 +26,14 @@ import {
   disableSmoothing,
   setZooming,
 } from "./leaflet-smoothing";
+import {
+  ensureDefs,
+  nextPatternId,
+  createStripePattern,
+  createGridPattern,
+  removePattern,
+  patchSVGUpdateStyle,
+} from "./svg-patterns";
 
 // --------------- Internal handle wrapper ---------------
 
@@ -39,6 +47,19 @@ interface InternalBriefingHandle {
   layer: L.Layer;
   shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
   size?: [number, number];
+  patternId?: string;
+}
+
+interface ShapeResult {
+  opts: L.PolylineOptions;
+  patternType?: "stripe" | "grid";
+  patternParams?: {
+    angle?: number;
+    weight: number;
+    spaceWeight: number;
+    opacity: number;
+    bgOpacity?: number;
+  };
 }
 
 interface InternalLineHandle {
@@ -120,6 +141,7 @@ export class LeafletRenderer implements MapRenderer {
 
   // SVG renderer for briefing marker shapes (avoids canvas zoom-animation scaling)
   private svgRenderer!: L.SVG;
+  private svgDefs!: SVGDefsElement;
 
   // Smoothing state
   private smoothingEnabled = false;
@@ -151,6 +173,8 @@ export class LeafletRenderer implements MapRenderer {
     // during zoom animation (the old frontend does the same: window.svgRenderer = L.svg())
     this.svgRenderer = L.svg();
     this.svgRenderer.addTo(this.map);
+    this.svgDefs = ensureDefs(this.svgRenderer);
+    patchSVGUpdateStyle();
 
     // Add layer groups to map
     for (const group of Object.values(this.layers)) {
@@ -461,8 +485,27 @@ export class LeafletRenderer implements MapRenderer {
     } else if (def.shape === "ELLIPSE" || def.shape === "RECTANGLE") {
       // Build polygon options from brush type; use SVG renderer to avoid
       // canvas bitmap scaling during zoom animation
-      const polygonOpts = this.buildShapeOptions(cssColor, def.brush);
-      layer = L.polygon([], { ...polygonOpts, noClip: false, interactive: false, renderer: this.svgRenderer } as any);
+      const result = this.buildShapeOptions(cssColor, def.brush);
+      const polygonOpts: any = { ...result.opts, noClip: false, interactive: false, renderer: this.svgRenderer };
+
+      let patternId: string | undefined;
+      if (result.patternType && result.patternParams) {
+        patternId = nextPatternId();
+        const p = result.patternParams;
+        if (result.patternType === "stripe") {
+          createStripePattern(this.svgDefs, patternId, cssColor, p.angle ?? 0, p.weight, p.spaceWeight, p.opacity);
+        } else {
+          createGridPattern(this.svgDefs, patternId, cssColor, p.weight, p.spaceWeight, p.opacity, p.bgOpacity ?? 0);
+        }
+        polygonOpts._fillPatternId = patternId;
+      }
+
+      layer = L.polygon([], polygonOpts);
+
+      if (patternId) {
+        layer.addTo(this.layers.briefingMarkers);
+        return wrapBriefing({ layer, shape: def.shape, size: def.size, patternId });
+      }
     } else {
       // ICON shape — load actual marker image from server
       const isMagIcon = def.type.indexOf("magIcons") > -1;
@@ -522,9 +565,9 @@ export class LeafletRenderer implements MapRenderer {
       }
 
       polygon.setLatLngs(latlngs);
-      polygon.setStyle({
-        fillOpacity: Math.min(0.3, state.alpha),
-      });
+      if (!internal.patternId) {
+        polygon.setStyle({ fillOpacity: Math.min(0.3, state.alpha) });
+      }
     } else if (internal.shape === "RECTANGLE") {
       const polygon = layer as L.Polygon;
       const [cx, cy] = state.position;
@@ -546,9 +589,9 @@ export class LeafletRenderer implements MapRenderer {
       );
 
       polygon.setLatLngs(latlngs);
-      polygon.setStyle({
-        fillOpacity: Math.min(0.3, state.alpha),
-      });
+      if (!internal.patternId) {
+        polygon.setStyle({ fillOpacity: Math.min(0.3, state.alpha) });
+      }
     } else if (internal.shape === "POLYLINE" && state.points) {
       const polyline = layer as L.Polyline;
       const latlngs = state.points.map((p) => this.armaToLatLng(p));
@@ -560,6 +603,9 @@ export class LeafletRenderer implements MapRenderer {
   removeBriefingMarker(handle: BriefingMarkerHandle): void {
     const internal = unwrapBriefing(handle);
     this.layers.briefingMarkers.removeLayer(internal.layer);
+    if (internal.patternId) {
+      removePattern(this.svgDefs, internal.patternId);
+    }
   }
 
   // ==================== Briefing marker helpers ====================
@@ -567,17 +613,59 @@ export class LeafletRenderer implements MapRenderer {
   private buildShapeOptions(
     color: string,
     brush?: string,
-  ): L.PolylineOptions {
+  ): ShapeResult {
     switch (brush?.toLowerCase()) {
       case "solidfull":
-        return { color, stroke: false, fill: true, fillOpacity: 0.8 };
+        return { opts: { color, stroke: false, fill: true, fillOpacity: 0.8 } };
       case "border":
-        return { color, stroke: true, fill: false, fillOpacity: 0 };
+        return { opts: { color, stroke: true, fill: false, fillOpacity: 0 } };
       case "solidborder":
-        return { color, stroke: true, fill: true, fillOpacity: 0.3 };
+        return { opts: { color, stroke: true, fill: true, fillOpacity: 0.3 } };
+      case "horizontal":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
+          patternType: "stripe",
+          patternParams: { angle: 0, weight: 2, spaceWeight: 6, opacity: 1 },
+        };
+      case "vertical":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
+          patternType: "stripe",
+          patternParams: { angle: 90, weight: 2, spaceWeight: 6, opacity: 1 },
+        };
+      case "fdiagonal":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
+          patternType: "stripe",
+          patternParams: { angle: 315, weight: 2, spaceWeight: 6, opacity: 1 },
+        };
+      case "bdiagonal":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
+          patternType: "stripe",
+          patternParams: { angle: 45, weight: 2, spaceWeight: 6, opacity: 1 },
+        };
+      case "diaggrid":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 0.2 },
+          patternType: "stripe",
+          patternParams: { angle: 45, weight: 1, spaceWeight: 3, opacity: 0.8 },
+        };
+      case "grid":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 1.0 },
+          patternType: "grid",
+          patternParams: { weight: 2, spaceWeight: 6, opacity: 0.5, bgOpacity: 0.3 },
+        };
+      case "cross":
+        return {
+          opts: { color, stroke: false, fill: true, fillOpacity: 1.0 },
+          patternType: "grid",
+          patternParams: { weight: 2, spaceWeight: 6, opacity: 0.5, bgOpacity: 0.3 },
+        };
       case "solid":
       default:
-        return { color, stroke: false, fill: true, fillOpacity: 0.3 };
+        return { opts: { color, stroke: false, fill: true, fillOpacity: 0.3 } };
     }
   }
 
