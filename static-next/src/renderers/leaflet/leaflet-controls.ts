@@ -120,8 +120,6 @@ class BasemapControl extends L.Control {
         if (prevAlt) L.DomUtil.removeClass(prevAlt as HTMLElement, "alt");
         const items = container.querySelectorAll(".basemap");
         if (items[altIdx]) L.DomUtil.addClass(items[altIdx] as HTMLElement, "alt");
-
-        L.DomUtil.addClass(container, "closed");
       });
     });
 
@@ -270,7 +268,6 @@ class MaplibreStyleControl extends L.Control {
             }
             if (result.index === this._active) return;
             this._setStyle(result.index, container);
-            L.DomUtil.addClass(container, "closed");
           });
         } else {
           item.style.display = "none";
