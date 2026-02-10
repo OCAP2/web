@@ -22,6 +22,13 @@ import type {
 } from "../renderer.types";
 import { entityIcon } from "./leaflet-icons";
 import {
+  createZoomInfoControl,
+  createScaleControl,
+  createBasemapControl,
+  createMaplibreStyleControl,
+} from "./leaflet-controls";
+import type { StyleCandidate } from "./leaflet-controls";
+import {
   enableSmoothing,
   disableSmoothing,
   setZooming,
@@ -148,6 +155,9 @@ export class LeafletRenderer implements MapRenderer {
   private smoothingEnabled = false;
   private smoothingSpeed = 1;
 
+  // MapLibre layer reference (for style switching)
+  private maplibreLayer: any = null;
+
   // Legacy-mode state
   private imageSize = 0;
   private multiplier = 1;
@@ -169,6 +179,10 @@ export class LeafletRenderer implements MapRenderer {
     } else {
       this.initLegacyMode(container, world, maxZoom);
     }
+
+    // Add standard controls
+    createZoomInfoControl().addTo(this.map);
+    createScaleControl().addTo(this.map);
 
     // SVG renderer for briefing marker shapes — avoids canvas bitmap scaling
     // during zoom animation (the old frontend does the same: window.svgRenderer = L.svg())
@@ -243,9 +257,26 @@ export class LeafletRenderer implements MapRenderer {
         // regardless of where the style JSON is served from (local or CDN).
         const fontsBaseURL = new URL("images/maps/fonts/", window.location.href).href;
 
+        // Resolve saved style preference
+        const styleBase = world.tileBaseUrl + "/styles/";
+        const styleCandidates: StyleCandidate[] = [
+          { label: "Topographic", url: styleBase + "topo.json" },
+          { label: "Topographic Dark", url: styleBase + "topo-dark.json" },
+          { label: "Color Relief", url: styleBase + "color-relief.json" },
+          { label: "Topographic Relief", url: styleBase + "topo-relief.json" },
+        ];
+        const savedIdx = parseInt(
+          localStorage.getItem("ocap-maplibre-style") ?? "0",
+          10,
+        ) || 0;
+        const initialStyle =
+          styleCandidates[
+            savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0
+          ].url;
+
         await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
-          style: styleUrl,
+          style: initialStyle,
           interactive: false,
           renderWorldCopies: false,
           // Rewrite font glyph requests to the Go server's font endpoint
@@ -259,6 +290,17 @@ export class LeafletRenderer implements MapRenderer {
           },
         });
         mlLayer.addTo(this.map);
+        this.maplibreLayer = mlLayer;
+
+        // Add MapLibre style switcher control
+        const previewCenter: [number, number] = [
+          worldSizeDeg / 2,
+          worldSizeDeg / 2,
+        ];
+        createMaplibreStyleControl(mlLayer, styleCandidates, {
+          center: previewCenter,
+          zoom: 12,
+        }).addTo(this.map);
       })();
     }
 
@@ -319,17 +361,81 @@ export class LeafletRenderer implements MapRenderer {
       this.map.unproject([imgSize, 0], nz),
     );
 
-    // Add tile layer — expects tiles at {tileBaseUrl}/{z}/{x}/{y}.png
+    // Build tile layers based on available styles in map.json
     const tileUrl = world.tileBaseUrl ?? "";
+    const baseLayers: L.TileLayer[] = [];
+    const tileOpts: L.TileLayerOptions = {
+      maxNativeZoom: world.maxZoom,
+      minNativeZoom: world.minZoom,
+      bounds: mapBounds,
+      noWrap: true,
+      tms: false,
+      keepBuffer: 4,
+    } as any;
+    const attr = world.attribution
+      ? `Map Data &copy; ${world.attribution}`
+      : undefined;
+
     if (tileUrl) {
-      L.tileLayer(`${tileUrl}/{z}/{x}/{y}.png`, {
-        maxNativeZoom: world.maxZoom,
-        minNativeZoom: world.minZoom,
-        bounds: mapBounds,
-        noWrap: true,
-        tms: false,
-        keepBuffer: 4,
-      } as any).addTo(this.map);
+      if (world.hasTopo !== false) {
+        baseLayers.push(
+          L.tileLayer(`${tileUrl}/{z}/{x}/{y}.png`, {
+            ...tileOpts,
+            label: "Topographic",
+            attribution: attr,
+          } as any),
+        );
+      }
+      if (world.hasTopoDark) {
+        baseLayers.push(
+          L.tileLayer(`${tileUrl}/topoDark/{z}/{x}/{y}.png`, {
+            ...tileOpts,
+            label: "Topographic Dark",
+            attribution: attr,
+          } as any),
+        );
+      }
+      if (world.hasTopoRelief) {
+        baseLayers.push(
+          L.tileLayer(`${tileUrl}/topoRelief/{z}/{x}/{y}.png`, {
+            ...tileOpts,
+            label: "Topographic Relief",
+            attribution: attr,
+          } as any),
+        );
+      }
+      if (world.hasColorRelief) {
+        baseLayers.push(
+          L.tileLayer(`${tileUrl}/colorRelief/{z}/{x}/{y}.png`, {
+            ...tileOpts,
+            label: "Color Relief",
+            attribution: attr,
+          } as any),
+        );
+      }
+
+      // Fallback: if no flags set at all, add default topo layer
+      if (baseLayers.length === 0) {
+        baseLayers.push(
+          L.tileLayer(`${tileUrl}/{z}/{x}/{y}.png`, {
+            ...tileOpts,
+            attribution: attr,
+          } as any),
+        );
+      }
+    }
+
+    // Add first layer to map; basemap control handles switching
+    if (baseLayers.length > 0) {
+      if (baseLayers.length >= 2) {
+        createBasemapControl(baseLayers, {
+          tileX: 2,
+          tileY: 6,
+          tileZ: 4,
+        }).addTo(this.map);
+      } else {
+        baseLayers[0].addTo(this.map);
+      }
     }
 
     // Fit to tile bounds
@@ -343,6 +449,11 @@ export class LeafletRenderer implements MapRenderer {
     for (const group of Object.values(this.layers)) {
       group.clearLayers();
       this.map.removeLayer(group);
+    }
+
+    if (this.maplibreLayer) {
+      this.map.removeLayer(this.maplibreLayer);
+      this.maplibreLayer = null;
     }
 
     if (this.svgRenderer) {

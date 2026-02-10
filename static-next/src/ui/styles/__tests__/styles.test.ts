@@ -109,6 +109,18 @@ describe("CSS style files", () => {
       expect(css).toContain(".leaflet-popup");
       expect(css).toContain(".leaflet-div-icon");
     });
+
+    it("contains basemap switcher styles", () => {
+      expect(css).toContain(".basemaps");
+      expect(css).toContain(".basemaps.closed .basemap");
+      expect(css).toContain(".basemap.active img");
+    });
+
+    it("contains maplibre style switcher styles", () => {
+      expect(css).toContain(".maplibre-styles");
+      expect(css).toContain(".maplibre-styles.closed .maplibre-style-item");
+      expect(css).toContain(".maplibre-style-item.active img");
+    });
   });
 
   describe("responsive.css", () => {

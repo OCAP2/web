@@ -174,4 +174,10 @@ export interface WorldConfig {
   maplibre?: boolean;
   /** Base URL for tile assets (set during probing). */
   tileBaseUrl?: string;
+  /** Raster layer availability flags (from map.json). */
+  hasTopo?: boolean;
+  hasTopoDark?: boolean;
+  hasTopoRelief?: boolean;
+  hasColorRelief?: boolean;
+  attribution?: string;
 }
