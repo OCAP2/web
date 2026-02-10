@@ -54,6 +54,7 @@ function mapOperation(raw: RawOperation): Operation {
     tag: raw.tag,
     filename: raw.filename,
     storageFormat: raw.storageFormat,
+    conversionStatus: raw.conversionStatus,
     schemaVersion: raw.schemaVersion,
     chunkCount: raw.chunkCount,
   };

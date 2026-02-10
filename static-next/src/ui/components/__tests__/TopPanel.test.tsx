@@ -319,6 +319,36 @@ describe("MissionModal", () => {
     expect(getByTestId("filter-name-input")).toBeDefined();
     expect(getByTestId("filter-submit-button")).toBeDefined();
   });
+
+  it("has tag dropdown and date range filters", () => {
+    const [open] = createSignal(true);
+    const { getByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+    ));
+
+    expect(getByTestId("filter-tag-input")).toBeDefined();
+    expect(getByTestId("filter-newer-input")).toBeDefined();
+    expect(getByTestId("filter-older-input")).toBeDefined();
+  });
+
+  it("shows date in D/M/YYYY format and duration with hours", async () => {
+    const [open] = createSignal(true);
+    const { findByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+    ));
+
+    const op1 = await findByTestId("operation-1");
+    // 3600 seconds = 1h 0m 0s
+    expect(op1.textContent).toContain("1h 0m 0s");
+    // 2024-01-01 → 1/1/2024
+    expect(op1.textContent).toContain("1/1/2024");
+
+    const op2 = await findByTestId("operation-2");
+    // 1800 seconds = 30m 0s
+    expect(op2.textContent).toContain("30m 0s");
+    // 2024-02-01 → 1/2/2024
+    expect(op2.textContent).toContain("1/2/2024");
+  });
 });
 
 // ─── CounterDisplay ───

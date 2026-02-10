@@ -156,6 +156,7 @@ export interface Operation {
   tag?: string;
   filename?: string;
   storageFormat?: string;
+  conversionStatus?: string;
   schemaVersion?: number;
   chunkCount?: number;
 }

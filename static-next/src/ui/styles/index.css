@@ -139,26 +139,6 @@
   align-items: center;
 }
 
-.filter-input {
-  display: inline-block;
-  padding: 0 2px;
-  height: 18px;
-  border: 0;
-  margin: 0 5px;
-  flex: 1;
-  background: none;
-  color: var(--text-primary);
-  font-family: Roboto, sans-serif;
-}
-
-.filter-input::placeholder {
-  color: var(--text-dim);
-}
-
-.filter-input:focus {
-  outline: none;
-}
-
 /* ---------- Unit list ---------- */
 
 .unit-list {
