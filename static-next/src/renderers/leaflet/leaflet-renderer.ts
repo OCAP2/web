@@ -27,6 +27,7 @@ import {
   createMaplibreStyleControl,
 } from "./leaflet-controls";
 import type { StyleCandidate } from "./leaflet-controls";
+import { createGridLayer } from "./leaflet-grid";
 import {
   enableSmoothing,
   disableSmoothing,
@@ -163,6 +164,11 @@ export class LeafletRenderer implements MapRenderer {
   // MapLibre layer reference (for style switching)
   private maplibreLayer: any = null;
 
+  // Grid and MapLibre toggle layers for overlay control
+  private gridLayer: L.LayerGroup | null = null;
+  private mapIconsLayer: L.LayerGroup | null = null;
+  private buildings3DLayer: L.LayerGroup | null = null;
+
   // Legacy-mode state
   private imageSize = 0;
   private multiplier = 1;
@@ -178,6 +184,14 @@ export class LeafletRenderer implements MapRenderer {
     this.useMapLibreMode = Boolean(world.maplibre);
 
     const maxZoom = this.maxNativeZoom + 2;
+
+    // Grid layer (created early for overlay control ordering; not added to map)
+    this.gridLayer = createGridLayer({
+      worldSize: world.worldSize,
+      useMapLibreMode: this.useMapLibreMode,
+      armaToLatLng: (c) => this.armaToLatLng(c),
+      latLngToArma: (ll) => this.latLngToArma(ll),
+    });
 
     if (this.useMapLibreMode) {
       this.initMapLibreMode(container, world);
@@ -298,7 +312,31 @@ export class LeafletRenderer implements MapRenderer {
         mlLayer.addTo(this.map);
         this.maplibreLayer = mlLayer;
 
-        // Add MapLibre style switcher control
+        // Overlay control (added before style switcher so switcher appears
+        // above in Leaflet's bottom corner, which prepends new controls)
+        this.addOverlayControl();
+
+        // Add MapLibre pseudo-layers to map by default (checked in overlay control)
+        if (this.mapIconsLayer) this.mapIconsLayer.addTo(this.map);
+        if (this.buildings3DLayer) this.buildings3DLayer.addTo(this.map);
+
+        // Reapply toggle states after style switch (setStyle resets all GL layers)
+        const glMap = mlLayer.getMaplibreMap?.();
+        if (glMap) {
+          glMap.on("styledata", () => {
+            if (this.mapIconsLayer && !this.map.hasLayer(this.mapIconsLayer)) {
+              this.setMapLibreIconVisibility("none");
+            }
+            if (
+              this.buildings3DLayer &&
+              !this.map.hasLayer(this.buildings3DLayer)
+            ) {
+              this.setBuildings3DVisibility("none");
+            }
+          });
+        }
+
+        // MapLibre style switcher (added after overlay → appears above it)
         const previewCenter: [number, number] = [
           worldSizeDeg / 2,
           worldSizeDeg / 2,
@@ -309,6 +347,9 @@ export class LeafletRenderer implements MapRenderer {
           transformRequest,
         }).addTo(this.map);
       })();
+    } else {
+      // No style URL — add overlay control immediately
+      this.addOverlayControl();
     }
 
     // Fit map to world bounds
@@ -432,6 +473,10 @@ export class LeafletRenderer implements MapRenderer {
       }
     }
 
+    // Overlay control (added before basemap so basemap appears above in
+    // Leaflet's bottom corner, which prepends new controls)
+    this.addOverlayControl();
+
     // Add first layer to map; basemap control handles switching
     if (baseLayers.length > 0) {
       if (baseLayers.length >= 2) {
@@ -457,6 +502,21 @@ export class LeafletRenderer implements MapRenderer {
       group.clearLayers();
       this.map.removeLayer(group);
     }
+
+    if (this.gridLayer && this.map.hasLayer(this.gridLayer)) {
+      this.map.removeLayer(this.gridLayer);
+    }
+    this.gridLayer = null;
+
+    if (this.mapIconsLayer && this.map.hasLayer(this.mapIconsLayer)) {
+      this.map.removeLayer(this.mapIconsLayer);
+    }
+    this.mapIconsLayer = null;
+
+    if (this.buildings3DLayer && this.map.hasLayer(this.buildings3DLayer)) {
+      this.map.removeLayer(this.buildings3DLayer);
+    }
+    this.buildings3DLayer = null;
 
     if (this.maplibreLayer) {
       this.map.removeLayer(this.maplibreLayer);
@@ -875,8 +935,19 @@ export class LeafletRenderer implements MapRenderer {
   // ==================== Layer visibility ====================
 
   setLayerVisible(layer: RenderLayer, visible: boolean): void {
-    // "grid" is not a managed layer group in this renderer
-    if (layer === "grid") return;
+    if (layer === "grid") {
+      if (!this.gridLayer) return;
+      if (visible) {
+        if (!this.map.hasLayer(this.gridLayer)) {
+          this.gridLayer.addTo(this.map);
+        }
+      } else {
+        if (this.map.hasLayer(this.gridLayer)) {
+          this.map.removeLayer(this.gridLayer);
+        }
+      }
+      return;
+    }
 
     const group = this.layers[layer as LayerGroupKey];
     if (!group) return;
@@ -912,6 +983,85 @@ export class LeafletRenderer implements MapRenderer {
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
     this.nameDisplayMode = mode;
+  }
+
+  // ==================== Overlay control ====================
+
+  private addOverlayControl(): void {
+    if (!this.gridLayer) return;
+
+    const overlays: Record<string, L.Layer> = {
+      "Units and Vehicles": this.layers.entities,
+      "Selected Side Markers": this.layers.systemMarkers,
+      "Editor/Briefing Markers": this.layers.briefingMarkers,
+      "Projectile Markers": this.layers.projectileMarkers,
+      "Coordinate Grid": this.gridLayer,
+    };
+
+    if (this.maplibreLayer) {
+      this.mapIconsLayer = this.createMapLibreToggleLayer((vis) =>
+        this.setMapLibreIconVisibility(vis),
+      );
+      this.buildings3DLayer = this.createMapLibreToggleLayer((vis) =>
+        this.setBuildings3DVisibility(vis),
+      );
+      overlays["Map Icons"] = this.mapIconsLayer;
+      overlays["3D Buildings"] = this.buildings3DLayer;
+    }
+
+    L.control
+      .layers({}, overlays, {
+        position: "bottomright",
+        collapsed: false,
+      })
+      .addTo(this.map);
+  }
+
+  private createMapLibreToggleLayer(
+    toggleFn: (vis: "visible" | "none") => void,
+  ): L.LayerGroup {
+    const layer = L.layerGroup([]);
+    const origOnAdd = L.LayerGroup.prototype.onAdd;
+    const origOnRemove = L.LayerGroup.prototype.onRemove;
+
+    layer.onAdd = function (map: L.Map) {
+      origOnAdd.call(this, map);
+      toggleFn("visible");
+      return this;
+    };
+    layer.onRemove = function (map: L.Map) {
+      origOnRemove.call(this, map);
+      toggleFn("none");
+      return this;
+    };
+
+    return layer;
+  }
+
+  private setMapLibreIconVisibility(vis: "visible" | "none"): void {
+    if (!this.maplibreLayer) return;
+    const glMap = this.maplibreLayer.getMaplibreMap?.();
+    if (!glMap?.getStyle()) return;
+    for (const layer of glMap.getStyle().layers) {
+      if (
+        layer.type === "symbol" &&
+        layer.layout &&
+        layer.layout["icon-image"]
+      ) {
+        glMap.setLayoutProperty(layer.id, "visibility", vis);
+      }
+    }
+  }
+
+  private setBuildings3DVisibility(vis: "visible" | "none"): void {
+    if (!this.maplibreLayer) return;
+    const glMap = this.maplibreLayer.getMaplibreMap?.();
+    if (!glMap?.getStyle()) return;
+    for (const layer of glMap.getStyle().layers) {
+      if (layer.type === "fill-extrusion" && !layer.id.includes("bridge")) {
+        glMap.setLayoutProperty(layer.id, "visibility", vis);
+      }
+    }
   }
 
   // ==================== Events ====================
