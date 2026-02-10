@@ -22,7 +22,6 @@ import type {
 } from "../renderer.types";
 import { entityIcon } from "./leaflet-icons";
 import {
-  createZoomInfoControl,
   createScaleControl,
   createBasemapControl,
   createMaplibreStyleControl,
@@ -181,7 +180,6 @@ export class LeafletRenderer implements MapRenderer {
     }
 
     // Add standard controls
-    createZoomInfoControl().addTo(this.map);
     createScaleControl().addTo(this.map);
 
     // SVG renderer for briefing marker shapes — avoids canvas bitmap scaling
@@ -274,20 +272,22 @@ export class LeafletRenderer implements MapRenderer {
             savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0
           ].url;
 
+        // Rewrite font glyph requests to the Go server's font endpoint
+        const transformRequest = (url: string, resourceType: string) => {
+          if (resourceType === "Glyphs") {
+            const match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
+            if (match) {
+              return { url: fontsBaseURL + match[1] + "/" + match[2] };
+            }
+          }
+        };
+
         await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
           style: initialStyle,
           interactive: false,
           renderWorldCopies: false,
-          // Rewrite font glyph requests to the Go server's font endpoint
-          transformRequest: (url: string, resourceType: string) => {
-            if (resourceType === "Glyphs") {
-              const match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
-              if (match) {
-                return { url: fontsBaseURL + match[1] + "/" + match[2] };
-              }
-            }
-          },
+          transformRequest,
         });
         mlLayer.addTo(this.map);
         this.maplibreLayer = mlLayer;
@@ -300,6 +300,7 @@ export class LeafletRenderer implements MapRenderer {
         createMaplibreStyleControl(mlLayer, styleCandidates, {
           center: previewCenter,
           zoom: 12,
+          transformRequest,
         }).addTo(this.map);
       })();
     }

@@ -1,36 +1,11 @@
 import { describe, it, expect } from "vitest";
 import L from "leaflet";
 import {
-  createZoomInfoControl,
   createScaleControl,
   createLayerControl,
   createBasemapControl,
   createMaplibreStyleControl,
 } from "../leaflet-controls";
-
-// ------------------------------------------------------------------
-// ZoomInfo control — smoke tests
-// ------------------------------------------------------------------
-
-describe("createZoomInfoControl", () => {
-  it("returns a control object", () => {
-    const control = createZoomInfoControl();
-    expect(control).toBeDefined();
-    expect(typeof control.onAdd).toBe("function");
-    expect(typeof control.onRemove).toBe("function");
-  });
-
-  it("accepts custom position option", () => {
-    const control = createZoomInfoControl({ position: "topright" });
-    expect(control).toBeDefined();
-    expect(control.getPosition()).toBe("topright");
-  });
-
-  it("defaults to bottomright position", () => {
-    const control = createZoomInfoControl();
-    expect(control.getPosition()).toBe("bottomright");
-  });
-});
 
 // ------------------------------------------------------------------
 // Scale control — smoke tests
