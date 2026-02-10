@@ -387,8 +387,36 @@ describe("ProtobufDecoder.decodeChunk", () => {
 
     const states20 = chunk.entities.get(20);
     expect(states20).toBeDefined();
-    expect(states20).toHaveLength(1);
+    expect(states20).toHaveLength(2);
     expect(states20![0].position).toEqual([300.0, 400.0]);
+    expect(states20![1]).toBeUndefined(); // entity 20 absent from frame 1
+  });
+
+  it("indexes entity states by frame offset (sparse entities)", () => {
+    // Chunk with 5 frames, entity 99 only present in frames 0 and 4
+    const buffer = encodePb(PbChunk, {
+      index: 1,
+      startFrame: 300,
+      frameCount: 5,
+      frames: [
+        { frameNum: 300, entities: [{ entityId: 99, posX: 1, posY: 2, direction: 0, alive: 1 }] },
+        { frameNum: 301, entities: [] },
+        { frameNum: 302, entities: [] },
+        { frameNum: 303, entities: [] },
+        { frameNum: 304, entities: [{ entityId: 99, posX: 3, posY: 4, direction: 0, alive: 1 }] },
+      ],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const states = chunk.entities.get(99)!;
+
+    // Array length matches frameCount, not number of appearances
+    expect(states).toHaveLength(5);
+    expect(states[0].position).toEqual([1, 2]); // frame 300 → index 0
+    expect(states[1]).toBeUndefined();           // frame 301 → absent
+    expect(states[2]).toBeUndefined();           // frame 302 → absent
+    expect(states[3]).toBeUndefined();           // frame 303 → absent
+    expect(states[4].position).toEqual([3, 4]); // frame 304 → index 4
   });
 
   it("decodes entity state with crew, vehicle, name, and player fields", () => {

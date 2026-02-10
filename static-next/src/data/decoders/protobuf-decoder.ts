@@ -201,13 +201,14 @@ export class ProtobufDecoder implements DecoderStrategy {
 
     const entities = new Map<number, AppEntityState[]>();
     for (const frame of pb.frames) {
+      const idx = frame.frameNum - pb.startFrame;
       for (const raw of frame.entities) {
         let arr = entities.get(raw.entityId);
         if (!arr) {
-          arr = [];
+          arr = new Array(pb.frameCount);
           entities.set(raw.entityId, arr);
         }
-        arr.push(convertEntityState(raw));
+        arr[idx] = convertEntityState(raw);
       }
     }
 
