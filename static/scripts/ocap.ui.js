@@ -856,7 +856,7 @@ class UI {
 	};
 
 	downloadFile() {
-		window.open("file/" + fileName, "_blank");
+		window.open("data/" + fileName + ".json.gz", "_blank");
 	};
 
 	showPlaybackSpeedSlider() {

@@ -7,7 +7,7 @@
 
 class ChunkManager {
     /**
-     * @param {string} missionId - The mission identifier
+     * @param {string} filename - The operation filename (used to construct static data paths)
      * @param {Object} manifest - The decoded manifest object
      * @param {StorageManager} storageManager - Storage backend
      * @param {string} baseUrl - Base URL for chunk fetching
@@ -16,8 +16,8 @@ class ChunkManager {
      * @param {boolean} options.enableBrowserCache - Enable browser storage caching (default: false)
      * @param {Object} options.loader - Versioned loader for decoding chunks
      */
-    constructor(missionId, manifest, storageManager, baseUrl, options = {}) {
-        this._missionId = missionId;
+    constructor(filename, manifest, storageManager, baseUrl, options = {}) {
+        this._filename = filename;
         this._manifest = manifest;
         this._storage = storageManager;
         this._baseUrl = baseUrl;
@@ -103,7 +103,7 @@ class ChunkManager {
     async _loadChunkInternal(chunkIndex) {
         // Try storage cache first (if enabled)
         if (this._enableBrowserCache) {
-            const cached = await this._storage.getChunk(this._missionId, chunkIndex, this._format);
+            const cached = await this._storage.getChunk(this._filename, chunkIndex, this._format);
             if (cached) {
                 this._cacheHits++;
                 const chunk = await this._decodeChunk(cached);
@@ -114,7 +114,7 @@ class ChunkManager {
 
         // Fetch from network
         this._networkFetches++;
-        const url = `${this._baseUrl}/api/v1/operations/${this._missionId}/chunk/${chunkIndex}`;
+        const url = `${this._baseUrl}/data/${this._filename}/chunks/${String(chunkIndex).padStart(4, '0')}.pb`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -125,7 +125,7 @@ class ChunkManager {
 
         // Save to storage cache (async, don't wait) - only if enabled
         if (this._enableBrowserCache) {
-            this._storage.saveChunk(this._missionId, chunkIndex, data, this._format).catch(e => {
+            this._storage.saveChunk(this._filename, chunkIndex, data, this._format).catch(e => {
                 console.warn('Failed to cache chunk:', e);
             });
         }

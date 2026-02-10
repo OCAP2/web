@@ -1,12 +1,15 @@
 package server
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"image"
 	"image/color"
 	"image/png"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -22,12 +25,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// TestIntegration_ConversionAndPlayback tests the complete flow:
+// TestIntegration_ConversionAndStaticServing tests the complete flow:
 // 1. Store JSON recording
 // 2. Convert to protobuf
-// 3. Fetch manifest
-// 4. Fetch chunks
-func TestIntegration_ConversionAndPlayback(t *testing.T) {
+// 3. Serve manifest via static /data/ path
+// 4. Serve chunks via static /data/ path
+func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 	dataDir := filepath.Join(dir, "data")
@@ -119,51 +122,24 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
-		jsonEngine: storage.NewJSONEngine(dataDir),
 	}
 
-	// Test 1: Get format info (JSON)
-	t.Run("GetFormatJSON", func(t *testing.T) {
+	// Test 1: Serve legacy JSON via GetData
+	t.Run("GetDataJSON", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
+		req := httptest.NewRequest(http.MethodGet, "/data/test_integration.json.gz", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("id")
-		c.SetParamValues("1")
+		c.SetParamNames("*")
+		c.SetParamValues("test_integration.json.gz")
 
-		err := hdlr.GetOperationFormat(c)
+		err := hdlr.GetData(c)
 		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var formatInfo FormatInfo
-		err = json.Unmarshal(rec.Body.Bytes(), &formatInfo)
-		assert.NoError(t, err)
-		assert.Equal(t, "json", formatInfo.Format)
-		assert.False(t, formatInfo.SupportsStreaming)
+		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	})
 
-	// Test 2: Get manifest (JSON format returns JSON)
-	t.Run("GetManifestJSON", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("id")
-		c.SetParamValues("1")
-
-		err := hdlr.GetOperationManifest(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var manifest storage.Manifest
-		err = json.Unmarshal(rec.Body.Bytes(), &manifest)
-		assert.NoError(t, err)
-		assert.Equal(t, "altis", manifest.WorldName)
-		assert.Equal(t, "Integration Test Mission", manifest.MissionName)
-		assert.Len(t, manifest.Entities, 2)
-	})
-
-	// Test 3: Convert to protobuf
+	// Test 2: Convert to protobuf
 	t.Run("ConvertToProtobuf", func(t *testing.T) {
 		converter := storage.NewConverter(5) // 5 frames per chunk for testing
 		outputPath := filepath.Join(dataDir, "test_integration")
@@ -179,40 +155,18 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// Test 4: Get format info (Protobuf)
-	t.Run("GetFormatProtobuf", func(t *testing.T) {
+	// Test 3: Serve manifest via static path
+	t.Run("GetDataManifest", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/format", nil)
+		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/manifest.pb", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("id")
-		c.SetParamValues("1")
+		c.SetParamNames("*")
+		c.SetParamValues("test_integration/manifest.pb")
 
-		err := hdlr.GetOperationFormat(c)
+		err := hdlr.GetData(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var formatInfo FormatInfo
-		err = json.Unmarshal(rec.Body.Bytes(), &formatInfo)
-		assert.NoError(t, err)
-		assert.Equal(t, "protobuf", formatInfo.Format)
-		assert.True(t, formatInfo.SupportsStreaming)
-		assert.Equal(t, 2, formatInfo.ChunkCount) // 10 frames / 5 per chunk = 2 chunks
-	})
-
-	// Test 5: Get manifest (Protobuf)
-	t.Run("GetManifestProtobuf", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/manifest", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("id")
-		c.SetParamValues("1")
-
-		err := hdlr.GetOperationManifest(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
 		data := rec.Body.Bytes()
 
@@ -226,19 +180,18 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, uint32(2), manifest.ChunkCount)
 	})
 
-	// Test 6: Get chunk 0
-	t.Run("GetChunk0", func(t *testing.T) {
+	// Test 4: Serve chunk 0
+	t.Run("GetDataChunk0", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/0", nil)
+		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/0000.pb", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("id", "index")
-		c.SetParamValues("1", "0")
+		c.SetParamNames("*")
+		c.SetParamValues("test_integration/chunks/0000.pb")
 
-		err := hdlr.GetOperationChunk(c)
+		err := hdlr.GetData(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "application/x-protobuf", rec.Header().Get("Content-Type"))
 
 		data := rec.Body.Bytes()
 
@@ -255,16 +208,16 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Len(t, firstFrame.Entities, 2)
 	})
 
-	// Test 7: Get chunk 1
-	t.Run("GetChunk1", func(t *testing.T) {
+	// Test 5: Serve chunk 1
+	t.Run("GetDataChunk1", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/1", nil)
+		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/0001.pb", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("id", "index")
-		c.SetParamValues("1", "1")
+		c.SetParamNames("*")
+		c.SetParamValues("test_integration/chunks/0001.pb")
 
-		err := hdlr.GetOperationChunk(c)
+		err := hdlr.GetData(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -278,17 +231,17 @@ func TestIntegration_ConversionAndPlayback(t *testing.T) {
 		assert.Equal(t, uint32(5), chunk.FrameCount) // Remaining 5 frames
 	})
 
-	// Test 8: Invalid chunk index
-	t.Run("GetChunkInvalid", func(t *testing.T) {
+	// Test 6: Nonexistent chunk returns 404
+	t.Run("GetDataChunkNotFound", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations/1/chunk/999", nil)
+		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/9999.pb", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("id", "index")
-		c.SetParamValues("1", "999")
+		c.SetParamNames("*")
+		c.SetParamValues("test_integration/chunks/9999.pb")
 
-		err := hdlr.GetOperationChunk(c)
-		assert.Error(t, err)
+		err := hdlr.GetData(c)
+		assert.Equal(t, echo.ErrNotFound, err)
 	})
 }
 
@@ -343,6 +296,219 @@ func TestIntegration_PendingConversion(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "protobuf", updated.StorageFormat)
 	assert.Equal(t, "completed", updated.ConversionStatus)
+}
+
+// TestIntegration_UploadAndServeGzippedJSON tests the full round-trip:
+// upload a gzipped JSON file via StoreOperation, then fetch it via GetData
+// and verify the response can be decompressed to valid JSON.
+func TestIntegration_UploadAndServeGzippedJSON(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(dbPath)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	// Prepare gzipped JSON payload
+	recording := map[string]interface{}{
+		"worldName":   "stratis",
+		"missionName": "Upload Test GZ",
+		"endFrame":    5,
+		"entities":    []interface{}{},
+		"events":      []interface{}{},
+	}
+	var gzBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzBuf)
+	require.NoError(t, json.NewEncoder(gw).Encode(recording))
+	require.NoError(t, gw.Close())
+
+	// Build multipart upload request
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", "upload_gz_test")
+	writer.WriteField("worldName", "stratis")
+	writer.WriteField("missionName", "Upload Test GZ")
+	writer.WriteField("missionDuration", "300")
+	part, err := writer.CreateFormFile("file", "upload_gz_test.json.gz")
+	require.NoError(t, err)
+	_, err = io.Copy(part, &gzBuf)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	// Upload
+	t.Run("Upload", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.StoreOperation(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	// Fetch and verify
+	t.Run("Fetch", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/data/upload_gz_test.json.gz", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("upload_gz_test.json.gz")
+
+		err := hdlr.GetData(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+
+		// The response body is gzipped — decompress and verify valid JSON
+		gr, err := gzip.NewReader(rec.Body)
+		require.NoError(t, err, "response body must be valid gzip")
+		defer gr.Close()
+
+		var result map[string]interface{}
+		require.NoError(t, json.NewDecoder(gr).Decode(&result))
+		assert.Equal(t, "stratis", result["worldName"])
+		assert.Equal(t, "Upload Test GZ", result["missionName"])
+	})
+}
+
+// TestIntegration_UploadAndServeRawJSON tests uploading a raw (non-gzipped) JSON file.
+// StoreOperation detects the missing gzip header and compresses it before saving as .json.gz.
+// GetData then serves it with Content-Encoding: gzip and the browser can decompress it.
+func TestIntegration_UploadAndServeRawJSON(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(dbPath)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	// Prepare raw (uncompressed) JSON payload
+	recording := map[string]interface{}{
+		"worldName":   "altis",
+		"missionName": "Upload Test Raw",
+		"endFrame":    5,
+		"entities":    []interface{}{},
+		"events":      []interface{}{},
+	}
+	rawJSON, err := json.Marshal(recording)
+	require.NoError(t, err)
+
+	// Build multipart upload request
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", "upload_raw_test")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Upload Test Raw")
+	writer.WriteField("missionDuration", "300")
+	part, err := writer.CreateFormFile("file", "upload_raw_test.json")
+	require.NoError(t, err)
+	_, err = part.Write(rawJSON)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	// Upload
+	t.Run("Upload", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.StoreOperation(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	// Fetch — raw JSON was gzip-compressed during upload, so it decompresses correctly
+	t.Run("Fetch", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/data/upload_raw_test.json.gz", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("*")
+		c.SetParamValues("upload_raw_test.json.gz")
+
+		err := hdlr.GetData(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+
+		// Decompress and verify valid JSON
+		gr, err := gzip.NewReader(rec.Body)
+		require.NoError(t, err, "response body must be valid gzip")
+		defer gr.Close()
+
+		var result map[string]interface{}
+		require.NoError(t, json.NewDecoder(gr).Decode(&result))
+		assert.Equal(t, "altis", result["worldName"])
+		assert.Equal(t, "Upload Test Raw", result["missionName"])
+	})
+}
+
+// TestIntegration_ServeLegacyRawJSONAsGz tests serving a legacy file that was
+// uploaded as raw JSON but stored with a .json.gz extension (pre-fix behavior).
+// GetData detects the content isn't gzipped and omits Content-Encoding: gzip,
+// so the browser receives plain JSON.
+func TestIntegration_ServeLegacyRawJSONAsGz(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	// Simulate legacy behavior: raw JSON stored with .json.gz extension
+	recording := map[string]interface{}{
+		"worldName":   "tanoa",
+		"missionName": "Legacy Raw Mission",
+		"endFrame":    5,
+		"entities":    []interface{}{},
+		"events":      []interface{}{},
+	}
+	rawJSON, err := json.Marshal(recording)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dataDir, "legacy_raw.json.gz"), rawJSON, 0644))
+
+	hdlr := Handler{
+		setting: Setting{Data: dataDir},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/data/legacy_raw.json.gz", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("*")
+	c.SetParamValues("legacy_raw.json.gz")
+
+	err = hdlr.GetData(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+	assert.Empty(t, rec.Header().Get("Content-Encoding"), "must not claim gzip for raw JSON content")
+
+	// Body is plain JSON — parse directly
+	var result map[string]interface{}
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "tanoa", result["worldName"])
+	assert.Equal(t, "Legacy Raw Mission", result["missionName"])
 }
 
 func writeTestGzippedJSON(t *testing.T, path string, data interface{}) {

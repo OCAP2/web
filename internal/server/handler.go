@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bufio"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -15,8 +17,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-
-	"github.com/OCAP2/web/internal/storage"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -37,16 +37,7 @@ type Handler struct {
 	repoMarker        *RepoMarker
 	repoAmmo          *RepoAmmo
 	setting           Setting
-	jsonEngine        *storage.JSONEngine
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
-}
-
-// FormatInfo contains storage format details for a recording
-type FormatInfo struct {
-	Format            string `json:"format"`
-	ChunkCount        int    `json:"chunkCount"`
-	SupportsStreaming bool   `json:"supportsStreaming"`
-	SchemaVersion     uint32 `json:"schemaVersion"`
 }
 
 // HandlerOption configures the Handler
@@ -72,7 +63,6 @@ func NewHandler(
 		repoMarker:    repoMarker,
 		repoAmmo:      repoAmmo,
 		setting:       setting,
-		jsonEngine:    storage.NewJSONEngine(setting.Data),
 	}
 
 	// Apply options
@@ -97,19 +87,6 @@ func NewHandler(
 		hdlr.StoreOperation,
 	)
 	g.GET(
-		"/api/v1/operations/:id/format",
-		hdlr.GetOperationFormat,
-	)
-	g.GET(
-		"/api/v1/operations/:id/manifest",
-		hdlr.GetOperationManifest,
-	)
-	g.GET(
-		"/api/v1/operations/:id/chunk/:index",
-		hdlr.GetOperationChunk,
-		hdlr.cacheControl(CacheDuration),
-	)
-	g.GET(
 		"/api/v1/customize",
 		hdlr.GetCustomize,
 	)
@@ -118,13 +95,8 @@ func NewHandler(
 		hdlr.GetVersion,
 	)
 	g.GET(
-		"/data/:name",
-		hdlr.GetCapture,
-		hdlr.cacheControl(CacheDuration),
-	)
-	g.GET(
-		"/file/:name",
-		hdlr.GetCaptureFile,
+		"/data/*",
+		hdlr.GetData,
 		hdlr.cacheControl(CacheDuration),
 	)
 	g.GET(
@@ -196,17 +168,6 @@ func (h *Handler) errorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// resolveFormat returns the canonical format string, falling back to "json"
-// if the format is empty or unknown.
-func resolveFormat(format string) string {
-	switch format {
-	case "protobuf":
-		return "protobuf"
-	default:
-		return "json"
-	}
-}
-
 func (h *Handler) GetOperations(c echo.Context) error {
 	var (
 		ctx    = c.Request().Context()
@@ -243,83 +204,6 @@ func (h *Handler) GetVersion(c echo.Context) error {
 
 func (*Handler) GetHealthcheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-}
-
-func (h *Handler) GetOperationFormat(c echo.Context) error {
-	id := c.Param("id")
-
-	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
-	}
-
-	format := resolveFormat(op.StorageFormat)
-
-	// Default schema version to 1 for legacy recordings
-	schemaVersion := op.SchemaVersion
-	if schemaVersion == 0 {
-		schemaVersion = 1
-	}
-
-	return c.JSON(http.StatusOK, FormatInfo{
-		Format:            format,
-		ChunkCount:        op.ChunkCount,
-		SupportsStreaming: format == "protobuf",
-		SchemaVersion:     schemaVersion,
-	})
-}
-
-func (h *Handler) GetOperationManifest(c echo.Context) error {
-	id := c.Param("id")
-
-	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
-	}
-
-	format := resolveFormat(op.StorageFormat)
-
-	// For protobuf format, serve raw binary file directly
-	if format == "protobuf" {
-		manifestPath := filepath.Join(h.setting.Data, op.Filename, "manifest.pb")
-		if _, err := os.Stat(manifestPath); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
-		}
-		c.Response().Header().Set("Content-Type", "application/x-protobuf")
-		return c.File(manifestPath)
-	}
-
-	// For JSON format, parse and return as JSON
-	manifest, err := h.jsonEngine.GetManifest(c.Request().Context(), op.Filename)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load manifest")
-	}
-	return c.JSON(http.StatusOK, manifest)
-}
-
-func (h *Handler) GetOperationChunk(c echo.Context) error {
-	id := c.Param("id")
-	indexStr := c.Param("index")
-
-	// Parse chunk index
-	chunkIndex, err := strconv.Atoi(indexStr)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid chunk index")
-	}
-
-	// Get operation by ID
-	op, err := h.repoOperation.GetByID(c.Request().Context(), id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "operation not found")
-	}
-
-	// Serve chunk file directly
-	chunkPath := filepath.Join(h.setting.Data, op.Filename, "chunks", fmt.Sprintf("%04d.pb", chunkIndex))
-	if _, err := os.Stat(chunkPath); err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "chunk not found")
-	}
-	c.Response().Header().Set("Content-Type", "application/x-protobuf")
-	return c.File(chunkPath)
 }
 
 func (h *Handler) StoreOperation(c echo.Context) error {
@@ -364,13 +248,32 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	}
 	defer file.Close()
 
-	writer, err := os.Create(filepath.Join(h.setting.Data, filename+".json.gz"))
+	// Peek at the first two bytes to detect gzip magic number (0x1f 0x8b)
+	br := bufio.NewReader(file)
+	header, err := br.Peek(2)
 	if err != nil {
 		return err
 	}
+	isGzipped := header[0] == 0x1f && header[1] == 0x8b
 
-	if _, err = io.Copy(writer, file); err != nil {
+	outFile, err := os.Create(filepath.Join(h.setting.Data, filename+".json.gz"))
+	if err != nil {
 		return err
+	}
+	defer outFile.Close()
+
+	if isGzipped {
+		if _, err = io.Copy(outFile, br); err != nil {
+			return err
+		}
+	} else {
+		gw := gzip.NewWriter(outFile)
+		if _, err = io.Copy(gw, br); err != nil {
+			return err
+		}
+		if err = gw.Close(); err != nil {
+			return err
+		}
 	}
 
 	// Trigger conversion immediately if enabled (async, non-blocking)
@@ -381,31 +284,40 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *Handler) GetCapture(c echo.Context) error {
-	name, err := url.PathUnescape(c.Param("name"))
+func (h *Handler) GetData(c echo.Context) error {
+	relativePath, err := paramPath(c, "*")
 	if err != nil {
-		return err
+		return fmt.Errorf("clean path: %s: %w", err.Error(), ErrNotFound)
+	}
+	absolutePath := filepath.Join(h.setting.Data, relativePath)
+
+	// For .json.gz files, check if the content is actually gzipped
+	// before setting Content-Encoding. Legacy uploads may have stored
+	// raw JSON with a .json.gz extension.
+	if strings.HasSuffix(relativePath, ".json.gz") {
+		f, err := os.Open(absolutePath)
+		if err != nil {
+			return echo.ErrNotFound
+		}
+		var magic [2]byte
+		_, err = io.ReadFull(f, magic[:])
+		f.Close()
+		if err != nil {
+			return echo.ErrNotFound
+		}
+
+		c.Response().Header().Set("Content-Type", "application/json")
+		if magic[0] == 0x1f && magic[1] == 0x8b {
+			c.Response().Header().Set("Content-Encoding", "gzip")
+		}
+		return c.File(absolutePath)
 	}
 
-	upath := filepath.Join(h.setting.Data, filepath.Base(name+".json.gz"))
-
-	c.Response().Header().Set("Content-Encoding", "gzip")
-	c.Response().Header().Set("Content-Type", "application/json")
-
-	return c.File(upath)
-}
-
-func (h *Handler) GetCaptureFile(c echo.Context) error {
-	name, err := url.PathUnescape(c.Param("name"))
-	if err != nil {
-		return err
+	if _, err := os.Stat(absolutePath); err != nil {
+		return echo.ErrNotFound
 	}
 
-	filename := filepath.Base(name + ".json.gz")
-
-	c.Response().Header().Set("Content-Disposition", "attachment;filename=\""+filename+"\"")
-
-	return c.Attachment(filepath.Join(h.setting.Data, filename), filename)
+	return c.File(absolutePath)
 }
 
 func (h *Handler) GetMarker(c echo.Context) error {

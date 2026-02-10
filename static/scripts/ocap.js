@@ -1219,7 +1219,7 @@ async function loadOperation(op) {
 	}
 	// Fall back to legacy JSON loading
 	console.log(`Loading operation using legacy JSON mode`);
-	return processOp("data/" + op.filename);
+	return processOp("data/" + op.filename + ".json.gz");
 }
 
 /**
@@ -1245,15 +1245,15 @@ async function loadOperationByFilename(filename) {
 
 	// Fallback to legacy JSON loading if operation not found in database
 	console.log(`Operation not found in database, using legacy JSON mode`);
-	return processOp("data/" + filename);
+	return processOp("data/" + filename + ".json.gz");
 }
 
 // Read operation JSON data and create unit objects
 function processOp (filepath, opRecord) {
 	console.log("Processing operation: (" + filepath + ")...");
 	const time = new Date();
-	// Strip "data/" prefix and .json extension since /file/:name endpoint adds .json.gz
-	fileName = filepath.substr(5, filepath.length).replace(/\.json$/, '');
+	// Strip "data/" prefix and .json.gz extension to get the base filename
+	fileName = filepath.replace(/^data\//, '').replace(/\.json\.gz$/, '');
 
 	let data;
 	return fetch(filepath)
@@ -1927,22 +1927,6 @@ async function checkStoragePersistence() {
 }
 
 /**
- * Check if operation supports streaming and return format info
- * @param {string} operationId
- * @returns {Promise<Object|null>}
- */
-async function getOperationFormat(operationId) {
-	try {
-		const response = await fetch(`api/v1/operations/${operationId}/format`);
-		if (!response.ok) return null;
-		return response.json();
-	} catch (e) {
-		console.warn('Failed to get operation format:', e);
-		return null;
-	}
-}
-
-/**
  * Process operation using streaming/chunked mode
  * @param {string} operationId - Operation ID from database
  * @param {string} format - Storage format ('protobuf')
@@ -1953,9 +1937,8 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 	console.log(`Processing operation (streaming mode): ${operationId} (format: ${format}, schema: v${schemaVersion})`);
 	const time = new Date();
 
-	// Set global fileName for download functionality
-	// Strip .json extension since /file/:name endpoint adds .json.gz
-	fileName = (operationFilename || operationId).replace(/\.json$/, '');
+	// Set global fileName for download/URL sharing
+	fileName = operationFilename || operationId;
 
 	// Get versioned loader from registry
 	const loader = LoaderRegistry.getLoader(schemaVersion);
@@ -1982,7 +1965,7 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 		manifest = loader.decodeManifest(cachedManifest, format);
 		console.log('Loaded manifest from cache');
 	} else {
-		const response = await fetch(`api/v1/operations/${operationId}/manifest`);
+		const response = await fetch(`data/${operationFilename}/manifest.pb`);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch manifest: ${response.status}`);
 		}
@@ -1998,7 +1981,7 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 
 	// Initialize chunk manager with format, loader, and cache setting
 	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
-	chunkManager = new ChunkManager(operationId, manifest, storageManager, baseUrl, {
+	chunkManager = new ChunkManager(operationFilename, manifest, storageManager, baseUrl, {
 		format: format,
 		enableBrowserCache: enableBrowserCache,
 		loader: loader
