@@ -41,7 +41,7 @@ func DiscoverGeoJSONLayers(inputDir string) ([]geoJSONSource, error) {
 			return nil
 		}
 		if strings.HasSuffix(info.Name(), ".geojson.gz") {
-			name := strings.TrimSuffix(info.Name(), ".geojson.gz")
+			name := strings.TrimSpace(strings.TrimSuffix(info.Name(), ".geojson.gz"))
 			if name == "" {
 				log.Printf("Skipping unnamed geojson file: %s", path)
 				return nil
