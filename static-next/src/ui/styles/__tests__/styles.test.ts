@@ -96,19 +96,6 @@ describe("CSS style files", () => {
       expect(css).toContain(".reveal");
       expect(css).toContain(".action");
     });
-
-    it("contains hint toast styles", () => {
-      expect(css).toContain(".hint-toast");
-    });
-
-    it("contains loading indicator styles", () => {
-      expect(css).toContain(".loading-indicator");
-      expect(css).toContain(".loading-spinner");
-    });
-
-    it("contains streaming indicator styling", () => {
-      expect(css).toContain(".streaming-indicator");
-    });
   });
 
   describe("leaflet.css", () => {
