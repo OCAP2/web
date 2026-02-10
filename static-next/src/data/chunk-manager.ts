@@ -1,6 +1,5 @@
 import type { ChunkData, Manifest } from "./types";
 import type { DecoderStrategy } from "./decoders/decoder.interface";
-import type { StorageBackend } from "./storage/storage.interface";
 import type { ApiClient } from "./api-client";
 
 // ─── Options & callbacks ───
@@ -15,12 +14,11 @@ export interface ChunkManagerCallbacks {
 /**
  * Manages on-demand chunk loading for streaming playback.
  *
- * Handles loading chunks from network/storage, LRU eviction,
+ * Handles loading chunks from network, LRU eviction,
  * and prefetching for smooth playback.
  */
 export class ChunkManager {
   private readonly decoder: DecoderStrategy;
-  private readonly storage: StorageBackend | null;
   private readonly api: ApiClient;
 
   /** Max decoded chunks kept in memory. */
@@ -46,13 +44,8 @@ export class ChunkManager {
   /** Optional callbacks. */
   private callbacks: ChunkManagerCallbacks = {};
 
-  constructor(
-    decoder: DecoderStrategy,
-    storage: StorageBackend | null | undefined,
-    api: ApiClient,
-  ) {
+  constructor(decoder: DecoderStrategy, api: ApiClient) {
     this.decoder = decoder;
-    this.storage = storage ?? null;
     this.api = api;
   }
 
@@ -71,31 +64,13 @@ export class ChunkManager {
   async loadManifest(filename: string): Promise<Manifest> {
     this.filename = filename;
 
-    // Try storage first
-    if (this.storage) {
-      const cached = await this.storage.getManifest(filename, "protobuf");
-      if (cached) {
-        this.manifest = this.decoder.decodeManifest(cached);
-        return this.manifest;
-      }
-    }
-
-    // Network
     const buffer = await this.api.getManifest(filename);
-
-    // Save to storage (fire-and-forget)
-    if (this.storage) {
-      this.storage
-        .saveManifest(filename, "protobuf", buffer)
-        .catch(() => {});
-    }
-
     this.manifest = this.decoder.decodeManifest(buffer);
     return this.manifest;
   }
 
   /**
-   * Load a specific chunk (from cache, storage, or network).
+   * Load a specific chunk (from cache or network).
    */
   async loadChunk(chunkIndex: number): Promise<ChunkData> {
     // Already in memory?
@@ -173,26 +148,7 @@ export class ChunkManager {
   private async loadChunkInternal(chunkIndex: number): Promise<ChunkData> {
     const filename = this.filename!;
 
-    // Try storage first
-    if (this.storage) {
-      const cached = await this.storage.getChunk(filename, chunkIndex);
-      if (cached) {
-        const chunk = this.decoder.decodeChunk(cached);
-        this.storeInMemory(chunkIndex, chunk);
-        return chunk;
-      }
-    }
-
-    // Fetch from network
     const buffer = await this.api.getChunk(filename, chunkIndex);
-
-    // Save to storage (fire-and-forget)
-    if (this.storage) {
-      this.storage
-        .saveChunk(filename, chunkIndex, buffer)
-        .catch(() => {});
-    }
-
     const chunk = this.decoder.decodeChunk(buffer);
     this.storeInMemory(chunkIndex, chunk);
     return chunk;

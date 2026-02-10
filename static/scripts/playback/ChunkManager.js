@@ -1,7 +1,7 @@
 /**
  * ChunkManager - Manages on-demand chunk loading for playback
  *
- * Handles loading chunks from network/cache, LRU eviction,
+ * Handles loading chunks from network, LRU eviction,
  * and prefetching for smooth playback.
  */
 
@@ -9,20 +9,16 @@ class ChunkManager {
     /**
      * @param {string} filename - The operation filename (used to construct static data paths)
      * @param {Object} manifest - The decoded manifest object
-     * @param {StorageManager} storageManager - Storage backend
      * @param {string} baseUrl - Base URL for chunk fetching
      * @param {Object} options - Configuration options
      * @param {string} options.format - Storage format ('protobuf')
-     * @param {boolean} options.enableBrowserCache - Enable browser storage caching (default: false)
      * @param {Object} options.loader - Versioned loader for decoding chunks
      */
-    constructor(filename, manifest, storageManager, baseUrl, options = {}) {
+    constructor(filename, manifest, baseUrl, options = {}) {
         this._filename = filename;
         this._manifest = manifest;
-        this._storage = storageManager;
         this._baseUrl = baseUrl;
         this._format = options.format || 'protobuf';
-        this._enableBrowserCache = options.enableBrowserCache || false;
         this._loader = options.loader || null;
 
         // Chunk cache with LRU eviction (max 3 in memory)
@@ -36,10 +32,6 @@ class ChunkManager {
         // Prefetch settings
         this._prefetchThreshold = 0.8; // Prefetch next chunk at 80% progress
         this._prefetchingChunk = null;
-
-        // Stats
-        this._cacheHits = 0;
-        this._networkFetches = 0;
     }
 
     /**
@@ -101,19 +93,6 @@ class ChunkManager {
      * @private
      */
     async _loadChunkInternal(chunkIndex) {
-        // Try storage cache first (if enabled)
-        if (this._enableBrowserCache) {
-            const cached = await this._storage.getChunk(this._filename, chunkIndex, this._format);
-            if (cached) {
-                this._cacheHits++;
-                const chunk = await this._decodeChunk(cached);
-                this._storeInMemory(chunkIndex, chunk);
-                return chunk;
-            }
-        }
-
-        // Fetch from network
-        this._networkFetches++;
         const url = `${this._baseUrl}/data/${this._filename}/chunks/${String(chunkIndex).padStart(4, '0')}.pb`;
         const response = await fetch(url);
 
@@ -122,14 +101,6 @@ class ChunkManager {
         }
 
         const data = await response.arrayBuffer();
-
-        // Save to storage cache (async, don't wait) - only if enabled
-        if (this._enableBrowserCache) {
-            this._storage.saveChunk(this._filename, chunkIndex, data, this._format).catch(e => {
-                console.warn('Failed to cache chunk:', e);
-            });
-        }
-
         const chunk = await this._decodeChunk(data);
         this._storeInMemory(chunkIndex, chunk);
         return chunk;
@@ -297,20 +268,6 @@ class ChunkManager {
         this._chunkAccessOrder = [];
         this._loadingChunks.clear();
         this._prefetchingChunk = null;
-    }
-
-    /**
-     * Get statistics
-     * @returns {Object}
-     */
-    getStats() {
-        return {
-            loadedChunks: this._loadedChunks.size,
-            cacheHits: this._cacheHits,
-            networkFetches: this._networkFetches,
-            hitRate: this._cacheHits / (this._cacheHits + this._networkFetches) || 0,
-            browserCacheEnabled: this._enableBrowserCache
-        };
     }
 
     /**

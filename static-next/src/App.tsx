@@ -112,7 +112,7 @@ export function App(): JSX.Element {
         decoder = new ProtobufDecoder();
 
         // Create chunk manager for on-demand chunk loading
-        const chunkMgr = new ChunkManager(decoder, null, api);
+        const chunkMgr = new ChunkManager(decoder, api);
         manifest = await chunkMgr.loadManifest(filename);
 
         // Pre-load chunk 0 so initial frame has position data

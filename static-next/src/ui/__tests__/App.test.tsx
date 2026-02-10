@@ -29,11 +29,6 @@ vi.mock("../../renderers/leaflet/leaflet-renderer", () => ({
   })),
 }));
 
-// Mock storage factory to avoid actual OPFS/IndexedDB access in tests
-vi.mock("../../data/storage/storage-factory", () => ({
-  createStorage: vi.fn().mockRejectedValue(new Error("not available in test")),
-}));
-
 describe("App", () => {
   afterEach(() => {
     cleanup();

@@ -301,9 +301,6 @@ function initOCAP () {
 			ui.setServerVersion('unknown');
 		});
 
-	// Check storage persistence and warn Safari users
-	checkStoragePersistence();
-
 	const args = getArguments();
 
 	Promise.all([ui.updateCustomize(), ui.setModalOpList()])
@@ -1889,42 +1886,7 @@ function closestEquivalentAngle (from, to) {
 
 // Global chunk manager for streaming playback
 let chunkManager = null;
-let storageManager = null;
 let isStreamingMode = false;
-
-/**
- * Detect if browser is Safari
- * @returns {boolean}
- */
-function isSafari() {
-	const ua = navigator.userAgent.toLowerCase();
-	return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium');
-}
-
-/**
- * Request persistent storage and warn Safari users about ITP limitations
- */
-async function checkStoragePersistence() {
-	// Request persistent storage if available
-	if (navigator.storage && navigator.storage.persist) {
-		const isPersisted = await navigator.storage.persisted();
-		if (!isPersisted) {
-			const granted = await navigator.storage.persist();
-			console.log(`Persistent storage ${granted ? 'granted' : 'denied'}`);
-		}
-	}
-
-	// Warn Safari users about ITP 7-day eviction
-	if (isSafari()) {
-		console.warn('Safari detected: Storage may be evicted after 7 days due to ITP');
-		// Show warning in UI after a short delay
-		setTimeout(() => {
-			if (ui && typeof ui.showHint === 'function') {
-				ui.showHint('Safari: Cached recordings may be cleared after 7 days of inactivity');
-			}
-		}, 3000);
-	}
-}
 
 /**
  * Process operation using streaming/chunked mode
@@ -1943,47 +1905,23 @@ async function processOpStreaming(operationId, format = 'protobuf', schemaVersio
 	// Get versioned loader from registry
 	const loader = LoaderRegistry.getLoader(schemaVersion);
 
-	// Check if browser caching is enabled (opt-in via URL param ?cache=1)
-	const urlParams = new URLSearchParams(window.location.search);
-	const enableBrowserCache = urlParams.get('cache') === '1';
-
 	// Show loading indicator
 	ui.showLoading('Initializing streaming playback...');
-
-	// Initialize storage manager if needed (only if caching enabled)
-	if (enableBrowserCache && !storageManager) {
-		storageManager = new StorageManager();
-		await storageManager.init();
-	}
 
 	ui.updateLoadingProgress(1, 4, 'Loading manifest...');
 
 	// Fetch manifest
-	let manifest;
-	const cachedManifest = enableBrowserCache ? await storageManager.getManifest(operationId, format) : null;
-	if (cachedManifest) {
-		manifest = loader.decodeManifest(cachedManifest, format);
-		console.log('Loaded manifest from cache');
-	} else {
-		const response = await fetch(`data/${operationFilename}/manifest.pb`);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch manifest: ${response.status}`);
-		}
-		const data = await response.arrayBuffer();
-		manifest = loader.decodeManifest(data, format);
-		// Cache manifest (only if enabled)
-		if (enableBrowserCache) {
-			storageManager.saveManifest(operationId, data, format).catch(e => {
-				console.warn('Failed to cache manifest:', e);
-			});
-		}
+	const response = await fetch(`data/${operationFilename}/manifest.pb`);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch manifest: ${response.status}`);
 	}
+	const data = await response.arrayBuffer();
+	const manifest = loader.decodeManifest(data, format);
 
-	// Initialize chunk manager with format, loader, and cache setting
+	// Initialize chunk manager
 	const baseUrl = window.location.pathname.replace(/\/[^/]*$/, '');
-	chunkManager = new ChunkManager(operationFilename, manifest, storageManager, baseUrl, {
+	chunkManager = new ChunkManager(operationFilename, manifest, baseUrl, {
 		format: format,
-		enableBrowserCache: enableBrowserCache,
 		loader: loader
 	});
 	isStreamingMode = true;

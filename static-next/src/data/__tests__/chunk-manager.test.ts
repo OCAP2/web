@@ -1,8 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ChunkManager } from "../chunk-manager";
-import type { ChunkManagerCallbacks } from "../chunk-manager";
 import type { DecoderStrategy } from "../decoders/decoder.interface";
-import type { StorageBackend } from "../storage/storage.interface";
 import type { ApiClient } from "../api-client";
 import type { ChunkData, Manifest } from "../types";
 
@@ -39,38 +37,6 @@ function makeDecoder(manifest?: Manifest): DecoderStrategy {
   };
 }
 
-function makeStorage(): StorageBackend & {
-  _savedChunks: Map<string, ArrayBuffer>;
-  _savedManifests: Map<string, ArrayBuffer>;
-} {
-  const savedChunks = new Map<string, ArrayBuffer>();
-  const savedManifests = new Map<string, ArrayBuffer>();
-
-  return {
-    _savedChunks: savedChunks,
-    _savedManifests: savedManifests,
-
-    hasManifest: vi.fn().mockResolvedValue(false),
-    getManifest: vi.fn().mockResolvedValue(null),
-    saveManifest: vi.fn().mockImplementation(
-      async (id: string, fmt: string, data: ArrayBuffer) => {
-        savedManifests.set(`${id}/${fmt}`, data);
-      },
-    ),
-    hasChunk: vi.fn().mockResolvedValue(false),
-    getChunk: vi.fn().mockResolvedValue(null),
-    saveChunk: vi.fn().mockImplementation(
-      async (id: string, idx: number, data: ArrayBuffer) => {
-        savedChunks.set(`${id}/${idx}`, data);
-      },
-    ),
-    evictOldChunks: vi.fn().mockResolvedValue(undefined),
-    getStorageUsage: vi
-      .fn()
-      .mockResolvedValue({ used: 0, available: 1024 * 1024 }),
-  };
-}
-
 function makeApi(): ApiClient & {
   getManifest: ReturnType<typeof vi.fn>;
   getChunk: ReturnType<typeof vi.fn>;
@@ -95,15 +61,13 @@ function makeApi(): ApiClient & {
 
 describe("ChunkManager", () => {
   let decoder: ReturnType<typeof makeDecoder>;
-  let storage: ReturnType<typeof makeStorage>;
   let api: ReturnType<typeof makeApi>;
   let cm: ChunkManager;
 
   beforeEach(() => {
     decoder = makeDecoder();
-    storage = makeStorage();
     api = makeApi();
-    cm = new ChunkManager(decoder, storage, api);
+    cm = new ChunkManager(decoder, api);
   });
 
   // ─── loadManifest ───
@@ -116,42 +80,6 @@ describe("ChunkManager", () => {
       expect(decoder.decodeManifest).toHaveBeenCalled();
       expect(manifest.worldName).toBe("altis");
       expect(cm.getManifest()).toBe(manifest);
-    });
-
-    it("saves manifest to storage after network fetch", async () => {
-      await cm.loadManifest("op_mission");
-
-      expect(storage.saveManifest).toHaveBeenCalledWith(
-        "op_mission",
-        "protobuf",
-        expect.any(ArrayBuffer),
-      );
-    });
-
-    it("loads manifest from storage when cached", async () => {
-      const cachedBuffer = new Uint8Array([99]).buffer;
-      storage.getManifest = vi.fn().mockResolvedValue(cachedBuffer);
-
-      await cm.loadManifest("op_mission");
-
-      expect(api.getManifest).not.toHaveBeenCalled();
-      expect(decoder.decodeManifest).toHaveBeenCalledWith(cachedBuffer);
-    });
-
-    it("falls back to network when storage returns null", async () => {
-      storage.getManifest = vi.fn().mockResolvedValue(null);
-
-      await cm.loadManifest("op_mission");
-
-      expect(api.getManifest).toHaveBeenCalledWith("op_mission");
-    });
-
-    it("works without storage backend", async () => {
-      const cm2 = new ChunkManager(decoder, null, api);
-      const manifest = await cm2.loadManifest("op_mission");
-
-      expect(manifest.worldName).toBe("altis");
-      expect(api.getManifest).toHaveBeenCalled();
     });
   });
 
@@ -168,26 +96,6 @@ describe("ChunkManager", () => {
       expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
       expect(decoder.decodeChunk).toHaveBeenCalled();
       expect(chunk.entities).toBeInstanceOf(Map);
-    });
-
-    it("saves chunk to storage after network fetch", async () => {
-      await cm.loadChunk(2);
-
-      expect(storage.saveChunk).toHaveBeenCalledWith(
-        "op_mission",
-        2,
-        expect.any(ArrayBuffer),
-      );
-    });
-
-    it("loads chunk from storage when cached", async () => {
-      const cachedBuf = new Uint8Array([50]).buffer;
-      storage.getChunk = vi.fn().mockResolvedValue(cachedBuf);
-
-      await cm.loadChunk(0);
-
-      expect(api.getChunk).not.toHaveBeenCalled();
-      expect(decoder.decodeChunk).toHaveBeenCalledWith(cachedBuf);
     });
 
     it("returns cached chunk on re-request (memory cache hit)", async () => {
@@ -216,7 +124,7 @@ describe("ChunkManager", () => {
     beforeEach(async () => {
       // 5 chunks so we can test eviction of the max (3) capacity
       decoder = makeDecoder(makeManifest({ chunkCount: 5 }));
-      cm = new ChunkManager(decoder, storage, api);
+      cm = new ChunkManager(decoder, api);
       await cm.loadManifest("op_mission");
     });
 
@@ -292,7 +200,7 @@ describe("ChunkManager", () => {
       decoder = makeDecoder(
         makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
       );
-      cm = new ChunkManager(decoder, storage, api);
+      cm = new ChunkManager(decoder, api);
       await cm.loadManifest("op_mission");
     });
 
@@ -304,7 +212,7 @@ describe("ChunkManager", () => {
     });
 
     it("throws if manifest not loaded", async () => {
-      const cm2 = new ChunkManager(decoder, storage, api);
+      const cm2 = new ChunkManager(decoder, api);
       await expect(cm2.ensureLoaded(0)).rejects.toThrow(
         /manifest not loaded/,
       );
@@ -318,7 +226,7 @@ describe("ChunkManager", () => {
       decoder = makeDecoder(
         makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
       );
-      cm = new ChunkManager(decoder, storage, api);
+      cm = new ChunkManager(decoder, api);
       await cm.loadManifest("op_mission");
     });
 
@@ -381,53 +289,6 @@ describe("ChunkManager", () => {
       const chunk = cm.getChunkForFrame(100); // frame 100 -> chunk 0 (chunkSize=300)
       expect(chunk).not.toBeNull();
       expect(chunk!.entities).toBeInstanceOf(Map);
-    });
-  });
-
-  // ─── Storage integration ───
-
-  describe("storage integration", () => {
-    it("saves chunk to storage after network fetch", async () => {
-      await cm.loadManifest("op_mission");
-      await cm.loadChunk(2);
-
-      expect(storage.saveChunk).toHaveBeenCalledWith(
-        "op_mission",
-        2,
-        expect.any(ArrayBuffer),
-      );
-    });
-
-    it("loads chunk from storage before trying network", async () => {
-      const cachedBuf = new Uint8Array([77]).buffer;
-      storage.getChunk = vi.fn().mockResolvedValue(cachedBuf);
-
-      await cm.loadManifest("op_mission");
-      await cm.loadChunk(0);
-
-      expect(storage.getChunk).toHaveBeenCalledWith("op_mission", 0);
-      expect(api.getChunk).not.toHaveBeenCalled();
-      expect(decoder.decodeChunk).toHaveBeenCalledWith(cachedBuf);
-    });
-
-    it("falls back to network when storage has no chunk", async () => {
-      storage.getChunk = vi.fn().mockResolvedValue(null);
-
-      await cm.loadManifest("op_mission");
-      await cm.loadChunk(0);
-
-      expect(api.getChunk).toHaveBeenCalledWith("op_mission", 0);
-    });
-
-    it("handles storage save failure gracefully", async () => {
-      storage.saveChunk = vi
-        .fn()
-        .mockRejectedValue(new Error("disk full"));
-
-      await cm.loadManifest("op_mission");
-      // Should not throw even if storage save fails
-      const chunk = await cm.loadChunk(0);
-      expect(chunk.entities).toBeInstanceOf(Map);
     });
   });
 
