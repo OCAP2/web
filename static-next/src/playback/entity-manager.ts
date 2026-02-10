@@ -31,6 +31,8 @@ export class EntityManager {
         def.groupName,
         def.role ?? "",
         def.positions ?? null,
+        "man",
+        def.framesFired ?? null,
       );
     } else {
       entity = new Vehicle(

@@ -1,7 +1,8 @@
 import { onMount, onCleanup, createSignal, createEffect } from "solid-js";
 import type { JSX } from "solid-js";
 import type { WorldConfig, Manifest, Operation } from "./data/types";
-import type { MarkerHandle } from "./renderers/renderer.types";
+import type { MarkerHandle, LineHandle } from "./renderers/renderer.types";
+import { SIDE_COLORS_DARK } from "./config/side-colors";
 import { ApiClient } from "./data/api-client";
 import { JsonDecoder } from "./data/decoders/json-decoder";
 import { ProtobufDecoder } from "./data/decoders/protobuf-decoder";
@@ -145,9 +146,16 @@ export function App(): JSX.Element {
 
   // ─── Render bridge: sync engine snapshots → renderer markers ───
   const markerHandles = new Map<number, MarkerHandle>();
+  let firelineHandles: LineHandle[] = [];
 
   createEffect(() => {
     const snapshots = engine.entitySnapshots();
+
+    // Clear previous frame's fire lines
+    for (const handle of firelineHandles) {
+      renderer.removeLine(handle);
+    }
+    firelineHandles = [];
 
     // Remove markers for entities no longer in snapshots
     for (const [id, handle] of markerHandles) {
@@ -178,6 +186,18 @@ export function App(): JSX.Element {
         iconType: snap.iconType,
         isInVehicle: snap.isInVehicle,
       });
+
+      // Draw fire line if unit fired this frame
+      if (snap.firedTarget) {
+        const color = snap.side ? SIDE_COLORS_DARK[snap.side] : "#FFFFFF";
+        firelineHandles.push(
+          renderer.addLine(snap.position, snap.firedTarget, {
+            color,
+            weight: 2,
+            opacity: 0.4,
+          }),
+        );
+      }
     }
   });
 

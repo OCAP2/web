@@ -396,7 +396,7 @@ export class PlaybackEngine {
             entity.setCrew(state.crewIds);
             side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
           }
-          snapshots.set(entity.id, {
+          const snapshot: EntitySnapshot = {
             id: entity.id,
             position: state.position,
             direction: state.direction,
@@ -405,7 +405,12 @@ export class PlaybackEngine {
             name: state.name ?? entity.name,
             iconType: entity.iconType,
             isInVehicle: state.isInVehicle ?? false,
-          });
+          };
+          if (entity instanceof Unit) {
+            const target = entity.firedOnFrame(frame);
+            if (target) snapshot.firedTarget = target;
+          }
+          snapshots.set(entity.id, snapshot);
           continue;
         }
       }
@@ -421,6 +426,10 @@ export class PlaybackEngine {
             entity.setCrew(state.crewIds);
             snap.side = entity.getSideFromCrew((id) => this.entityManager.getEntity(id));
           }
+        }
+        if (entity instanceof Unit) {
+          const target = entity.firedOnFrame(frame);
+          if (target) snap.firedTarget = target;
         }
         snapshots.set(entity.id, snap);
       }

@@ -819,13 +819,13 @@ export class LeafletRenderer implements MapRenderer {
         opacity: opts.opacity,
       },
     );
-    line.addTo(this.layers.entities);
+    line.addTo(this.layers.projectileMarkers);
     return wrapLine({ line });
   }
 
   removeLine(handle: LineHandle): void {
     const internal = unwrapLine(handle);
-    this.layers.entities.removeLayer(internal.line);
+    this.layers.projectileMarkers.removeLayer(internal.line);
   }
 
   // ==================== Pulses ====================

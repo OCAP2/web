@@ -1,4 +1,5 @@
 import type { EntityState, EntityType, Side } from "../../data/types";
+import type { ArmaCoord } from "../../utils/coordinates";
 import type { EntitySnapshot } from "../types";
 import { Entity } from "./entity";
 import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/side-colors";
@@ -14,6 +15,7 @@ export class Unit extends Entity {
   killCount: number;
   teamKillCount: number;
   isInVehicle: boolean;
+  private _framesFired: Array<[number, ArmaCoord]> | null;
 
   constructor(
     id: number,
@@ -27,6 +29,7 @@ export class Unit extends Entity {
     role: string = "",
     positions: EntityState[] | null = null,
     iconType: string = "man",
+    framesFired: Array<[number, ArmaCoord]> | null = null,
   ) {
     super(id, name, type, startFrame, endFrame, positions, iconType);
     this.side = side;
@@ -36,6 +39,16 @@ export class Unit extends Entity {
     this.killCount = 0;
     this.teamKillCount = 0;
     this.isInVehicle = false;
+    this._framesFired = framesFired;
+  }
+
+  /** Return projectile target position if this unit fired on the given absolute frame. */
+  firedOnFrame(frame: number): ArmaCoord | null {
+    if (!this._framesFired) return null;
+    for (const [f, pos] of this._framesFired) {
+      if (f === frame) return pos;
+    }
+    return null;
   }
 
   /** CSS class for the unit's side: WEST->'blufor', EAST->'opfor', etc. */
