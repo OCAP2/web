@@ -306,6 +306,7 @@ export function MissionSelector(): JSX.Element {
               <span class={styles.colLabel}>KILLS</span>
               <span class={styles.colLabel}>TAG</span>
               <span class={styles.colLabelRight}>STATUS</span>
+              <span />
             </div>
 
             {/* Rows */}

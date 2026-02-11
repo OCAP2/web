@@ -68,9 +68,13 @@ export function MissionRow(props: {
         <TagBadge tag={props.op.tag!} />
       </Show>
 
-      {/* Status + Play */}
+      {/* Status */}
       <div class={styles.rowStatus}>
         <StatusBadge status={status().key} />
+      </div>
+
+      {/* Play */}
+      <div class={styles.rowPlay}>
         <Show when={ready() && props.selected}>
           <button
             class={styles.playButton}

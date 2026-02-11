@@ -413,7 +413,7 @@
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px;
+  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px 40px;
   padding: 10px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
@@ -482,7 +482,7 @@
 /* ── Mission row ── */
 .missionRow {
   display: grid;
-  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px;
+  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px 40px;
   align-items: center;
   gap: 0;
   padding: 14px 20px;
@@ -604,8 +604,13 @@
 .rowStatus {
   display: flex;
   align-items: center;
-  gap: 8px;
   justify-content: flex-end;
+}
+
+.rowPlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .playButton {
@@ -1163,7 +1168,7 @@
 
   .tableHeader,
   .missionRow {
-    grid-template-columns: 1fr 100px 80px 70px;
+    grid-template-columns: 1fr 100px 80px 70px 40px;
   }
 
   .sidebar {
