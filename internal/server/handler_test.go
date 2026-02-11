@@ -546,6 +546,43 @@ func TestStaticFileServing(t *testing.T) {
 	})
 }
 
+func TestStaticFileServingWithPrefix(t *testing.T) {
+	dir := t.TempDir()
+	staticDir := filepath.Join(dir, "static")
+	err := os.MkdirAll(filepath.Join(staticDir, "assets"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>prefixed</html>"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(staticDir, "assets", "app.js"), []byte("// prefixed"), 0644)
+	require.NoError(t, err)
+
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
+	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
+
+	e := echo.New()
+	NewHandler(e, repo, repoMarker, repoAmmo, Setting{PrefixURL: "/sub/"}, WithStaticFS(os.DirFS(staticDir)))
+
+	t.Run("static file under prefix", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/sub/assets/app.js", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "// prefixed")
+	})
+
+	t.Run("SPA fallback under prefix", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/sub/some/spa/route", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "<html>prefixed</html>")
+	})
+}
+
 func TestParamPath(t *testing.T) {
 	tests := []struct {
 		name      string

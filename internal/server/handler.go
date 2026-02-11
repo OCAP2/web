@@ -135,7 +135,7 @@ func NewHandler(
 	)
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing
-		staticHandler := hdlr.spaFileServer(hdlr.staticFS, prefixURL)
+		staticHandler := spaFileServer(hdlr.staticFS, prefixURL)
 		g.GET("/*", echo.WrapHandler(staticHandler), hdlr.cacheControl(0))
 		g.GET("", echo.WrapHandler(staticHandler), middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
 			RedirectCode: http.StatusMovedPermanently,
@@ -372,24 +372,37 @@ func (h *Handler) GetMapTitle(c echo.Context) error {
 
 // spaFileServer returns an http.Handler that serves static files from fsys,
 // falling back to index.html for paths that don't match a file (SPA routing).
-func (*Handler) spaFileServer(fsys fs.FS, prefix string) http.Handler {
-	fileServer := http.FileServer(http.FS(fsys))
+func spaFileServer(fsys fs.FS, prefix string) http.Handler {
+	handler := http.StripPrefix(prefix, http.FileServer(http.FS(fsys)))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Strip the prefix so the FS lookup starts at the root
 		p := strings.TrimPrefix(r.URL.Path, prefix)
 		p = strings.TrimPrefix(p, "/")
 
-		// Try to open the requested file
+		// Serve existing files directly
 		if p != "" {
 			if _, err := fs.Stat(fsys, p); err == nil {
-				http.StripPrefix(prefix, fileServer).ServeHTTP(w, r)
+				handler.ServeHTTP(w, r)
 				return
 			}
 		}
 
-		// Fallback to index.html for SPA client-side routing
-		r.URL.Path = prefix + "/"
-		fileServer.ServeHTTP(w, r)
+		// Fallback: serve index.html for SPA client-side routing.
+		// Read directly to avoid http.FileServer's redirect of /index.html → /
+		f, err := fsys.Open("index.html")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		defer f.Close()
+
+		stat, err := f.Stat()
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		http.ServeContent(w, r, "index.html", stat.ModTime(), f.(io.ReadSeeker))
 	})
 }
 
