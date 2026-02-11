@@ -554,7 +554,7 @@
 
 .rowDateValue {
   font-size: 12px;
-  color: #99aabb;
+  color: var(--ms-text-muted);
   font-family: var(--ms-font-mono);
 }
 
@@ -612,7 +612,7 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #4A9EFF, #3585dd);
+  background: linear-gradient(135deg, var(--ms-accent-blue), #3585dd);
   border: none;
   cursor: pointer;
   color: #fff;
@@ -695,7 +695,7 @@
   background: rgba(0, 0, 0, 0.3);
   border: none;
   cursor: pointer;
-  color: #667788;
+  color: var(--ms-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -856,7 +856,7 @@
 
 .launchButtonReady {
   cursor: pointer;
-  background: linear-gradient(135deg, #4A9EFF, #3585dd);
+  background: linear-gradient(135deg, var(--ms-accent-blue), #3585dd);
   color: #fff;
   box-shadow: 0 4px 20px rgba(74, 158, 255, 0.25);
 }
@@ -991,7 +991,7 @@
 
 .sideDotCount {
   font-size: 10px;
-  color: #667788;
+  color: var(--ms-text-muted);
   font-family: var(--ms-font-mono);
 }
 
@@ -1044,7 +1044,7 @@
 .loadingBarFill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #4A9EFF, #2DD4A0);
+  background: linear-gradient(90deg, var(--ms-accent-blue), var(--ms-accent-green));
   animation: loadBar 2s ease-in-out forwards;
 }
 

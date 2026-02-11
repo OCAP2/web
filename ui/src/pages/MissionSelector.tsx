@@ -17,7 +17,7 @@ const MAP_COLORS: Record<string, string> = {
   livonia: "#FFB84A",
   malden: "#2DD4A0",
   enoch: "#FFB84A",
-  vr: "#667788",
+  vr: "var(--ms-text-muted)",
 };
 
 const TAG_COLORS: Record<string, { bg: string; color: string; border: string }> = {
@@ -31,7 +31,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: string }>
   ready:      { label: "Ready",      color: "#2DD4A0", icon: "\u25CF" },
   streaming:  { label: "Streaming",  color: "#4A9EFF", icon: "\u25C9" },
   converting: { label: "Converting", color: "#FFB84A", icon: "\u25CC" },
-  pending:    { label: "Pending",    color: "#667788", icon: "\u25CB" },
+  pending:    { label: "Pending",    color: "var(--ms-text-muted)", icon: "\u25CB" },
   failed:     { label: "Failed",     color: "#FF4A4A", icon: "\u2715" },
 };
 
@@ -106,7 +106,7 @@ function relativeDate(dateStr: string): string {
 }
 
 function getMapColor(worldName: string): string {
-  return MAP_COLORS[worldName.toLowerCase()] || "#667788";
+  return MAP_COLORS[worldName.toLowerCase()] || "var(--ms-text-muted)";
 }
 
 function getStatusInfo(op: Operation): { label: string; color: string; icon: string; key: string } {
@@ -170,13 +170,13 @@ function StatPill(props: { icon: JSX.Element; value: string | number; label: str
 }
 
 function TagBadge(props: { tag: string; clickable?: boolean; active?: boolean; onClick?: () => void }) {
-  const tc = () => TAG_COLORS[props.tag] || { bg: "rgba(255,255,255,0.06)", color: "#667788", border: "rgba(255,255,255,0.1)" };
+  const tc = () => TAG_COLORS[props.tag] || { bg: "rgba(255,255,255,0.06)", color: "var(--ms-text-muted)", border: "rgba(255,255,255,0.1)" };
   const isActive = () => props.active !== false;
   return (
     <button
       class={`${styles.tagBadge} ${props.clickable ? styles.tagBadgeClickable : ""}`}
       style={{
-        color: isActive() ? tc().color : "#445566",
+        color: isActive() ? tc().color : "var(--ms-text-dimmer)",
         background: isActive() ? tc().bg : "rgba(255,255,255,0.02)",
         "border-color": isActive() ? tc().border : "rgba(255,255,255,0.05)",
       }}
@@ -281,7 +281,7 @@ function MissionRow(props: {
       {/* Kills — placeholder */}
       <div class={styles.rowKills}>
         <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
-        <span class={styles.rowKillsValue} style={{ color: "#445566" }}>&mdash;</span>
+        <span class={styles.rowKillsValue} style={{ color: "var(--ms-text-dimmer)" }}>&mdash;</span>
       </div>
 
       {/* Tag */}
@@ -671,12 +671,12 @@ export function MissionSelector(): JSX.Element {
                         class={styles.mapButton}
                         style={{
                           background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
-                          color: active() ? color : "#445566",
+                          color: active() ? color : "var(--ms-text-dimmer)",
                           border: `1px solid ${active() ? color + "30" : "rgba(255,255,255,0.05)"}`,
                         }}
                         onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
                       >
-                        <div class={styles.mapDot} style={{ background: active() ? color : "#445566" }} />
+                        <div class={styles.mapDot} style={{ background: active() ? color : "var(--ms-text-dimmer)" }} />
                         {mapName}
                       </button>
                     );
@@ -713,7 +713,7 @@ export function MissionSelector(): JSX.Element {
               <Show when={loading()}>
                 <div data-testid="loading-indicator" style={{
                   display: "flex", "align-items": "center", "justify-content": "center",
-                  padding: "40px", color: "#556677", "font-family": "'JetBrains Mono', monospace",
+                  padding: "40px", color: "var(--ms-text-dim)", "font-family": "var(--ms-font-mono)",
                   "font-size": "12px",
                 }}>
                   {t("loading")}

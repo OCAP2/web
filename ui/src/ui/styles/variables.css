@@ -47,12 +47,12 @@
   --ms-bg-dark: #0a0f14;
   --ms-bg-panel: rgba(13, 21, 32, 0.88);
   --ms-bg-panel-header: rgba(13, 21, 32, 0.6);
-  --ms-text-primary: #e0e6ed;
-  --ms-text-secondary: #c8d4e0;
-  --ms-text-muted: #8899aa;
-  --ms-text-dim: #556677;
-  --ms-text-dimmer: #445566;
-  --ms-text-dimmest: #334455;
+  --ms-text-primary: #e5ebf1;
+  --ms-text-secondary: #cfd9e4;
+  --ms-text-muted: #96a7b8;
+  --ms-text-dim: #6b7e90;
+  --ms-text-dimmer: #5b6f82;
+  --ms-text-dimmest: #4c6174;
   --ms-accent-blue: #4A9EFF;
   --ms-accent-red: #FF4A4A;
   --ms-accent-green: #2DD4A0;
