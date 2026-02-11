@@ -272,9 +272,9 @@ export function MissionSelector(): JSX.Element {
                       <button
                         class={styles.mapButton}
                         style={{
-                          background: active() ? `${color}` : "rgba(255,255,255,0.02)",
+                          background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
                           color: active() ? color : "var(--ms-text-dimmer)",
-                          border: `1px solid ${active() ? color : "rgba(255,255,255,0.05)"}`,
+                          border: `1px solid ${active() ? color + "30" : "rgba(255,255,255,0.05)"}`,
                         }}
                         onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
                       >

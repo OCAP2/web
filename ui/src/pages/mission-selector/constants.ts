@@ -11,14 +11,15 @@ export const C = {
   dimmer:  "var(--ms-text-dimmer)",
 } as const;
 
+// Known map colors (raw hex — must NOT be CSS vars so hex opacity suffixes work)
 export const MAP_COLORS: Record<string, string> = {
-  altis: C.blue,
-  stratis: C.purple,
+  altis: "#4A9EFF",
+  stratis: "#A78BFA",
   tanoa: "#FF9F43",
-  livonia: C.orange,
-  malden: C.green,
-  enoch: C.orange,
-  vr: C.muted,
+  livonia: "#FFB84A",
+  malden: "#2DD4A0",
+  enoch: "#FFB84A",
+  vr: "#667788",
 };
 
 export const TAG_COLORS: Record<string, { bg: string; color: string; border: string }> = {

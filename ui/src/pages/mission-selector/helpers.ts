@@ -1,5 +1,19 @@
 import type { Operation } from "../../data/types";
-import { MAP_COLORS, STATUS_MAP, C } from "./constants";
+import { MAP_COLORS, STATUS_MAP } from "./constants";
+
+// Deterministic hex color from string hash — saturated pastels for dark backgrounds
+function hashColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  // Pick from a curated palette so every unknown map gets a vibrant, readable color
+  const palette = [
+    "#4A9EFF", "#2DD4A0", "#FF9F43", "#A78BFA", "#FF6B6B",
+    "#FFB84A", "#6BB3FF", "#F472B6", "#34D399", "#FBBF24",
+  ];
+  return palette[((hash % palette.length) + palette.length) % palette.length];
+}
 
 export function formatDuration(seconds: number): string {
   if (seconds <= 0) return "0m 0s";
@@ -29,7 +43,7 @@ export function relativeDate(dateStr: string): string {
 }
 
 export function getMapColor(worldName: string): string {
-  return MAP_COLORS[worldName.toLowerCase()] || C.muted;
+  return MAP_COLORS[worldName.toLowerCase()] || hashColor(worldName);
 }
 
 export function getStatusInfo(op: Operation): { label: string; color: string; icon: string; key: string } {
