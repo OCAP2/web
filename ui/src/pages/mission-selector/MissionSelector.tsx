@@ -185,8 +185,10 @@ export function MissionSelector(): JSX.Element {
             <div class={styles.statsArea}>
               <div class={styles.statPills}>
                 <StatPill icon={<Icons.Globe />} value={uniqueMaps().length} label={t("maps_label")} />
+                {/* Uncomment when data is available
                 <StatPill icon={<Icons.Users />} value={"\u2014"} label={t("max_players")} />
                 <StatPill icon={<Icons.Crosshair />} value={"\u2014"} label={t("total_kills")} />
+                */}
               </div>
 
               <div class={styles.divider} />
@@ -270,9 +272,9 @@ export function MissionSelector(): JSX.Element {
                       <button
                         class={styles.mapButton}
                         style={{
-                          background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
+                          background: active() ? `${color}` : "rgba(255,255,255,0.02)",
                           color: active() ? color : "var(--ms-text-dimmer)",
-                          border: `1px solid ${active() ? color + "30" : "rgba(255,255,255,0.05)"}`,
+                          border: `1px solid ${active() ? color : "rgba(255,255,255,0.05)"}`,
                         }}
                         onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
                       >
