@@ -15,6 +15,7 @@ import type { MapRenderer } from "./renderers/renderer.interface";
 import { EngineProvider } from "./ui/hooks/useEngine";
 import { RendererProvider } from "./ui/hooks/useRenderer";
 import { I18nProvider } from "./ui/hooks/useLocale";
+import { CustomizeProvider } from "./ui/hooks/useCustomize";
 import { MapContainer } from "./ui/components/MapContainer";
 import { TopPanel } from "./ui/components/TopPanel";
 import { LeftPanel } from "./ui/components/LeftPanel";
@@ -23,9 +24,10 @@ import { BottomPanel } from "./ui/components/BottomPanel";
 import { MissionModal } from "./ui/components/MissionModal";
 import { AboutModal } from "./ui/components/AboutModal";
 import { CounterDisplay } from "./ui/components/CounterDisplay";
+import { CustomizeLogo } from "./ui/components/CustomizeLogo";
 import { Hint, showHint } from "./ui/components/Hint";
 import { hintMessage, hintVisible } from "./ui/components/Hint";
-import { registerShortcuts, unregisterShortcuts } from "./ui/shortcuts";
+import { registerShortcuts, unregisterShortcuts, leftPanelVisible } from "./ui/shortcuts";
 import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./ui/styles/variables.css";
@@ -211,6 +213,15 @@ export function App(): JSX.Element {
   });
 
 
+  // Sync left panel visibility to a CSS custom property so Leaflet controls
+  // (scale ruler, zoom) slide with the panel.
+  createEffect(() => {
+    const offset = leftPanelVisible()
+      ? "calc(var(--left-panel-width) + 10px)"
+      : "10px";
+    document.documentElement.style.setProperty("--leaflet-left-offset", offset);
+  });
+
   onMount(() => {
     registerShortcuts(engine);
 
@@ -244,28 +255,31 @@ export function App(): JSX.Element {
 
   return (
     <I18nProvider>
-      <EngineProvider engine={engine}>
-        <RendererProvider renderer={renderer}>
-          <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-          <TopPanel missionName={missionName} operationId={operationId} operationFilename={operationFilename} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
-          <LeftPanel />
-          <RightPanel />
-          <BottomPanel />
-          <CounterDisplay />
-          <MissionModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            onSelectOperation={(op) => loadOperation(op)}
-          />
-          <AboutModal
-            open={aboutOpen}
-            onClose={() => setAboutOpen(false)}
-            extensionVersion={extensionVersion}
-            addonVersion={addonVersion}
-          />
-          <Hint message={hintMessage} visible={hintVisible} />
-        </RendererProvider>
-      </EngineProvider>
+      <CustomizeProvider>
+        <EngineProvider engine={engine}>
+          <RendererProvider renderer={renderer}>
+            <MapContainer renderer={renderer} worldConfig={worldConfig()} />
+            <TopPanel missionName={missionName} operationId={operationId} operationFilename={operationFilename} onInfoClick={() => { setModalOpen(false); setAboutOpen(true); }} />
+            <LeftPanel />
+            <RightPanel />
+            <BottomPanel />
+            <CustomizeLogo />
+            <CounterDisplay />
+            <MissionModal
+              open={modalOpen}
+              onClose={() => setModalOpen(false)}
+              onSelectOperation={(op) => loadOperation(op)}
+            />
+            <AboutModal
+              open={aboutOpen}
+              onClose={() => setAboutOpen(false)}
+              extensionVersion={extensionVersion}
+              addonVersion={addonVersion}
+            />
+            <Hint message={hintMessage} visible={hintVisible} />
+          </RendererProvider>
+        </EngineProvider>
+      </CustomizeProvider>
     </I18nProvider>
   );
 }

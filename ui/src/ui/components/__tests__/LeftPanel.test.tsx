@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { PlaybackEngine } from "../../../playback/engine";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
+import { CustomizeProvider } from "../../hooks/useCustomize";
 import { I18nProvider } from "../../hooks/useLocale";
 import { LeftPanel } from "../LeftPanel";
 import { UnitListItem } from "../UnitListItem";
@@ -39,9 +40,9 @@ describe("LeftPanel", () => {
 
   it("renders when leftPanelVisible is true", () => {
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     expect(getByTestId("left-panel")).toBeDefined();
   });
@@ -49,18 +50,18 @@ describe("LeftPanel", () => {
   it("is hidden when leftPanelVisible is false", () => {
     shortcuts.setLeftPanelVisible(false);
     const { queryByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     expect(queryByTestId("left-panel")).toBeNull();
   });
 
   it("renders side tabs for all four sides", () => {
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     expect(getByTestId("tab-WEST")).toBeDefined();
     expect(getByTestId("tab-EAST")).toBeDefined();
@@ -70,9 +71,9 @@ describe("LeftPanel", () => {
 
   it("side tabs show display names with side color classes", () => {
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     expect(getByTestId("tab-WEST").textContent).toContain("BLUFOR");
     expect(getByTestId("tab-WEST").textContent).toContain("(0)");
@@ -87,9 +88,9 @@ describe("LeftPanel", () => {
 
   it("side tabs are at the bottom (after panel content in DOM)", () => {
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     const panel = getByTestId("left-panel");
     const content = getByTestId("left-panel-content");
@@ -100,9 +101,9 @@ describe("LeftPanel", () => {
 
   it("shows units after loadOperation without needing a tab click", () => {
     const { getByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
 
     // No units yet
@@ -137,9 +138,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
 
     // Default tab is WEST, so we should see 2 unit items
@@ -158,9 +159,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
 
     // Click EAST tab
@@ -182,9 +183,9 @@ describe("LeftPanel", () => {
     });
 
     const { getByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><EngineProvider engine={engine}>
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
-      </EngineProvider></I18nProvider>
+      </EngineProvider></I18nProvider></CustomizeProvider>
     ));
 
     expect(getByTestId("unit-item-1")).toBeDefined();
@@ -206,9 +207,9 @@ describe("UnitListItem", () => {
   it("renders player unit name with kill count", () => {
     const unit = createUnit(1, "John", "WEST", true);
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
     expect(getByTestId("unit-item-1").textContent).toBe("John (0)");
   });
@@ -216,9 +217,9 @@ describe("UnitListItem", () => {
   it("renders AI unit name with [AI] suffix and kill count", () => {
     const unit = createUnit(1, "AI_Soldier", "WEST", false);
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
     expect(getByTestId("unit-item-1").textContent).toBe("AI_Soldier [AI] (0)");
   });
@@ -227,9 +228,9 @@ describe("UnitListItem", () => {
     const unit = createUnit(1, "John", "WEST", true);
     unit.killCount = 3;
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
     expect(getByTestId("unit-item-1").textContent).toBe("John (3)");
   });
@@ -237,9 +238,9 @@ describe("UnitListItem", () => {
   it("player units have player class", () => {
     const unit = createUnit(1, "John", "WEST", true);
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
     expect(getByTestId("unit-item-1").className).toContain("player");
   });
@@ -247,9 +248,9 @@ describe("UnitListItem", () => {
   it("AI units do not have player class", () => {
     const unit = createUnit(1, "AI_Soldier", "WEST", false);
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
     expect(getByTestId("unit-item-1").className).not.toContain("player");
   });
@@ -259,9 +260,9 @@ describe("UnitListItem", () => {
     const spy = vi.spyOn(engine, "followEntity");
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     fireEvent.click(getByTestId("unit-item-5"));
@@ -273,9 +274,9 @@ describe("UnitListItem", () => {
     engine.followEntity(7);
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     expect(getByTestId("unit-item-7").className).toContain("followed");
@@ -287,9 +288,9 @@ describe("UnitListItem", () => {
     engine.followEntity(99);
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <UnitListItem unit={unit} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     expect(getByTestId("unit-item-7").className).not.toContain("followed");
@@ -315,9 +316,9 @@ describe("SideGroup", () => {
     ];
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <SideGroup side="WEST" units={units} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     expect(getByTestId("group-Alpha")).toBeDefined();
@@ -334,9 +335,9 @@ describe("SideGroup", () => {
     ];
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <SideGroup side="WEST" units={units} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     expect(getByTestId("unit-item-1")).toBeDefined();
@@ -356,9 +357,9 @@ describe("SideGroup", () => {
     ];
 
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <SideGroup side="WEST" units={units} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     const sideGroup = getByTestId("side-group-WEST");
@@ -370,9 +371,9 @@ describe("SideGroup", () => {
 
   it("renders empty list when no units", () => {
     const { getByTestId } = render(() => (
-      <EngineProvider engine={engine}>
+      <CustomizeProvider><EngineProvider engine={engine}>
         <SideGroup side="EAST" units={[]} />
-      </EngineProvider>
+      </EngineProvider></CustomizeProvider>
     ));
 
     const sideGroup = getByTestId("side-group-EAST");

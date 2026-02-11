@@ -4,6 +4,7 @@ import { createSignal } from "solid-js";
 import { PlaybackEngine } from "../../../playback/engine";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
+import { CustomizeProvider } from "../../hooks/useCustomize";
 import { TopPanel } from "../TopPanel";
 import { AboutModal } from "../AboutModal";
 import { I18nProvider } from "../../hooks/useLocale";
@@ -34,7 +35,7 @@ describe("TopPanel", () => {
     const [name] = createSignal("Operation Thunder");
     const [opId] = createSignal<string | null>("123");
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
     ));
     expect(getByTestId("mission-name").textContent).toBe("Operation Thunder");
   });
@@ -43,7 +44,7 @@ describe("TopPanel", () => {
     const [name] = createSignal("Test");
     const [opId] = createSignal<string | null>(null);
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
     ));
     expect(getByTestId("info-button")).toBeDefined();
     expect(getByTestId("info-button").textContent).toBe("i");
@@ -54,7 +55,7 @@ describe("TopPanel", () => {
     const [opId] = createSignal<string | null>(null);
     const onInfo = vi.fn();
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} onInfoClick={onInfo} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} onInfoClick={onInfo} /></CustomizeProvider>
     ));
     fireEvent.click(getByTestId("info-button"));
     expect(onInfo).toHaveBeenCalledTimes(1);
@@ -69,7 +70,7 @@ describe("TopPanel", () => {
     const [name] = createSignal("Test Mission");
     const [opId] = createSignal<string | null>("op-42");
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
     ));
 
     fireEvent.click(getByTestId("share-button"));
@@ -83,7 +84,7 @@ describe("TopPanel", () => {
     const [name] = createSignal("No Op");
     const [opId] = createSignal<string | null>(null);
     const { queryByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
     ));
     expect(queryByTestId("share-button")).toBeNull();
     expect(queryByTestId("download-button")).toBeNull();
@@ -94,7 +95,7 @@ describe("TopPanel", () => {
     const [opId] = createSignal<string | null>("42");
     const [opFilename] = createSignal<string | null>("my_mission");
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} operationFilename={opFilename} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} operationFilename={opFilename} /></CustomizeProvider>
     ));
     const link = getByTestId("download-button") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toBe("data/my_mission.json.gz");
@@ -105,7 +106,7 @@ describe("TopPanel", () => {
     const [name] = createSignal("DL Mission");
     const [opId] = createSignal<string | null>("my-file");
     const { getByTestId } = render(() => (
-      <TopPanel missionName={name} operationId={opId} />
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
     ));
     const link = getByTestId("download-button") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toBe("data/my-file.json.gz");

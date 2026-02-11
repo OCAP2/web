@@ -1,6 +1,8 @@
 import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import type { Unit } from "../../playback/entities/unit";
 import { useEngine } from "../hooks/useEngine";
+import { useCustomize } from "../hooks/useCustomize";
 import styles from "./LeftPanel.module.css";
 
 export interface UnitListItemProps {
@@ -17,6 +19,7 @@ export interface UnitListItemProps {
  */
 export function UnitListItem(props: UnitListItemProps): JSX.Element {
   const engine = useEngine();
+  const customize = useCustomize();
 
   const handleClick = () => {
     engine.followEntity(props.unit.id);
@@ -30,7 +33,10 @@ export function UnitListItem(props: UnitListItemProps): JSX.Element {
       data-testid={`unit-item-${props.unit.id}`}
       onClick={handleClick}
     >
-      {props.unit.name}{!props.unit.isPlayer && " [AI]"} ({props.unit.killCount})
+      {props.unit.name}{!props.unit.isPlayer && " [AI]"}
+      <Show when={!customize().disableKillCount}>
+        {" "}({props.unit.killCount})
+      </Show>
     </div>
   );
 }

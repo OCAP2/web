@@ -1,4 +1,4 @@
-import { Show, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { useI18n } from "../hooks/useLocale";
 import { rightPanelVisible } from "../shortcuts";
@@ -19,41 +19,43 @@ export function RightPanel(): JSX.Element {
   const [filterText, setFilterText] = createSignal("");
 
   return (
-    <Show when={rightPanelVisible()}>
-      <div class={styles.rightPanel} data-testid="right-panel">
-        <div class={styles.panelTitle} data-testid="right-panel-header">
-          {t("events")}
-        </div>
-        <div class={styles.filterBox} data-testid="right-panel-filters">
-          <div
-            class={`${styles.filterHit} ${showHitEvents() ? "" : styles.filterDisabled}`}
-            data-testid="filter-hit-button"
-            title="Toggle kill/hit events"
-            onClick={() => setShowHitEvents(!showHitEvents())}
-          />
-          <div
-            class={`${styles.filterConnect} ${showConnectEvents() ? "" : styles.filterDisabled}`}
-            data-testid="filter-connect-button"
-            title="Toggle connect/disconnect events"
-            onClick={() => setShowConnectEvents(!showConnectEvents())}
-          />
-          <input
-            type="text"
-            class={styles.filterInput}
-            data-testid="filter-events-input"
-            placeholder={`${t("filter")}...`}
-            value={filterText()}
-            onInput={(e) => setFilterText(e.currentTarget.value)}
-          />
-        </div>
-        <div class={styles.panelContent} data-testid="right-panel-content">
-          <EventList
-            showHitEvents={showHitEvents()}
-            showConnectEvents={showConnectEvents()}
-            filterText={filterText()}
-          />
-        </div>
+    <div
+      class={styles.rightPanel}
+      data-testid={rightPanelVisible() ? "right-panel" : undefined}
+      style={{ transform: rightPanelVisible() ? "translateX(0)" : "translateX(100%)" }}
+    >
+      <div class={styles.panelTitle} data-testid="right-panel-header">
+        {t("events")}
       </div>
-    </Show>
+      <div class={styles.filterBox} data-testid="right-panel-filters">
+        <div
+          class={`${styles.filterHit} ${showHitEvents() ? "" : styles.filterDisabled}`}
+          data-testid="filter-hit-button"
+          title="Toggle kill/hit events"
+          onClick={() => setShowHitEvents(!showHitEvents())}
+        />
+        <div
+          class={`${styles.filterConnect} ${showConnectEvents() ? "" : styles.filterDisabled}`}
+          data-testid="filter-connect-button"
+          title="Toggle connect/disconnect events"
+          onClick={() => setShowConnectEvents(!showConnectEvents())}
+        />
+        <input
+          type="text"
+          class={styles.filterInput}
+          data-testid="filter-events-input"
+          placeholder={`${t("filter")}...`}
+          value={filterText()}
+          onInput={(e) => setFilterText(e.currentTarget.value)}
+        />
+      </div>
+      <div class={styles.panelContent} data-testid="right-panel-content">
+        <EventList
+          showHitEvents={showHitEvents()}
+          showConnectEvents={showConnectEvents()}
+          filterText={filterText()}
+        />
+      </div>
+    </div>
   );
 }

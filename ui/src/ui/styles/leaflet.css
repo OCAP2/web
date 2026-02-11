@@ -7,8 +7,9 @@
 }
 
 .leaflet-left {
-  left: 360px;
+  left: var(--leaflet-left-offset, 360px);
   top: 50px;
+  transition: left 0.3s ease;
 }
 
 .leaflet-bottom {
