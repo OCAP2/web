@@ -19,8 +19,8 @@ export function CustomizeProvider(props: {
       const api = new ApiClient();
       const data = await api.getCustomize();
       setConfig(data);
-    } catch {
-      // Non-fatal — keep defaults
+    } catch (err) {
+      console.error("Failed to fetch customize config:", err);
     }
   });
 
