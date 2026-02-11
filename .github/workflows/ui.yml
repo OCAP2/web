@@ -6,10 +6,12 @@ on:
       - main
     paths:
       - "ui/**"
+      - ".github/workflows/ui.yml"
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "ui/**"
+      - ".github/workflows/ui.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
