@@ -51,17 +51,19 @@ export function MissionRow(props: {
       {/* Duration */}
       <div class={styles.rowDuration}>{formatDuration(props.op.missionDuration)}</div>
 
-      {/* Players — placeholder */}
+      {/* Players — uncomment when data is available
       <div class={styles.rowPlayers}>
         <span class={styles.rowPlayersIcon}><Icons.Users /></span>
         <span class={styles.rowPlayersValue}>&mdash;</span>
       </div>
+      */}
 
-      {/* Kills — placeholder */}
+      {/* Kills — uncomment when data is available
       <div class={styles.rowKills}>
         <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
         <span class={styles.rowKillsValue} style={{ color: "var(--ms-text-dimmer)" }}>&mdash;</span>
       </div>
+      */}
 
       {/* Tag */}
       <Show when={props.op.tag} fallback={<span />}>

@@ -304,8 +304,10 @@ export function MissionSelector(): JSX.Element {
               <SortHeader label="MISSION" sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label="DATE" sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label="DURATION" sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              {/* Uncomment when data is available
               <span class={styles.colLabel}>PLAYERS</span>
               <span class={styles.colLabel}>KILLS</span>
+              */}
               <span class={styles.colLabel}>TAG</span>
               <span class={styles.colLabelRight}>STATUS</span>
               <span />

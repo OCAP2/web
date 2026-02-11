@@ -330,6 +330,7 @@
   font-size: 10px;
   font-family: var(--ms-font-mono);
   font-weight: 600;
+  text-transform: uppercase;
   transition: all 0.2s;
 }
 
@@ -415,7 +416,7 @@
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px 40px;
+  grid-template-columns: 1fr 130px 100px 70px 100px 40px;
   padding: 10px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
@@ -484,7 +485,7 @@
 /* ── Mission row ── */
 .missionRow {
   display: grid;
-  grid-template-columns: 1fr 130px 100px 90px 80px 70px 100px 40px;
+  grid-template-columns: 1fr 130px 100px 70px 100px 40px;
   align-items: center;
   gap: 0;
   padding: 14px 20px;
@@ -546,6 +547,7 @@
   color: var(--ms-text-dim);
   font-family: var(--ms-font-mono);
   margin-top: 1px;
+  text-transform: uppercase;
 }
 
 .rowDate {
