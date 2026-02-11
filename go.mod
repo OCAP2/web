@@ -1,6 +1,6 @@
 module github.com/OCAP2/web
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/labstack/echo/v4 v4.15.0

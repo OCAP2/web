@@ -5,7 +5,7 @@ RUN npm ci
 COPY ui/ ./
 RUN npx vite build --outDir /frontend-dist
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 RUN apk add --no-cache alpine-sdk
 WORKDIR /go/pkg/ocap
 COPY go.mod go.sum ./
