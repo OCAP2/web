@@ -1,4 +1,4 @@
-import { createSignal, For } from "solid-js";
+import { createEffect, createMemo, createSignal, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Side } from "../../data/types";
 import { SIDE_CLASS } from "../../config/side-colors";
@@ -23,6 +23,7 @@ const SIDE_LABEL: Record<Side, string> = {
  * - Visibility controlled by `leftPanelVisible` signal (toggled via 'e' key).
  * - Side tabs at the bottom let the user switch between WEST/EAST/GUER/CIV.
  * - Units are grouped by group/squad name within each side.
+ * - Sides with no units are hidden automatically.
  */
 export function LeftPanel(): JSX.Element {
   const engine = useEngine();
@@ -36,6 +37,20 @@ export function LeftPanel(): JSX.Element {
     return engine.entityManager.getBySide(side);
   };
 
+  // Only show sides that have at least one unit in the recording
+  const populatedSides = createMemo(() => {
+    engine.endFrame();
+    return SIDES.filter((side) => engine.entityManager.getBySide(side).length > 0);
+  });
+
+  // Auto-select first populated side when recording loads
+  createEffect(() => {
+    const sides = populatedSides();
+    if (sides.length > 0 && !sides.includes(activeTab())) {
+      setActiveTab(sides[0]);
+    }
+  });
+
   return (
     <div
       class={styles.leftPanel}
@@ -47,7 +62,7 @@ export function LeftPanel(): JSX.Element {
         <SideGroup side={activeTab()} units={unitsForSide(activeTab())} />
       </div>
       <div class={styles.sideTabs} data-testid="left-panel-tabs">
-        <For each={SIDES}>
+        <For each={populatedSides()}>
           {(side) => (
             <div
               class={`${styles.sideTab} ${SIDE_CLASS[side]} ${styles.sideTitle}`}
