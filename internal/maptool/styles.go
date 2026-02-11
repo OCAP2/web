@@ -800,22 +800,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 			"fill-color": "#000000", "fill-opacity": 0.3, "fill-antialias": true,
 		},
 	}},
-	"house": {{
-		ID: "house", Type: "fill", SourceLayer: "house",
-		Paint: map[string]interface{}{
-			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-antialias": true,
-			"fill-opacity":   1.0,
-		},
-	}},
-	"house-extrusion": {{
-		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
-		Paint: map[string]interface{}{
-			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
-			"fill-extrusion-height":  []interface{}{"get", "height"},
-		},
-	}},
+	// "house" and "house-extrusion" fall back to knownLayerStyles (identical across variants)
 	"railway": {{
 		ID: "railway", Type: "line", SourceLayer: "railway", MinZoom: 14,
 		Paint: map[string]interface{}{
@@ -1036,22 +1021,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 			"fill-color": "#333333", "fill-opacity": 0.4, "fill-antialias": true,
 		},
 	}},
-	"house": {{
-		ID: "house", Type: "fill", SourceLayer: "house",
-		Paint: map[string]interface{}{
-			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-antialias": true,
-			"fill-opacity":   1.0,
-		},
-	}},
-	"house-extrusion": {{
-		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
-		Paint: map[string]interface{}{
-			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
-			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
-			"fill-extrusion-height":  []interface{}{"get", "height"},
-		},
-	}},
+	// "house" and "house-extrusion" fall back to knownLayerStyles (identical across variants)
 	"railway": {{
 		ID: "railway", Type: "line", SourceLayer: "railway", MinZoom: 14,
 		Paint: map[string]interface{}{
@@ -1435,7 +1405,7 @@ func buildOrderedVectorLayers(layerNames []string, styleMap map[string][]LayerSt
 	emitted := make(map[string]bool)
 	var result []interface{}
 
-	// Emit layers in topo render order
+	// Emit layers in topo render order, falling back to standard styles
 	for _, name := range topoLayerOrder {
 		if !available[name] {
 			continue
@@ -1443,7 +1413,7 @@ func buildOrderedVectorLayers(layerNames []string, styleMap map[string][]LayerSt
 		emitted[name] = true
 		styles, ok := styleMap[name]
 		if !ok {
-			continue
+			styles = GetLayerStyles(name)
 		}
 		for _, style := range styles {
 			result = append(result, layerStyleToMap(style))
