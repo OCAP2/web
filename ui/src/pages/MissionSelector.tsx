@@ -10,14 +10,25 @@ import styles from "./MissionSelector.module.css";
 
 // ─── Constants ───
 
+// All accent colors in one place — CSS vars for inline styles
+const C = {
+  blue:    "var(--ms-accent-blue)",
+  red:     "var(--ms-accent-red)",
+  green:   "var(--ms-accent-green)",
+  purple:  "var(--ms-accent-purple)",
+  orange:  "var(--ms-accent-orange)",
+  muted:   "var(--ms-text-muted)",
+  dimmer:  "var(--ms-text-dimmer)",
+} as const;
+
 const MAP_COLORS: Record<string, string> = {
-  altis: "#4A9EFF",
-  stratis: "#A78BFA",
+  altis: C.blue,
+  stratis: C.purple,
   tanoa: "#FF9F43",
-  livonia: "#FFB84A",
-  malden: "#2DD4A0",
-  enoch: "#FFB84A",
-  vr: "var(--ms-text-muted)",
+  livonia: C.orange,
+  malden: C.green,
+  enoch: C.orange,
+  vr: C.muted,
 };
 
 const TAG_COLORS: Record<string, { bg: string; color: string; border: string }> = {
@@ -28,21 +39,18 @@ const TAG_COLORS: Record<string, { bg: string; color: string; border: string }> 
 };
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
-  ready:      { label: "Ready",      color: "#2DD4A0", icon: "\u25CF" },
-  streaming:  { label: "Streaming",  color: "#4A9EFF", icon: "\u25C9" },
-  converting: { label: "Converting", color: "#FFB84A", icon: "\u25CC" },
-  pending:    { label: "Pending",    color: "var(--ms-text-muted)", icon: "\u25CB" },
-  failed:     { label: "Failed",     color: "#FF4A4A", icon: "\u2715" },
+  ready:      { label: "Ready",      color: C.green,  icon: "\u25CF" },
+  streaming:  { label: "Streaming",  color: C.blue,   icon: "\u25C9" },
+  converting: { label: "Converting", color: C.orange,  icon: "\u25CC" },
+  pending:    { label: "Pending",    color: C.muted,  icon: "\u25CB" },
+  failed:     { label: "Failed",     color: C.red,    icon: "\u2715" },
 };
 
 const SIDE_COLORS: Record<string, string> = {
-  BLUFOR: "#4A9EFF",
-  OPFOR:  "#FF4A4A",
-  IND:    "#2DD4A0",
-  CIV:    "#A78BFA",
-  WEST:   "#4A9EFF",
-  EAST:   "#FF4A4A",
-  GUER:   "#2DD4A0",
+  BLUFOR: C.blue,  WEST: C.blue,
+  OPFOR:  C.red,   EAST: C.red,
+  IND:    C.green, GUER: C.green,
+  CIV:    C.purple,
 };
 
 const LOCALE_LABELS: Record<Locale, { label: string; flag: string }> = {
@@ -106,7 +114,7 @@ function relativeDate(dateStr: string): string {
 }
 
 function getMapColor(worldName: string): string {
-  return MAP_COLORS[worldName.toLowerCase()] || "var(--ms-text-muted)";
+  return MAP_COLORS[worldName.toLowerCase()] || C.muted;
 }
 
 function getStatusInfo(op: Operation): { label: string; color: string; icon: string; key: string } {
@@ -131,24 +139,24 @@ function OcapLogoSvg(props: { size?: number }) {
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <circle cx={s / 2} cy={s / 2} r={s / 2 - 2} stroke="url(#logoGrad)" stroke-width="1.5" opacity="0.3"/>
-      <circle cx={s / 2} cy={s / 2} r={s * 0.095} fill="#4A9EFF"/>
-      <circle cx={s * 0.238} cy={s * 0.286} r={s * 0.06} fill="#FF4A4A"/>
-      <circle cx={s * 0.762} cy={s * 0.286} r={s * 0.06} fill="#FF4A4A"/>
-      <circle cx={s * 0.238} cy={s * 0.714} r={s * 0.06} fill="#4A9EFF"/>
-      <circle cx={s * 0.762} cy={s * 0.714} r={s * 0.06} fill="#4A9EFF"/>
-      <circle cx={s / 2} cy={s * 0.143} r={s * 0.048} fill="#2DD4A0"/>
-      <circle cx={s / 2} cy={s * 0.857} r={s * 0.048} fill="#2DD4A0"/>
-      <line x1={s / 2} y1={s / 2} x2={s * 0.238} y2={s * 0.286} stroke="#FF4A4A" stroke-width="1" opacity="0.4"/>
-      <line x1={s / 2} y1={s / 2} x2={s * 0.762} y2={s * 0.286} stroke="#FF4A4A" stroke-width="1" opacity="0.4"/>
-      <line x1={s / 2} y1={s / 2} x2={s * 0.238} y2={s * 0.714} stroke="#4A9EFF" stroke-width="1" opacity="0.4"/>
-      <line x1={s / 2} y1={s / 2} x2={s * 0.762} y2={s * 0.714} stroke="#4A9EFF" stroke-width="1" opacity="0.4"/>
-      <line x1={s / 2} y1={s / 2} x2={s / 2} y2={s * 0.143} stroke="#2DD4A0" stroke-width="1" opacity="0.3"/>
-      <line x1={s / 2} y1={s / 2} x2={s / 2} y2={s * 0.857} stroke="#2DD4A0" stroke-width="1" opacity="0.3"/>
-      <circle cx={s / 2} cy={s / 2} r={s * 0.143} fill="#4A9EFF" opacity="0.1"/>
+      <circle cx={s / 2} cy={s / 2} r={s * 0.095} fill={C.blue}/>
+      <circle cx={s * 0.238} cy={s * 0.286} r={s * 0.06} fill={C.red}/>
+      <circle cx={s * 0.762} cy={s * 0.286} r={s * 0.06} fill={C.red}/>
+      <circle cx={s * 0.238} cy={s * 0.714} r={s * 0.06} fill={C.blue}/>
+      <circle cx={s * 0.762} cy={s * 0.714} r={s * 0.06} fill={C.blue}/>
+      <circle cx={s / 2} cy={s * 0.143} r={s * 0.048} fill={C.green}/>
+      <circle cx={s / 2} cy={s * 0.857} r={s * 0.048} fill={C.green}/>
+      <line x1={s / 2} y1={s / 2} x2={s * 0.238} y2={s * 0.286} stroke={C.red} stroke-width="1" opacity="0.4"/>
+      <line x1={s / 2} y1={s / 2} x2={s * 0.762} y2={s * 0.286} stroke={C.red} stroke-width="1" opacity="0.4"/>
+      <line x1={s / 2} y1={s / 2} x2={s * 0.238} y2={s * 0.714} stroke={C.blue} stroke-width="1" opacity="0.4"/>
+      <line x1={s / 2} y1={s / 2} x2={s * 0.762} y2={s * 0.714} stroke={C.blue} stroke-width="1" opacity="0.4"/>
+      <line x1={s / 2} y1={s / 2} x2={s / 2} y2={s * 0.143} stroke={C.green} stroke-width="1" opacity="0.3"/>
+      <line x1={s / 2} y1={s / 2} x2={s / 2} y2={s * 0.857} stroke={C.green} stroke-width="1" opacity="0.3"/>
+      <circle cx={s / 2} cy={s / 2} r={s * 0.143} fill={C.blue} opacity="0.1"/>
       <defs>
         <linearGradient id="logoGrad" x1="0" y1="0" x2={s} y2={s}>
-          <stop offset="0%" stop-color="#4A9EFF"/>
-          <stop offset="100%" stop-color="#2DD4A0"/>
+          <stop offset="0%" style={{ "stop-color": C.blue }}/>
+          <stop offset="100%" style={{ "stop-color": C.green }}/>
         </linearGradient>
       </defs>
     </svg>
@@ -170,7 +178,7 @@ function StatPill(props: { icon: JSX.Element; value: string | number; label: str
 }
 
 function TagBadge(props: { tag: string; clickable?: boolean; active?: boolean; onClick?: () => void }) {
-  const tc = () => TAG_COLORS[props.tag] || { bg: "rgba(255,255,255,0.06)", color: "var(--ms-text-muted)", border: "rgba(255,255,255,0.1)" };
+  const tc = () => TAG_COLORS[props.tag] || { bg: "rgba(255,255,255,0.06)", color: C.muted, border: "rgba(255,255,255,0.1)" };
   const isActive = () => props.active !== false;
   return (
     <button
@@ -381,7 +389,7 @@ function DetailSidebar(props: {
           <div class={styles.sidebarCombatItem}>
             <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
             <div>
-              <div class={styles.sidebarCombatValue} style={{ color: "#FF6B6B" }}>&mdash;</div>
+              <div class={styles.sidebarCombatValue} style={{ color: C.red }}>&mdash;</div>
               <div class={styles.sidebarCombatLabel}>{props.t("total_kills")}</div>
             </div>
           </div>
@@ -389,7 +397,7 @@ function DetailSidebar(props: {
           <div class={styles.sidebarCombatItem}>
             <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
             <div>
-              <div class={styles.sidebarCombatValue} style={{ color: "#FFB84A" }}>&mdash;</div>
+              <div class={styles.sidebarCombatValue} style={{ color: C.orange }}>&mdash;</div>
               <div class={styles.sidebarCombatLabel}>{props.t("kills_per_min")}</div>
             </div>
           </div>
