@@ -1,6 +1,6 @@
 export type Locale = "en" | "ru" | "de" | "cs" | "it" | "fr";
 
-export const LOCALES: Locale[] = ["en", "ru", "de", "fr", "cs", "it"];
+export const LOCALES: Locale[] = ["cs", "de", "en", "fr", "it", "ru"];
 
 /**
  * All translation strings ported from static/scripts/localizable.js.
