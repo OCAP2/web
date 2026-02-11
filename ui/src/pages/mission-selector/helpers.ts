@@ -1,18 +1,30 @@
 import type { Operation } from "../../data/types";
 import { MAP_COLORS, STATUS_MAP } from "./constants";
 
-// Deterministic hex color from string hash — saturated pastels for dark backgrounds
-function hashColor(str: string): string {
-  let hash = 0;
+// Curated palette for unknown maps — perceptually distinct, readable on dark backgrounds.
+// 37 entries (prime) to reduce modulo collisions.
+export const FALLBACK_PALETTE = [
+  "#4A9EFF", "#FF6B6B", "#2DD4A0", "#A78BFA", "#FF9F43",
+  "#F472B6", "#FBBF24", "#34D399", "#6BB3FF", "#E879F9",
+  "#FB923C", "#22D3EE", "#C084FC", "#F87171", "#A3E635",
+  "#38BDF8", "#FB7185", "#4ADE80", "#FACC15", "#818CF8",
+  "#F59E0B", "#EC4899", "#14B8A6", "#8B5CF6", "#EF4444",
+  "#06B6D4", "#D946EF", "#10B981", "#F97316", "#6366F1",
+  "#0EA5E9", "#84CC16", "#E11D48", "#A855F7", "#059669",
+  "#D97706", "#7C3AED",
+];
+
+// Deterministic hex color from string hash (FNV-1a for better distribution)
+export function hashColor(str: string): string {
+  let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
-  // Pick from a curated palette so every unknown map gets a vibrant, readable color
-  const palette = [
-    "#4A9EFF", "#2DD4A0", "#FF9F43", "#A78BFA", "#FF6B6B",
-    "#FFB84A", "#6BB3FF", "#F472B6", "#34D399", "#FBBF24",
-  ];
-  return palette[((hash % palette.length) + palette.length) % palette.length];
+  // Unsigned
+  hash = hash >>> 0;
+  const idx = hash % FALLBACK_PALETTE.length;
+  return FALLBACK_PALETTE[idx];
 }
 
 export function formatDuration(seconds: number): string {
