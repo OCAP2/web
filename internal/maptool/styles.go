@@ -715,9 +715,11 @@ func makeTopoLabel(name, color string) LayerStyle {
 
 // knownTopoLayerStyles maps layer names to their topo-specific MapLibre styles.
 var knownTopoLayerStyles = map[string][]LayerStyle{
-	// "sea" is handled explicitly in buildTopoLayers() as land/sea with
-	// ELEV_MAX filters. nil suppresses the standard-style fallback.
-	"sea": nil,
+	// nil entries suppress the standard-style fallback for layers that are
+	// either handled explicitly (sea via buildLandSeaLayers) or intentionally
+	// unstyled in topo (legacy contours — topo uses 4-interval contours instead).
+	"sea":      nil,
+	"contours": nil,
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
@@ -938,8 +940,8 @@ var topoLayerOrder = []string{
 
 // knownTopoDarkLayerStyles maps layer names to their topo-dark-specific MapLibre styles.
 var knownTopoDarkLayerStyles = map[string][]LayerStyle{
-	// "sea" is handled explicitly in buildTopoDarkLayers() as land/sea.
-	"sea": nil,
+	"sea":      nil, // handled by buildLandSeaLayers
+	"contours": nil, // topo uses 4-interval contours
 	"contours05": {{
 		ID: "contours/05", Type: "line", SourceLayer: "contours05", MinZoom: 16,
 		Paint: map[string]interface{}{
