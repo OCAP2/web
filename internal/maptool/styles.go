@@ -299,7 +299,7 @@ var knownLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house": {{
-		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
+		ID: "house", Type: "fill", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-antialias": true,
@@ -801,7 +801,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house": {{
-		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
+		ID: "house", Type: "fill", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-antialias": true,
@@ -809,7 +809,7 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house-extrusion": {{
-		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house",
+		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
@@ -1037,7 +1037,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house": {{
-		ID: "house", Type: "fill", SourceLayer: "house", MinZoom: 13,
+		ID: "house", Type: "fill", SourceLayer: "house",
 		Paint: map[string]interface{}{
 			"fill-color":     []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-antialias": true,
@@ -1045,7 +1045,7 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 		},
 	}},
 	"house-extrusion": {{
-		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house",
+		ID: "house-extrusion", Type: "fill-extrusion", SourceLayer: "house", MinZoom: 15,
 		Paint: map[string]interface{}{
 			"fill-extrusion-color":   []interface{}{"concat", "#", []interface{}{"get", "color"}},
 			"fill-extrusion-opacity": []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 16.0, 1.0, 18.0, 0.85},
