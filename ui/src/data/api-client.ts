@@ -146,14 +146,16 @@ export class ApiClient {
       minZoom: 0,
     };
 
+    const normalizedName = worldName.toLowerCase();
+
     // 1. Try local map data
     try {
-      const localUrl = `${this.baseUrl}/images/maps/${encodeURIComponent(worldName)}/map.json`;
+      const localUrl = `${this.baseUrl}/images/maps/${encodeURIComponent(normalizedName)}/map.json`;
       const local = await this.fetchJson<Partial<WorldConfig>>(localUrl);
       return {
         ...defaults,
         ...local,
-        tileBaseUrl: `${this.baseUrl}/images/maps/${encodeURIComponent(worldName)}`,
+        tileBaseUrl: `${this.baseUrl}/images/maps/${encodeURIComponent(normalizedName)}`,
       };
     } catch {
       // Local not available, try CDN
@@ -161,7 +163,7 @@ export class ApiClient {
 
     // 2. Try PMTiles CDN (MapLibre-capable)
     try {
-      const pmtilesUrl = `https://pmtiles.ocap2.com/${encodeURIComponent(worldName)}/map.json`;
+      const pmtilesUrl = `https://pmtiles.ocap2.com/${encodeURIComponent(normalizedName)}/map.json`;
       const res = await fetch(pmtilesUrl, { cache: "no-store" });
       if (res.ok) {
         const data = (await res.json()) as Partial<WorldConfig>;
@@ -169,7 +171,7 @@ export class ApiClient {
           ...defaults,
           ...data,
           maplibre: true,
-          tileBaseUrl: `https://pmtiles.ocap2.com/${encodeURIComponent(worldName)}`,
+          tileBaseUrl: `https://pmtiles.ocap2.com/${encodeURIComponent(normalizedName)}`,
         };
       }
     } catch {
@@ -178,14 +180,14 @@ export class ApiClient {
 
     // 3. Try legacy raster CDN
     try {
-      const rasterUrl = `https://maps.ocap2.com/${encodeURIComponent(worldName)}/map.json`;
+      const rasterUrl = `https://maps.ocap2.com/${encodeURIComponent(normalizedName)}/map.json`;
       const res = await fetch(rasterUrl, { cache: "no-store" });
       if (res.ok) {
         const data = (await res.json()) as Partial<WorldConfig>;
         return {
           ...defaults,
           ...data,
-          tileBaseUrl: `https://maps.ocap2.com/${encodeURIComponent(worldName)}`,
+          tileBaseUrl: `https://maps.ocap2.com/${encodeURIComponent(normalizedName)}`,
         };
       }
     } catch {
