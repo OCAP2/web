@@ -31,7 +31,7 @@ export function DetailSidebar(props: {
           <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.op.worldName}</div>
           {/* <div class={styles.sidebarHeroTerrain}>{props.op.worldName}</div> */}
         </div>
-        <button class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
+        <button data-testid="sidebar-close" class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
           <Icons.X />
         </button>
       </div>
