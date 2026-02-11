@@ -156,6 +156,7 @@ export class ApiClient {
         ...defaults,
         ...local,
         tileBaseUrl: `${this.baseUrl}/images/maps/${encodeURIComponent(normalizedName)}`,
+        worldName,
       };
     } catch {
       // Local not available, try CDN
@@ -172,6 +173,7 @@ export class ApiClient {
           ...data,
           maplibre: true,
           tileBaseUrl: `https://pmtiles.ocap2.com/${encodeURIComponent(normalizedName)}`,
+          worldName,
         };
       }
     } catch {
@@ -188,6 +190,7 @@ export class ApiClient {
           ...defaults,
           ...data,
           tileBaseUrl: `https://maps.ocap2.com/${encodeURIComponent(normalizedName)}`,
+          worldName,
         };
       }
     } catch {
