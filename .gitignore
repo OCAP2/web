@@ -9,7 +9,7 @@
 # Runtime data
 data.db
 /data/
-maps/
+/maps/
 setting.json
 
 # Logs
@@ -25,5 +25,7 @@ coverage.html
 
 # Frontend
 static-next/node_modules/
+static-next/.vite/
+static-next/dist/
 internal/frontend/dist/*
 !internal/frontend/dist/.gitkeep
