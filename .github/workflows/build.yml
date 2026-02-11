@@ -295,7 +295,7 @@ jobs:
           node-version: 22
 
       - name: Build frontend
-        working-directory: static-next
+        working-directory: ui
         run: npm ci && npm run build
 
       - uses: actions/setup-go@v6

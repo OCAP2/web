@@ -1,8 +1,8 @@
 FROM node:22-alpine AS frontend
 WORKDIR /app
-COPY static-next/package.json static-next/package-lock.json ./
+COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
-COPY static-next/ ./
+COPY ui/ ./
 RUN npx vite build --outDir /frontend-dist
 
 FROM golang:1.24-alpine AS builder

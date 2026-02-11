@@ -24,8 +24,8 @@ coverage.out
 coverage.html
 
 # Frontend
-static-next/node_modules/
-static-next/.vite/
-static-next/dist/
+ui/node_modules/
+ui/.vite/
+ui/dist/
 internal/frontend/dist/*
 !internal/frontend/dist/.gitkeep

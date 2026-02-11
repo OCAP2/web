@@ -15,7 +15,7 @@ git clone https://github.com/OCAP2/web.git
 cd web
 
 # Install frontend dependencies
-cd static-next && npm ci && cd ..
+cd ui && npm ci && cd ..
 
 # Copy the example config (requires a valid secret to start the server)
 cp setting.json.example setting.json
@@ -31,17 +31,17 @@ Use the Vite dev server for hot module replacement. API requests are proxied to 
 go run ./cmd/ocap-webserver
 
 # Terminal 2 — start the Vite dev server (localhost:5173)
-cd static-next && npm run dev
+cd ui && npm run dev
 ```
 
-Edit files in `static-next/` — changes appear instantly in the browser via HMR.
+Edit files in `ui/` — changes appear instantly in the browser via HMR.
 
 ### Backend development (Go)
 
 Build the frontend once, then iterate on Go code:
 
 ```bash
-cd static-next && npm run build && cd ..
+cd ui && npm run build && cd ..
 go run ./cmd/ocap-webserver
 ```
 
@@ -61,7 +61,7 @@ internal/
   maptool/              # Map tile pipeline
 pkg/schemas/
   protobuf/             # Protobuf schema and generated code
-static-next/            # SolidJS + Vite + TypeScript frontend source
+ui/            # SolidJS + Vite + TypeScript frontend source
 assets/                 # Marker SVGs, ammo icons, fonts
 ```
 
@@ -72,7 +72,7 @@ assets/                 # Marker SVGs, ammo icons, fonts
 go test ./...
 
 # Frontend tests
-cd static-next
+cd ui
 npm test
 ```
 
@@ -80,7 +80,7 @@ npm test
 
 1. Create a branch from `main`
 2. Make your changes
-3. Run `go test ./...` and `cd static-next && npm test` to verify
+3. Run `go test ./...` and `cd ui && npm test` to verify
 4. Commit using [conventional commit](https://www.conventionalcommits.org/) messages:
    - `feat:` new functionality
    - `fix:` bug fixes
@@ -100,7 +100,7 @@ go generate ./pkg/schemas/...
 This regenerates the Go code. The frontend uses `ts-proto` — regenerate TypeScript types with:
 
 ```bash
-cd static-next
+cd ui
 npx protoc --ts_proto_out=./src/generated --ts_proto_opt=esModuleInterop=true ../pkg/schemas/protobuf/v1/ocap.proto
 ```
 

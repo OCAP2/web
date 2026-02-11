@@ -225,7 +225,7 @@ Requires [Go 1.24+](https://golang.org/dl/) and [Node.js 22+](https://nodejs.org
 
 ```bash
 # Build the frontend
-cd static-next && npm ci && npm run build && cd ..
+cd ui && npm ci && npm run build && cd ..
 
 # Build the server (frontend is embedded into the binary)
 go build -o ocap-webserver ./cmd/ocap-webserver
