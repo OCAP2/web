@@ -4,9 +4,9 @@ import { TAG_COLORS, STATUS_MAP, C } from "./constants";
 import { Icons } from "./icons";
 import styles from "./MissionSelector.module.css";
 
-export function StatPill(props: { icon: JSX.Element; value: string | number; label: string }) {
+export function StatPill(props: { icon: JSX.Element; value: string | number; label: string; class?: string }) {
   return (
-    <div class={styles.statPill}>
+    <div class={`${styles.statPill}${props.class ? ` ${props.class}` : ""}`}>
       <div class={styles.statPillValue}>
         <span class={styles.statPillIcon}>{props.icon}</span>
         <span class={styles.statPillNumber}>{props.value}</span>

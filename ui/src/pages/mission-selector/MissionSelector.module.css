@@ -1,3 +1,10 @@
+/* ── Twemoji Country Flags — polyfill for Windows which lacks flag emoji ── */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1/dist/TwemojiCountryFlags.woff2') format('woff2');
+  font-display: swap;
+}
+
 /* ── Page layout ── */
 .page {
   width: 100vw;
@@ -151,6 +158,7 @@
 
 .langFlag {
   font-size: 15px;
+  font-family: 'Twemoji Country Flags', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 .langLabel {
@@ -221,6 +229,7 @@
 
 .langOptionFlag {
   font-size: 16px;
+  font-family: 'Twemoji Country Flags', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 .langOptionLabel {
@@ -754,12 +763,16 @@
 
 .sidebarStatsGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 16px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebarStatsGridFull {
+  grid-column: 1 / -1;
 }
 
 .sidebarSectionLabel {
