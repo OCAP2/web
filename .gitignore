@@ -11,8 +11,6 @@ data.db
 /data/
 maps/
 setting.json
-static/data
-static/images/maps
 
 # Logs
 *.log
@@ -25,6 +23,7 @@ cover.out
 coverage.out
 coverage.html
 
-# Frontend (static-next)
+# Frontend
 static-next/node_modules/
-static-next/dist/
+internal/frontend/dist/*
+!internal/frontend/dist/.gitkeep

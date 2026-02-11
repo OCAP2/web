@@ -290,6 +290,14 @@ jobs:
       - name: Install cross compile dependencies
         run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build frontend
+        working-directory: static-next
+        run: npm ci && npm run build
+
       - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
@@ -311,7 +319,6 @@ jobs:
           cp ${{ matrix.binary }} release/
           cp -r assets/markers release/assets/
           cp -r assets/ammo release/assets/
-          cp -r static release/
           cp setting.json.example release/
           cd release && ${{ matrix.archiver }} ../${{ matrix.archive }} .
 

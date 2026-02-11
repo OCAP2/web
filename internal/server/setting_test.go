@@ -100,7 +100,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "assets/ammo", setting.Ammo)
 		assert.Equal(t, "maps", setting.Maps)
 		assert.Equal(t, "data", setting.Data)
-		assert.Equal(t, "static", setting.Static)
+		assert.Equal(t, "", setting.Static)
 		assert.False(t, setting.Logger)
 	})
 

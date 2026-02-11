@@ -61,7 +61,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("fonts", "assets/fonts")
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
-	viper.SetDefault("static", "static")
+	viper.SetDefault("static", "")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 	viper.SetDefault("conversion.enabled", false)

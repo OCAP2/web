@@ -7,7 +7,6 @@
 	"ammo": "assets/ammo",
 	"maps": "maps",
 	"data": "data",
-	"static": "static",
 	"logger": false,
 	"customize": {
 		"websiteURL": "",

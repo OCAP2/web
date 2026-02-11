@@ -485,76 +485,64 @@ func TestGetMapTitle(t *testing.T) {
 	})
 }
 
-func TestGetStatic(t *testing.T) {
+func TestStaticFileServing(t *testing.T) {
 	dir := t.TempDir()
 	staticDir := filepath.Join(dir, "static")
 	err := os.MkdirAll(staticDir, 0755)
 	require.NoError(t, err)
 
-	// Create test static file
-	indexPath := filepath.Join(staticDir, "index.html")
-	err = os.WriteFile(indexPath, []byte("<html>test</html>"), 0644)
+	// Create test static files
+	err = os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>test</html>"), 0644)
 	require.NoError(t, err)
 
-	// Create nested directory with file
-	scriptsDir := filepath.Join(staticDir, "scripts")
+	scriptsDir := filepath.Join(staticDir, "assets")
 	err = os.MkdirAll(scriptsDir, 0755)
 	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(scriptsDir, "ocap.js"), []byte("// test"), 0644)
+	err = os.WriteFile(filepath.Join(scriptsDir, "app.js"), []byte("// test"), 0644)
 	require.NoError(t, err)
 
-	hdlr := Handler{
-		setting: Setting{Static: staticDir},
-	}
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
+	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
+
+	e := echo.New()
+	NewHandler(e, repo, repoMarker, repoAmmo, Setting{}, WithStaticFS(os.DirFS(staticDir)))
 
 	t.Run("get static file", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+		req := httptest.NewRequest(http.MethodGet, "/assets/app.js", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("index.html")
-
-		err := hdlr.GetStatic(c)
-		assert.NoError(t, err)
-	})
-
-	t.Run("root path serves index.html", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("") // Empty param for root path
-
-		err := hdlr.GetStatic(c)
-		assert.NoError(t, err)
-		assert.Contains(t, rec.Body.String(), "<html>test</html>")
-	})
-
-	t.Run("nested path with forward slashes", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/scripts/ocap.js", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("scripts/ocap.js") // Forward slashes in path
-
-		err := hdlr.GetStatic(c)
-		assert.NoError(t, err)
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "// test")
 	})
 
-	t.Run("path traversal blocked", func(t *testing.T) {
-		e := echo.New()
+	t.Run("root path serves index.html", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "<html>test</html>")
+	})
+
+	t.Run("SPA fallback serves index.html for unknown paths", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/some/spa/route", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "<html>test</html>")
+	})
+
+	t.Run("path traversal returns SPA fallback", func(t *testing.T) {
+		// Go's net/http cleans the path before serving, so traversal attempts
+		// are safely normalized. The SPA fallback then serves index.html.
 		req := httptest.NewRequest(http.MethodGet, "/../../../etc/passwd", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("../../../etc/passwd")
-
-		err := hdlr.GetStatic(c)
-		assert.Error(t, err)
+		e.ServeHTTP(rec, req)
+		// Should get index.html (SPA fallback), not the actual file
+		assert.Contains(t, rec.Body.String(), "<html>test</html>")
 	})
 }
 
@@ -849,7 +837,7 @@ func TestNewHandler(t *testing.T) {
 	e := echo.New()
 
 	// Should not panic
-	NewHandler(e, repo, repoMarker, repoAmmo, setting)
+	NewHandler(e, repo, repoMarker, repoAmmo, setting, WithStaticFS(os.DirFS(dir)))
 
 	// Verify routes are registered
 	routes := e.Routes()
@@ -892,7 +880,7 @@ func TestNewHandlerWithOptions(t *testing.T) {
 	e := echo.New()
 
 	// Should apply options
-	NewHandler(e, repo, repoMarker, repoAmmo, setting, WithConversionTrigger(trigger))
+	NewHandler(e, repo, repoMarker, repoAmmo, setting, WithConversionTrigger(trigger), WithStaticFS(os.DirFS(dir)))
 
 	// Routes should still be registered
 	assert.NotEmpty(t, e.Routes())

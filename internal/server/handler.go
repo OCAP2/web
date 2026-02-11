@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -38,6 +39,7 @@ type Handler struct {
 	repoAmmo          *RepoAmmo
 	setting           Setting
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
+	staticFS          fs.FS             // optional, nil disables static file serving
 }
 
 // HandlerOption configures the Handler
@@ -47,6 +49,13 @@ type HandlerOption func(*Handler)
 func WithConversionTrigger(trigger ConversionTrigger) HandlerOption {
 	return func(h *Handler) {
 		h.conversionTrigger = trigger
+	}
+}
+
+// WithStaticFS sets the filesystem used to serve the frontend
+func WithStaticFS(fsys fs.FS) HandlerOption {
+	return func(h *Handler) {
+		h.staticFS = fsys
 	}
 }
 
@@ -124,18 +133,14 @@ func NewHandler(
 		hdlr.GetMapTitle,
 		hdlr.cacheControl(CacheDuration),
 	)
-	g.GET(
-		"/*",
-		hdlr.GetStatic,
-		hdlr.cacheControl(0),
-	)
-	g.GET(
-		"",
-		hdlr.GetStatic,
-		middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+	if hdlr.staticFS != nil {
+		// Serve the SPA frontend with fallback to index.html for client-side routing
+		staticHandler := hdlr.spaFileServer(hdlr.staticFS, prefixURL)
+		g.GET("/*", echo.WrapHandler(staticHandler), hdlr.cacheControl(0))
+		g.GET("", echo.WrapHandler(staticHandler), middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
 			RedirectCode: http.StatusMovedPermanently,
-		}),
-	)
+		}))
+	}
 }
 
 func (*Handler) cacheControl(duration time.Duration) echo.MiddlewareFunc {
@@ -365,20 +370,27 @@ func (h *Handler) GetMapTitle(c echo.Context) error {
 	return c.File(absolutePath)
 }
 
-func (h *Handler) GetStatic(c echo.Context) error {
-	relativePath, err := paramPath(c, "*")
-	if err != nil {
-		return fmt.Errorf("clean path: %s: %w", err.Error(), ErrNotFound)
-	}
+// spaFileServer returns an http.Handler that serves static files from fsys,
+// falling back to index.html for paths that don't match a file (SPA routing).
+func (*Handler) spaFileServer(fsys fs.FS, prefix string) http.Handler {
+	fileServer := http.FileServer(http.FS(fsys))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Strip the prefix so the FS lookup starts at the root
+		p := strings.TrimPrefix(r.URL.Path, prefix)
+		p = strings.TrimPrefix(p, "/")
 
-	absolutePath := filepath.Join(h.setting.Static, relativePath)
+		// Try to open the requested file
+		if p != "" {
+			if _, err := fs.Stat(fsys, p); err == nil {
+				http.StripPrefix(prefix, fileServer).ServeHTTP(w, r)
+				return
+			}
+		}
 
-	// Serve index.html for directory requests
-	if info, statErr := os.Stat(absolutePath); statErr == nil && info.IsDir() {
-		absolutePath = filepath.Join(absolutePath, "index.html")
-	}
-
-	return c.File(absolutePath)
+		// Fallback to index.html for SPA client-side routing
+		r.URL.Path = prefix + "/"
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func (h *Handler) GetAmmo(c echo.Context) error {

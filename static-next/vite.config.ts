@@ -13,5 +13,7 @@ export default defineConfig({
   },
   build: {
     target: "es2020",
+    outDir: "../internal/frontend/dist",
+    emptyOutDir: true,
   },
 });

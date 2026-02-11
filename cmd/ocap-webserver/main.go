@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/conversion"
+	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/server"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -81,7 +83,19 @@ func app() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Resolve static frontend filesystem
+	var staticFS fs.FS
+	if setting.Static != "" {
+		staticFS = os.DirFS(setting.Static)
+	} else {
+		staticFS, err = fs.Sub(frontend.DistFS, "dist")
+		if err != nil {
+			return fmt.Errorf("embedded frontend: %w", err)
+		}
+	}
+
 	var handlerOpts []server.HandlerOption
+	handlerOpts = append(handlerOpts, server.WithStaticFS(staticFS))
 	if setting.Conversion.Enabled {
 		interval, err := time.ParseDuration(setting.Conversion.Interval)
 		if err != nil {
