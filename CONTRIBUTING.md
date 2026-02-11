@@ -5,7 +5,7 @@
 | Tool | Version | Notes |
 |------|---------|-------|
 | [Go](https://golang.org/dl/) | 1.26+ | Backend |
-| [Node.js](https://nodejs.org/) | 22+ | Frontend build |
+| [Node.js](https://nodejs.org/) | 24+ | Frontend build |
 | [protoc](https://grpc.io/docs/protoc-installation/) | 3+ | Only if editing `.proto` files |
 
 ## Development Setup

@@ -222,7 +222,7 @@ Each archive contains the binary and required assets (markers, ammo icons).
 
 ### Build from source
 
-Requires [Go 1.24+](https://golang.org/dl/) and [Node.js 22+](https://nodejs.org/).
+Requires [Go 1.26+](https://golang.org/dl/) and [Node.js 24+](https://nodejs.org/).
 
 ```bash
 # Build the frontend
