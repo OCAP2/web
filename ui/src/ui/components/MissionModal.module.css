@@ -148,7 +148,9 @@
   color: #ffffff;
   appearance: none;
   border: 0;
+  box-sizing: border-box;
   padding-left: 4px;
+  padding-right: 28px;
   height: inherit;
   width: 100%;
   outline: none;

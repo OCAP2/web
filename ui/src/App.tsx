@@ -141,6 +141,7 @@ export function App(): JSX.Element {
     } catch (err) {
       console.error("Failed to load operation:", err);
       showHint("Failed to load operation");
+      throw err;
     }
   }
 
