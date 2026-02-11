@@ -254,10 +254,7 @@ export function App(): JSX.Element {
           <MissionModal
             open={modalOpen}
             onClose={() => setModalOpen(false)}
-            onSelectOperation={(op) => {
-              setModalOpen(false);
-              void loadOperation(op);
-            }}
+            onSelectOperation={(op) => loadOperation(op)}
           />
           <AboutModal
             open={aboutOpen}

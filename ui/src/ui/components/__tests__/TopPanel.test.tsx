@@ -307,7 +307,63 @@ describe("MissionModal", () => {
         worldName: "Altis",
       }),
     );
+    // onClose is called after awaiting onSelectOperation
+    await vi.waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("shows loading overlay while operation is loading and closes on success", async () => {
+    let resolveLoad!: () => void;
+    const onClose = vi.fn();
+    const onSelect = vi.fn().mockImplementation(
+      () => new Promise<void>((resolve) => { resolveLoad = resolve; }),
+    );
+
+    const [open] = createSignal(true);
+    const { findByTestId, queryByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
+    ));
+
+    const op1 = await findByTestId("operation-1");
+    fireEvent.click(op1);
+
+    // Overlay visible while loading, modal not closed yet
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-loading-indicator")).not.toBeNull();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Resolve the load
+    resolveLoad();
+
+    // Overlay disappears and modal closes
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-loading-indicator")).toBeNull();
+    });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps modal open when operation loading fails", async () => {
+    const onClose = vi.fn();
+    const onSelect = vi.fn().mockRejectedValue(new Error("load failed"));
+
+    const [open] = createSignal(true);
+    const { findByTestId, queryByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
+    ));
+
+    const op1 = await findByTestId("operation-1");
+    fireEvent.click(op1);
+
+    // Wait for the rejection to be handled
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-loading-indicator")).toBeNull();
+    });
+
+    // Modal should stay open — onClose never called
+    expect(onClose).not.toHaveBeenCalled();
+    expect(queryByTestId("mission-modal")).not.toBeNull();
   });
 
   it("has filter input and submit button", async () => {
@@ -329,6 +385,79 @@ describe("MissionModal", () => {
     expect(getByTestId("filter-tag-input")).toBeDefined();
     expect(getByTestId("filter-newer-input")).toBeDefined();
     expect(getByTestId("filter-older-input")).toBeDefined();
+  });
+
+  it("shows loading overlay and disables filter button while fetching", async () => {
+    let resolveFetch!: (value: Response) => void;
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise<Response>((resolve) => { resolveFetch = resolve; }),
+    );
+
+    const [open] = createSignal(true);
+    const { getByTestId, queryByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+    ));
+
+    // During initial fetch: overlay visible, button disabled
+    expect(queryByTestId("loading-indicator")).not.toBeNull();
+    const btn = getByTestId("filter-submit-button") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+
+    // Overlay should be inside the operations list container
+    const list = getByTestId("operations-list");
+    expect(list.contains(queryByTestId("loading-indicator"))).toBe(true);
+
+    // Resolve fetch
+    resolveFetch({
+      ok: true,
+      json: () => Promise.resolve([]),
+    } as Response);
+
+    // Wait for loading to finish
+    await vi.waitFor(() => {
+      expect(queryByTestId("loading-indicator")).toBeNull();
+    });
+    expect(btn.disabled).toBe(false);
+  });
+
+  it("shows loading overlay when filter button is clicked", async () => {
+    let fetchCount = 0;
+    let resolveFetch!: (value: Response) => void;
+    const emptyResponse = { ok: true, json: () => Promise.resolve([]) } as Response;
+
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      fetchCount++;
+      if (fetchCount === 1) return Promise.resolve(emptyResponse);
+      // Second call (filter click) — hold it pending
+      return new Promise<Response>((resolve) => { resolveFetch = resolve; });
+    });
+
+    const [open] = createSignal(true);
+    const { getByTestId, queryByTestId, findByTestId } = render(() => (
+      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+    ));
+
+    // Wait for initial fetch to complete
+    await findByTestId("operations-list");
+    await vi.waitFor(() => {
+      expect(queryByTestId("loading-indicator")).toBeNull();
+    });
+
+    // Click filter
+    fireEvent.click(getByTestId("filter-submit-button"));
+
+    // Overlay should appear, button disabled
+    await vi.waitFor(() => {
+      expect(queryByTestId("loading-indicator")).not.toBeNull();
+    });
+    expect((getByTestId("filter-submit-button") as HTMLButtonElement).disabled).toBe(true);
+
+    // Resolve and verify cleanup
+    resolveFetch(emptyResponse);
+    await vi.waitFor(() => {
+      expect(queryByTestId("loading-indicator")).toBeNull();
+    });
+    expect((getByTestId("filter-submit-button") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("shows date in D/M/YYYY format and duration with hours", async () => {

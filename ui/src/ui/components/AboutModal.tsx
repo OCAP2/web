@@ -51,8 +51,8 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
             <span>{t("info")}</span>
           </div>
           <div class={styles.modalBody} style={{ "min-width": "0", "min-height": "0", padding: "10px 15px" }}>
-            <img src="/images/ocap-logo.png" height="60" alt="OCAP" />
-            <h4 style={{ "line-height": "0" }}>Operation Capture And Playback</h4>
+            <img src="ocap-logo.png" height="60" alt="OCAP" />
+            <h4>Operation Capture And Playback</h4>
             <a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
             <br />
             <span>{t("version-server")}{serverVersion()}</span>

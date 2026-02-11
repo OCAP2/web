@@ -8,7 +8,7 @@ import styles from "./MissionModal.module.css";
 export interface MissionModalProps {
   open: Accessor<boolean>;
   onClose: () => void;
-  onSelectOperation: (op: Operation) => void;
+  onSelectOperation: (op: Operation) => void | Promise<void>;
 }
 
 function formatDuration(seconds: number): string {
@@ -50,6 +50,7 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
   const [newerFilter, setNewerFilter] = createSignal("2017-06-01");
   const [olderFilter, setOlderFilter] = createSignal("2099-12-12");
   const [loading, setLoading] = createSignal(false);
+  const [loadingOperation, setLoadingOperation] = createSignal(false);
   const [allTags, setAllTags] = createSignal<string[]>([]);
   const api = new ApiClient();
 
@@ -88,15 +89,27 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
     void fetchOperations(Object.keys(filters).length > 0 ? filters : undefined);
   };
 
-  const handleSelect = (op: Operation) => {
-    props.onSelectOperation(op);
-    props.onClose();
+  const handleSelect = async (op: Operation) => {
+    setLoadingOperation(true);
+    try {
+      await props.onSelectOperation(op);
+      props.onClose();
+    } catch {
+      // loadOperation shows its own error via Hint
+    } finally {
+      setLoadingOperation(false);
+    }
   };
 
   return (
     <Show when={props.open()}>
       <div data-testid="mission-modal" class={styles.modalOverlay}>
         <div class={styles.modalBase}>
+          <Show when={loadingOperation()}>
+            <div data-testid="operation-loading-indicator" class={styles.loadingOverlay}>
+              {t("loading")}
+            </div>
+          </Show>
           <div class={styles.modalHeader}>
             <span>{t("select_mission")}</span>
           </div>
@@ -140,15 +153,17 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
                 onInput={(e) => setOlderFilter(e.currentTarget.value)}
                 class={styles.dateInput}
               />
-              <button type="submit" data-testid="filter-submit-button" class={styles.modalButton}>
+              <button type="submit" data-testid="filter-submit-button" class={styles.modalButton} disabled={loading()}>
                 {t("filter")}
               </button>
             </form>
           </div>
-          <Show when={loading()}>
-            <div data-testid="loading-indicator" style={{ padding: "20px", "text-align": "center", color: "#f2f2f2" }}>{t("loading")}</div>
-          </Show>
           <div class={styles.modalBody} data-testid="operations-list">
+            <Show when={loading()}>
+              <div data-testid="loading-indicator" class={styles.loadingOverlay}>
+                {t("loading")}
+              </div>
+            </Show>
             <table>
               <thead>
                 <tr>
