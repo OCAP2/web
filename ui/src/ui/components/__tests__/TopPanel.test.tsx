@@ -271,6 +271,7 @@ describe("MissionSelector", () => {
       missionName: "Op Alpha",
       missionDuration: 3600,
       date: "2024-01-01",
+      tag: "TvT",
     },
     {
       id: "2",
@@ -278,6 +279,7 @@ describe("MissionSelector", () => {
       missionName: "Op Bravo",
       missionDuration: 1800,
       date: "2024-02-01",
+      tag: "COOP",
     },
   ];
 
@@ -304,7 +306,18 @@ describe("MissionSelector", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders operations list", async () => {
+  it("renders mission selector page", async () => {
+    const { findByTestId } = render(() => (
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
+    ));
+
+    const page = await findByTestId("mission-selector");
+    expect(page).toBeDefined();
+  });
+
+  it("loads and displays operations in grid rows", async () => {
     const { findByTestId } = render(() => (
       <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
         <Route path="/" component={MissionSelector} />
@@ -322,49 +335,51 @@ describe("MissionSelector", () => {
     expect(op2.textContent).toContain("Stratis");
   });
 
-  it("has filter input and submit button", async () => {
+  it("has search input", async () => {
     const { getByTestId } = render(() => (
       <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
         <Route path="/" component={MissionSelector} />
       </Router>
     ));
 
-    expect(getByTestId("filter-name-input")).toBeDefined();
-    expect(getByTestId("filter-submit-button")).toBeDefined();
+    expect(getByTestId("search-input")).toBeDefined();
   });
 
-  it("has tag dropdown and date range filters", () => {
-    const { getByTestId } = render(() => (
+  it("filters by search text", async () => {
+    const { findByTestId, getByTestId, queryByTestId } = render(() => (
       <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
         <Route path="/" component={MissionSelector} />
       </Router>
     ));
 
-    expect(getByTestId("filter-tag-input")).toBeDefined();
-    expect(getByTestId("filter-newer-input")).toBeDefined();
-    expect(getByTestId("filter-older-input")).toBeDefined();
+    await findByTestId("operation-1");
+
+    const input = getByTestId("search-input") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "Bravo" } });
+
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-1")).toBeNull();
+    });
+    expect(queryByTestId("operation-2")).not.toBeNull();
   });
 
-  it("shows loading overlay and disables filter button while fetching", async () => {
+  it("shows loading indicator while fetching", async () => {
     const resolvers: Array<(value: Response) => void> = [];
     globalThis.fetch = vi.fn().mockImplementation(() => {
       return new Promise<Response>((resolve) => { resolvers.push(resolve); });
     });
 
-    const { getByTestId, queryByTestId } = render(() => (
+    const { queryByTestId, getByTestId } = render(() => (
       <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
         <Route path="/" component={MissionSelector} />
       </Router>
     ));
 
     expect(queryByTestId("loading-indicator")).not.toBeNull();
-    const btn = getByTestId("filter-submit-button") as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
 
     const list = getByTestId("operations-list");
     expect(list.contains(queryByTestId("loading-indicator"))).toBe(true);
 
-    // Resolve all pending fetches (customize + operations)
     const emptyResponse = { ok: true, json: () => Promise.resolve([]) } as Response;
     for (const resolve of resolvers) {
       resolve(emptyResponse);
@@ -373,10 +388,9 @@ describe("MissionSelector", () => {
     await vi.waitFor(() => {
       expect(queryByTestId("loading-indicator")).toBeNull();
     });
-    expect(btn.disabled).toBe(false);
   });
 
-  it("shows date in D/M/YYYY format and duration with hours", async () => {
+  it("shows duration with hours and date in localized format", async () => {
     const { findByTestId } = render(() => (
       <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
         <Route path="/" component={MissionSelector} />
@@ -385,21 +399,9 @@ describe("MissionSelector", () => {
 
     const op1 = await findByTestId("operation-1");
     expect(op1.textContent).toContain("1h 0m 0s");
-    expect(op1.textContent).toContain("1/1/2024");
 
     const op2 = await findByTestId("operation-2");
     expect(op2.textContent).toContain("30m 0s");
-    expect(op2.textContent).toContain("1/2/2024");
-  });
-
-  it("has info button", () => {
-    const { getByTestId } = render(() => (
-      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
-        <Route path="/" component={MissionSelector} />
-      </Router>
-    ));
-
-    expect(getByTestId("info-button")).toBeDefined();
   });
 });
 

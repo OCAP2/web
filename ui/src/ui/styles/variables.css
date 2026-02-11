@@ -42,4 +42,26 @@
 
   /* Breakpoints — not usable in @media directly, documented here as reference */
   /* Tablet: 768px, Mobile: 480px */
+
+  /* ── Mission Selector dark theme ── */
+  --ms-bg-dark: #0a0f14;
+  --ms-bg-panel: rgba(13, 21, 32, 0.88);
+  --ms-bg-panel-header: rgba(13, 21, 32, 0.6);
+  --ms-text-primary: #e0e6ed;
+  --ms-text-secondary: #c8d4e0;
+  --ms-text-muted: #8899aa;
+  --ms-text-dim: #556677;
+  --ms-text-dimmer: #445566;
+  --ms-text-dimmest: #334455;
+  --ms-accent-blue: #4A9EFF;
+  --ms-accent-red: #FF4A4A;
+  --ms-accent-green: #2DD4A0;
+  --ms-accent-purple: #A78BFA;
+  --ms-accent-orange: #FFB84A;
+  --ms-side-blufor: #4A9EFF;
+  --ms-side-opfor: #FF4A4A;
+  --ms-side-ind: #2DD4A0;
+  --ms-side-civ: #A78BFA;
+  --ms-font-mono: 'JetBrains Mono', monospace;
+  --ms-font-heading: 'Outfit', sans-serif;
 }
