@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
+import { Router, Route } from "@solidjs/router";
 import { App } from "../../App";
+import { MissionSelector } from "../../pages/MissionSelector";
 
 // Mock LeafletRenderer to avoid Leaflet in jsdom
 vi.mock("../../renderers/leaflet/leaflet-renderer", () => ({
@@ -35,19 +37,20 @@ describe("App", () => {
   });
 
   it("renders without crashing", () => {
-    const { container } = render(() => <App />);
+    const { container } = render(() => (
+      <Router root={App}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
+    ));
     expect(container).toBeDefined();
   });
 
-  it("renders the map container", () => {
-    const { getByTestId } = render(() => <App />);
-    expect(getByTestId("map-container")).toBeDefined();
-  });
-
-  it("renders panel components", () => {
-    const { container } = render(() => <App />);
-    // Panels are rendered (may be hidden depending on signal state)
-    expect(container.innerHTML).toBeDefined();
-    expect(container.innerHTML.length).toBeGreaterThan(0);
+  it("renders the mission selector on /", () => {
+    const { getByTestId } = render(() => (
+      <Router root={App}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
+    ));
+    expect(getByTestId("mission-selector")).toBeDefined();
   });
 });

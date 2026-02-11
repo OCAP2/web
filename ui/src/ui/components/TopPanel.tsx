@@ -7,21 +7,23 @@ export interface TopPanelProps {
   operationId: Accessor<string | null>;
   operationFilename?: Accessor<string | null>;
   onInfoClick?: () => void;
+  onBack?: () => void;
 }
 
 /**
- * Top panel displaying the mission name and action buttons (Download, Info, Share).
+ * Top panel displaying the mission name and action buttons (Back, Download, Info, Share).
  *
+ * - Back navigates to the mission selector.
  * - Download triggers a file download via the server's data static file endpoint.
  * - Info opens the about modal with version and shortcut info.
- * - Share copies the current URL with `?op=<id>` to the clipboard.
+ * - Share copies the recording URL to the clipboard.
  */
 export function TopPanel(props: TopPanelProps): JSX.Element {
   const handleShare = () => {
-    const id = props.operationId();
+    const id = props.operationFilename?.() ?? props.operationId();
     if (!id) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("op", id);
+    const url = new URL(window.location.origin);
+    url.pathname = `/recording/${encodeURIComponent(id)}`;
     void navigator.clipboard.writeText(url.toString());
   };
 
@@ -33,6 +35,14 @@ export function TopPanel(props: TopPanelProps): JSX.Element {
 
   return (
     <div data-testid="top-panel" class={styles.topPanel}>
+      <Show when={props.onBack}>
+        <div
+          data-testid="back-button"
+          class={`${styles.button} ${styles.backButton}`}
+          title="Back"
+          onClick={() => props.onBack?.()}
+        />
+      </Show>
       <span data-testid="mission-name" class={styles.missionName}>
         {props.missionName()}
       </span>

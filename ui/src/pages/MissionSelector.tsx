@@ -1,15 +1,12 @@
 import { createSignal, Show, For, onMount } from "solid-js";
-import type { JSX, Accessor } from "solid-js";
-import type { Operation } from "../../data/types";
-import { ApiClient, type OperationFilters } from "../../data/api-client";
-import { useI18n } from "../hooks/useLocale";
-import styles from "./MissionModal.module.css";
-
-export interface MissionModalProps {
-  open: Accessor<boolean>;
-  onClose: () => void;
-  onSelectOperation: (op: Operation) => void | Promise<void>;
-}
+import type { JSX } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import type { Operation } from "../data/types";
+import { ApiClient, type OperationFilters } from "../data/api-client";
+import { useI18n } from "../ui/hooks/useLocale";
+import { CustomizeLogo } from "../ui/components/CustomizeLogo";
+import { AboutModal } from "../ui/components/AboutModal";
+import styles from "./MissionSelector.module.css";
 
 function formatDuration(seconds: number): string {
   const mins = Math.round(seconds / 60);
@@ -40,25 +37,25 @@ function getStatusInfo(op: Operation): { icon: string; tooltip: string } {
 }
 
 /**
- * Full-screen modal for browsing and selecting missions.
+ * Full-page mission selector — the entry page at `/`.
  */
-export function MissionModal(props: MissionModalProps): JSX.Element {
+export function MissionSelector(): JSX.Element {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [operations, setOperations] = createSignal<Operation[]>([]);
   const [nameFilter, setNameFilter] = createSignal("");
   const [tagFilter, setTagFilter] = createSignal("");
   const [newerFilter, setNewerFilter] = createSignal("2017-06-01");
   const [olderFilter, setOlderFilter] = createSignal("2099-12-12");
   const [loading, setLoading] = createSignal(false);
-  const [loadingOperation, setLoadingOperation] = createSignal(false);
   const [allTags, setAllTags] = createSignal<string[]>([]);
+  const [aboutOpen, setAboutOpen] = createSignal(false);
   const api = new ApiClient();
 
   const fetchOperations = async (filters?: OperationFilters) => {
     setLoading(true);
     try {
       const ops = await api.getOperations(filters);
-      // Populate tag list from first unfiltered fetch
       if (allTags().length === 0) {
         const tags = [...new Set(ops.map((op) => op.tag).filter(Boolean))] as string[];
         setAllTags(tags);
@@ -89,31 +86,28 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
     void fetchOperations(Object.keys(filters).length > 0 ? filters : undefined);
   };
 
-  const handleSelect = async (op: Operation) => {
-    setLoadingOperation(true);
-    try {
-      await props.onSelectOperation(op);
-      props.onClose();
-    } catch {
-      // loadOperation shows its own error via Hint
-    } finally {
-      setLoadingOperation(false);
-    }
+  const handleSelect = (op: Operation) => {
+    const id = op.filename ?? op.id;
+    navigate(`/recording/${encodeURIComponent(id)}`);
   };
 
   return (
-    <Show when={props.open()}>
-      <div data-testid="mission-modal" class={styles.modalOverlay}>
-        <div class={styles.modalBase}>
-          <Show when={loadingOperation()}>
-            <div data-testid="operation-loading-indicator" class={styles.loadingOverlay}>
-              {t("loading")}
-            </div>
-          </Show>
-          <div class={styles.modalHeader}>
+    <>
+      <div data-testid="mission-selector" class={styles.page}>
+        <div class={styles.container}>
+          <div class={styles.header}>
             <span>{t("select_mission")}</span>
+            <div class={styles.headerSpacer} />
+            <div
+              data-testid="info-button"
+              class={styles.infoButton}
+              title="Information"
+              onClick={() => setAboutOpen(true)}
+            >
+              i
+            </div>
           </div>
-          <div class={styles.modalFilter}>
+          <div class={styles.filterBar}>
             <form
               data-testid="filter-form"
               onSubmit={handleSubmit}
@@ -153,12 +147,12 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
                 onInput={(e) => setOlderFilter(e.currentTarget.value)}
                 class={styles.dateInput}
               />
-              <button type="submit" data-testid="filter-submit-button" class={styles.modalButton} disabled={loading()}>
+              <button type="submit" data-testid="filter-submit-button" class={styles.filterButton} disabled={loading()}>
                 {t("filter")}
               </button>
             </form>
           </div>
-          <div class={styles.modalBody} data-testid="operations-list">
+          <div class={styles.body} data-testid="operations-list">
             <Show when={loading()}>
               <div data-testid="loading-indicator" class={styles.loadingOverlay}>
                 {t("loading")}
@@ -214,7 +208,12 @@ export function MissionModal(props: MissionModalProps): JSX.Element {
             </table>
           </div>
         </div>
+        <CustomizeLogo />
       </div>
-    </Show>
+      <AboutModal
+        open={aboutOpen}
+        onClose={() => setAboutOpen(false)}
+      />
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
+import { Router, Route } from "@solidjs/router";
 import { PlaybackEngine } from "../../../playback/engine";
 import { MockRenderer } from "../../../renderers/mock-renderer";
 import { EngineProvider } from "../../hooks/useEngine";
@@ -8,7 +9,7 @@ import { CustomizeProvider } from "../../hooks/useCustomize";
 import { TopPanel } from "../TopPanel";
 import { AboutModal } from "../AboutModal";
 import { I18nProvider } from "../../hooks/useLocale";
-import { MissionModal } from "../MissionModal";
+import { MissionSelector } from "../../../pages/MissionSelector";
 import { CounterDisplay } from "../CounterDisplay";
 import { Hint, showHint, hintVisible } from "../Hint";
 import type { Operation } from "../../../data/types";
@@ -61,7 +62,7 @@ describe("TopPanel", () => {
     expect(onInfo).toHaveBeenCalledTimes(1);
   });
 
-  it("share button copies URL with ?op= param to clipboard", async () => {
+  it("share button copies URL with /recording/:id path to clipboard", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: { writeText },
@@ -77,7 +78,26 @@ describe("TopPanel", () => {
 
     expect(writeText).toHaveBeenCalledTimes(1);
     const calledUrl = writeText.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("?op=op-42");
+    expect(calledUrl).toContain("/recording/op-42");
+  });
+
+  it("share button uses operationFilename over operationId", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    const [name] = createSignal("Test Mission");
+    const [opId] = createSignal<string | null>("42");
+    const [opFilename] = createSignal<string | null>("my_mission");
+    const { getByTestId } = render(() => (
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} operationFilename={opFilename} /></CustomizeProvider>
+    ));
+
+    fireEvent.click(getByTestId("share-button"));
+
+    const calledUrl = writeText.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/recording/my_mission");
   });
 
   it("hides share and download buttons when no operationId", () => {
@@ -111,6 +131,36 @@ describe("TopPanel", () => {
     const link = getByTestId("download-button") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toBe("data/my-file.json.gz");
     expect(link.hasAttribute("download")).toBe(true);
+  });
+
+  it("renders back button when onBack is provided", () => {
+    const [name] = createSignal("Test");
+    const [opId] = createSignal<string | null>(null);
+    const onBack = vi.fn();
+    const { getByTestId } = render(() => (
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} onBack={onBack} /></CustomizeProvider>
+    ));
+    expect(getByTestId("back-button")).toBeDefined();
+  });
+
+  it("does not render back button when onBack is not provided", () => {
+    const [name] = createSignal("Test");
+    const [opId] = createSignal<string | null>(null);
+    const { queryByTestId } = render(() => (
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} /></CustomizeProvider>
+    ));
+    expect(queryByTestId("back-button")).toBeNull();
+  });
+
+  it("calls onBack when back button clicked", () => {
+    const [name] = createSignal("Test");
+    const [opId] = createSignal<string | null>(null);
+    const onBack = vi.fn();
+    const { getByTestId } = render(() => (
+      <CustomizeProvider><TopPanel missionName={name} operationId={opId} onBack={onBack} /></CustomizeProvider>
+    ));
+    fireEvent.click(getByTestId("back-button"));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -211,9 +261,9 @@ describe("AboutModal", () => {
   });
 });
 
-// ─── MissionModal ───
+// ─── MissionSelector ───
 
-describe("MissionModal", () => {
+describe("MissionSelector", () => {
   const mockOperations: Operation[] = [
     {
       id: "1",
@@ -254,20 +304,16 @@ describe("MissionModal", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders operations list when open", async () => {
-    const [open] = createSignal(true);
-    const onClose = vi.fn();
-    const onSelect = vi.fn();
-
+  it("renders operations list", async () => {
     const { findByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
     ));
 
-    // Wait for fetch to complete
     const list = await findByTestId("operations-list");
     expect(list).toBeDefined();
 
-    // Verify operations appear
     const op1 = await findByTestId("operation-1");
     const op2 = await findByTestId("operation-2");
     expect(op1.textContent).toContain("Op Alpha");
@@ -276,101 +322,11 @@ describe("MissionModal", () => {
     expect(op2.textContent).toContain("Stratis");
   });
 
-  it("does not render when closed", () => {
-    const [open] = createSignal(false);
-    const onClose = vi.fn();
-    const onSelect = vi.fn();
-
-    const { queryByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
-    ));
-
-    expect(queryByTestId("mission-modal")).toBeNull();
-  });
-
-  it("calls onSelectOperation when clicking an operation", async () => {
-    const [open] = createSignal(true);
-    const onClose = vi.fn();
-    const onSelect = vi.fn();
-
-    const { findByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
-    ));
-
-    const op1 = await findByTestId("operation-1");
-    fireEvent.click(op1);
-
-    expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "1",
-        missionName: "Op Alpha",
-        worldName: "Altis",
-      }),
-    );
-    // onClose is called after awaiting onSelectOperation
-    await vi.waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("shows loading overlay while operation is loading and closes on success", async () => {
-    let resolveLoad!: () => void;
-    const onClose = vi.fn();
-    const onSelect = vi.fn().mockImplementation(
-      () => new Promise<void>((resolve) => { resolveLoad = resolve; }),
-    );
-
-    const [open] = createSignal(true);
-    const { findByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
-    ));
-
-    const op1 = await findByTestId("operation-1");
-    fireEvent.click(op1);
-
-    // Overlay visible while loading, modal not closed yet
-    await vi.waitFor(() => {
-      expect(queryByTestId("operation-loading-indicator")).not.toBeNull();
-    });
-    expect(onClose).not.toHaveBeenCalled();
-
-    // Resolve the load
-    resolveLoad();
-
-    // Overlay disappears and modal closes
-    await vi.waitFor(() => {
-      expect(queryByTestId("operation-loading-indicator")).toBeNull();
-    });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps modal open when operation loading fails", async () => {
-    const onClose = vi.fn();
-    const onSelect = vi.fn().mockRejectedValue(new Error("load failed"));
-
-    const [open] = createSignal(true);
-    const { findByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={onClose} onSelectOperation={onSelect} /></I18nProvider>
-    ));
-
-    const op1 = await findByTestId("operation-1");
-    fireEvent.click(op1);
-
-    // Wait for the rejection to be handled
-    await vi.waitFor(() => {
-      expect(queryByTestId("operation-loading-indicator")).toBeNull();
-    });
-
-    // Modal should stay open — onClose never called
-    expect(onClose).not.toHaveBeenCalled();
-    expect(queryByTestId("mission-modal")).not.toBeNull();
-  });
-
   it("has filter input and submit button", async () => {
-    const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
     ));
 
     expect(getByTestId("filter-name-input")).toBeDefined();
@@ -378,9 +334,10 @@ describe("MissionModal", () => {
   });
 
   it("has tag dropdown and date range filters", () => {
-    const [open] = createSignal(true);
     const { getByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
     ));
 
     expect(getByTestId("filter-tag-input")).toBeDefined();
@@ -389,95 +346,60 @@ describe("MissionModal", () => {
   });
 
   it("shows loading overlay and disables filter button while fetching", async () => {
-    let resolveFetch!: (value: Response) => void;
-    globalThis.fetch = vi.fn().mockImplementation(
-      () => new Promise<Response>((resolve) => { resolveFetch = resolve; }),
-    );
+    const resolvers: Array<(value: Response) => void> = [];
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      return new Promise<Response>((resolve) => { resolvers.push(resolve); });
+    });
 
-    const [open] = createSignal(true);
     const { getByTestId, queryByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
     ));
 
-    // During initial fetch: overlay visible, button disabled
     expect(queryByTestId("loading-indicator")).not.toBeNull();
     const btn = getByTestId("filter-submit-button") as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
 
-    // Overlay should be inside the operations list container
     const list = getByTestId("operations-list");
     expect(list.contains(queryByTestId("loading-indicator"))).toBe(true);
 
-    // Resolve fetch
-    resolveFetch({
-      ok: true,
-      json: () => Promise.resolve([]),
-    } as Response);
+    // Resolve all pending fetches (customize + operations)
+    const emptyResponse = { ok: true, json: () => Promise.resolve([]) } as Response;
+    for (const resolve of resolvers) {
+      resolve(emptyResponse);
+    }
 
-    // Wait for loading to finish
     await vi.waitFor(() => {
       expect(queryByTestId("loading-indicator")).toBeNull();
     });
     expect(btn.disabled).toBe(false);
   });
 
-  it("shows loading overlay when filter button is clicked", async () => {
-    let fetchCount = 0;
-    let resolveFetch!: (value: Response) => void;
-    const emptyResponse = { ok: true, json: () => Promise.resolve([]) } as Response;
-
-    globalThis.fetch = vi.fn().mockImplementation(() => {
-      fetchCount++;
-      if (fetchCount === 1) return Promise.resolve(emptyResponse);
-      // Second call (filter click) — hold it pending
-      return new Promise<Response>((resolve) => { resolveFetch = resolve; });
-    });
-
-    const [open] = createSignal(true);
-    const { getByTestId, queryByTestId, findByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
-    ));
-
-    // Wait for initial fetch to complete
-    await findByTestId("operations-list");
-    await vi.waitFor(() => {
-      expect(queryByTestId("loading-indicator")).toBeNull();
-    });
-
-    // Click filter
-    fireEvent.click(getByTestId("filter-submit-button"));
-
-    // Overlay should appear, button disabled
-    await vi.waitFor(() => {
-      expect(queryByTestId("loading-indicator")).not.toBeNull();
-    });
-    expect((getByTestId("filter-submit-button") as HTMLButtonElement).disabled).toBe(true);
-
-    // Resolve and verify cleanup
-    resolveFetch(emptyResponse);
-    await vi.waitFor(() => {
-      expect(queryByTestId("loading-indicator")).toBeNull();
-    });
-    expect((getByTestId("filter-submit-button") as HTMLButtonElement).disabled).toBe(false);
-  });
-
   it("shows date in D/M/YYYY format and duration with hours", async () => {
-    const [open] = createSignal(true);
     const { findByTestId } = render(() => (
-      <I18nProvider locale="en"><MissionModal open={open} onClose={() => {}} onSelectOperation={() => {}} /></I18nProvider>
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
     ));
 
     const op1 = await findByTestId("operation-1");
-    // 3600 seconds = 1h 0m 0s
     expect(op1.textContent).toContain("1h 0m 0s");
-    // 2024-01-01 → 1/1/2024
     expect(op1.textContent).toContain("1/1/2024");
 
     const op2 = await findByTestId("operation-2");
-    // 1800 seconds = 30m 0s
     expect(op2.textContent).toContain("30m 0s");
-    // 2024-02-01 → 1/2/2024
     expect(op2.textContent).toContain("1/2/2024");
+  });
+
+  it("has info button", () => {
+    const { getByTestId } = render(() => (
+      <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+        <Route path="/" component={MissionSelector} />
+      </Router>
+    ));
+
+    expect(getByTestId("info-button")).toBeDefined();
   });
 });
 
@@ -490,7 +412,6 @@ describe("CounterDisplay", () => {
 
   it("is hidden when counterState is null", () => {
     const engine = createEngine();
-    // counterState defaults to null
     const { queryByTestId } = render(withEngine(engine, () => <CounterDisplay />));
     expect(queryByTestId("counter-display")).toBeNull();
   });
@@ -498,7 +419,6 @@ describe("CounterDisplay", () => {
   it("shows counter values when counterState is present", () => {
     const engine = createEngine();
 
-    // Build a minimal manifest with counter events to trigger counterState
     const manifest = {
       version: 1,
       worldName: "Altis",
@@ -515,7 +435,6 @@ describe("CounterDisplay", () => {
       times: [],
     };
 
-    // Use loadOperation to set up counter state (requires a mock chunk manager)
     const mockChunkManager = { getChunkForFrame: () => null } as any;
     engine.loadOperation(manifest, mockChunkManager);
 

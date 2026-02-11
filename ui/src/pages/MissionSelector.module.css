@@ -1,0 +1,236 @@
+.page {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background-color: var(--bg-dark);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  max-width: 75vw;
+  max-height: 85vh;
+}
+
+.header {
+  background-color: var(--bg-modal-header);
+  margin-bottom: 3px;
+  color: white;
+  border-bottom: 1px solid black;
+  padding: 5px 10px;
+  font-weight: 500;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.infoButton {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 25px;
+  text-align: center;
+  cursor: pointer;
+  width: 25px;
+  height: 25px;
+}
+
+.body {
+  position: relative;
+  background-color: var(--bg-modal);
+  overflow-y: auto;
+  min-width: 66vw;
+  min-height: 400px;
+  max-height: calc(75vh - 50px);
+  flex: 1;
+  padding: 5px;
+}
+
+.body a {
+  color: white;
+  text-decoration: none;
+}
+
+.body a:hover {
+  text-decoration: underline;
+}
+
+.body table {
+  border-collapse: collapse;
+  border: none;
+  width: 100%;
+}
+
+.body th {
+  background-color: var(--bg-modal);
+  padding: 3px;
+  font-weight: 500;
+}
+
+.body td {
+  padding: 3px;
+  padding-right: 20px;
+}
+
+.body tr {
+  text-align: left;
+}
+
+.body tr:hover {
+  background-color: var(--highlight);
+}
+
+.filterBar {
+  background-color: rgba(0, 0, 0, 0.6);
+  width: 100%;
+  height: 50px;
+  padding: 4px 16px;
+  margin-bottom: 3px;
+  overflow-y: auto;
+  overflow-x: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.a3Select {
+  position: relative;
+  height: 26px;
+}
+
+.a3Select::after {
+  content: "\25BE";
+  position: absolute;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  background-color: #282828;
+  width: 24px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.a3Select select {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  appearance: none;
+  border: 0;
+  box-sizing: border-box;
+  padding-left: 4px;
+  padding-right: 28px;
+  height: inherit;
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.tagSelect {
+  min-width: 80px;
+}
+
+.filterInput {
+  flex: 1;
+  background-color: rgba(10, 10, 10, 0.8);
+  color: white;
+  border: 0;
+  height: 26px;
+}
+
+.dateInput {
+  background-color: rgba(10, 10, 10, 0.8);
+  color: white;
+  border: 0;
+  padding: 2px 4px;
+  height: 26px;
+}
+
+.dateInput::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.filterButton {
+  display: inline-block;
+  background-color: var(--bg-modal);
+  color: var(--text-primary);
+  border: none;
+  padding: 5px;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filterButton:hover:not(:disabled) {
+  background-color: #fff;
+  color: #000;
+}
+
+.filterButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f2f2f2;
+  font-size: 14px;
+}
+
+.mapPreviewWrap {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.mapPreview {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.previewPopup {
+  display: none;
+  position: fixed;
+  width: 256px;
+  height: 256px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  z-index: 700;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mapPreviewWrap:hover .previewPopup {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .container {
+    max-width: 95vw;
+  }
+
+  .body {
+    min-width: auto;
+  }
+}
