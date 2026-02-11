@@ -15,7 +15,7 @@ git clone https://github.com/OCAP2/web.git
 cd web
 
 # Install frontend dependencies
-cd ui && npm ci && cd ..
+npm ci --prefix ui
 
 # Copy the example config (requires a valid secret to start the server)
 cp setting.json.example setting.json

@@ -22,5 +22,10 @@ data/
 maps/
 *.log
 
+# Frontend build artifacts
+**/node_modules
+ui/dist
+internal/frontend/dist
+
 # Local config
 setting.json
