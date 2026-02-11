@@ -257,7 +257,7 @@ describe("AboutModal", () => {
     const select = getByTestId("language-select") as HTMLSelectElement;
     expect(select).toBeDefined();
     expect(select.value).toBe("en");
-    expect(select.options.length).toBe(5);
+    expect(select.options.length).toBe(6);
   });
 });
 

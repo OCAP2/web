@@ -1,6 +1,6 @@
-export type Locale = "en" | "ru" | "de" | "cs" | "it";
+export type Locale = "en" | "ru" | "de" | "cs" | "it" | "fr";
 
-export const LOCALES: Locale[] = ["en", "ru", "de", "cs", "it"];
+export const LOCALES: Locale[] = ["en", "ru", "de", "fr", "cs", "it"];
 
 /**
  * All translation strings ported from static/scripts/localizable.js.
@@ -13,6 +13,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Spieler",
     cs: "Hráči",
     it: "Giocatori",
+    fr: "Joueurs",
   },
   events: {
     ru: "События",
@@ -20,6 +21,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Events",
     cs: "Události",
     it: "Eventi",
+    fr: "Événements",
   },
   info: {
     ru: "Информация",
@@ -27,6 +29,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Information",
     cs: "Informace",
     it: "Informazioni",
+    fr: "Informations",
   },
   by_killer: {
     ru: " был убит ",
@@ -34,6 +37,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " getötet durch ",
     cs: " zabit od ",
     it: " ucciso da ",
+    fr: " tué par ",
   },
   connected: {
     ru: "подключился",
@@ -41,6 +45,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "verbunden",
     cs: "se připojil",
     it: "connesso",
+    fr: "connecté",
   },
   disconnected: {
     ru: "отключился",
@@ -48,6 +53,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "getrennt",
     cs: "se odpojil",
     it: "disconnesso",
+    fr: "déconnecté",
   },
   captured_something: {
     ru: "captured something",
@@ -55,6 +61,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "hat irgendwas gekapert",
     cs: "něco zabral",
     it: "ha catturato qualcosa",
+    fr: "a capturé quelque chose",
   },
   captured_flag: {
     ru: "захватил флаг",
@@ -62,6 +69,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "hat die Flagge gekapert",
     cs: "zabral vlajku",
     it: "ha catturato la bandiera",
+    fr: "a capturé le drapeau",
   },
   by_injured: {
     ru: " был ранен ",
@@ -69,6 +77,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " verwundet durch ",
     cs: " zraněn od ",
     it: " ferito da ",
+    fr: " blessé par ",
   },
   by_destroyed: {
     ru: " уничтожен ",
@@ -76,6 +85,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " zerstört durch ",
     cs: " zničen od ",
     it: " distrutto da ",
+    fr: " détruit par ",
   },
   shared: {
     ru: "Поделиться",
@@ -83,6 +93,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Geteilt",
     cs: "Sdílet",
     it: "Condiviso",
+    fr: "Partagé",
   },
   copy_link: {
     ru: "Скопируйте ссылку",
@@ -90,6 +101,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Link kopieren",
     cs: "Kopírovat odkaz",
     it: "Copia link",
+    fr: "Copier le lien",
   },
   close: {
     ru: "Закрыть",
@@ -97,6 +109,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Schließen",
     cs: "Zavřít",
     it: "Chiudi",
+    fr: "Fermer",
   },
   filter: {
     ru: "Фильтр",
@@ -104,6 +117,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Filter",
     cs: "Filtr",
     it: "Filtro",
+    fr: "Filtre",
   },
   shown: {
     ru: " показаны",
@@ -111,6 +125,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " sichtbar",
     cs: " zobrazeno",
     it: " visibili",
+    fr: " affichés",
   },
   hidden: {
     ru: " скрыты",
@@ -118,6 +133,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " unsichtbar",
     cs: " schováno",
     it: " nascosti",
+    fr: " masqués",
   },
   line_fire: {
     ru: "Линии выстрелов",
@@ -125,6 +141,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Projektilbahnen",
     cs: "Čáry výstřelů",
     it: "Traiettorie proiettili",
+    fr: "Lignes de tir",
   },
   nickname: {
     ru: "Никнеймы игроков и название техники ",
@@ -132,6 +149,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Spieler-, Fahrzeug und Projektilnamen",
     cs: "Hráčské přezdívky a názvy vozidel",
     it: "Nome giocatori e veicoli",
+    fr: "Noms des joueurs, véhicules et projectiles",
   },
   names_all: {
     ru: "Все имена",
@@ -139,6 +157,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Alle Namen",
     cs: "Všechna jména",
     it: "Tutti i nomi",
+    fr: "Tous les noms",
   },
   names_players: {
     ru: "Только игроки",
@@ -146,6 +165,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Nur Spieler",
     cs: "Pouze hráči",
     it: "Solo giocatori",
+    fr: "Joueurs uniquement",
   },
   names_none: {
     ru: "Скрыть все",
@@ -153,6 +173,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Alle ausblenden",
     cs: "Skrýt vše",
     it: "Nascondi tutto",
+    fr: "Tout masquer",
   },
   markers: {
     ru: "Маркеры",
@@ -160,6 +181,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Markierungen",
     cs: "Značení",
     it: "Indicatori",
+    fr: "Marqueurs",
   },
   grid: {
     ru: "Сетка координат",
@@ -167,6 +189,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Koordinatengitter",
     cs: "Souřadnicová mřížka",
     it: "Griglia coordinate",
+    fr: "Grille de coordonnées",
   },
   event_fire: {
     ru: "Эвенты попадания",
@@ -174,6 +197,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Treffer",
     cs: "Události zásahů",
     it: "Impatti",
+    fr: "Événements de tir",
   },
   "event_dis-connected": {
     ru: "Подключения/отключения",
@@ -181,6 +205,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Verbunden / Getrennt",
     cs: "Připojení / Odpojení",
     it: "Connessioni / Disconnessioni",
+    fr: "Connexions / Déconnexions",
   },
   name_missions: {
     ru: "Название миссии",
@@ -188,6 +213,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Name der Mission",
     cs: "Název mise",
     it: "Nome missione",
+    fr: "Nom de la mission",
   },
   something: {
     ru: "кто-то",
@@ -195,6 +221,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "etwas",
     cs: "něco",
     it: "qualcosa",
+    fr: "quelque chose",
   },
   select_mission: {
     ru: "Выбор миссии",
@@ -202,6 +229,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Wähle Mission",
     cs: "Vybrat misi",
     it: "Seleziona missione",
+    fr: "Sélectionner la mission",
   },
   mission: {
     ru: "Миссия",
@@ -209,6 +237,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Mission",
     cs: "Mise",
     it: "Missione",
+    fr: "Mission",
   },
   map: {
     ru: "Карта",
@@ -216,6 +245,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Karte",
     cs: "Mapa",
     it: "Mappa",
+    fr: "Carte",
   },
   data: {
     ru: "Дата",
@@ -223,6 +253,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Datum",
     cs: "Datum",
     it: "Data",
+    fr: "Date",
   },
   durability: {
     ru: "Длительность",
@@ -230,6 +261,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Dauer",
     cs: "Doba trvání",
     it: "Durata",
+    fr: "Durée",
   },
   tag: {
     ru: "Тег",
@@ -237,6 +269,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Tag",
     cs: "Tag",
     it: "Etichetta",
+    fr: "Tag",
   },
   status: {
     ru: "Статус",
@@ -244,6 +277,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Status",
     cs: "Stav",
     it: "Stato",
+    fr: "Statut",
   },
   status_static: {
     ru: "Статичный",
@@ -251,6 +285,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Statisch",
     cs: "Statický",
     it: "Statico",
+    fr: "Statique",
   },
   status_converting: {
     ru: "Конвертация",
@@ -258,6 +293,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Konvertierung",
     cs: "Konverze",
     it: "Conversione",
+    fr: "Conversion",
   },
   status_streaming: {
     ru: "Потоковый",
@@ -265,6 +301,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Streaming",
     cs: "Streamování",
     it: "Streaming",
+    fr: "Streaming",
   },
   list_compilation: {
     ru: "Составления списка...",
@@ -272,6 +309,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Auflisting der Erstellungen...",
     cs: "Seznam kompilací...",
     it: "Caricamento lista...",
+    fr: "Compilation de la liste...",
   },
   loading: {
     ru: "Загрузка...",
@@ -279,6 +317,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Lädt...",
     cs: "Načítání...",
     it: "Caricamento...",
+    fr: "Chargement...",
   },
   win: {
     ru: "Победа",
@@ -286,6 +325,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Gewonnen",
     cs: "Vítězství",
     it: "Vittoria",
+    fr: "Victoire",
   },
   "play-pause": {
     ru: "Воспроизвести/пауза: пробел",
@@ -293,6 +333,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Start/Pause: Leertaste",
     cs: "Spustit/pozastavit: mezerník",
     it: "Riproduci/Pausa: spazio",
+    fr: "Lecture/pause : espace",
   },
   "show-hide-left-panel": {
     ru: "Показать/скрыть левую панель: E",
@@ -300,6 +341,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Linkes Fenster Anzeigen/Verstecken: E",
     cs: "Zobrazit/Schovat levý panel: E",
     it: "Mostra/Nascondi pannello di sinistra: E",
+    fr: "Afficher/Masquer le panneau gauche : E",
   },
   "show-hide-right-panel": {
     ru: "Показать/скрыть правую панель: R",
@@ -307,6 +349,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Rechtes Fenster Anzeigen/Verstecken: R",
     cs: "Zobrazit/Schovat pravý panel: R",
     it: "Mostra/Nascondi pannello di destra: R",
+    fr: "Afficher/Masquer le panneau droit : R",
   },
   "show-experimental": {
     ru: "Enable experimental mode: .",
@@ -314,6 +357,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Aktiviert experimentaller Modus: .",
     cs: "Povolit experimentální režim: .",
     it: "Abilita modalità sperimentale: .",
+    fr: "Activer le mode expérimental : .",
   },
   language: {
     ru: "Язык:",
@@ -321,6 +365,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Sprache:",
     cs: "Jazyk:",
     it: "Lingua",
+    fr: "Langue :",
   },
   time_elapsed: {
     ru: "Время записи",
@@ -328,6 +373,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Verstrichene Aufnahmezeit",
     cs: "Čas nahrávky",
     it: "Tempo registrazione",
+    fr: "Temps d'enregistrement écoulé",
   },
   time_mission: {
     ru: "Время миссии",
@@ -335,6 +381,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Verstrichene Missionszeit",
     cs: "Čas mise",
     it: "Orario missione",
+    fr: "Heure en jeu",
   },
   time_system: {
     ru: "Системное время",
@@ -342,6 +389,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Systemzeit (UTC)",
     cs: "Čas systému",
     it: "Orario sistema",
+    fr: "Heure serveur UTC",
   },
   not_available: {
     ru: " недоступен",
@@ -349,6 +397,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " nicht Verfügbar",
     cs: " není k dispozici",
     it: " non disponibile",
+    fr: " non disponible",
   },
   is_hacking_terminal: {
     ru: " is hacking terminal",
@@ -356,6 +405,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " hackt das Terminal",
     cs: " hackuje terminál",
     it: " sta hackerando il terminale",
+    fr: " pirate le terminal",
   },
   interrupted_hack: {
     ru: " has interrupted the hack",
@@ -363,6 +413,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: " hat den Hack unterbrochen",
     cs: " přerušil hackování",
     it: " ha interrotto l'hackeraggio",
+    fr: " a interrompu le piratage",
   },
   "version-server": {
     ru: "Версия сервера: ",
@@ -370,6 +421,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Server Version: ",
     cs: "Verze serveru: ",
     it: "Versione server: ",
+    fr: "Version serveur : ",
   },
   "version-extension": {
     ru: "Pасширения bерсия : ",
@@ -377,6 +429,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Erweiterungs Version: ",
     cs: "Verze rozšíření: ",
     it: "Versione estensione: ",
+    fr: "Version extension : ",
   },
   "version-addon": {
     ru: "Aддона bерсия: ",
@@ -384,6 +437,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Addon Version: ",
     cs: "Verze addonu: ",
     it: "Versione addon: ",
+    fr: "Version addon : ",
   },
   basemap_topographic: {
     ru: "Топографическая",
@@ -391,6 +445,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Topografisch",
     cs: "Topografická",
     it: "Topografica",
+    fr: "Topographique",
   },
   basemap_topographic_dark: {
     ru: "Топографическая (тёмная)",
@@ -398,6 +453,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Topografisch Dunkel",
     cs: "Topografická tmavá",
     it: "Topografica scura",
+    fr: "Topographique sombre",
   },
   basemap_color_relief: {
     ru: "Цветной рельеф",
@@ -405,6 +461,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Farbreliefkarte",
     cs: "Barevný reliéf",
     it: "Rilievo a colori",
+    fr: "Relief en couleur",
   },
   basemap_topographic_relief: {
     ru: "Топографический рельеф",
@@ -412,6 +469,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Topografisches Relief",
     cs: "Topografický reliéf",
     it: "Rilievo topografico",
+    fr: "Relief topographique",
   },
   search_placeholder: {
     ru: "Поиск миссий или карт...",
@@ -419,6 +477,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Missionen oder Karten suchen...",
     cs: "Hledat mise nebo mapy...",
     it: "Cerca missioni o mappe...",
+    fr: "Rechercher des missions ou des cartes...",
   },
   no_missions_found: {
     ru: "Миссии не найдены",
@@ -426,6 +485,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Keine Missionen gefunden",
     cs: "Žádné mise nenalezeny",
     it: "Nessuna missione trovata",
+    fr: "Aucune mission trouvée",
   },
   adjust_filters: {
     ru: "Попробуйте изменить фильтры",
@@ -433,6 +493,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Versuche die Filter anzupassen",
     cs: "Zkuste upravit filtry",
     it: "Prova a modificare i filtri",
+    fr: "Essayez de modifier vos filtres",
   },
   open_replay: {
     ru: "Открыть запись",
@@ -440,6 +501,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Wiedergabe öffnen",
     cs: "Otevřít záznam",
     it: "Apri registrazione",
+    fr: "Ouvrir la rediffusion",
   },
   force_composition: {
     ru: "СОСТАВ СИЛ",
@@ -447,6 +509,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "KRÄFTEVERTEILUNG",
     cs: "SLOŽENÍ SIL",
     it: "COMPOSIZIONE FORZE",
+    fr: "COMPOSITION DES FORCES",
   },
   total_kills: {
     ru: "ВСЕГО УБИЙСТВ",
@@ -454,6 +517,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "GESAMTE ABSCHÜSSE",
     cs: "CELKEM ZABITÍ",
     it: "UCCISIONI TOTALI",
+    fr: "ÉLIMINATIONS TOTALES",
   },
   kills_per_min: {
     ru: "УБИЙСТВ/МИН",
@@ -461,6 +525,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "ABSCHÜSSE/MIN",
     cs: "ZABITÍ/MIN",
     it: "UCCISIONI/MIN",
+    fr: "ÉLIM./MIN",
   },
   recordings: {
     ru: "записей",
@@ -468,6 +533,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Aufnahmen",
     cs: "záznamů",
     it: "registrazioni",
+    fr: "enregistrements",
   },
   maps_label: {
     ru: "КАРТЫ",
@@ -475,6 +541,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "KARTEN",
     cs: "MAPY",
     it: "MAPPE",
+    fr: "CARTES",
   },
   max_players: {
     ru: "МАКС ИГРОКОВ",
@@ -482,6 +549,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "MAX SPIELER",
     cs: "MAX HRÁČŮ",
     it: "MAX GIOCATORI",
+    fr: "MAX JOUEURS",
   },
   deselect: {
     ru: "Отменить выбор",
@@ -489,6 +557,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Abwählen",
     cs: "Zrušit výběr",
     it: "Deseleziona",
+    fr: "Désélectionner",
   },
   search_shortcut: {
     ru: "Поиск",
@@ -496,6 +565,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Suchen",
     cs: "Hledat",
     it: "Cerca",
+    fr: "Rechercher",
   },
   open_shortcut: {
     ru: "Открыть",
@@ -503,6 +573,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Öffnen",
     cs: "Otevřít",
     it: "Apri",
+    fr: "Ouvrir",
   },
   navigate: {
     ru: "Навигация",
@@ -510,6 +581,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Navigieren",
     cs: "Navigovat",
     it: "Naviga",
+    fr: "Naviguer",
   },
   status_ready: {
     ru: "Готов",
@@ -517,6 +589,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Bereit",
     cs: "Připraveno",
     it: "Pronto",
+    fr: "Prêt",
   },
   status_pending: {
     ru: "Ожидание",
@@ -524,6 +597,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Ausstehend",
     cs: "Čekající",
     it: "In attesa",
+    fr: "En attente",
   },
   status_failed: {
     ru: "Ошибка",
@@ -531,6 +605,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Fehlgeschlagen",
     cs: "Selhalo",
     it: "Fallito",
+    fr: "Échoué",
   },
   clear: {
     ru: "Очистить",
@@ -538,6 +613,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Löschen",
     cs: "Vymazat",
     it: "Cancella",
+    fr: "Effacer",
   },
   loading_mission: {
     ru: "Загрузка",
@@ -545,6 +621,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Laden",
     cs: "Načítání",
     it: "Caricamento",
+    fr: "Chargement",
   },
   initializing_engine: {
     ru: "Инициализация движка воспроизведения...",
@@ -552,6 +629,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Wiedergabe-Engine wird initialisiert...",
     cs: "Inicializace přehrávače...",
     it: "Inizializzazione motore di riproduzione...",
+    fr: "Initialisation du moteur de rediffusion...",
   },
   language_label: {
     ru: "ЯЗЫК",
@@ -559,6 +637,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "SPRACHE",
     cs: "JAZYK",
     it: "LINGUA",
+    fr: "LANGUE",
   },
   server: {
     ru: "Сервер",
@@ -566,6 +645,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Server",
     cs: "Server",
     it: "Server",
+    fr: "Serveur",
   },
   made_with_love: {
     ru: "Сделано с любовью для сообщества Arma",
@@ -573,6 +653,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Mit Liebe für die Arma-Community gemacht",
     cs: "Vytvořeno s láskou pro Arma komunitu",
     it: "Fatto con amore per la community di Arma",
+    fr: "Fait avec amour pour la communauté Arma",
   },
   of: {
     ru: "из",
@@ -580,6 +661,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "von",
     cs: "z",
     it: "di",
+    fr: "sur",
   },
   missions: {
     ru: "миссий",
@@ -587,5 +669,6 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Missionen",
     cs: "misí",
     it: "missioni",
+    fr: "missions",
   },
 };

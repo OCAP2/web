@@ -37,7 +37,7 @@ export function formatDuration(seconds: number): string {
 }
 
 // Map our locale codes to BCP 47 tags for Intl APIs
-const BCP47: Record<string, string> = { en: "en-GB", de: "de-DE", ru: "ru-RU", cs: "cs-CZ", it: "it-IT" };
+const BCP47: Record<string, string> = { en: "en-GB", de: "de-DE", fr: "fr-FR", ru: "ru-RU", cs: "cs-CZ", it: "it-IT" };
 
 export function formatDate(dateStr: string, locale = "en"): string {
   const d = new Date(dateStr);
