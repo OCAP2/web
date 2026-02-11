@@ -504,4 +504,11 @@ export const translations: Record<string, Record<Locale, string>> = {
     cs: "Otevřít",
     it: "Apri",
   },
+  navigate: {
+    ru: "Навигация",
+    en: "Navigate",
+    de: "Navigieren",
+    cs: "Navigovat",
+    it: "Naviga",
+  },
 };

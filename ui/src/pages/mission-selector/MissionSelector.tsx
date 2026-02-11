@@ -68,6 +68,19 @@ export function MissionSelector(): JSX.Element {
       const op = operations().find((o) => o.id === selectedId());
       if (op && isOpReady(op)) handleLaunch(op);
     }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const list = filtered();
+      if (list.length === 0) return;
+      const currentIdx = list.findIndex((o) => o.id === selectedId());
+      let nextIdx: number;
+      if (e.key === "ArrowDown") {
+        nextIdx = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, list.length - 1);
+      } else {
+        nextIdx = currentIdx < 0 ? list.length - 1 : Math.max(currentIdx - 1, 0);
+      }
+      setSelectedId(list[nextIdx].id);
+    }
   };
 
   onMount(() => window.addEventListener("keydown", handleKeydown));
@@ -167,7 +180,8 @@ export function MissionSelector(): JSX.Element {
         <header class={styles.header}>
           <div class={styles.headerRow}>
             <div class={styles.logoArea}>
-              <div class={styles.logoWrap}>
+              <img src="ocap-logo.png" height="60" alt="OCAP" />
+              {/* <div class={styles.logoWrap}>
                 <OcapLogoSvg />
               </div>
               <div>
@@ -178,7 +192,7 @@ export function MissionSelector(): JSX.Element {
                 <div class={styles.subtitle}>
                   Operation Capture and Playback &middot; {operations().length} {t("recordings")}
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Right side: stats + language */}
@@ -368,16 +382,20 @@ export function MissionSelector(): JSX.Element {
               </span>
               <div class={styles.footerRight}>
                 <div class={styles.footerShortcut}>
+                  <kbd class={styles.footerKbd}>{"\u2191\u2193"}</kbd>
+                  <span class={styles.footerAction}>{t("navigate")}</span>
+                </div>
+                <div class={styles.footerShortcut}>
+                  <kbd class={styles.footerKbd}>Enter</kbd>
+                  <span class={styles.footerAction}>{t("open_shortcut")}</span>
+                </div>
+                <div class={styles.footerShortcut}>
                   <kbd class={styles.footerKbd}>Esc</kbd>
                   <span class={styles.footerAction}>{t("deselect")}</span>
                 </div>
                 <div class={styles.footerShortcut}>
                   <kbd class={styles.footerKbd}>/</kbd>
                   <span class={styles.footerAction}>{t("search_shortcut")}</span>
-                </div>
-                <div class={styles.footerShortcut}>
-                  <kbd class={styles.footerKbd}>Enter</kbd>
-                  <span class={styles.footerAction}>{t("open_shortcut")}</span>
                 </div>
               </div>
             </div>

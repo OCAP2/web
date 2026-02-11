@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { Show, createEffect } from "solid-js";
 import type { Operation } from "../../data/types";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, relativeDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
@@ -17,8 +17,17 @@ export function MissionRow(props: {
   const ready = () => isOpReady(props.op);
   const delay = () => `${Math.min(props.index * 0.03, 0.3)}s`;
 
+  let rowRef: HTMLDivElement | undefined;
+
+  createEffect(() => {
+    if (props.selected && rowRef?.scrollIntoView) {
+      rowRef.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
+
   return (
     <div
+      ref={rowRef}
       data-testid={`operation-${props.op.id}`}
       class={`${styles.missionRow} ${props.selected ? styles.missionRowSelected : ""}`}
       style={{ animation: `stagger 0.3s ease-out ${delay()} both` }}
