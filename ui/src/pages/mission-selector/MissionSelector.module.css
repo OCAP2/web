@@ -96,6 +96,8 @@
 
 .statPillIcon {
   color: var(--ms-text-dim);
+  height: 18px;
+  width: 18px;
 }
 
 .statPillNumber {
