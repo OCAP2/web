@@ -1,7 +1,7 @@
 import { render } from "solid-js/web";
 import { Router, Route } from "@solidjs/router";
 import { App } from "./App";
-import { MissionSelector } from "./pages/MissionSelector";
+import { MissionSelector } from "./pages/mission-selector";
 import { RecordingPlayback } from "./pages/RecordingPlayback";
 
 // Backwards compat: redirect ?op=<id> to /recording/<id>

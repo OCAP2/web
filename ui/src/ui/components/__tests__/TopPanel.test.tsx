@@ -9,7 +9,7 @@ import { CustomizeProvider } from "../../hooks/useCustomize";
 import { TopPanel } from "../TopPanel";
 import { AboutModal } from "../AboutModal";
 import { I18nProvider } from "../../hooks/useLocale";
-import { MissionSelector } from "../../../pages/MissionSelector";
+import { MissionSelector } from "../../../pages/mission-selector";
 import { CounterDisplay } from "../CounterDisplay";
 import { Hint, showHint, hintVisible } from "../Hint";
 import type { Operation } from "../../../data/types";

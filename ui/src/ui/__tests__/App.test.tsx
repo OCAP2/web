@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
 import { App } from "../../App";
-import { MissionSelector } from "../../pages/MissionSelector";
+import { MissionSelector } from "../../pages/mission-selector";
 
 // Mock LeafletRenderer to avoid Leaflet in jsdom
 vi.mock("../../renderers/leaflet/leaflet-renderer", () => ({
