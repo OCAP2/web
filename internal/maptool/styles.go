@@ -735,7 +735,9 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.9), "line-width": 1.0,
+			"line-color":   topoContourColorExpr(),
+			"line-opacity": seaContourOpacityExpr(0.7),
+			"line-width":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 0.5, 15.0, 1.0},
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
@@ -753,7 +755,9 @@ var knownTopoLayerStyles = map[string][]LayerStyle{
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoContourColorExpr(), "line-opacity": seaContourOpacityExpr(1.0), "line-width": 1.0,
+			"line-color":   topoContourColorExpr(),
+			"line-opacity": seaContourOpacityExpr(0.7),
+			"line-width":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 8.0, 0.3, 11.0, 0.7},
 		},
 	}},
 	"trail": {{
@@ -957,7 +961,9 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"contours50": {{
 		ID: "contours/50", Type: "line", SourceLayer: "contours50", MinZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(0.9), "line-width": 1.0,
+			"line-color":   topoDarkContourColorExpr(),
+			"line-opacity": seaContourOpacityExpr(0.7),
+			"line-width":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 12.0, 0.5, 15.0, 1.0},
 		},
 	}, {
 		ID: "contours/50-text", Type: "symbol", SourceLayer: "contours50", MinZoom: 14,
@@ -975,7 +981,9 @@ var knownTopoDarkLayerStyles = map[string][]LayerStyle{
 	"contours100": {{
 		ID: "contours/100", Type: "line", SourceLayer: "contours100", MinZoom: 8, MaxZoom: 12,
 		Paint: map[string]interface{}{
-			"line-color": topoDarkContourColorExpr(), "line-opacity": seaContourOpacityExpr(1.0), "line-width": 1.0,
+			"line-color":   topoDarkContourColorExpr(),
+			"line-opacity": seaContourOpacityExpr(0.7),
+			"line-width":   []interface{}{"interpolate", []interface{}{"linear"}, []interface{}{"zoom"}, 8.0, 0.3, 11.0, 0.7},
 		},
 	}},
 	"trail": {{
