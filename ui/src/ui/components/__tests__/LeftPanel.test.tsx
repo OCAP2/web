@@ -57,7 +57,35 @@ describe("LeftPanel", () => {
     expect(queryByTestId("left-panel")).toBeNull();
   });
 
-  it("renders side tabs for all four sides", () => {
+  it("renders side tabs only for sides with units", () => {
+    engine.entityManager.addEntity({
+      id: 1, type: "man", name: "A1", side: "WEST",
+      groupName: "Alpha", isPlayer: true, startFrame: 0, endFrame: 100,
+    });
+    engine.entityManager.addEntity({
+      id: 2, type: "man", name: "B1", side: "EAST",
+      groupName: "Bravo", isPlayer: false, startFrame: 0, endFrame: 100,
+    });
+
+    const { getByTestId, queryByTestId } = render(() => (
+      <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
+        <LeftPanel />
+      </EngineProvider></I18nProvider></CustomizeProvider>
+    ));
+    expect(getByTestId("tab-WEST")).toBeDefined();
+    expect(getByTestId("tab-EAST")).toBeDefined();
+    expect(queryByTestId("tab-GUER")).toBeNull();
+    expect(queryByTestId("tab-CIV")).toBeNull();
+  });
+
+  it("renders all four tabs when all sides have units", () => {
+    for (const [id, side] of [[1, "WEST"], [2, "EAST"], [3, "GUER"], [4, "CIV"]] as const) {
+      engine.entityManager.addEntity({
+        id, type: "man", name: `Unit${id}`, side,
+        groupName: "G", isPlayer: false, startFrame: 0, endFrame: 100,
+      });
+    }
+
     const { getByTestId } = render(() => (
       <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
@@ -70,13 +98,20 @@ describe("LeftPanel", () => {
   });
 
   it("side tabs show display names with side color classes", () => {
+    for (const [id, side] of [[1, "WEST"], [2, "EAST"], [3, "GUER"], [4, "CIV"]] as const) {
+      engine.entityManager.addEntity({
+        id, type: "man", name: `Unit${id}`, side,
+        groupName: "G", isPlayer: false, startFrame: 0, endFrame: 100,
+      });
+    }
+
     const { getByTestId } = render(() => (
       <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
       </EngineProvider></I18nProvider></CustomizeProvider>
     ));
     expect(getByTestId("tab-WEST").textContent).toContain("BLUFOR");
-    expect(getByTestId("tab-WEST").textContent).toContain("(0)");
+    expect(getByTestId("tab-WEST").textContent).toContain("(1)");
     expect(getByTestId("tab-WEST").className).toContain("blufor");
     expect(getByTestId("tab-EAST").textContent).toContain("OPFOR");
     expect(getByTestId("tab-EAST").className).toContain("opfor");
@@ -87,6 +122,11 @@ describe("LeftPanel", () => {
   });
 
   it("side tabs are at the bottom (after panel content in DOM)", () => {
+    engine.entityManager.addEntity({
+      id: 1, type: "man", name: "A1", side: "WEST",
+      groupName: "Alpha", isPlayer: true, startFrame: 0, endFrame: 100,
+    });
+
     const { getByTestId } = render(() => (
       <CustomizeProvider><I18nProvider locale="en"><EngineProvider engine={engine}>
         <LeftPanel />
