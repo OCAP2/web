@@ -676,11 +676,26 @@
   overflow: hidden;
 }
 
+.sidebarHeroImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebarHeroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3));
+}
+
 .sidebarHeroMapName {
   font-size: 28px;
   font-weight: 700;
   font-family: var(--ms-font-heading);
   opacity: 0.8;
+  text-transform: uppercase;
 }
 
 .sidebarHeroTerrain {

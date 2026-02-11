@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import type { Operation } from "../../data/types";
-import { C, SIDE_COLORS } from "./constants";
+// C and SIDE_COLORS needed when force composition / combat summary are uncommented
+// import { C, SIDE_COLORS } from "./constants";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
 import { StatPill, TagBadge, StatusBadge } from "./components";
@@ -19,25 +20,16 @@ export function DetailSidebar(props: {
   return (
     <div class={styles.sidebar}>
       {/* Map Hero */}
-      <div class={styles.sidebarHero} style={{ background: `linear-gradient(135deg, ${mapColor()}15, ${mapColor()}05)` }}>
-        {/* Grid pattern */}
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: "0", opacity: "0.06" }}>
-          <defs>
-            <pattern id="detailGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke={mapColor()} stroke-width="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#detailGrid)"/>
-        </svg>
-        {/* Contour shapes */}
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: "0", opacity: "0.08" }}>
-          <ellipse cx="50%" cy="50%" rx="80" ry="50" fill="none" stroke={mapColor()} stroke-width="1"/>
-          <ellipse cx="50%" cy="50%" rx="120" ry="75" fill="none" stroke={mapColor()} stroke-width="0.7"/>
-          <ellipse cx="50%" cy="50%" rx="160" ry="100" fill="none" stroke={mapColor()} stroke-width="0.5"/>
-        </svg>
+      <div class={styles.sidebarHero}>
+        <img
+          src={`/images/maps/${encodeURIComponent(props.op.worldName)}/preview_512.png`}
+          alt=""
+          class={styles.sidebarHeroImg}
+        />
+        <div class={styles.sidebarHeroOverlay} />
         <div style={{ "text-align": "center", "z-index": "1" }}>
           <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.op.worldName}</div>
-          <div class={styles.sidebarHeroTerrain}>{props.op.worldName}</div>
+          {/* <div class={styles.sidebarHeroTerrain}>{props.op.worldName}</div> */}
         </div>
         <button class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
           <Icons.X />
@@ -64,7 +56,7 @@ export function DetailSidebar(props: {
           <StatPill icon={<Icons.Users />} value={"\u2014"} label="PLAYERS" />
         </div>
 
-        {/* Force composition placeholder */}
+        {/* Force composition — uncomment when data is available
         <div>
           <div class={styles.sidebarSectionLabel}>{props.t("force_composition")}</div>
           <div class={styles.sidebarSideRow}>
@@ -76,8 +68,9 @@ export function DetailSidebar(props: {
             <span class={styles.sidebarSideCount}>&mdash;</span>
           </div>
         </div>
+        */}
 
-        {/* Combat Summary placeholder */}
+        {/* Combat summary — uncomment when data is available
         <div class={styles.sidebarCombat}>
           <div class={styles.sidebarCombatItem}>
             <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
@@ -95,6 +88,7 @@ export function DetailSidebar(props: {
             </div>
           </div>
         </div>
+        */}
       </div>
 
       {/* Launch Button */}
@@ -107,7 +101,6 @@ export function DetailSidebar(props: {
         >
           <Show when={ready()} fallback={<>{status().label}</>}>
             <Icons.Play /> {props.t("open_replay")}
-            <span class={styles.launchArrow}><Icons.ArrowRight /></span>
           </Show>
         </button>
       </div>
