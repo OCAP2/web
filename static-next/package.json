@@ -13,8 +13,8 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@deck.gl/core": "^9.2.6",
+    "@deck.gl/geo-layers": "^9.2.6",
     "@deck.gl/layers": "^9.2.6",
-    "@deck.gl/mapbox": "^9.2.6",
     "@maplibre/maplibre-gl-leaflet": "^0.0.22",
     "leaflet": "^1.9.0",
     "leaflet-rotatedmarker": "^0.2.0",

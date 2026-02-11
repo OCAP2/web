@@ -1,10 +1,10 @@
-import maplibregl from "maplibre-gl";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import type { Layer } from "@deck.gl/core";
+import { Deck, FlyToInterpolator, WebMercatorViewport } from "@deck.gl/core";
+import type { Layer, MapViewState } from "@deck.gl/core";
+import { PMTiles } from "pmtiles";
 import type { ArmaCoord } from "../../utils/coordinates";
 import { METERS_PER_DEGREE } from "../../utils/coordinates";
 import { closestEquivalentAngle } from "../../utils/math";
-import type { WorldConfig, Side, AliveState } from "../../data/types";
+import type { WorldConfig } from "../../data/types";
 import type { MapRenderer } from "../renderer.interface";
 import type {
   MarkerHandle,
@@ -21,7 +21,6 @@ import type {
   RendererEvent,
   RendererControls,
 } from "../renderer.types";
-import { SIDE_CLASS } from "../../config/side-colors";
 import {
   DeckState,
   hexToRGBA,
@@ -45,6 +44,11 @@ import {
   buildPulseLayer,
 } from "./deckgl-layers";
 import { getTransitionDuration } from "../shared/transitions";
+import { parseStyleDocument } from "./deckgl-style-parser";
+import type { CompiledStyle } from "./deckgl-style-parser";
+import { buildBasemapLayers, loadSpriteAtlas, createVectorTileDataFetcher } from "./deckgl-basemap";
+import type { SpriteAtlas } from "./deckgl-basemap";
+import { ScaleControl } from "./deckgl-scale-control";
 
 // --------------- Internal handle types ---------------
 
@@ -105,10 +109,23 @@ function lngLatToArma(lngLat: [number, number]): ArmaCoord {
 // --------------- Renderer ---------------
 
 export class DeckGLRenderer implements MapRenderer {
-  private map!: maplibregl.Map;
-  private overlay!: MapboxOverlay;
+  private deck!: Deck;
+  private container!: HTMLElement;
   private state!: DeckState;
   private iconAtlas!: IconAtlas;
+  private scaleControl!: ScaleControl;
+
+  private viewState!: MapViewState;
+  private worldSizeDeg = 0;
+  private lastIntZoom = 0;
+
+  // Basemap
+  private compiledStyle: CompiledStyle | null = null;
+  private spriteAtlas: SpriteAtlas | null = null;
+  private vectorPMTiles: PMTiles | null = null;
+  private vectorMaxZoom = 14;
+  private vectorGetTileData: ((opts: any) => Promise<any>) | null = null;
+  private basemapLayers: Layer[] = [];
 
   private nameDisplayMode: "players" | "all" | "none" = "players";
   private smoothingEnabled = false;
@@ -119,80 +136,71 @@ export class DeckGLRenderer implements MapRenderer {
   // ==================== Lifecycle ====================
 
   init(container: HTMLElement, world: WorldConfig): void {
-    const worldSizeDeg = world.worldSize / METERS_PER_DEGREE;
+    this.container = container;
+    this.worldSizeDeg = world.worldSize / METERS_PER_DEGREE;
 
-    // Register PMTiles protocol (idempotent)
-    this.registerPMTiles();
+    const centerLng = this.worldSizeDeg / 2;
+    const centerLat = this.worldSizeDeg / 2;
 
-    // Resolve font glyph base URL
-    const fontsBaseURL = new URL("images/maps/fonts/", window.location.href).href;
-
-    // Build style URL
-    const styleUrl = world.tileBaseUrl
-      ? `${world.tileBaseUrl}/styles/topo.json`
-      : undefined;
-
-    // transformRequest: rewrite glyph requests to Go server's font endpoint
-    const transformRequest = (url: string, resourceType?: string) => {
-      if (resourceType === "Glyphs") {
-        const match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
-        if (match) {
-          return { url: fontsBaseURL + match[1] + "/" + match[2] };
-        }
-      }
-    };
-
-    // Pad the world bounds so the user can't pan into empty space,
-    // and MapLibre doesn't load/render tiles outside the map area.
-    const pad = worldSizeDeg * 0.1;
-    const maxBounds: maplibregl.LngLatBoundsLike = [
-      [-pad, -pad],
-      [worldSizeDeg + pad, worldSizeDeg + pad],
-    ];
-
-    // Create MapLibre map (standalone, no Leaflet)
-    this.map = new maplibregl.Map({
-      container,
-      style: styleUrl ?? {
-        version: 8,
-        sources: {},
-        layers: [{ id: "background", type: "background", paint: { "background-color": "#1a1a2e" } }],
-      },
-      center: [worldSizeDeg / 2, worldSizeDeg / 2],
+    this.viewState = {
+      longitude: centerLng,
+      latitude: centerLat,
       zoom: 12,
-      minZoom: 10,
-      maxZoom: 20,
-      maxBounds,
-      transformRequest,
-      attributionControl: {},
-      // Disable rotation/pitch: 2D icons have no height axis, so tilting
-      // the camera causes them to clip into the ground or get cut off.
-      dragRotate: false,
-      pitchWithRotate: false,
-      touchPitch: false,
-      // Don't render repeated world copies — our map is a small area at the equator
-      renderWorldCopies: false,
-      // Performance: skip tile cross-fade to reduce GPU draw calls per frame
-      fadeDuration: 0,
-      // Performance: cache more parsed tiles to avoid re-parsing on pan/zoom
-      maxTileCacheSize: 256,
-      // Performance: skip Resource Timing API entries for tile requests
-      collectResourceTiming: false,
-    });
+      pitch: 0,
+      bearing: 0,
+    };
+    this.lastIntZoom = 12;
 
-    // Initialize state and overlay
+    // Initialize state (callbacks wired after deck creation)
     this.state = new DeckState(
       () => this.buildLayers(),
-      (layers) => this.overlay.setProps({ layers }),
+      (layers) => this.deck.setProps({ layers }),
     );
 
-    this.overlay = new MapboxOverlay({
+    // Create standalone Deck
+    this.deck = new Deck({
+      parent: container as HTMLDivElement,
+      initialViewState: this.viewState,
+      controller: {
+        dragRotate: false,
+        touchRotate: false,
+        keyboard: { moveSpeed: 100 },
+        minZoom: 10,
+        maxZoom: 20,
+      },
+      onViewStateChange: ({ viewState }: { viewState: MapViewState }) => {
+        this.viewState = viewState;
+
+        // Rebuild basemap layers on integer zoom change.
+        // Use RAF-batched markDirty() instead of synchronous flushNow()
+        // to avoid blocking the zoom gesture handler.
+        const intZoom = Math.floor(viewState.zoom);
+        if (intZoom !== this.lastIntZoom) {
+          this.lastIntZoom = intZoom;
+          this.rebuildBasemap();
+          this.state.markDirty();
+          this.fireEvent("zoom", viewState.zoom);
+        }
+
+        this.scaleControl?.update(viewState.zoom);
+      },
+      onDragStart: () => {
+        this.fireEvent("dragstart");
+      },
+      onClick: (info: any) => {
+        if (info.coordinate) {
+          this.fireEvent("click", lngLatToArma([info.coordinate[0], info.coordinate[1]]));
+        }
+      },
       layers: [],
-      interleaved: true,
+      // Use WebGL2 for better performance
+      useDevicePixels: true,
+      _animate: true,
     });
 
-    this.map.addControl(this.overlay as any);
-    this.map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    // Scale control
+    this.scaleControl = new ScaleControl(container);
+    this.scaleControl.update(this.viewState.zoom);
 
     // Build icon atlas async, then trigger first render
     void buildIconAtlas().then((atlas) => {
@@ -200,36 +208,70 @@ export class DeckGLRenderer implements MapRenderer {
       this.state.flushNow();
     });
 
-    // Forward map events
-    this.map.on("zoomend", () => {
-      this.fireEvent("zoom", this.map.getZoom());
-    });
-    this.map.on("dragstart", () => {
-      this.fireEvent("dragstart");
-    });
-    this.map.on("click", (e) => {
-      this.fireEvent("click", lngLatToArma([e.lngLat.lng, e.lngLat.lat]));
-    });
+    // Load style and basemap async
+    this.loadStyle(world);
 
     // Fit to world bounds
-    this.map.fitBounds(
-      [[0, 0], [worldSizeDeg, worldSizeDeg]] as maplibregl.LngLatBoundsLike,
-      { animate: false },
+    this.fitBoundsInternal(
+      [0, 0],
+      [this.worldSizeDeg, this.worldSizeDeg],
+      false,
     );
   }
 
-  private registerPMTiles(): void {
-    if ((window as any)._pmtilesRegistered) return;
-    void (async () => {
-      try {
-        const { Protocol } = await import("pmtiles");
-        const protocol = new Protocol();
-        maplibregl.addProtocol("pmtiles", protocol.tile);
-        (window as any)._pmtilesRegistered = true;
-      } catch {
-        // PMTiles not available
+  private async loadStyle(world: WorldConfig): Promise<void> {
+    if (!world.tileBaseUrl) return;
+
+    const styleUrl = `${world.tileBaseUrl}/styles/topo.json`;
+    try {
+      const resp = await fetch(styleUrl);
+      if (!resp.ok) return;
+      const doc = await resp.json();
+      this.compiledStyle = parseStyleDocument(doc);
+
+      // Load sprite atlas
+      if (this.compiledStyle.spriteUrl) {
+        this.spriteAtlas = await loadSpriteAtlas(this.compiledStyle.spriteUrl);
       }
-    })();
+
+      // Open PMTiles archives for each source and read metadata
+      for (const [name, source] of Object.entries(this.compiledStyle.sources)) {
+        if (source.type === "vector" && source.url) {
+          this.vectorPMTiles = new PMTiles(source.url);
+          // Create stable getTileData reference once — reused across all
+          // basemap rebuilds so TileLayer keeps its tile cache.
+          this.vectorGetTileData = createVectorTileDataFetcher(this.vectorPMTiles);
+          try {
+            const header = await this.vectorPMTiles.getHeader();
+            this.vectorMaxZoom = header.maxZoom;
+          } catch {
+            // Fallback already set
+          }
+        }
+      }
+
+      this.rebuildBasemap();
+      this.state.flushNow();
+    } catch {
+      // Style not available — render with empty basemap
+    }
+  }
+
+  private rebuildBasemap(): void {
+    if (!this.compiledStyle) {
+      this.basemapLayers = [];
+      return;
+    }
+
+    this.basemapLayers = buildBasemapLayers({
+      compiledStyle: this.compiledStyle,
+      zoom: this.viewState.zoom,
+      worldSizeDeg: this.worldSizeDeg,
+      spriteAtlas: this.spriteAtlas,
+      vectorPMTiles: this.vectorPMTiles ?? undefined,
+      vectorMaxZoom: this.vectorMaxZoom,
+      vectorGetTileData: this.vectorGetTileData ?? undefined,
+    });
   }
 
   dispose(): void {
@@ -237,15 +279,18 @@ export class DeckGLRenderer implements MapRenderer {
       this.state.dispose();
     }
     this.listeners.clear();
-    if (this.map) {
-      this.map.remove();
+    if (this.scaleControl) {
+      this.scaleControl.dispose();
+    }
+    if (this.deck) {
+      this.deck.finalize();
     }
   }
 
   // ==================== Layer building ====================
 
   private buildLayers(): Layer[] {
-    const layers: Layer[] = [];
+    const layers: Layer[] = [...this.basemapLayers];
     const s = this.state;
 
     if (s.enabledLayers.has("entities") && this.iconAtlas) {
@@ -286,36 +331,78 @@ export class DeckGLRenderer implements MapRenderer {
   // ==================== Camera ====================
 
   getZoom(): number {
-    return this.map.getZoom();
+    return this.viewState.zoom;
   }
 
   setView(armaPos: ArmaCoord, zoom?: number, animate?: boolean): void {
-    const center = armaToLngLat(armaPos);
+    const [lng, lat] = armaToLngLat(armaPos);
+    const targetZoom = zoom ?? this.viewState.zoom;
+
     if (animate ?? true) {
-      this.map.flyTo({
-        center: center as maplibregl.LngLatLike,
-        zoom: zoom ?? this.map.getZoom(),
-        duration: 500,
+      this.deck.setProps({
+        initialViewState: {
+          ...this.viewState,
+          longitude: lng,
+          latitude: lat,
+          zoom: targetZoom,
+          transitionDuration: 500,
+          transitionInterpolator: new FlyToInterpolator(),
+        },
       });
     } else {
-      this.map.jumpTo({
-        center: center as maplibregl.LngLatLike,
-        zoom: zoom ?? this.map.getZoom(),
-      });
+      this.viewState = { ...this.viewState, longitude: lng, latitude: lat, zoom: targetZoom };
+      this.deck.setProps({ initialViewState: { ...this.viewState } });
     }
   }
 
   fitBounds(sw: ArmaCoord, ne: ArmaCoord): void {
     const swLngLat = armaToLngLat(sw);
     const neLngLat = armaToLngLat(ne);
-    this.map.fitBounds(
-      [swLngLat, neLngLat] as maplibregl.LngLatBoundsLike,
-    );
+    this.fitBoundsInternal(swLngLat, neLngLat, true);
+  }
+
+  private fitBoundsInternal(
+    sw: [number, number],
+    ne: [number, number],
+    animate: boolean,
+  ): void {
+    const { width, height } = this.getContainerSize();
+    if (width === 0 || height === 0) return;
+
+    const viewport = new WebMercatorViewport({ width, height });
+    const fitted = viewport.fitBounds([sw, ne], { padding: 20 });
+
+    if (animate) {
+      this.deck.setProps({
+        initialViewState: {
+          ...this.viewState,
+          longitude: fitted.longitude,
+          latitude: fitted.latitude,
+          zoom: fitted.zoom,
+          transitionDuration: 500,
+          transitionInterpolator: new FlyToInterpolator(),
+        },
+      });
+    } else {
+      this.viewState = {
+        ...this.viewState,
+        longitude: fitted.longitude,
+        latitude: fitted.latitude,
+        zoom: fitted.zoom,
+      };
+      this.deck.setProps({ initialViewState: { ...this.viewState } });
+    }
+  }
+
+  private getContainerSize(): { width: number; height: number } {
+    return {
+      width: this.container?.clientWidth ?? 0,
+      height: this.container?.clientHeight ?? 0,
+    };
   }
 
   getCenter(): ArmaCoord {
-    const c = this.map.getCenter();
-    return lngLatToArma([c.lng, c.lat]);
+    return lngLatToArma([this.viewState.longitude, this.viewState.latitude]);
   }
 
   // ==================== Entity markers ====================
@@ -644,7 +731,7 @@ export class DeckGLRenderer implements MapRenderer {
 
   getControls(): RendererControls {
     return {
-      container: this.map?.getContainer(),
+      container: this.container,
     };
   }
 }
