@@ -29,12 +29,13 @@ export const TAG_COLORS: Record<string, { bg: string; color: string; border: str
   Training: { bg: "rgba(255,184,74,0.12)",  color: "#FFC66B", border: "rgba(255,184,74,0.2)" },
 };
 
-export const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
-  ready:      { label: "Ready",      color: C.green,  icon: "\u25CF" },
-  streaming:  { label: "Streaming",  color: C.blue,   icon: "\u25C9" },
-  converting: { label: "Converting", color: C.orange,  icon: "\u25CC" },
-  pending:    { label: "Pending",    color: C.muted,  icon: "\u25CB" },
-  failed:     { label: "Failed",     color: C.red,    icon: "\u2715" },
+// Labels are i18n keys — resolve via t() at render time
+export const STATUS_MAP: Record<string, { labelKey: string; color: string; icon: string }> = {
+  ready:      { labelKey: "status_ready",      color: C.green,  icon: "\u25CF" },
+  streaming:  { labelKey: "status_streaming",  color: C.blue,   icon: "\u25C9" },
+  converting: { labelKey: "status_converting", color: C.orange,  icon: "\u25CC" },
+  pending:    { labelKey: "status_pending",    color: C.muted,  icon: "\u25CB" },
+  failed:     { labelKey: "status_failed",     color: C.red,    icon: "\u2715" },
 };
 
 export const SIDE_COLORS: Record<string, string> = {

@@ -360,7 +360,7 @@ describe("MissionSelector", () => {
     await findByTestId("operation-1");
 
     const missionHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("MISSION"),
+      (b) => b.textContent?.toLowerCase().includes("mission"),
     );
     expect(missionHeader).toBeDefined();
 
@@ -381,7 +381,7 @@ describe("MissionSelector", () => {
     await findByTestId("operation-1");
 
     const missionHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("MISSION"),
+      (b) => b.textContent?.toLowerCase().includes("mission"),
     );
 
     // First click: descending

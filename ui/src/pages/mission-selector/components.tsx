@@ -1,5 +1,6 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
+import { useI18n } from "../../ui/hooks/useLocale";
 import { TAG_COLORS, STATUS_MAP, C } from "./constants";
 import { Icons } from "./icons";
 import styles from "./MissionSelector.module.css";
@@ -35,6 +36,7 @@ export function TagBadge(props: { tag: string; clickable?: boolean; active?: boo
 }
 
 export function StatusBadge(props: { status: string }) {
+  const { t } = useI18n();
   const info = () => {
     const si = STATUS_MAP[props.status];
     return si || STATUS_MAP.pending;
@@ -47,7 +49,7 @@ export function StatusBadge(props: { status: string }) {
       >
         {info().icon}
       </span>
-      {info().label}
+      {t(info().labelKey)}
     </div>
   );
 }

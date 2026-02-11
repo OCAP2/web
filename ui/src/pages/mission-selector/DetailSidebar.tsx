@@ -1,5 +1,6 @@
 import { Show } from "solid-js";
 import type { Operation } from "../../data/types";
+import { useI18n } from "../../ui/hooks/useLocale";
 // C and SIDE_COLORS needed when force composition / combat summary are uncommented
 // import { C, SIDE_COLORS } from "./constants";
 import { Icons } from "./icons";
@@ -11,8 +12,8 @@ export function DetailSidebar(props: {
   op: Operation;
   onLaunch: (op: Operation) => void;
   onClose: () => void;
-  t: (key: string) => string;
 }) {
+  const { t, locale } = useI18n();
   const mapColor = () => getMapColor(props.op.worldName);
   const status = () => getStatusInfo(props.op);
   const ready = () => isOpReady(props.op);
@@ -51,14 +52,14 @@ export function DetailSidebar(props: {
 
         {/* Stats Grid */}
         <div class={styles.sidebarStatsGrid}>
-          <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.op.date)} label="DATE" />
-          <StatPill icon={<Icons.Clock />} value={formatDuration(props.op.missionDuration)} label="DURATION" />
-          <StatPill icon={<Icons.Users />} value={"\u2014"} label="PLAYERS" />
+          <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.op.date, locale())} label={t("data")} />
+          <StatPill icon={<Icons.Clock />} value={formatDuration(props.op.missionDuration)} label={t("durability")} />
+          <StatPill icon={<Icons.Users />} value={"\u2014"} label={t("players")} />
         </div>
 
         {/* Force composition — uncomment when data is available
         <div>
-          <div class={styles.sidebarSectionLabel}>{props.t("force_composition")}</div>
+          <div class={styles.sidebarSectionLabel}>{t("force_composition")}</div>
           <div class={styles.sidebarSideRow}>
             <div class={styles.sidebarSideDot} style={{ background: SIDE_COLORS.BLUFOR }} />
             <span class={styles.sidebarSideName} style={{ color: SIDE_COLORS.BLUFOR }}>BLUFOR</span>
@@ -76,7 +77,7 @@ export function DetailSidebar(props: {
             <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
             <div>
               <div class={styles.sidebarCombatValue} style={{ color: C.red }}>&mdash;</div>
-              <div class={styles.sidebarCombatLabel}>{props.t("total_kills")}</div>
+              <div class={styles.sidebarCombatLabel}>{t("total_kills")}</div>
             </div>
           </div>
           <div class={styles.sidebarCombatDivider} />
@@ -84,7 +85,7 @@ export function DetailSidebar(props: {
             <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
             <div>
               <div class={styles.sidebarCombatValue} style={{ color: C.orange }}>&mdash;</div>
-              <div class={styles.sidebarCombatLabel}>{props.t("kills_per_min")}</div>
+              <div class={styles.sidebarCombatLabel}>{t("kills_per_min")}</div>
             </div>
           </div>
         </div>
@@ -99,8 +100,8 @@ export function DetailSidebar(props: {
           disabled={!ready()}
           onClick={() => ready() && props.onLaunch(props.op)}
         >
-          <Show when={ready()} fallback={<>{status().label}</>}>
-            <Icons.Play /> {props.t("open_replay")}
+          <Show when={ready()} fallback={<>{t(status().labelKey)}</>}>
+            <Icons.Play /> {t("open_replay")}
           </Show>
         </button>
       </div>

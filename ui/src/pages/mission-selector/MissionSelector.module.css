@@ -118,6 +118,7 @@
   color: var(--ms-text-dimmer);
   font-family: var(--ms-font-mono);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .divider {
@@ -443,6 +444,7 @@
   font-family: var(--ms-font-mono);
   font-weight: 600;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   transition: color 0.15s;
   color: var(--ms-text-dim);
 }
@@ -461,6 +463,7 @@
   font-family: var(--ms-font-mono);
   font-weight: 600;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .colLabelRight {

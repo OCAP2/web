@@ -1,5 +1,6 @@
 import { Show, createEffect } from "solid-js";
 import type { Operation } from "../../data/types";
+import { useI18n } from "../../ui/hooks/useLocale";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, relativeDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
 import { TagBadge, StatusBadge } from "./components";
@@ -12,6 +13,7 @@ export function MissionRow(props: {
   onLaunch: (op: Operation) => void;
   index: number;
 }) {
+  const { locale } = useI18n();
   const mapColor = () => getMapColor(props.op.worldName);
   const status = () => getStatusInfo(props.op);
   const ready = () => isOpReady(props.op);
@@ -53,8 +55,8 @@ export function MissionRow(props: {
 
       {/* Date */}
       <div class={styles.rowDate}>
-        <span class={styles.rowDateValue}>{formatDate(props.op.date)}</span>
-        <span class={styles.rowDateRelative}>{relativeDate(props.op.date)}</span>
+        <span class={styles.rowDateValue}>{formatDate(props.op.date, locale())}</span>
+        <span class={styles.rowDateRelative}>{relativeDate(props.op.date, locale())}</span>
       </div>
 
       {/* Duration */}

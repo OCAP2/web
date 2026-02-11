@@ -36,29 +36,33 @@ export function formatDuration(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
-export function formatDate(dateStr: string): string {
+// Map our locale codes to BCP 47 tags for Intl APIs
+const BCP47: Record<string, string> = { en: "en-GB", de: "de-DE", ru: "ru-RU", cs: "cs-CZ", it: "it-IT" };
+
+export function formatDate(dateStr: string, locale = "en"): string {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(BCP47[locale] || locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function relativeDate(dateStr: string): string {
+export function relativeDate(dateStr: string, locale = "en"): string {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "";
   const now = Date.now();
-  const diff = Math.floor((now - d.getTime()) / 86400000);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  if (diff < 7) return `${diff} days ago`;
-  if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
-  return `${Math.floor(diff / 30)}mo ago`;
+  const diffMs = now - d.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+  const rtf = new Intl.RelativeTimeFormat(BCP47[locale] || locale, { numeric: "auto" });
+  if (diffDays === 0) return rtf.format(0, "day");
+  if (diffDays < 7) return rtf.format(-diffDays, "day");
+  if (diffDays < 30) return rtf.format(-Math.floor(diffDays / 7), "week");
+  return rtf.format(-Math.floor(diffDays / 30), "month");
 }
 
 export function getMapColor(worldName: string): string {
   return MAP_COLORS[worldName.toLowerCase()] || hashColor(worldName);
 }
 
-export function getStatusInfo(op: Operation): { label: string; color: string; icon: string; key: string } {
+export function getStatusInfo(op: Operation): { labelKey: string; color: string; icon: string; key: string } {
   const format = op.storageFormat || "json";
   const conversionStatus = op.conversionStatus || "completed";
   if (conversionStatus === "pending") return { ...STATUS_MAP.pending, key: "pending" };

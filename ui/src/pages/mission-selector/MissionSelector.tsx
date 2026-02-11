@@ -166,12 +166,12 @@ export function MissionSelector(): JSX.Element {
           <div class={styles.loadingLogo}>
             <OcapLogoSvg size={56} />
           </div>
-          <div class={styles.loadingTitle}>Loading {launchedOp()!.missionName}</div>
+          <div class={styles.loadingTitle}>{t("loading_mission")} {launchedOp()!.missionName}</div>
           <div class={styles.loadingSubtitle}>{launchedOp()!.worldName} &middot; {formatDuration(launchedOp()!.missionDuration)}</div>
           <div class={styles.loadingBarTrack}>
             <div class={styles.loadingBarFill} />
           </div>
-          <div class={styles.loadingHint}>Initializing replay engine...</div>
+          <div class={styles.loadingHint}>{t("initializing_engine")}</div>
         </div>
       </div>
     }>
@@ -219,7 +219,7 @@ export function MissionSelector(): JSX.Element {
                 <Show when={langOpen()}>
                   <div class={styles.langOverlay} onClick={() => setLangOpen(false)} />
                   <div class={styles.langDropdown}>
-                    <div class={styles.langDropdownTitle}>LANGUAGE</div>
+                    <div class={styles.langDropdownTitle}>{t("language_label")}</div>
                     <For each={LOCALES}>
                       {(loc) => (
                         <button
@@ -304,7 +304,7 @@ export function MissionSelector(): JSX.Element {
             {/* Clear */}
             <Show when={hasFilters()}>
               <button class={styles.clearButton} onClick={clearFilters}>
-                <Icons.X /> Clear
+                <Icons.X /> {t("clear")}
               </button>
             </Show>
           </div>
@@ -315,15 +315,15 @@ export function MissionSelector(): JSX.Element {
           <div class={styles.tableArea}>
             {/* Column Headers */}
             <div class={styles.tableHeader}>
-              <SortHeader label="MISSION" sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
-              <SortHeader label="DATE" sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
-              <SortHeader label="DURATION" sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              <SortHeader label={t("mission")} sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              <SortHeader label={t("data")} sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              <SortHeader label={t("durability")} sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               {/* Uncomment when data is available
-              <span class={styles.colLabel}>PLAYERS</span>
+              <span class={styles.colLabel}>{t("players")}</span>
               <span class={styles.colLabel}>KILLS</span>
               */}
-              <span class={styles.colLabel}>TAG</span>
-              <span class={styles.colLabelRight}>STATUS</span>
+              <span class={styles.colLabel}>{t("tag")}</span>
+              <span class={styles.colLabelRight}>{t("status")}</span>
               <span />
             </div>
 
@@ -369,16 +369,16 @@ export function MissionSelector(): JSX.Element {
                 <div class={styles.dividerShort} />
                 <div class={styles.footerVersions}>
                   <span class={styles.footerVersion}>
-                    Server <span class={styles.footerVersionValue}>{serverVersion()}</span>
+                    {t("server")} <span class={styles.footerVersionValue}>{serverVersion()}</span>
                   </span>
                 </div>
                 <div class={styles.dividerShort} />
                 <span class={styles.footerMadeWith}>
-                  Made with <span class={styles.footerHeart}><Icons.Heart /></span> for the Arma community
+                  {t("made_with_love")} <span class={styles.footerHeart}><Icons.Heart /></span>
                 </span>
               </div>
               <span class={styles.footerCenter}>
-                {filtered().length} of {operations().length} missions
+                {filtered().length} {t("of")} {operations().length} {t("missions")}
               </span>
               <div class={styles.footerRight}>
                 <div class={styles.footerShortcut}>
@@ -408,7 +408,6 @@ export function MissionSelector(): JSX.Element {
                 op={op()}
                 onLaunch={handleLaunch}
                 onClose={() => setSelectedId(null)}
-                t={t}
               />
             )}
           </Show>
