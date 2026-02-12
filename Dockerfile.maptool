@@ -20,7 +20,7 @@ FROM alpine:3.23
 ARG TARGETARCH
 ARG PMTILES_VERSION=1.30.0
 
-RUN apk add --no-cache gdal-tools py3-gdal gdal-driver-png sqlite-libs zlib && \
+RUN apk add --no-cache gdal-tools py3-gdal gdal-driver-png gdal-driver-jpeg sqlite-libs zlib && \
     case "$TARGETARCH" in \
       amd64) ARCH="x86_64" ;; \
       arm64) ARCH="arm64" ;; \
