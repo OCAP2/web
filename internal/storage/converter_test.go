@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
@@ -90,195 +92,97 @@ func TestConverter_Convert(t *testing.T) {
 
 	// Write test JSON
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
-	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
-		t.Fatalf("write test JSON: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644), "write test JSON")
 
 	// Convert with small chunk size for testing
 	converter := NewConverter(5) // 5 frames per chunk
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
-		t.Fatalf("convert: %v", err)
-	}
+	require.NoError(t, converter.Convert(ctx, inputPath, outputPath, "protobuf"), "convert")
 
 	// Verify manifest was created
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
+	require.NoError(t, err, "read manifest")
 
 	var manifest pbv1.Manifest
-	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
-		t.Fatalf("unmarshal manifest: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(manifestData, &manifest), "unmarshal manifest")
 
 	// Verify manifest content
-	if manifest.WorldName != "Altis" {
-		t.Errorf("WorldName = %q, want %q", manifest.WorldName, "Altis")
-	}
-	if manifest.MissionName != "Test Mission" {
-		t.Errorf("MissionName = %q, want %q", manifest.MissionName, "Test Mission")
-	}
-	if manifest.FrameCount != 10 {
-		t.Errorf("FrameCount = %d, want %d", manifest.FrameCount, 10)
-	}
-	if manifest.ChunkSize != 5 {
-		t.Errorf("ChunkSize = %d, want %d", manifest.ChunkSize, 5)
-	}
-	if manifest.ChunkCount != 2 {
-		t.Errorf("ChunkCount = %d, want %d", manifest.ChunkCount, 2)
-	}
-	if manifest.CaptureDelayMs != 1000 {
-		t.Errorf("CaptureDelayMs = %d, want %d", manifest.CaptureDelayMs, 1000)
-	}
-	if len(manifest.Entities) != 2 {
-		t.Errorf("len(Entities) = %d, want %d", len(manifest.Entities), 2)
-	}
+	assert.Equal(t, "Altis", manifest.WorldName)
+	assert.Equal(t, "Test Mission", manifest.MissionName)
+	assert.Equal(t, uint32(10), manifest.FrameCount)
+	assert.Equal(t, uint32(5), manifest.ChunkSize)
+	assert.Equal(t, uint32(2), manifest.ChunkCount)
+	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)
+	require.Len(t, manifest.Entities, 2)
 
 	// Verify first entity
-	if len(manifest.Entities) > 0 {
-		ent := manifest.Entities[0]
-		if ent.Id != 0 {
-			t.Errorf("Entity[0].Id = %d, want %d", ent.Id, 0)
-		}
-		if ent.Type != pbv1.EntityType_ENTITY_TYPE_UNIT {
-			t.Errorf("Entity[0].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_UNIT)
-		}
-		if ent.Name != "Player1" {
-			t.Errorf("Entity[0].Name = %q, want %q", ent.Name, "Player1")
-		}
-		if ent.Side != pbv1.Side_SIDE_WEST {
-			t.Errorf("Entity[0].Side = %v, want %v", ent.Side, pbv1.Side_SIDE_WEST)
-		}
-		if !ent.IsPlayer {
-			t.Errorf("Entity[0].IsPlayer = %v, want %v", ent.IsPlayer, true)
-		}
-	}
+	ent := manifest.Entities[0]
+	assert.Equal(t, uint32(0), ent.Id)
+	assert.Equal(t, pbv1.EntityType_ENTITY_TYPE_UNIT, ent.Type)
+	assert.Equal(t, "Player1", ent.Name)
+	assert.Equal(t, pbv1.Side_SIDE_WEST, ent.Side)
+	assert.True(t, ent.IsPlayer)
 
 	// Verify second entity (vehicle)
-	if len(manifest.Entities) > 1 {
-		ent := manifest.Entities[1]
-		if ent.Type != pbv1.EntityType_ENTITY_TYPE_VEHICLE {
-			t.Errorf("Entity[1].Type = %v, want %v", ent.Type, pbv1.EntityType_ENTITY_TYPE_VEHICLE)
-		}
-		if ent.VehicleClass != "B_Truck_01" {
-			t.Errorf("Entity[1].VehicleClass = %q, want %q", ent.VehicleClass, "B_Truck_01")
-		}
-	}
+	ent = manifest.Entities[1]
+	assert.Equal(t, pbv1.EntityType_ENTITY_TYPE_VEHICLE, ent.Type)
+	assert.Equal(t, "B_Truck_01", ent.VehicleClass)
 
 	// Verify events
-	if len(manifest.Events) != 1 {
-		t.Errorf("len(Events) = %d, want %d", len(manifest.Events), 1)
-	} else {
-		evt := manifest.Events[0]
-		if evt.FrameNum != 8 {
-			t.Errorf("Event.FrameNum = %d, want %d", evt.FrameNum, 8)
-		}
-		if evt.Type != "killed" {
-			t.Errorf("Event.Type = %q, want %q", evt.Type, "killed")
-		}
-	}
+	require.Len(t, manifest.Events, 1)
+	assert.Equal(t, uint32(8), manifest.Events[0].FrameNum)
+	assert.Equal(t, "killed", manifest.Events[0].Type)
 
 	// Verify markers
-	if len(manifest.Markers) != 1 {
-		t.Errorf("len(Markers) = %d, want %d", len(manifest.Markers), 1)
-	}
+	assert.Len(t, manifest.Markers, 1)
 
 	// Verify times
-	if len(manifest.Times) != 1 {
-		t.Errorf("len(Times) = %d, want %d", len(manifest.Times), 1)
-	}
+	assert.Len(t, manifest.Times, 1)
 
 	// Verify chunks were created
 	chunk0Path := filepath.Join(outputPath, "chunks", "0000.pb")
 	chunk1Path := filepath.Join(outputPath, "chunks", "0001.pb")
 
-	if _, err := os.Stat(chunk0Path); err != nil {
-		t.Errorf("chunk 0 not created: %v", err)
-	}
-	if _, err := os.Stat(chunk1Path); err != nil {
-		t.Errorf("chunk 1 not created: %v", err)
-	}
+	assert.FileExists(t, chunk0Path)
+	assert.FileExists(t, chunk1Path)
 
 	// Read and verify chunk 0
 	chunk0Data, err := os.ReadFile(chunk0Path)
-	if err != nil {
-		t.Fatalf("read chunk 0: %v", err)
-	}
+	require.NoError(t, err, "read chunk 0")
 
 	var chunk0 pbv1.Chunk
-	if err := proto.Unmarshal(chunk0Data, &chunk0); err != nil {
-		t.Fatalf("unmarshal chunk 0: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(chunk0Data, &chunk0), "unmarshal chunk 0")
 
-	if chunk0.Index != 0 {
-		t.Errorf("Chunk0.Index = %d, want %d", chunk0.Index, 0)
-	}
-	if chunk0.StartFrame != 0 {
-		t.Errorf("Chunk0.StartFrame = %d, want %d", chunk0.StartFrame, 0)
-	}
-	if chunk0.FrameCount != 5 {
-		t.Errorf("Chunk0.FrameCount = %d, want %d", chunk0.FrameCount, 5)
-	}
-	if len(chunk0.Frames) != 5 {
-		t.Errorf("len(Chunk0.Frames) = %d, want %d", len(chunk0.Frames), 5)
-	}
+	assert.Equal(t, uint32(0), chunk0.Index)
+	assert.Equal(t, uint32(0), chunk0.StartFrame)
+	assert.Equal(t, uint32(5), chunk0.FrameCount)
+	require.Len(t, chunk0.Frames, 5)
 
 	// Verify first frame has entities
-	if len(chunk0.Frames) > 0 {
-		frame0 := chunk0.Frames[0]
-		if frame0.FrameNum != 0 {
-			t.Errorf("Frame0.FrameNum = %d, want %d", frame0.FrameNum, 0)
-		}
-		if len(frame0.Entities) != 2 {
-			t.Errorf("len(Frame0.Entities) = %d, want %d", len(frame0.Entities), 2)
-		}
+	frame0 := chunk0.Frames[0]
+	assert.Equal(t, uint32(0), frame0.FrameNum)
+	require.Len(t, frame0.Entities, 2)
 
-		// Verify first entity state
-		if len(frame0.Entities) > 0 {
-			state := frame0.Entities[0]
-			if state.EntityId != 0 {
-				t.Errorf("EntityState.EntityId = %d, want %d", state.EntityId, 0)
-			}
-			if state.PosX != 100.0 {
-				t.Errorf("EntityState.PosX = %f, want %f", state.PosX, 100.0)
-			}
-			if state.PosY != 200.0 {
-				t.Errorf("EntityState.PosY = %f, want %f", state.PosY, 200.0)
-			}
-			if state.Direction != 90 {
-				t.Errorf("EntityState.Direction = %d, want %d", state.Direction, 90)
-			}
-			if state.Alive != 1 {
-				t.Errorf("EntityState.Alive = %d, want %d", state.Alive, 1)
-			}
-		}
-	}
+	// Verify first entity state
+	state := frame0.Entities[0]
+	assert.Equal(t, uint32(0), state.EntityId)
+	assert.Equal(t, float32(100.0), state.PosX)
+	assert.Equal(t, float32(200.0), state.PosY)
+	assert.Equal(t, uint32(90), state.Direction)
+	assert.Equal(t, uint32(1), state.Alive)
 
 	// Read and verify chunk 1
 	chunk1Data, err := os.ReadFile(chunk1Path)
-	if err != nil {
-		t.Fatalf("read chunk 1: %v", err)
-	}
+	require.NoError(t, err, "read chunk 1")
 
 	var chunk1 pbv1.Chunk
-	if err := proto.Unmarshal(chunk1Data, &chunk1); err != nil {
-		t.Fatalf("unmarshal chunk 1: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(chunk1Data, &chunk1), "unmarshal chunk 1")
 
-	if chunk1.Index != 1 {
-		t.Errorf("Chunk1.Index = %d, want %d", chunk1.Index, 1)
-	}
-	if chunk1.StartFrame != 5 {
-		t.Errorf("Chunk1.StartFrame = %d, want %d", chunk1.StartFrame, 5)
-	}
-	if chunk1.FrameCount != 5 {
-		t.Errorf("Chunk1.FrameCount = %d, want %d", chunk1.FrameCount, 5)
-	}
+	assert.Equal(t, uint32(1), chunk1.Index)
+	assert.Equal(t, uint32(5), chunk1.StartFrame)
+	assert.Equal(t, uint32(5), chunk1.FrameCount)
 }
 
 func TestConverter_ConvertGzipped(t *testing.T) {
@@ -300,45 +204,30 @@ func TestConverter_ConvertGzipped(t *testing.T) {
 
 	// Write gzipped JSON
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
 
 	f, err := os.Create(inputPath)
-	if err != nil {
-		t.Fatalf("create gzip file: %v", err)
-	}
+	require.NoError(t, err, "create gzip file")
 	gw := gzip.NewWriter(f)
-	if _, err := gw.Write(jsonData); err != nil {
-		gw.Close()
-		f.Close()
-		t.Fatalf("write gzip: %v", err)
-	}
+	_, err = gw.Write(jsonData)
+	require.NoError(t, err, "write gzip")
 	gw.Close()
 	f.Close()
 
 	// Convert
 	converter := NewConverter(DefaultChunkSize)
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
-		t.Fatalf("convert: %v", err)
-	}
+	require.NoError(t, converter.Convert(ctx, inputPath, outputPath, "protobuf"), "convert")
 
 	// Verify manifest
 	manifestPath := filepath.Join(outputPath, "manifest.pb")
 	manifestData, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
+	require.NoError(t, err, "read manifest")
 
 	var manifest pbv1.Manifest
-	if err := proto.Unmarshal(manifestData, &manifest); err != nil {
-		t.Fatalf("unmarshal manifest: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(manifestData, &manifest), "unmarshal manifest")
 
-	if manifest.WorldName != "Stratis" {
-		t.Errorf("WorldName = %q, want %q", manifest.WorldName, "Stratis")
-	}
+	assert.Equal(t, "Stratis", manifest.WorldName)
 }
 
 func TestConverter_ContextCancellation(t *testing.T) {
@@ -359,12 +248,8 @@ func TestConverter_ContextCancellation(t *testing.T) {
 	}
 
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
-	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
-		t.Fatalf("write test JSON: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644), "write test JSON")
 
 	// Create cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -372,9 +257,7 @@ func TestConverter_ContextCancellation(t *testing.T) {
 
 	converter := NewConverter(10)
 	err = converter.Convert(ctx, inputPath, outputPath, "protobuf")
-	if err == nil {
-		t.Error("expected error from cancelled context")
-	}
+	assert.Error(t, err, "expected error from cancelled context")
 }
 
 func TestConverter_VehicleCrew(t *testing.T) {
@@ -421,55 +304,37 @@ func TestConverter_VehicleCrew(t *testing.T) {
 	}
 
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
-	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
-		t.Fatalf("write test JSON: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644), "write test JSON")
 
 	converter := NewConverter(10)
 	ctx := context.Background()
-	if err := converter.Convert(ctx, inputPath, outputPath, "protobuf"); err != nil {
-		t.Fatalf("convert: %v", err)
-	}
+	require.NoError(t, converter.Convert(ctx, inputPath, outputPath, "protobuf"), "convert")
 
 	// Read chunk and verify crew
 	chunkPath := filepath.Join(outputPath, "chunks", "0000.pb")
 	chunkData, err := os.ReadFile(chunkPath)
-	if err != nil {
-		t.Fatalf("read chunk: %v", err)
-	}
+	require.NoError(t, err, "read chunk")
 
 	var chunk pbv1.Chunk
-	if err := proto.Unmarshal(chunkData, &chunk); err != nil {
-		t.Fatalf("unmarshal chunk: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(chunkData, &chunk), "unmarshal chunk")
 
 	// Find vehicle state in first frame
-	if len(chunk.Frames) > 0 {
-		for _, state := range chunk.Frames[0].Entities {
-			if state.EntityId == 1 { // Vehicle
-				if len(state.CrewIds) != 1 {
-					t.Errorf("len(CrewIds) = %d, want %d", len(state.CrewIds), 1)
-				} else if state.CrewIds[0] != 0 {
-					t.Errorf("CrewIds[0] = %d, want %d", state.CrewIds[0], 0)
-				}
-			}
+	require.NotEmpty(t, chunk.Frames)
+	for _, state := range chunk.Frames[0].Entities {
+		if state.EntityId == 1 { // Vehicle
+			require.Len(t, state.CrewIds, 1)
+			assert.Equal(t, uint32(0), state.CrewIds[0])
 		}
 	}
 }
 
 func TestNewConverter_DefaultChunkSize(t *testing.T) {
 	converter := NewConverter(0)
-	if converter.ChunkSize != DefaultChunkSize {
-		t.Errorf("ChunkSize = %d, want %d", converter.ChunkSize, DefaultChunkSize)
-	}
+	assert.Equal(t, uint32(DefaultChunkSize), converter.ChunkSize)
 
 	converter2 := NewConverter(100)
-	if converter2.ChunkSize != 100 {
-		t.Errorf("ChunkSize = %d, want %d", converter2.ChunkSize, 100)
-	}
+	assert.Equal(t, uint32(100), converter2.ChunkSize)
 }
 
 func TestToFloat64(t *testing.T) {
@@ -489,10 +354,7 @@ func TestToFloat64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toFloat64(tt.input)
-			if got != tt.want {
-				t.Errorf("toFloat64(%v) = %v, want %v", tt.input, got, tt.want)
-			}
+			assert.Equal(t, tt.want, toFloat64(tt.input))
 		})
 	}
 }
@@ -513,10 +375,7 @@ func TestToString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toString(tt.input)
-			if got != tt.want {
-				t.Errorf("toString(%v) = %q, want %q", tt.input, got, tt.want)
-			}
+			assert.Equal(t, tt.want, toString(tt.input))
 		})
 	}
 }
@@ -532,19 +391,13 @@ func TestConverter_UnknownInputVersion(t *testing.T) {
 	}
 
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
-	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
-		t.Fatalf("write test JSON: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644), "write test JSON")
 
 	converter := NewConverter(DefaultChunkSize)
 	ctx := context.Background()
 	err = converter.Convert(ctx, inputPath, outputPath, "protobuf")
-	if err == nil {
-		t.Error("expected error for unknown input version")
-	}
+	assert.Error(t, err, "expected error for unknown input version")
 }
 
 func TestConverter_InvalidFormat(t *testing.T) {
@@ -565,17 +418,11 @@ func TestConverter_InvalidFormat(t *testing.T) {
 	}
 
 	jsonData, err := json.Marshal(testData)
-	if err != nil {
-		t.Fatalf("marshal test data: %v", err)
-	}
-	if err := os.WriteFile(inputPath, jsonData, 0644); err != nil {
-		t.Fatalf("write test JSON: %v", err)
-	}
+	require.NoError(t, err, "marshal test data")
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644), "write test JSON")
 
 	converter := NewConverter(DefaultChunkSize)
 	ctx := context.Background()
 	err = converter.Convert(ctx, inputPath, outputPath, "invalid_format")
-	if err == nil {
-		t.Error("expected error for invalid format")
-	}
+	assert.Error(t, err, "expected error for invalid format")
 }

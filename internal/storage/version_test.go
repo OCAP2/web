@@ -1,6 +1,10 @@
 package storage
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestSchemaVersion_String(t *testing.T) {
 	tests := []struct {
@@ -27,9 +31,7 @@ func TestSchemaVersion_String(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.version.String(); got != tt.want {
-				t.Errorf("SchemaVersion.String() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, tt.version.String())
 		})
 	}
 }
@@ -59,9 +61,7 @@ func TestJSONInputVersion_String(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.version.String(); got != tt.want {
-				t.Errorf("JSONInputVersion.String() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, tt.version.String())
 		})
 	}
 }
@@ -159,9 +159,7 @@ func TestDetectJSONInputVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DetectJSONInputVersion(tt.data); got != tt.want {
-				t.Errorf("DetectJSONInputVersion() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, DetectJSONInputVersion(tt.data))
 		})
 	}
 }
@@ -191,9 +189,7 @@ func TestMapInputToSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MapInputToSchema(tt.input); got != tt.want {
-				t.Errorf("MapInputToSchema() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, MapInputToSchema(tt.input))
 		})
 	}
 }

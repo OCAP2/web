@@ -3,9 +3,10 @@ package storage
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
@@ -43,18 +44,10 @@ func TestRegisterAndGetWriter(t *testing.T) {
 
 	// Test GetWriter returns the registered writer
 	w, err := GetWriter("protobuf", SchemaVersionV1)
-	if err != nil {
-		t.Fatalf("GetWriter returned error: %v", err)
-	}
-	if w == nil {
-		t.Fatal("GetWriter returned nil writer")
-	}
-	if w.Version() != SchemaVersionV1 {
-		t.Errorf("expected version %v, got %v", SchemaVersionV1, w.Version())
-	}
-	if w.Format() != "protobuf" {
-		t.Errorf("expected format %q, got %q", "protobuf", w.Format())
-	}
+	require.NoError(t, err)
+	require.NotNil(t, w)
+	assert.Equal(t, SchemaVersionV1, w.Version())
+	assert.Equal(t, "protobuf", w.Format())
 }
 
 func TestGetWriterUnknownFormat(t *testing.T) {
@@ -67,15 +60,9 @@ func TestGetWriterUnknownFormat(t *testing.T) {
 
 	// Test GetWriter returns error for unknown format
 	w, err := GetWriter("unknown", SchemaVersionV1)
-	if err == nil {
-		t.Fatal("expected error for unknown format, got nil")
-	}
-	if w != nil {
-		t.Fatal("expected nil writer for unknown format")
-	}
-	if !strings.Contains(err.Error(), "no writer for unknown version") {
-		t.Errorf("unexpected error message: %v", err)
-	}
+	require.Error(t, err)
+	assert.Nil(t, w)
+	assert.Contains(t, err.Error(), "no writer for unknown version")
 }
 
 func TestGetWriterUnknownVersion(t *testing.T) {
@@ -88,15 +75,9 @@ func TestGetWriterUnknownVersion(t *testing.T) {
 
 	// Test GetWriter returns error for unknown version
 	w, err := GetWriter("protobuf", SchemaVersion(99))
-	if err == nil {
-		t.Fatal("expected error for unknown version, got nil")
-	}
-	if w != nil {
-		t.Fatal("expected nil writer for unknown version")
-	}
-	if !strings.Contains(err.Error(), "no writer for protobuf version 99") {
-		t.Errorf("unexpected error message: %v", err)
-	}
+	require.Error(t, err)
+	assert.Nil(t, w)
+	assert.Contains(t, err.Error(), "no writer for protobuf version 99")
 }
 
 func TestGetWriterUnregistered(t *testing.T) {
@@ -105,12 +86,8 @@ func TestGetWriterUnregistered(t *testing.T) {
 
 	// Test GetWriter returns error when no writers registered
 	w, err := GetWriter("protobuf", SchemaVersionV1)
-	if err == nil {
-		t.Fatal("expected error for unregistered writer, got nil")
-	}
-	if w != nil {
-		t.Fatal("expected nil writer for unregistered writer")
-	}
+	require.Error(t, err)
+	assert.Nil(t, w)
 }
 
 func TestRegisterWriterOverwrites(t *testing.T) {
@@ -127,12 +104,8 @@ func TestRegisterWriterOverwrites(t *testing.T) {
 
 	// Should get the second writer
 	w, err := GetWriter("protobuf", SchemaVersionV1)
-	if err != nil {
-		t.Fatalf("GetWriter returned error: %v", err)
-	}
-	if w != mock2 {
-		t.Error("expected second writer to overwrite first")
-	}
+	require.NoError(t, err)
+	assert.Same(t, mock2, w)
 }
 
 // ProtobufWriterV1 tests
@@ -144,30 +117,18 @@ func TestProtobufWriterV1Registration(t *testing.T) {
 
 	// Test that the writer is registered
 	w, err := GetWriter("protobuf", SchemaVersionV1)
-	if err != nil {
-		t.Fatalf("GetWriter returned error: %v", err)
-	}
-	if w == nil {
-		t.Fatal("GetWriter returned nil writer")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, w)
 
 	// Verify it's the ProtobufWriterV1
-	_, ok := w.(*ProtobufWriterV1)
-	if !ok {
-		t.Errorf("expected *ProtobufWriterV1, got %T", w)
-	}
+	assert.IsType(t, &ProtobufWriterV1{}, w)
 }
 
 func TestProtobufWriterV1VersionAndFormat(t *testing.T) {
 	w := &ProtobufWriterV1{}
 
-	if w.Version() != SchemaVersionV1 {
-		t.Errorf("Version() = %v, want %v", w.Version(), SchemaVersionV1)
-	}
-
-	if w.Format() != "protobuf" {
-		t.Errorf("Format() = %q, want %q", w.Format(), "protobuf")
-	}
+	assert.Equal(t, SchemaVersionV1, w.Version())
+	assert.Equal(t, "protobuf", w.Format())
 }
 
 func TestProtobufWriterV1WriteManifest(t *testing.T) {
@@ -238,31 +199,19 @@ func TestProtobufWriterV1WriteManifest(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := w.WriteManifest(ctx, tmpDir, result)
-	if err != nil {
-		t.Fatalf("WriteManifest returned error: %v", err)
-	}
+	require.NoError(t, w.WriteManifest(ctx, tmpDir, result))
 
 	// Verify file was created and contains valid protobuf
 	manifestPath := tmpDir + "/manifest.pb"
 	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("failed to read manifest file: %v", err)
-	}
-
-	if len(data) == 0 {
-		t.Fatal("manifest file is empty")
-	}
+	require.NoError(t, err, "read manifest file")
+	require.NotEmpty(t, data, "manifest file is empty")
 
 	// Verify the data is valid protobuf (no version prefix)
 	var pbManifest pbv1.Manifest
-	if err := proto.Unmarshal(data, &pbManifest); err != nil {
-		t.Fatalf("failed to unmarshal manifest protobuf: %v", err)
-	}
+	require.NoError(t, proto.Unmarshal(data, &pbManifest), "unmarshal manifest protobuf")
 
-	if pbManifest.WorldName != "TestWorld" {
-		t.Errorf("expected WorldName 'TestWorld', got %q", pbManifest.WorldName)
-	}
+	assert.Equal(t, "TestWorld", pbManifest.WorldName)
 }
 
 func TestProtobufWriterV1WriteChunks(t *testing.T) {
@@ -288,41 +237,25 @@ func TestProtobufWriterV1WriteChunks(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := w.WriteChunks(ctx, tmpDir, result)
-	if err != nil {
-		t.Fatalf("WriteChunks returned error: %v", err)
-	}
+	require.NoError(t, w.WriteChunks(ctx, tmpDir, result))
 
 	// Verify chunks directory was created
 	chunksDir := tmpDir + "/chunks"
 	entries, err := os.ReadDir(chunksDir)
-	if err != nil {
-		t.Fatalf("failed to read chunks directory: %v", err)
-	}
+	require.NoError(t, err, "read chunks directory")
 
 	// Should have 2 chunks (100 frames / 50 chunk size = 2)
-	if len(entries) != 2 {
-		t.Errorf("expected 2 chunk files, got %d", len(entries))
-	}
+	assert.Len(t, entries, 2)
 
 	// Verify first chunk file contains valid protobuf (no version prefix)
 	chunkPath := chunksDir + "/0000.pb"
 	data, err := os.ReadFile(chunkPath)
-	if err != nil {
-		t.Fatalf("failed to read chunk file: %v", err)
-	}
-
-	if len(data) == 0 {
-		t.Fatal("chunk file is empty")
-	}
+	require.NoError(t, err, "read chunk file")
+	require.NotEmpty(t, data, "chunk file is empty")
 
 	var pbChunk pbv1.Chunk
-	if err := proto.Unmarshal(data, &pbChunk); err != nil {
-		t.Fatalf("failed to unmarshal chunk protobuf: %v", err)
-	}
-	if pbChunk.Index != 0 {
-		t.Errorf("expected chunk index 0, got %d", pbChunk.Index)
-	}
+	require.NoError(t, proto.Unmarshal(data, &pbChunk), "unmarshal chunk protobuf")
+	assert.Equal(t, uint32(0), pbChunk.Index)
 }
 
 func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
@@ -344,12 +277,7 @@ func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
 
 	// Write chunks should return context error
 	err := w.WriteChunks(ctx, tmpDir, result)
-	if err == nil {
-		t.Fatal("expected error for cancelled context, got nil")
-	}
-	if err != context.Canceled {
-		t.Errorf("expected context.Canceled error, got: %v", err)
-	}
+	assert.Equal(t, context.Canceled, err)
 }
 
 func TestStringToEntityType(t *testing.T) {
@@ -369,10 +297,7 @@ func TestStringToEntityType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := stringToEntityType(tt.input)
-			if result.String() != tt.expected {
-				t.Errorf("stringToEntityType(%q) = %v, want %v", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, stringToEntityType(tt.input).String())
 		})
 	}
 }
@@ -398,10 +323,7 @@ func TestStringToSide(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := stringToSide(tt.input)
-			if result.String() != tt.expected {
-				t.Errorf("stringToSide(%q) = %v, want %v", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, stringToSide(tt.input).String())
 		})
 	}
 }
@@ -422,27 +344,16 @@ func TestProtobufWriterV1EmptyResult(t *testing.T) {
 	ctx := context.Background()
 
 	// Write manifest should succeed
-	err := w.WriteManifest(ctx, tmpDir, result)
-	if err != nil {
-		t.Fatalf("WriteManifest returned error: %v", err)
-	}
+	require.NoError(t, w.WriteManifest(ctx, tmpDir, result))
 
 	// Write chunks should succeed (creates at least 1 chunk)
-	err = w.WriteChunks(ctx, tmpDir, result)
-	if err != nil {
-		t.Fatalf("WriteChunks returned error: %v", err)
-	}
+	require.NoError(t, w.WriteChunks(ctx, tmpDir, result))
 
 	// Verify chunk was created
 	chunksDir := tmpDir + "/chunks"
 	entries, err := os.ReadDir(chunksDir)
-	if err != nil {
-		t.Fatalf("failed to read chunks directory: %v", err)
-	}
+	require.NoError(t, err, "read chunks directory")
 
 	// Should have at least 1 chunk even with 0 frames
-	if len(entries) < 1 {
-		t.Errorf("expected at least 1 chunk file, got %d", len(entries))
-	}
+	assert.GreaterOrEqual(t, len(entries), 1)
 }
-

@@ -1,8 +1,10 @@
 package storage
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockParser is a test parser implementation
@@ -31,24 +33,14 @@ func TestRegisterAndGetParser(t *testing.T) {
 
 	// Test GetParser returns the registered parser
 	p, err := GetParser(JSONInputVersionV1)
-	if err != nil {
-		t.Fatalf("GetParser returned error: %v", err)
-	}
-	if p == nil {
-		t.Fatal("GetParser returned nil parser")
-	}
-	if p.Version() != JSONInputVersionV1 {
-		t.Errorf("expected version %v, got %v", JSONInputVersionV1, p.Version())
-	}
+	require.NoError(t, err)
+	require.NotNil(t, p)
+	assert.Equal(t, JSONInputVersionV1, p.Version())
 
 	// Verify the parser works
 	result, err := p.Parse(nil, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-	if result.WorldName != "TestWorld" {
-		t.Errorf("expected WorldName 'TestWorld', got %q", result.WorldName)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "TestWorld", result.WorldName)
 }
 
 func TestGetParserUnknownVersion(t *testing.T) {
@@ -57,15 +49,9 @@ func TestGetParserUnknownVersion(t *testing.T) {
 
 	// Test GetParser returns error for unknown version
 	p, err := GetParser(JSONInputVersionUnknown)
-	if err == nil {
-		t.Fatal("expected error for unknown version, got nil")
-	}
-	if p != nil {
-		t.Fatal("expected nil parser for unknown version")
-	}
-	if !strings.Contains(err.Error(), "no parser for JSON version") {
-		t.Errorf("unexpected error message: %v", err)
-	}
+	require.Error(t, err)
+	assert.Nil(t, p)
+	assert.Contains(t, err.Error(), "no parser for JSON version")
 }
 
 func TestGetParserUnregisteredVersion(t *testing.T) {
@@ -74,12 +60,8 @@ func TestGetParserUnregisteredVersion(t *testing.T) {
 
 	// Test GetParser returns error for unregistered version
 	p, err := GetParser(JSONInputVersionV1)
-	if err == nil {
-		t.Fatal("expected error for unregistered version, got nil")
-	}
-	if p != nil {
-		t.Fatal("expected nil parser for unregistered version")
-	}
+	require.Error(t, err)
+	assert.Nil(t, p)
 }
 
 func TestRegisterParserOverwrites(t *testing.T) {
@@ -96,21 +78,15 @@ func TestRegisterParserOverwrites(t *testing.T) {
 
 	// Should get the second parser
 	p, err := GetParser(JSONInputVersionV1)
-	if err != nil {
-		t.Fatalf("GetParser returned error: %v", err)
-	}
-	if p != mock2 {
-		t.Error("expected second parser to overwrite first")
-	}
+	require.NoError(t, err)
+	assert.Same(t, mock2, p)
 }
 
 // ParserV1 Tests
 
 func TestParserV1_Version(t *testing.T) {
 	p := &ParserV1{}
-	if p.Version() != JSONInputVersionV1 {
-		t.Errorf("Version() = %v, want %v", p.Version(), JSONInputVersionV1)
-	}
+	assert.Equal(t, JSONInputVersionV1, p.Version())
 }
 
 func TestParserV1_Parse_MinimalData(t *testing.T) {
@@ -124,25 +100,13 @@ func TestParserV1_Parse_MinimalData(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 50)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if result.WorldName != "Altis" {
-		t.Errorf("WorldName = %q, want %q", result.WorldName, "Altis")
-	}
-	if result.MissionName != "Test Mission" {
-		t.Errorf("MissionName = %q, want %q", result.MissionName, "Test Mission")
-	}
-	if result.FrameCount != 100 {
-		t.Errorf("FrameCount = %d, want %d", result.FrameCount, 100)
-	}
-	if result.ChunkSize != 50 {
-		t.Errorf("ChunkSize = %d, want %d", result.ChunkSize, 50)
-	}
-	if result.CaptureDelayMs != 1500 {
-		t.Errorf("CaptureDelayMs = %d, want %d", result.CaptureDelayMs, 1500)
-	}
+	assert.Equal(t, "Altis", result.WorldName)
+	assert.Equal(t, "Test Mission", result.MissionName)
+	assert.Equal(t, uint32(100), result.FrameCount)
+	assert.Equal(t, uint32(50), result.ChunkSize)
+	assert.Equal(t, uint32(1500), result.CaptureDelayMs)
 }
 
 func TestParserV1_Parse_EdgeCases(t *testing.T) {
@@ -155,18 +119,14 @@ func TestParserV1_Parse_EdgeCases(t *testing.T) {
 			"endFrame":     10.0,
 			"captureDelay": 1.0,
 			"entities": []interface{}{
-				"not a map",                        // Invalid - should be skipped
-				[]interface{}{"also not a map"},    // Invalid - should be skipped
+				"not a map",                                                       // Invalid - should be skipped
+				[]interface{}{"also not a map"},                                   // Invalid - should be skipped
 				map[string]interface{}{"id": 0.0, "type": "unit", "name": "Valid"}, // Valid
 			},
 		}
 		result, err := p.Parse(data, 100)
-		if err != nil {
-			t.Fatalf("Parse returned error: %v", err)
-		}
-		if len(result.Entities) != 1 {
-			t.Errorf("len(Entities) = %d, want %d (invalid entries skipped)", len(result.Entities), 1)
-		}
+		require.NoError(t, err)
+		assert.Len(t, result.Entities, 1, "invalid entries should be skipped")
 	})
 
 	t.Run("invalid event type in array (not an array)", func(t *testing.T) {
@@ -177,19 +137,15 @@ func TestParserV1_Parse_EdgeCases(t *testing.T) {
 			"captureDelay": 1.0,
 			"entities":     []interface{}{},
 			"events": []interface{}{
-				"not an array",                         // Invalid - should be skipped
-				map[string]interface{}{"frame": 0.0},   // Invalid - should be skipped
-				[]interface{}{0.0},                     // Too short - should be skipped
-				[]interface{}{0.0, "valid"},            // Valid
+				"not an array",                       // Invalid - should be skipped
+				map[string]interface{}{"frame": 0.0}, // Invalid - should be skipped
+				[]interface{}{0.0},                   // Too short - should be skipped
+				[]interface{}{0.0, "valid"},          // Valid
 			},
 		}
 		result, err := p.Parse(data, 100)
-		if err != nil {
-			t.Fatalf("Parse returned error: %v", err)
-		}
-		if len(result.Events) != 1 {
-			t.Errorf("len(Events) = %d, want %d (invalid entries skipped)", len(result.Events), 1)
-		}
+		require.NoError(t, err)
+		assert.Len(t, result.Events, 1, "invalid entries should be skipped")
 	})
 
 	t.Run("invalid marker type in array (not an array)", func(t *testing.T) {
@@ -200,18 +156,14 @@ func TestParserV1_Parse_EdgeCases(t *testing.T) {
 			"captureDelay": 1.0,
 			"entities":     []interface{}{},
 			"Markers": []interface{}{
-				"not an array",                         // Invalid - should be skipped
+				"not an array",                       // Invalid - should be skipped
 				map[string]interface{}{"type": "ICON"}, // Invalid - should be skipped
 				[]interface{}{"ICON", "text", 0.0, 10.0, 0.0, "color", 0.0}, // Valid
 			},
 		}
 		result, err := p.Parse(data, 100)
-		if err != nil {
-			t.Fatalf("Parse returned error: %v", err)
-		}
-		if len(result.Markers) != 1 {
-			t.Errorf("len(Markers) = %d, want %d (invalid entries skipped)", len(result.Markers), 1)
-		}
+		require.NoError(t, err)
+		assert.Len(t, result.Markers, 1, "invalid entries should be skipped")
 	})
 
 	t.Run("invalid time entry type (not a map)", func(t *testing.T) {
@@ -222,18 +174,14 @@ func TestParserV1_Parse_EdgeCases(t *testing.T) {
 			"captureDelay": 1.0,
 			"entities":     []interface{}{},
 			"times": []interface{}{
-				"not a map",              // Invalid - should be skipped
-				[]interface{}{0.0, 1.0},  // Invalid - should be skipped
+				"not a map",             // Invalid - should be skipped
+				[]interface{}{0.0, 1.0}, // Invalid - should be skipped
 				map[string]interface{}{"frameNum": 0.0, "time": 100.0}, // Valid
 			},
 		}
 		result, err := p.Parse(data, 100)
-		if err != nil {
-			t.Fatalf("Parse returned error: %v", err)
-		}
-		if len(result.Times) != 1 {
-			t.Errorf("len(Times) = %d, want %d (invalid entries skipped)", len(result.Times), 1)
-		}
+		require.NoError(t, err)
+		assert.Len(t, result.Times, 1, "invalid entries should be skipped")
 	})
 
 	t.Run("entity with nil position data", func(t *testing.T) {
@@ -252,15 +200,9 @@ func TestParserV1_Parse_EdgeCases(t *testing.T) {
 			},
 		}
 		result, err := p.Parse(data, 100)
-		if err != nil {
-			t.Fatalf("Parse returned error: %v", err)
-		}
-		if len(result.Entities) != 1 {
-			t.Errorf("len(Entities) = %d, want %d", len(result.Entities), 1)
-		}
-		if len(result.EntityPositions) != 0 {
-			t.Errorf("len(EntityPositions) = %d, want %d (nil positions)", len(result.EntityPositions), 0)
-		}
+		require.NoError(t, err)
+		assert.Len(t, result.Entities, 1)
+		assert.Empty(t, result.EntityPositions, "nil positions")
 	})
 }
 
@@ -300,50 +242,26 @@ func TestParserV1_Parse_Entities(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify entities
-	if len(result.Entities) != 2 {
-		t.Fatalf("len(Entities) = %d, want %d", len(result.Entities), 2)
-	}
+	require.Len(t, result.Entities, 2)
 
 	// First entity (unit)
 	ent := result.Entities[0]
-	if ent.ID != 0 {
-		t.Errorf("Entity[0].ID = %d, want %d", ent.ID, 0)
-	}
-	if ent.Type != "unit" {
-		t.Errorf("Entity[0].Type = %q, want %q", ent.Type, "unit")
-	}
-	if ent.Name != "Player1" {
-		t.Errorf("Entity[0].Name = %q, want %q", ent.Name, "Player1")
-	}
-	if ent.Side != "WEST" {
-		t.Errorf("Entity[0].Side = %q, want %q", ent.Side, "WEST")
-	}
-	if ent.Group != "Alpha" {
-		t.Errorf("Entity[0].Group = %q, want %q", ent.Group, "Alpha")
-	}
-	if !ent.IsPlayer {
-		t.Errorf("Entity[0].IsPlayer = %v, want %v", ent.IsPlayer, true)
-	}
-	if ent.StartFrame != 0 {
-		t.Errorf("Entity[0].StartFrame = %d, want %d", ent.StartFrame, 0)
-	}
-	if ent.EndFrame != 1 { // startFrame + len(positions) - 1 = 0 + 2 - 1 = 1
-		t.Errorf("Entity[0].EndFrame = %d, want %d", ent.EndFrame, 1)
-	}
+	assert.Equal(t, uint32(0), ent.ID)
+	assert.Equal(t, "unit", ent.Type)
+	assert.Equal(t, "Player1", ent.Name)
+	assert.Equal(t, "WEST", ent.Side)
+	assert.Equal(t, "Alpha", ent.Group)
+	assert.True(t, ent.IsPlayer)
+	assert.Equal(t, uint32(0), ent.StartFrame)
+	assert.Equal(t, uint32(1), ent.EndFrame) // startFrame + len(positions) - 1 = 0 + 2 - 1 = 1
 
 	// Second entity (vehicle)
 	ent = result.Entities[1]
-	if ent.Type != "vehicle" {
-		t.Errorf("Entity[1].Type = %q, want %q", ent.Type, "vehicle")
-	}
-	if ent.VehicleClass != "B_Truck_01" {
-		t.Errorf("Entity[1].VehicleClass = %q, want %q", ent.VehicleClass, "B_Truck_01")
-	}
+	assert.Equal(t, "vehicle", ent.Type)
+	assert.Equal(t, "B_Truck_01", ent.VehicleClass)
 }
 
 func TestParserV1_Parse_Events(t *testing.T) {
@@ -362,52 +280,27 @@ func TestParserV1_Parse_Events(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.Events) != 3 {
-		t.Fatalf("len(Events) = %d, want %d", len(result.Events), 3)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.Events, 3)
 
 	// Killed event
 	evt := result.Events[0]
-	if evt.FrameNum != 8 {
-		t.Errorf("Event[0].FrameNum = %d, want %d", evt.FrameNum, 8)
-	}
-	if evt.Type != "killed" {
-		t.Errorf("Event[0].Type = %q, want %q", evt.Type, "killed")
-	}
-	if evt.SourceID != 0 {
-		t.Errorf("Event[0].SourceID = %d, want %d", evt.SourceID, 0)
-	}
-	if evt.TargetID != 1 {
-		t.Errorf("Event[0].TargetID = %d, want %d", evt.TargetID, 1)
-	}
-	if evt.Weapon != "arifle_MX" {
-		t.Errorf("Event[0].Weapon = %q, want %q", evt.Weapon, "arifle_MX")
-	}
-	if evt.Distance != 150.0 {
-		t.Errorf("Event[0].Distance = %v, want %v", evt.Distance, 150.0)
-	}
+	assert.Equal(t, uint32(8), evt.FrameNum)
+	assert.Equal(t, "killed", evt.Type)
+	assert.Equal(t, uint32(0), evt.SourceID)
+	assert.Equal(t, uint32(1), evt.TargetID)
+	assert.Equal(t, "arifle_MX", evt.Weapon)
+	assert.Equal(t, float32(150.0), evt.Distance)
 
 	// Hit event
 	evt = result.Events[1]
-	if evt.Type != "hit" {
-		t.Errorf("Event[1].Type = %q, want %q", evt.Type, "hit")
-	}
-	if evt.Weapon != "pistol" {
-		t.Errorf("Event[1].Weapon = %q, want %q", evt.Weapon, "pistol")
-	}
+	assert.Equal(t, "hit", evt.Type)
+	assert.Equal(t, "pistol", evt.Weapon)
 
 	// Chat event
 	evt = result.Events[2]
-	if evt.Type != "chat" {
-		t.Errorf("Event[2].Type = %q, want %q", evt.Type, "chat")
-	}
-	if evt.Message != "Hello world" {
-		t.Errorf("Event[2].Message = %q, want %q", evt.Message, "Hello world")
-	}
+	assert.Equal(t, "chat", evt.Type)
+	assert.Equal(t, "Hello world", evt.Message)
 }
 
 func TestParserV1_Parse_Markers(t *testing.T) {
@@ -420,70 +313,38 @@ func TestParserV1_Parse_Markers(t *testing.T) {
 		"entities":     []interface{}{},
 		"Markers": []interface{}{
 			[]interface{}{
-				"ICON",                                           // type
-				"Alpha",                                          // text
-				0.0,                                               // startFrame
-				10.0,                                              // endFrame
-				0.0,                                               // playerId
-				"ColorBlufor",                                     // color
-				1.0,                                               // sideIndex (1 = WEST per BIS_fnc_sideID)
-				[]interface{}{[]interface{}{100.0, 200.0, 0.0}},   // positions
-				[]interface{}{1.0, 1.0},                           // size
-				"ICON",                                            // shape
-				"Solid",                                           // brush
+				"ICON",                                         // type
+				"Alpha",                                        // text
+				0.0,                                            // startFrame
+				10.0,                                           // endFrame
+				0.0,                                            // playerId
+				"ColorBlufor",                                  // color
+				1.0,                                            // sideIndex (1 = WEST per BIS_fnc_sideID)
+				[]interface{}{[]interface{}{100.0, 200.0, 0.0}}, // positions
+				[]interface{}{1.0, 1.0},                        // size
+				"ICON",                                         // shape
+				"Solid",                                        // brush
 			},
 		},
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.Markers) != 1 {
-		t.Fatalf("len(Markers) = %d, want %d", len(result.Markers), 1)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.Markers, 1)
 
 	m := result.Markers[0]
-	if m.Type != "ICON" {
-		t.Errorf("Marker.Type = %q, want %q", m.Type, "ICON")
-	}
-	if m.Text != "Alpha" {
-		t.Errorf("Marker.Text = %q, want %q", m.Text, "Alpha")
-	}
-	if m.StartFrame != 0 {
-		t.Errorf("Marker.StartFrame = %d, want %d", m.StartFrame, 0)
-	}
-	if m.EndFrame != 10 {
-		t.Errorf("Marker.EndFrame = %d, want %d", m.EndFrame, 10)
-	}
-	if m.Color != "ColorBlufor" {
-		t.Errorf("Marker.Color = %q, want %q", m.Color, "ColorBlufor")
-	}
-	if m.Side != "WEST" {
-		t.Errorf("Marker.Side = %q, want %q", m.Side, "WEST")
-	}
-	if m.Shape != "ICON" {
-		t.Errorf("Marker.Shape = %q, want %q", m.Shape, "ICON")
-	}
-	if m.Brush != "Solid" {
-		t.Errorf("Marker.Brush = %q, want %q", m.Brush, "Solid")
-	}
-	if len(m.Size) != 2 {
-		t.Errorf("len(Marker.Size) = %d, want %d", len(m.Size), 2)
-	}
-	if len(m.Positions) != 1 {
-		t.Errorf("len(Marker.Positions) = %d, want %d", len(m.Positions), 1)
-	}
-	if len(m.Positions) > 0 {
-		pos := m.Positions[0]
-		if pos.PosX != 100.0 {
-			t.Errorf("Marker.Positions[0].PosX = %v, want %v", pos.PosX, 100.0)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("Marker.Positions[0].PosY = %v, want %v", pos.PosY, 200.0)
-		}
-	}
+	assert.Equal(t, "ICON", m.Type)
+	assert.Equal(t, "Alpha", m.Text)
+	assert.Equal(t, uint32(0), m.StartFrame)
+	assert.Equal(t, uint32(10), m.EndFrame)
+	assert.Equal(t, "ColorBlufor", m.Color)
+	assert.Equal(t, "WEST", m.Side)
+	assert.Equal(t, "ICON", m.Shape)
+	assert.Equal(t, "Solid", m.Brush)
+	assert.Len(t, m.Size, 2)
+	require.Len(t, m.Positions, 1)
+	assert.Equal(t, float32(100.0), m.Positions[0].PosX)
+	assert.Equal(t, float32(200.0), m.Positions[0].PosY)
 }
 
 func TestParserV1_Parse_Markers_OldExtensionFormat(t *testing.T) {
@@ -496,15 +357,15 @@ func TestParserV1_Parse_Markers_OldExtensionFormat(t *testing.T) {
 		"entities":     []interface{}{},
 		"Markers": []interface{}{
 			[]interface{}{
-				"o_inf",                                         // type (old extension marker type)
-				"Enemy Squad",                                   // text
-				0.0,                                             // startFrame
-				-1.0,                                            // endFrame (-1 = not deleted, converted to frame count)
-				5.0,                                             // playerId
-				"0000FF",                                        // color (hex without #)
-				0.0,                                             // sideIndex (0 = EAST per BIS_fnc_sideID)
-				[]interface{}{                                   // positions in old extension format
-					[]interface{}{0.0, []interface{}{3915.44, 1971.98}, 180.0},       // [frameNum, [x,y], dir]
+				"o_inf",       // type (old extension marker type)
+				"Enemy Squad", // text
+				0.0,           // startFrame
+				-1.0,          // endFrame (-1 = not deleted, converted to frame count)
+				5.0,           // playerId
+				"0000FF",      // color (hex without #)
+				0.0,           // sideIndex (0 = EAST per BIS_fnc_sideID)
+				[]interface{}{ // positions in old extension format
+					[]interface{}{0.0, []interface{}{3915.44, 1971.98}, 180.0},        // [frameNum, [x,y], dir]
 					[]interface{}{50.0, []interface{}{3882.53, 2041.32}, 270.0, 100.0}, // [frameNum, [x,y], dir, alpha]
 				},
 				[]interface{}{1.0, 1.0}, // size
@@ -515,52 +376,27 @@ func TestParserV1_Parse_Markers_OldExtensionFormat(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.Markers) != 1 {
-		t.Fatalf("len(Markers) = %d, want %d", len(result.Markers), 1)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.Markers, 1)
 
 	m := result.Markers[0]
-	if m.Type != "o_inf" {
-		t.Errorf("Marker.Type = %q, want %q", m.Type, "o_inf")
-	}
-	if m.Side != "EAST" {
-		t.Errorf("Marker.Side = %q, want %q (sideIndex 0 = EAST)", m.Side, "EAST")
-	}
-	if m.Color != "0000FF" {
-		t.Errorf("Marker.Color = %q, want %q", m.Color, "0000FF")
-	}
+	assert.Equal(t, "o_inf", m.Type)
+	assert.Equal(t, "EAST", m.Side, "sideIndex 0 = EAST")
+	assert.Equal(t, "0000FF", m.Color)
 
-	if len(m.Positions) != 2 {
-		t.Fatalf("len(Marker.Positions) = %d, want %d", len(m.Positions), 2)
-	}
+	require.Len(t, m.Positions, 2)
 
 	// Check first position
 	pos1 := m.Positions[0]
-	if pos1.FrameNum != 0 {
-		t.Errorf("Positions[0].FrameNum = %d, want %d", pos1.FrameNum, 0)
-	}
-	if pos1.PosX != 3915.44 {
-		t.Errorf("Positions[0].PosX = %v, want %v", pos1.PosX, 3915.44)
-	}
-	if pos1.PosY != 1971.98 {
-		t.Errorf("Positions[0].PosY = %v, want %v", pos1.PosY, 1971.98)
-	}
-	if pos1.Direction != 180.0 {
-		t.Errorf("Positions[0].Direction = %v, want %v", pos1.Direction, 180.0)
-	}
+	assert.Equal(t, uint32(0), pos1.FrameNum)
+	assert.Equal(t, float32(3915.44), pos1.PosX)
+	assert.Equal(t, float32(1971.98), pos1.PosY)
+	assert.Equal(t, float32(180.0), pos1.Direction)
 
 	// Check second position with alpha
 	pos2 := m.Positions[1]
-	if pos2.FrameNum != 50 {
-		t.Errorf("Positions[1].FrameNum = %d, want %d", pos2.FrameNum, 50)
-	}
-	if pos2.Alpha != 100.0 {
-		t.Errorf("Positions[1].Alpha = %v, want %v", pos2.Alpha, 100.0)
-	}
+	assert.Equal(t, uint32(50), pos2.FrameNum)
+	assert.Equal(t, float32(100.0), pos2.Alpha)
 }
 
 func TestParserV1_Parse_Events_OldExtensionFormat(t *testing.T) {
@@ -584,40 +420,21 @@ func TestParserV1_Parse_Events_OldExtensionFormat(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.Events) != 4 {
-		t.Fatalf("len(Events) = %d, want %d", len(result.Events), 4)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.Events, 4)
 
 	// Check first killed event
 	evt := result.Events[0]
-	if evt.Type != "killed" {
-		t.Errorf("Event[0].Type = %q, want %q", evt.Type, "killed")
-	}
-	if evt.TargetID != 84 {
-		t.Errorf("Event[0].TargetID = %d, want %d (victimId)", evt.TargetID, 84)
-	}
-	if evt.SourceID != 83 {
-		t.Errorf("Event[0].SourceID = %d, want %d (killerId)", evt.SourceID, 83)
-	}
-	if evt.Weapon != "AKS-74N" {
-		t.Errorf("Event[0].Weapon = %q, want %q", evt.Weapon, "AKS-74N")
-	}
-	if evt.Distance != 10.0 {
-		t.Errorf("Event[0].Distance = %v, want %v", evt.Distance, 10.0)
-	}
+	assert.Equal(t, "killed", evt.Type)
+	assert.Equal(t, uint32(84), evt.TargetID, "victimId")
+	assert.Equal(t, uint32(83), evt.SourceID, "killerId")
+	assert.Equal(t, "AKS-74N", evt.Weapon)
+	assert.Equal(t, float32(10.0), evt.Distance)
 
 	// Check connected event
 	evt = result.Events[2]
-	if evt.Type != "connected" {
-		t.Errorf("Event[2].Type = %q, want %q", evt.Type, "connected")
-	}
-	if evt.Message != "[RMC] DoS" {
-		t.Errorf("Event[2].Message = %q, want %q", evt.Message, "[RMC] DoS")
-	}
+	assert.Equal(t, "connected", evt.Type)
+	assert.Equal(t, "[RMC] DoS", evt.Message)
 }
 
 func TestParserV1_Parse_Times(t *testing.T) {
@@ -640,30 +457,15 @@ func TestParserV1_Parse_Times(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.Times) != 1 {
-		t.Fatalf("len(Times) = %d, want %d", len(result.Times), 1)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.Times, 1)
 
 	ts := result.Times[0]
-	if ts.FrameNum != 0 {
-		t.Errorf("Time.FrameNum = %d, want %d", ts.FrameNum, 0)
-	}
-	if ts.SystemTimeUTC != "2035-06-10T10:00:00" {
-		t.Errorf("Time.SystemTimeUTC = %q, want %q", ts.SystemTimeUTC, "2035-06-10T10:00:00")
-	}
-	if ts.Date != "2035-06-10" {
-		t.Errorf("Time.Date = %q, want %q", ts.Date, "2035-06-10")
-	}
-	if ts.Time != 36000.0 {
-		t.Errorf("Time.Time = %v, want %v", ts.Time, 36000.0)
-	}
-	if ts.TimeMultiplier != 1.0 {
-		t.Errorf("Time.TimeMultiplier = %v, want %v", ts.TimeMultiplier, 1.0)
-	}
+	assert.Equal(t, uint32(0), ts.FrameNum)
+	assert.Equal(t, "2035-06-10T10:00:00", ts.SystemTimeUTC)
+	assert.Equal(t, "2035-06-10", ts.Date)
+	assert.Equal(t, float32(36000.0), ts.Time)
+	assert.Equal(t, float32(1.0), ts.TimeMultiplier)
 }
 
 func TestParserV1_Parse_EntityPositions(t *testing.T) {
@@ -703,69 +505,39 @@ func TestParserV1_Parse_EntityPositions(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 100)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
-
-	if len(result.EntityPositions) != 2 {
-		t.Fatalf("len(EntityPositions) = %d, want %d", len(result.EntityPositions), 2)
-	}
+	require.NoError(t, err)
+	require.Len(t, result.EntityPositions, 2)
 
 	// Unit positions
 	unitPos := result.EntityPositions[0]
-	if unitPos.EntityID != 0 {
-		t.Errorf("EntityPositions[0].EntityID = %d, want %d", unitPos.EntityID, 0)
-	}
-	if len(unitPos.Positions) != 3 {
-		t.Fatalf("len(EntityPositions[0].Positions) = %d, want %d", len(unitPos.Positions), 3)
-	}
+	assert.Equal(t, uint32(0), unitPos.EntityID)
+	require.Len(t, unitPos.Positions, 3)
 
 	// First position
 	pos := unitPos.Positions[0]
-	if pos.FrameNum != 0 {
-		t.Errorf("Position[0].FrameNum = %d, want %d", pos.FrameNum, 0)
-	}
-	if pos.PosX != 100.0 {
-		t.Errorf("Position[0].PosX = %v, want %v", pos.PosX, 100.0)
-	}
-	if pos.Direction != 90 {
-		t.Errorf("Position[0].Direction = %d, want %d", pos.Direction, 90)
-	}
-	if pos.Alive != 1 {
-		t.Errorf("Position[0].Alive = %d, want %d", pos.Alive, 1)
-	}
-	if pos.IsInVehicle {
-		t.Error("Position[0].IsInVehicle should be false")
-	}
+	assert.Equal(t, uint32(0), pos.FrameNum)
+	assert.Equal(t, float32(100.0), pos.PosX)
+	assert.Equal(t, uint32(90), pos.Direction)
+	assert.Equal(t, uint32(1), pos.Alive)
+	assert.False(t, pos.IsInVehicle)
 
 	// Second position (in vehicle)
 	pos = unitPos.Positions[1]
-	if !pos.IsInVehicle {
-		t.Error("Position[1].IsInVehicle should be true")
-	}
-	if pos.VehicleID != 5 {
-		t.Errorf("Position[1].VehicleID = %d, want %d", pos.VehicleID, 5)
-	}
+	assert.True(t, pos.IsInVehicle)
+	assert.Equal(t, uint32(5), pos.VehicleID)
 
 	// Third position (dead)
 	pos = unitPos.Positions[2]
-	if pos.Alive != 0 {
-		t.Errorf("Position[2].Alive = %d, want %d", pos.Alive, 0)
-	}
+	assert.Equal(t, uint32(0), pos.Alive)
 
 	// Vehicle positions
 	vehPos := result.EntityPositions[1]
-	if vehPos.EntityID != 1 {
-		t.Errorf("EntityPositions[1].EntityID = %d, want %d", vehPos.EntityID, 1)
-	}
+	assert.Equal(t, uint32(1), vehPos.EntityID)
 
 	// Check crew
 	pos = vehPos.Positions[1]
-	if len(pos.CrewIDs) != 1 {
-		t.Errorf("Position[1].CrewIDs = %v, want [0]", pos.CrewIDs)
-	} else if pos.CrewIDs[0] != 0 {
-		t.Errorf("Position[1].CrewIDs[0] = %d, want %d", pos.CrewIDs[0], 0)
-	}
+	require.Len(t, pos.CrewIDs, 1)
+	assert.Equal(t, uint32(0), pos.CrewIDs[0])
 }
 
 func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
@@ -773,132 +545,75 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 
 	t.Run("too short", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{100.0})
-		if evt != nil {
-			t.Error("expected nil for too short event")
-		}
+		assert.Nil(t, evt)
 	})
 
 	t.Run("empty", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{})
-		if evt != nil {
-			t.Error("expected nil for empty event")
-		}
+		assert.Nil(t, evt)
 	})
 
 	t.Run("minimal valid", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{100.0, "test"})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.FrameNum != 100 {
-			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 100)
-		}
-		if evt.Type != "test" {
-			t.Errorf("Type = %q, want %q", evt.Type, "test")
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(100), evt.FrameNum)
+		assert.Equal(t, "test", evt.Type)
 	})
 
 	t.Run("connected event", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{2.0, "connected", "Cal"})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.FrameNum != 2 {
-			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 2)
-		}
-		if evt.Type != "connected" {
-			t.Errorf("Type = %q, want %q", evt.Type, "connected")
-		}
-		if evt.Message != "Cal" {
-			t.Errorf("Message = %q, want %q", evt.Message, "Cal")
-		}
-		if evt.SourceID != 0 {
-			t.Errorf("SourceID = %d, want %d (should not be set)", evt.SourceID, 0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(2), evt.FrameNum)
+		assert.Equal(t, "connected", evt.Type)
+		assert.Equal(t, "Cal", evt.Message)
+		assert.Equal(t, uint32(0), evt.SourceID, "should not be set")
 	})
 
 	t.Run("disconnected event", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{3.0, "disconnected", "Wraith"})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.FrameNum != 3 {
-			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 3)
-		}
-		if evt.Type != "disconnected" {
-			t.Errorf("Type = %q, want %q", evt.Type, "disconnected")
-		}
-		if evt.Message != "Wraith" {
-			t.Errorf("Message = %q, want %q", evt.Message, "Wraith")
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(3), evt.FrameNum)
+		assert.Equal(t, "disconnected", evt.Type)
+		assert.Equal(t, "Wraith", evt.Message)
 	})
 
 	t.Run("connected event without player name", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{5.0, "connected"})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.Type != "connected" {
-			t.Errorf("Type = %q, want %q", evt.Type, "connected")
-		}
-		if evt.Message != "" {
-			t.Errorf("Message = %q, want empty string", evt.Message)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, "connected", evt.Type)
+		assert.Empty(t, evt.Message)
 	})
 
 	// Old extension format tests
 	t.Run("old extension killed event [frameNum, type, victimId, [killerId, weapon], distance]", func(t *testing.T) {
-		// Old extension produces: [frameNum, "killed", victimId, [killerId, weaponName], distance]
 		evt := p.parseEvent([]interface{}{
-			404.0,                             // frameNum
-			"killed",                          // type
-			84.0,                              // victimId (TargetID)
-			[]interface{}{83.0, "AKS-74N"},    // [killerId, weaponName]
-			10.0,                              // distance
+			404.0,                          // frameNum
+			"killed",                       // type
+			84.0,                           // victimId (TargetID)
+			[]interface{}{83.0, "AKS-74N"}, // [killerId, weaponName]
+			10.0,                           // distance
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.FrameNum != 404 {
-			t.Errorf("FrameNum = %d, want %d", evt.FrameNum, 404)
-		}
-		if evt.Type != "killed" {
-			t.Errorf("Type = %q, want %q", evt.Type, "killed")
-		}
-		if evt.TargetID != 84 {
-			t.Errorf("TargetID = %d, want %d (victimId)", evt.TargetID, 84)
-		}
-		if evt.SourceID != 83 {
-			t.Errorf("SourceID = %d, want %d (killerId)", evt.SourceID, 83)
-		}
-		if evt.Weapon != "AKS-74N" {
-			t.Errorf("Weapon = %q, want %q", evt.Weapon, "AKS-74N")
-		}
-		if evt.Distance != 10.0 {
-			t.Errorf("Distance = %v, want %v", evt.Distance, 10.0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(404), evt.FrameNum)
+		assert.Equal(t, "killed", evt.Type)
+		assert.Equal(t, uint32(84), evt.TargetID, "victimId")
+		assert.Equal(t, uint32(83), evt.SourceID, "killerId")
+		assert.Equal(t, "AKS-74N", evt.Weapon)
+		assert.Equal(t, float32(10.0), evt.Distance)
 	})
 
 	t.Run("old extension hit event [frameNum, type, victimId, [shooterId, weapon], distance]", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{
 			200.0,
 			"hit",
-			50.0,                                   // victimId
-			[]interface{}{42.0, "PKP Pecheneg"},    // [shooterId, weapon]
-			25.0,                                   // distance
+			50.0,                                // victimId
+			[]interface{}{42.0, "PKP Pecheneg"}, // [shooterId, weapon]
+			25.0,                                // distance
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.TargetID != 50 {
-			t.Errorf("TargetID = %d, want %d", evt.TargetID, 50)
-		}
-		if evt.SourceID != 42 {
-			t.Errorf("SourceID = %d, want %d", evt.SourceID, 42)
-		}
-		if evt.Weapon != "PKP Pecheneg" {
-			t.Errorf("Weapon = %q, want %q", evt.Weapon, "PKP Pecheneg")
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(50), evt.TargetID)
+		assert.Equal(t, uint32(42), evt.SourceID)
+		assert.Equal(t, "PKP Pecheneg", evt.Weapon)
 	})
 
 	t.Run("old extension killed event with only killerId in array", func(t *testing.T) {
@@ -909,79 +624,50 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			[]interface{}{5.0}, // Only killerId, no weapon
 			50.0,
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.SourceID != 5 {
-			t.Errorf("SourceID = %d, want %d", evt.SourceID, 5)
-		}
-		if evt.Weapon != "" {
-			t.Errorf("Weapon = %q, want empty string", evt.Weapon)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(5), evt.SourceID)
+		assert.Empty(t, evt.Weapon)
 	})
 
 	t.Run("alternative format killed event [frameNum, type, sourceId, targetId, weapon, distance]", func(t *testing.T) {
-		// Alternative format: [frameNum, "type", sourceId, targetId, weapon, distance]
 		evt := p.parseEvent([]interface{}{
-			8.0,           // frameNum
-			"killed",      // type
-			0.0,           // sourceId
-			1.0,           // targetId
-			"arifle_MX",   // weapon
-			150.0,         // distance
+			8.0,         // frameNum
+			"killed",    // type
+			0.0,         // sourceId
+			1.0,         // targetId
+			"arifle_MX", // weapon
+			150.0,       // distance
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.SourceID != 0 {
-			t.Errorf("SourceID = %d, want %d", evt.SourceID, 0)
-		}
-		if evt.TargetID != 1 {
-			t.Errorf("TargetID = %d, want %d", evt.TargetID, 1)
-		}
-		if evt.Weapon != "arifle_MX" {
-			t.Errorf("Weapon = %q, want %q", evt.Weapon, "arifle_MX")
-		}
-		if evt.Distance != 150.0 {
-			t.Errorf("Distance = %v, want %v", evt.Distance, 150.0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(0), evt.SourceID)
+		assert.Equal(t, uint32(1), evt.TargetID)
+		assert.Equal(t, "arifle_MX", evt.Weapon)
+		assert.Equal(t, float32(150.0), evt.Distance)
 	})
 
 	t.Run("non-combat event with message at index 4", func(t *testing.T) {
-		// Non-killed/hit event with string at index 4 should set Message
 		evt := p.parseEvent([]interface{}{
 			100.0,
 			"chat",
-			5.0,            // sourceId
-			10.0,           // targetId
-			"Hello world",  // message (not weapon since type is not killed/hit)
+			5.0,           // sourceId
+			10.0,          // targetId
+			"Hello world", // message (not weapon since type is not killed/hit)
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.Message != "Hello world" {
-			t.Errorf("Message = %q, want %q", evt.Message, "Hello world")
-		}
-		if evt.Weapon != "" {
-			t.Errorf("Weapon = %q, want empty (not a combat event)", evt.Weapon)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, "Hello world", evt.Message)
+		assert.Empty(t, evt.Weapon, "not a combat event")
 	})
 
 	t.Run("event with float distance at index 4", func(t *testing.T) {
-		// When index 4 is a float, it's treated as distance
 		evt := p.parseEvent([]interface{}{
 			100.0,
 			"explosion",
-			5.0,   // sourceId
-			10.0,  // targetId
-			50.5,  // distance as float
+			5.0,  // sourceId
+			10.0, // targetId
+			50.5, // distance as float
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.Distance != 50.5 {
-			t.Errorf("Distance = %v, want %v", evt.Distance, 50.5)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, float32(50.5), evt.Distance)
 	})
 
 	t.Run("event with only source (no target)", func(t *testing.T) {
@@ -990,15 +676,9 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			"fired",
 			5.0, // sourceId only
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.SourceID != 5 {
-			t.Errorf("SourceID = %d, want %d", evt.SourceID, 5)
-		}
-		if evt.TargetID != 0 {
-			t.Errorf("TargetID = %d, want %d (not set)", evt.TargetID, 0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(5), evt.SourceID)
+		assert.Equal(t, uint32(0), evt.TargetID, "not set")
 	})
 
 	t.Run("old extension event with empty killer array", func(t *testing.T) {
@@ -1009,18 +689,10 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			[]interface{}{}, // Empty array - no killer info
 			50.0,
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.TargetID != 10 {
-			t.Errorf("TargetID = %d, want %d", evt.TargetID, 10)
-		}
-		if evt.SourceID != 0 {
-			t.Errorf("SourceID = %d, want %d (empty array)", evt.SourceID, 0)
-		}
-		if evt.Distance != 50.0 {
-			t.Errorf("Distance = %v, want %v", evt.Distance, 50.0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(10), evt.TargetID)
+		assert.Equal(t, uint32(0), evt.SourceID, "empty array")
+		assert.Equal(t, float32(50.0), evt.Distance)
 	})
 
 	t.Run("old extension event without distance", func(t *testing.T) {
@@ -1031,12 +703,8 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			[]interface{}{5.0, "rifle"},
 			// No distance
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.Distance != 0 {
-			t.Errorf("Distance = %v, want %v (not set)", evt.Distance, 0.0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, float32(0.0), evt.Distance, "not set")
 	})
 
 	t.Run("old extension event with non-float distance", func(t *testing.T) {
@@ -1047,12 +715,8 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			[]interface{}{5.0, "rifle"},
 			"not a number", // Distance that's not a float
 		})
-		if evt == nil {
-			t.Fatal("expected non-nil event")
-		}
-		if evt.Distance != 0 {
-			t.Errorf("Distance = %v, want %v (invalid type)", evt.Distance, 0.0)
-		}
+		require.NotNil(t, evt)
+		assert.Equal(t, float32(0.0), evt.Distance, "invalid type")
 	})
 }
 
@@ -1061,19 +725,13 @@ func TestParserV1_parseMarker_EdgeCases(t *testing.T) {
 
 	t.Run("too short", func(t *testing.T) {
 		marker := p.parseMarker([]interface{}{"ICON", "text", 0.0, 10.0, 0.0, "color"})
-		if marker != nil {
-			t.Error("expected nil for too short marker")
-		}
+		assert.Nil(t, marker)
 	})
 
 	t.Run("minimal valid", func(t *testing.T) {
 		marker := p.parseMarker([]interface{}{"ICON", "text", 0.0, 10.0, 0.0, "color", 0.0})
-		if marker == nil {
-			t.Fatal("expected non-nil marker")
-		}
-		if marker.Type != "ICON" {
-			t.Errorf("Type = %q, want %q", marker.Type, "ICON")
-		}
+		require.NotNil(t, marker)
+		assert.Equal(t, "ICON", marker.Type)
 	})
 }
 
@@ -1082,22 +740,15 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 
 	t.Run("simple format [x, y]", func(t *testing.T) {
 		pos := p.parseMarkerPosition([]interface{}{100.0, 200.0})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosX != 100.0 || pos.PosY != 200.0 {
-			t.Errorf("Position = (%v, %v), want (100, 200)", pos.PosX, pos.PosY)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, float32(100.0), pos.PosX)
+		assert.Equal(t, float32(200.0), pos.PosY)
 	})
 
 	t.Run("simple format [x, y, z]", func(t *testing.T) {
 		pos := p.parseMarkerPosition([]interface{}{100.0, 200.0, 10.0})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosZ != 10.0 {
-			t.Errorf("PosZ = %v, want %v", pos.PosZ, 10.0)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, float32(10.0), pos.PosZ)
 	})
 
 	t.Run("complex format [[x, y, z], frameNum, direction, alpha]", func(t *testing.T) {
@@ -1105,42 +756,23 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 			[]interface{}{100.0, 200.0, 10.0},
 			50.0, 90.0, 0.5,
 		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.FrameNum != 50 {
-			t.Errorf("FrameNum = %d, want %d", pos.FrameNum, 50)
-		}
-		if pos.Direction != 90.0 {
-			t.Errorf("Direction = %v, want %v", pos.Direction, 90.0)
-		}
-		if pos.Alpha != 0.5 {
-			t.Errorf("Alpha = %v, want %v", pos.Alpha, 0.5)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(50), pos.FrameNum)
+		assert.Equal(t, float32(90.0), pos.Direction)
+		assert.Equal(t, float32(0.5), pos.Alpha)
 	})
 
 	t.Run("old extension format [frameNum, [x, y], direction]", func(t *testing.T) {
-		// Old extension produces: [frameNum, [x, y], direction, ?alpha]
 		pos := p.parseMarkerPosition([]interface{}{
 			50.0,                        // frameNum
 			[]interface{}{100.0, 200.0}, // [x, y]
 			90.0,                        // direction
 		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.FrameNum != 50 {
-			t.Errorf("FrameNum = %d, want %d", pos.FrameNum, 50)
-		}
-		if pos.PosX != 100.0 {
-			t.Errorf("PosX = %v, want %v", pos.PosX, 100.0)
-		}
-		if pos.PosY != 200.0 {
-			t.Errorf("PosY = %v, want %v", pos.PosY, 200.0)
-		}
-		if pos.Direction != 90.0 {
-			t.Errorf("Direction = %v, want %v", pos.Direction, 90.0)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(50), pos.FrameNum)
+		assert.Equal(t, float32(100.0), pos.PosX)
+		assert.Equal(t, float32(200.0), pos.PosY)
+		assert.Equal(t, float32(90.0), pos.Direction)
 	})
 
 	t.Run("old extension format [frameNum, [x, y], direction, alpha]", func(t *testing.T) {
@@ -1150,15 +782,9 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 			90.0,                        // direction
 			75.0,                        // alpha
 		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.FrameNum != 50 {
-			t.Errorf("FrameNum = %d, want %d", pos.FrameNum, 50)
-		}
-		if pos.Alpha != 75.0 {
-			t.Errorf("Alpha = %v, want %v", pos.Alpha, 75.0)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(50), pos.FrameNum)
+		assert.Equal(t, float32(75.0), pos.Alpha)
 	})
 
 	t.Run("old extension format [frameNum, [x, y, z], direction]", func(t *testing.T) {
@@ -1167,26 +793,18 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 			[]interface{}{100.0, 200.0, 10.0}, // [x, y, z]
 			90.0,                              // direction
 		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.PosZ != 10.0 {
-			t.Errorf("PosZ = %v, want %v", pos.PosZ, 10.0)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, float32(10.0), pos.PosZ)
 	})
 
 	t.Run("nil input", func(t *testing.T) {
 		pos := p.parseMarkerPosition(nil)
-		if pos != nil {
-			t.Error("expected nil for nil input")
-		}
+		assert.Nil(t, pos)
 	})
 
 	t.Run("empty array", func(t *testing.T) {
 		pos := p.parseMarkerPosition([]interface{}{})
-		if pos != nil {
-			t.Error("expected nil for empty array")
-		}
+		assert.Nil(t, pos)
 	})
 
 	t.Run("POLYLINE format [frameNum, [[x1, y1], [x2, y2], ...], direction, alpha]", func(t *testing.T) {
@@ -1200,35 +818,16 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 			0.0, // direction
 			1.0, // alpha
 		})
-		if pos == nil {
-			t.Fatal("expected non-nil position")
-		}
-		if pos.FrameNum != 67 {
-			t.Errorf("FrameNum = %d, want %d", pos.FrameNum, 67)
-		}
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(67), pos.FrameNum)
 		// First coordinate should be set as PosX/PosY for backwards compatibility
-		if pos.PosX != 7610.62 {
-			t.Errorf("PosX = %v, want %v", pos.PosX, 7610.62)
-		}
-		if pos.PosY != 20901.1 {
-			t.Errorf("PosY = %v, want %v", pos.PosY, 20901.1)
-		}
+		assert.Equal(t, float32(7610.62), pos.PosX)
+		assert.Equal(t, float32(20901.1), pos.PosY)
 		// LineCoords should contain all coordinates as flat array
 		expectedCoords := []float32{7610.62, 20901.1, 7647.86, 20901.1, 7745.6, 20887.2}
-		if len(pos.LineCoords) != len(expectedCoords) {
-			t.Errorf("len(LineCoords) = %d, want %d", len(pos.LineCoords), len(expectedCoords))
-		}
-		for i, v := range expectedCoords {
-			if i < len(pos.LineCoords) && pos.LineCoords[i] != v {
-				t.Errorf("LineCoords[%d] = %v, want %v", i, pos.LineCoords[i], v)
-			}
-		}
-		if pos.Direction != 0.0 {
-			t.Errorf("Direction = %v, want %v", pos.Direction, 0.0)
-		}
-		if pos.Alpha != 1.0 {
-			t.Errorf("Alpha = %v, want %v", pos.Alpha, 1.0)
-		}
+		assert.Equal(t, expectedCoords, pos.LineCoords)
+		assert.Equal(t, float32(0.0), pos.Direction)
+		assert.Equal(t, float32(1.0), pos.Alpha)
 	})
 }
 
@@ -1241,17 +840,13 @@ func TestParserV1_calculateEndFrame(t *testing.T) {
 		}
 		endFrame := p.calculateEndFrame(em, 10)
 		// startFrame + len(positions) - 1 = 10 + 5 - 1 = 14
-		if endFrame != 14 {
-			t.Errorf("endFrame = %d, want %d", endFrame, 14)
-		}
+		assert.Equal(t, uint32(14), endFrame)
 	})
 
 	t.Run("without positions", func(t *testing.T) {
 		em := map[string]interface{}{}
 		endFrame := p.calculateEndFrame(em, 10)
-		if endFrame != 10 {
-			t.Errorf("endFrame = %d, want %d", endFrame, 10)
-		}
+		assert.Equal(t, uint32(10), endFrame)
 	})
 }
 
@@ -1271,10 +866,7 @@ func TestSideIndexToString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := sideIndexToString(tt.input)
-		if got != tt.want {
-			t.Errorf("sideIndexToString(%d) = %q, want %q", tt.input, got, tt.want)
-		}
+		assert.Equal(t, tt.want, sideIndexToString(tt.input), "sideIndexToString(%d)", tt.input)
 	}
 }
 
@@ -1282,8 +874,6 @@ func TestParserV1_Parse_VehicleSparsePositions(t *testing.T) {
 	p := &ParserV1{}
 
 	// Simulate a static DShK that doesn't move for 10 frames, then moves.
-	// The Arma extension uses sparse format: each position entry has
-	// [startFrame, endFrame] at index 4, covering a range of frames.
 	data := map[string]interface{}{
 		"worldName":    "Altis",
 		"missionName":  "Test Sparse",
@@ -1301,18 +891,18 @@ func TestParserV1_Parse_VehicleSparsePositions(t *testing.T) {
 					// Static for frames 0-9: same position, no crew
 					[]interface{}{
 						[]interface{}{5000.0, 6000.0, 0.0}, // position
-						45.0,                                // direction
-						1.0,                                 // alive
-						[]interface{}{},                     // crew (empty)
-						[]interface{}{0.0, 9.0},             // [startFrame, endFrame] sparse range
+						45.0,                    // direction
+						1.0,                     // alive
+						[]interface{}{},         // crew (empty)
+						[]interface{}{0.0, 9.0}, // [startFrame, endFrame] sparse range
 					},
 					// Moves for frames 10-14: different position, with crew
 					[]interface{}{
 						[]interface{}{5010.0, 6010.0, 0.0},
 						90.0,
 						1.0,
-						[]interface{}{3.0},              // crew member ID 3
-						[]interface{}{10.0, 14.0},       // frames 10-14
+						[]interface{}{3.0},         // crew member ID 3
+						[]interface{}{10.0, 14.0},  // frames 10-14
 					},
 				},
 			},
@@ -1320,90 +910,53 @@ func TestParserV1_Parse_VehicleSparsePositions(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 300)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify entity definition
-	if len(result.Entities) != 1 {
-		t.Fatalf("len(Entities) = %d, want 1", len(result.Entities))
-	}
+	require.Len(t, result.Entities, 1)
 	ent := result.Entities[0]
-	if ent.EndFrame != 14 {
-		t.Errorf("Entity EndFrame = %d, want 14 (last sparse range end)", ent.EndFrame)
-	}
+	assert.Equal(t, uint32(14), ent.EndFrame, "last sparse range end")
 
 	// Verify positions were expanded from 2 sparse entries to 15 dense entries
-	if len(result.EntityPositions) != 1 {
-		t.Fatalf("len(EntityPositions) = %d, want 1", len(result.EntityPositions))
-	}
+	require.Len(t, result.EntityPositions, 1)
 	ep := result.EntityPositions[0]
-
-	if len(ep.Positions) != 15 {
-		t.Fatalf("len(Positions) = %d, want 15 (frames 0-14 expanded from sparse)", len(ep.Positions))
-	}
+	require.Len(t, ep.Positions, 15, "frames 0-14 expanded from sparse")
 
 	// Verify frame 0 (first sparse range)
 	pos := ep.Positions[0]
-	if pos.FrameNum != 0 {
-		t.Errorf("Positions[0].FrameNum = %d, want 0", pos.FrameNum)
-	}
-	if pos.PosX != 5000.0 || pos.PosY != 6000.0 {
-		t.Errorf("Positions[0] pos = (%v, %v), want (5000, 6000)", pos.PosX, pos.PosY)
-	}
-	if pos.Direction != 45 {
-		t.Errorf("Positions[0].Direction = %d, want 45", pos.Direction)
-	}
-	if pos.Alive != 1 {
-		t.Errorf("Positions[0].Alive = %d, want 1", pos.Alive)
-	}
+	assert.Equal(t, uint32(0), pos.FrameNum)
+	assert.Equal(t, float32(5000.0), pos.PosX)
+	assert.Equal(t, float32(6000.0), pos.PosY)
+	assert.Equal(t, uint32(45), pos.Direction)
+	assert.Equal(t, uint32(1), pos.Alive)
 
 	// Verify frame 5 (middle of first sparse range - should have same data)
 	pos = ep.Positions[5]
-	if pos.FrameNum != 5 {
-		t.Errorf("Positions[5].FrameNum = %d, want 5", pos.FrameNum)
-	}
-	if pos.PosX != 5000.0 || pos.PosY != 6000.0 {
-		t.Errorf("Positions[5] pos = (%v, %v), want (5000, 6000)", pos.PosX, pos.PosY)
-	}
+	assert.Equal(t, uint32(5), pos.FrameNum)
+	assert.Equal(t, float32(5000.0), pos.PosX)
+	assert.Equal(t, float32(6000.0), pos.PosY)
 
 	// Verify frame 9 (end of first sparse range)
 	pos = ep.Positions[9]
-	if pos.FrameNum != 9 {
-		t.Errorf("Positions[9].FrameNum = %d, want 9", pos.FrameNum)
-	}
-	if pos.PosX != 5000.0 {
-		t.Errorf("Positions[9].PosX = %v, want 5000", pos.PosX)
-	}
+	assert.Equal(t, uint32(9), pos.FrameNum)
+	assert.Equal(t, float32(5000.0), pos.PosX)
 
 	// Verify frame 10 (start of second sparse range - different position)
 	pos = ep.Positions[10]
-	if pos.FrameNum != 10 {
-		t.Errorf("Positions[10].FrameNum = %d, want 10", pos.FrameNum)
-	}
-	if pos.PosX != 5010.0 || pos.PosY != 6010.0 {
-		t.Errorf("Positions[10] pos = (%v, %v), want (5010, 6010)", pos.PosX, pos.PosY)
-	}
-	if pos.Direction != 90 {
-		t.Errorf("Positions[10].Direction = %d, want 90", pos.Direction)
-	}
-	if len(pos.CrewIDs) != 1 || pos.CrewIDs[0] != 3 {
-		t.Errorf("Positions[10].CrewIDs = %v, want [3]", pos.CrewIDs)
-	}
+	assert.Equal(t, uint32(10), pos.FrameNum)
+	assert.Equal(t, float32(5010.0), pos.PosX)
+	assert.Equal(t, float32(6010.0), pos.PosY)
+	assert.Equal(t, uint32(90), pos.Direction)
+	assert.Equal(t, []uint32{3}, pos.CrewIDs)
 
 	// Verify frame 14 (end of second sparse range)
 	pos = ep.Positions[14]
-	if pos.FrameNum != 14 {
-		t.Errorf("Positions[14].FrameNum = %d, want 14", pos.FrameNum)
-	}
-	if pos.PosX != 5010.0 {
-		t.Errorf("Positions[14].PosX = %v, want 5010", pos.PosX)
-	}
+	assert.Equal(t, uint32(14), pos.FrameNum)
+	assert.Equal(t, float32(5010.0), pos.PosX)
 }
 
 func TestParserV1_Parse_VehicleSparsePositions_ChunkBuild(t *testing.T) {
 	// Verify that sparse vehicle positions produce correct chunk data
-	// (entity appears in every frame, not just first frame)
 	p := &ParserV1{}
 	w := &ProtobufWriterV1{}
 
@@ -1434,28 +987,18 @@ func TestParserV1_Parse_VehicleSparsePositions_ChunkBuild(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 300)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Build a chunk and verify entity is present in EVERY frame
 	chunk := w.buildChunk(result, 0)
-	if len(chunk.Frames) != 10 {
-		t.Fatalf("len(Frames) = %d, want 10", len(chunk.Frames))
-	}
+	require.Len(t, chunk.Frames, 10)
 
 	for i, frame := range chunk.Frames {
-		if len(frame.Entities) != 1 {
-			t.Errorf("Frame %d: len(Entities) = %d, want 1 (static vehicle should be present in every frame)", i, len(frame.Entities))
-			continue
-		}
+		require.Len(t, frame.Entities, 1, "Frame %d: static vehicle should be present in every frame", i)
 		ent := frame.Entities[0]
-		if ent.EntityId != 2 {
-			t.Errorf("Frame %d: EntityId = %d, want 2", i, ent.EntityId)
-		}
-		if ent.PosX != 1000.0 || ent.PosY != 2000.0 {
-			t.Errorf("Frame %d: pos = (%v, %v), want (1000, 2000)", i, ent.PosX, ent.PosY)
-		}
+		assert.Equal(t, uint32(2), ent.EntityId, "Frame %d", i)
+		assert.Equal(t, float32(1000.0), ent.PosX, "Frame %d", i)
+		assert.Equal(t, float32(2000.0), ent.PosY, "Frame %d", i)
 	}
 }
 
@@ -1486,27 +1029,19 @@ func TestParserV1_Parse_VehicleDensePositions_Unaffected(t *testing.T) {
 	}
 
 	result, err := p.Parse(data, 300)
-	if err != nil {
-		t.Fatalf("Parse returned error: %v", err)
-	}
+	require.NoError(t, err)
 
 	ep := result.EntityPositions[0]
-	if len(ep.Positions) != 3 {
-		t.Fatalf("len(Positions) = %d, want 3 (dense, unchanged)", len(ep.Positions))
-	}
+	require.Len(t, ep.Positions, 3, "dense, unchanged")
 
 	// Verify sequential frame numbers
 	for i, pos := range ep.Positions {
-		if pos.FrameNum != uint32(i) {
-			t.Errorf("Positions[%d].FrameNum = %d, want %d", i, pos.FrameNum, i)
-		}
+		assert.Equal(t, uint32(i), pos.FrameNum, "Positions[%d].FrameNum", i)
 	}
 
 	// Verify end frame uses dense calculation
 	ent := result.Entities[0]
-	if ent.EndFrame != 2 { // 0 + 3 - 1
-		t.Errorf("EndFrame = %d, want 2", ent.EndFrame)
-	}
+	assert.Equal(t, uint32(2), ent.EndFrame) // 0 + 3 - 1
 }
 
 func TestParserV1_calculateEndFrame_SparseVehicle(t *testing.T) {
@@ -1528,9 +1063,7 @@ func TestParserV1_calculateEndFrame_SparseVehicle(t *testing.T) {
 			},
 		}
 		endFrame := p.calculateEndFrame(em, 0)
-		if endFrame != 999 {
-			t.Errorf("endFrame = %d, want 999 (from last sparse range)", endFrame)
-		}
+		assert.Equal(t, uint32(999), endFrame, "from last sparse range")
 	})
 }
 
@@ -1540,9 +1073,7 @@ func TestParserV1_collectEntityPositions_EdgeCases(t *testing.T) {
 	t.Run("no positions key", func(t *testing.T) {
 		em := map[string]interface{}{}
 		result := p.collectEntityPositions(em, 0, 0, "unit")
-		if result != nil {
-			t.Error("expected nil for missing positions")
-		}
+		assert.Nil(t, result)
 	})
 
 	t.Run("positions wrong type", func(t *testing.T) {
@@ -1550,9 +1081,7 @@ func TestParserV1_collectEntityPositions_EdgeCases(t *testing.T) {
 			"positions": "not an array",
 		}
 		result := p.collectEntityPositions(em, 0, 0, "unit")
-		if result != nil {
-			t.Error("expected nil for invalid positions type")
-		}
+		assert.Nil(t, result)
 	})
 
 	t.Run("position entry too short", func(t *testing.T) {
@@ -1562,12 +1091,8 @@ func TestParserV1_collectEntityPositions_EdgeCases(t *testing.T) {
 			},
 		}
 		result := p.collectEntityPositions(em, 0, 0, "unit")
-		if result == nil {
-			t.Fatal("expected non-nil result")
-		}
+		require.NotNil(t, result)
 		// Entry should be skipped
-		if len(result.Positions) != 0 {
-			t.Errorf("len(Positions) = %d, want %d", len(result.Positions), 0)
-		}
+		assert.Empty(t, result.Positions)
 	})
 }
