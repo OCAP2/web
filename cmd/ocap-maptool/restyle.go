@@ -99,7 +99,6 @@ func restyleWorld(mapsDir, worldName string) error {
 	styleCfg := maptool.StyleConfig{
 		WorldName:      meta.WorldName,
 		URLPrefix:      "images/maps/" + meta.WorldName + "/tiles",
-		SpritePrefix:   "images/maps/" + meta.WorldName + "/styles",
 		VectorLayers:   meta.FeatureLayers,
 		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),

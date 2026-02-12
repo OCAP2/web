@@ -104,51 +104,51 @@ describe("getEntityIcon", () => {
   it("returns a valid L.Icon for a known type and state", () => {
     const icon = getEntityIcon("man", "blufor");
     expect(icon).toBeDefined();
-    expect(icon.options.iconUrl).toBe("images/markers/man/blufor.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/man/blufor.svg");
     expect(icon.options.iconSize).toEqual([16, 16]);
     expect(icon.options.className).toBe("animation");
   });
 
   it("returns correct icon for tank/opfor", () => {
     const icon = getEntityIcon("tank", "opfor");
-    expect(icon.options.iconUrl).toBe("images/markers/tank/opfor.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/tank/opfor.svg");
     expect(icon.options.iconSize).toEqual([28, 28]);
   });
 
   it("returns correct icon for heli/dead", () => {
     const icon = getEntityIcon("heli", "dead");
-    expect(icon.options.iconUrl).toBe("images/markers/heli/dead.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/heli/dead.svg");
     expect(icon.options.iconSize).toEqual([32, 32]);
   });
 
   it("returns correct icon for car/hit", () => {
     const icon = getEntityIcon("car", "hit");
-    expect(icon.options.iconUrl).toBe("images/markers/car/hit.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/car/hit.svg");
     expect(icon.options.iconSize).toEqual([24, 24]);
   });
 
   it("returns correct icon for plane/follow", () => {
     const icon = getEntityIcon("plane", "follow");
-    expect(icon.options.iconUrl).toBe("images/markers/plane/follow.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/plane/follow.svg");
   });
 
   it("returns correct icon for staticMortar/unconscious", () => {
     const icon = getEntityIcon("staticMortar", "unconscious");
     expect(icon.options.iconUrl).toBe(
-      "images/markers/static-mortar/unconscious.svg",
+      "/images/markers/static-mortar/unconscious.svg",
     );
     expect(icon.options.iconSize).toEqual([20, 20]);
   });
 
   it("falls back to unknown type for unrecognised iconType", () => {
     const icon = getEntityIcon("submarine", "blufor");
-    expect(icon.options.iconUrl).toBe("images/markers/unknown/blufor.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/unknown/blufor.svg");
     expect(icon.options.iconSize).toEqual([28, 28]);
   });
 
   it("falls back to unknown state for unrecognised state", () => {
     const icon = getEntityIcon("man", "nonexistent");
-    expect(icon.options.iconUrl).toBe("images/markers/man/unknown.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/man/unknown.svg");
   });
 
   it("generates icons for all entity types and all states", () => {
@@ -191,31 +191,31 @@ describe("entityIcon", () => {
   it("returns alive icon with full opacity for alive state", () => {
     const result = entityIcon("man", "WEST", 1);
     expect(result.opacity).toBe(1);
-    expect(result.icon.options.iconUrl).toBe("images/markers/man/blufor.svg");
+    expect(result.icon.options.iconUrl).toBe("/images/markers/man/blufor.svg");
   });
 
   it("returns dead icon with reduced opacity for dead state", () => {
     const result = entityIcon("tank", "EAST", 0);
     expect(result.opacity).toBe(0.4);
-    expect(result.icon.options.iconUrl).toBe("images/markers/tank/dead.svg");
+    expect(result.icon.options.iconUrl).toBe("/images/markers/tank/dead.svg");
   });
 
   it("returns unconscious icon with full opacity for unconscious state", () => {
     const result = entityIcon("car", "GUER", 2);
     expect(result.opacity).toBe(1);
     expect(result.icon.options.iconUrl).toBe(
-      "images/markers/car/unconscious.svg",
+      "/images/markers/car/unconscious.svg",
     );
   });
 
   it("falls back to unknown type for unrecognised entity type", () => {
     const result = entityIcon("bicycle", "CIV", 1);
-    expect(result.icon.options.iconUrl).toBe("images/markers/unknown/civ.svg");
+    expect(result.icon.options.iconUrl).toBe("/images/markers/unknown/civ.svg");
   });
 
   it("uses dead variant for null side (empty vehicle)", () => {
     const result = entityIcon("heli", null, 1);
-    expect(result.icon.options.iconUrl).toBe("images/markers/heli/dead.svg");
+    expect(result.icon.options.iconUrl).toBe("/images/markers/heli/dead.svg");
     expect(result.opacity).toBe(1);
   });
 
@@ -230,7 +230,7 @@ describe("entityIcon", () => {
 
   it("uses dead variant with reduced opacity for dead + null side", () => {
     const result = entityIcon("heli", null, 0);
-    expect(result.icon.options.iconUrl).toBe("images/markers/heli/dead.svg");
+    expect(result.icon.options.iconUrl).toBe("/images/markers/heli/dead.svg");
     expect(result.opacity).toBe(0.4);
   });
 });
@@ -240,13 +240,13 @@ describe("entityIcon", () => {
 describe("hitIcon", () => {
   it("returns hit variant icon for a known type", () => {
     const icon = hitIcon("man");
-    expect(icon.options.iconUrl).toBe("images/markers/man/hit.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/man/hit.svg");
     expect(icon.options.iconSize).toEqual([16, 16]);
     expect(icon.options.className).toBe("animation");
   });
 
   it("falls back to unknown type for unrecognised entity type", () => {
     const icon = hitIcon("bicycle");
-    expect(icon.options.iconUrl).toBe("images/markers/unknown/hit.svg");
+    expect(icon.options.iconUrl).toBe("/images/markers/unknown/hit.svg");
   });
 });

@@ -1157,7 +1157,6 @@ const (
 type StyleConfig struct {
 	WorldName        string
 	URLPrefix        string // e.g. "images/maps/stratis"
-	SpritePrefix     string // e.g. "images/maps/stratis/styles" — directory containing sprite files
 	VectorLayers     []string
 	HasSatellite     bool
 	HasHeightmap     bool
@@ -1214,7 +1213,7 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		"name":    cfg.WorldName + "-" + string(variant),
 		"sources": sources,
 		"layers":  layers,
-		"sprite":  assetPath(cfg.SpritePrefix, spriteName),
+		"sprite":  spriteName,
 		"glyphs":  cfg.GlyphsURL,
 	}
 	return doc

@@ -271,12 +271,16 @@ export class LeafletRenderer implements MapRenderer {
         }
 
         // 2. Add MapLibre basemap layer (after protocol is registered)
-        // Resolve font glyph base URL against page origin so it works
-        // regardless of where the style JSON is served from (local or CDN).
-        const fontsBaseURL = new URL("images/maps/fonts/", window.location.href).href;
+        const baseUrl = import.meta.env.BASE_URL; // e.g. "/" or "/ocap/"
 
-        // Resolve saved style preference
-        const styleBase = world.tileBaseUrl + "/styles/";
+        // Resolve saved style preference — build a full URL so MapLibre
+        // resolves relative paths (sprite, glyphs, sources) against the
+        // correct origin rather than the current page route.
+        const raw = world.tileBaseUrl ?? "";
+        const tileBase = raw.startsWith("http")
+          ? raw
+          : new URL(baseUrl + raw.replace(/^\//, ""), window.location.origin).href;
+        const styleBase = tileBase + "/styles/";
         const styleCandidates: StyleCandidate[] = [
           { label: "Topographic", url: styleBase + "topo.json" },
           { label: "Topographic Dark", url: styleBase + "topo-dark.json" },
@@ -292,22 +296,11 @@ export class LeafletRenderer implements MapRenderer {
             savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0
           ].url;
 
-        // Rewrite font glyph requests to the Go server's font endpoint
-        const transformRequest = (url: string, resourceType: string) => {
-          if (resourceType === "Glyphs") {
-            const match = url.match(/([^/]+)\/(\d+-\d+\.pbf)(?:\?|$)/);
-            if (match) {
-              return { url: fontsBaseURL + match[1] + "/" + match[2] };
-            }
-          }
-        };
-
         await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
           style: initialStyle,
           interactive: false,
           renderWorldCopies: false,
-          transformRequest,
         });
         mlLayer.addTo(this.map);
         this.maplibreLayer = mlLayer;
@@ -344,7 +337,6 @@ export class LeafletRenderer implements MapRenderer {
         createMaplibreStyleControl(mlLayer, styleCandidates, {
           center: previewCenter,
           zoom: 12,
-          transformRequest,
         }).addTo(this.map);
       })();
     } else {
@@ -410,7 +402,8 @@ export class LeafletRenderer implements MapRenderer {
     );
 
     // Build tile layers based on available styles in map.json
-    const tileUrl = world.tileBaseUrl ?? "";
+    const rawTile = world.tileBaseUrl ?? "";
+    const tileUrl = rawTile.startsWith("http") ? rawTile : import.meta.env.BASE_URL + rawTile.replace(/^\//, "");
     const baseLayers: L.TileLayer[] = [];
     const tileOpts: L.TileLayerOptions = {
       maxNativeZoom: world.maxZoom,
@@ -713,11 +706,12 @@ export class LeafletRenderer implements MapRenderer {
     } else {
       // ICON shape — load actual marker image from server
       const isMagIcon = def.type.indexOf("magIcons") > -1;
+      const b = import.meta.env.BASE_URL;
       let iconUrl: string;
       if (isMagIcon) {
-        iconUrl = `images/markers/${def.type.toLowerCase()}.png`;
+        iconUrl = `${b}images/markers/${def.type.toLowerCase()}.png`;
       } else {
-        iconUrl = `images/markers/${def.type}/${def.color}.png`;
+        iconUrl = `${b}images/markers/${def.type}/${def.color}.png`;
       }
       const iconSize: [number, number] = def.size
         ? [def.size[0] * 35, def.size[1] * 35]

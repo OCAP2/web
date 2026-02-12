@@ -112,17 +112,14 @@ func NewGenerateStylesStage() Stage {
 				}
 			}
 
-			spritePrefix := "images/maps/" + worldName
 			glyphsURL := "../fonts/{fontstack}/{range}.pbf"
 			if job.SubDirs {
-				spritePrefix = "images/maps/" + worldName + "/styles"
 				glyphsURL = "../../fonts/{fontstack}/{range}.pbf"
 			}
 
 			styleCfg := StyleConfig{
 				WorldName:      worldName,
 				URLPrefix:      tilesPrefix,
-				SpritePrefix:   spritePrefix,
 				VectorLayers:   job.VectorLayers,
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,

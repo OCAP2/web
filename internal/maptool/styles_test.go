@@ -203,7 +203,6 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 	cfg := StyleConfig{
 		WorldName:    "altis",
 		URLPrefix:    "images/maps/altis",
-		SpritePrefix: "images/maps/altis/styles",
 		VectorLayers: []string{"sea", "road", "namecity"},
 		HasSatellite: true,
 		GlyphsURL:    "../../fonts/{fontstack}/{range}.pbf",
@@ -215,7 +214,7 @@ func TestGenerateStyleDocument_Structure(t *testing.T) {
 	assert.Equal(t, "altis-color-relief", doc["name"])
 	assert.NotNil(t, doc["sources"])
 	assert.NotNil(t, doc["layers"])
-	assert.Equal(t, "images/maps/altis/styles/sprite", doc["sprite"])
+	assert.Equal(t, "sprite", doc["sprite"])
 	assert.Equal(t, "../../fonts/{fontstack}/{range}.pbf", doc["glyphs"])
 }
 

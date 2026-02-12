@@ -33,20 +33,21 @@ const ICON_SIZES: Record<string, [number, number]> = {
   unknown: [28, 28],
 };
 
-/** Image path directory per entity type. */
+/** Image path directory per entity type (anchored to app base URL). */
+const base = import.meta.env.BASE_URL;
 const ICON_PATHS: Record<string, string> = {
-  man: "images/markers/man/",
-  ship: "images/markers/ship/",
-  parachute: "images/markers/parachute/",
-  heli: "images/markers/heli/",
-  plane: "images/markers/plane/",
-  truck: "images/markers/truck/",
-  car: "images/markers/car/",
-  apc: "images/markers/apc/",
-  tank: "images/markers/tank/",
-  staticMortar: "images/markers/static-mortar/",
-  staticWeapon: "images/markers/static-weapon/",
-  unknown: "images/markers/unknown/",
+  man: `${base}images/markers/man/`,
+  ship: `${base}images/markers/ship/`,
+  parachute: `${base}images/markers/parachute/`,
+  heli: `${base}images/markers/heli/`,
+  plane: `${base}images/markers/plane/`,
+  truck: `${base}images/markers/truck/`,
+  car: `${base}images/markers/car/`,
+  apc: `${base}images/markers/apc/`,
+  tank: `${base}images/markers/tank/`,
+  staticMortar: `${base}images/markers/static-mortar/`,
+  staticWeapon: `${base}images/markers/static-weapon/`,
+  unknown: `${base}images/markers/unknown/`,
 };
 
 /**
