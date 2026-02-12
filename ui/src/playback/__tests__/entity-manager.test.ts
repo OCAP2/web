@@ -496,6 +496,17 @@ describe("EntityManager", () => {
       expect(hioshi.id).toBe(20); // longest life (600 frames)
     });
 
+    it("does not deduplicate units with empty names", () => {
+      mgr.addEntity(unitDef({ id: 1, name: "", groupName: "Alpha", side: "WEST", startFrame: 0, endFrame: 100 }));
+      mgr.addEntity(unitDef({ id: 2, name: "", groupName: "Alpha", side: "WEST", startFrame: 0, endFrame: 200 }));
+      // Named units still dedup
+      mgr.addEntity(unitDef({ id: 3, name: "Bob", groupName: "Alpha", side: "WEST", startFrame: 0, endFrame: 50 }));
+      mgr.addEntity(unitDef({ id: 4, name: "Bob", groupName: "Alpha", side: "WEST", startFrame: 60, endFrame: 300 }));
+
+      const west = mgr.getBySide("WEST");
+      expect(west).toHaveLength(3); // 2 unnamed + 1 Bob (deduped)
+    });
+
     it("does not return vehicles", () => {
       mgr.addEntity(vehicleDef({ id: 10, side: "WEST" }));
       expect(mgr.getBySide("WEST")).toHaveLength(0);

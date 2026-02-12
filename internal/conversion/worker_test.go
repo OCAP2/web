@@ -710,6 +710,76 @@ func TestTriggerConversion_FailedStatusUpdateError(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
+func TestComputeStats_DeduplicatesPlayersByName(t *testing.T) {
+	manifest := &storage.Manifest{
+		Entities: []storage.EntityDef{
+			// "Hioshi" respawns 3 times in same group/side — should count as 1 player
+			{ID: 10, Type: "unit", Name: "Hioshi", Side: "GUER", IsPlayer: true},
+			{ID: 20, Type: "unit", Name: "Hioshi", Side: "GUER", IsPlayer: true},
+			{ID: 30, Type: "unit", Name: "Hioshi", Side: "GUER", IsPlayer: true},
+			// Different player
+			{ID: 40, Type: "unit", Name: "Nika", Side: "GUER", IsPlayer: true},
+			// AI unit (not a player)
+			{ID: 50, Type: "unit", Name: "AI Rifleman", Side: "GUER", IsPlayer: false},
+			// Vehicle (should be ignored for player count)
+			{ID: 60, Type: "vehicle", Name: "Truck", Side: "GUER"},
+		},
+		Events: []storage.Event{
+			// Hioshi(10) kills AI(50)
+			{Type: "killed", SourceID: 10, TargetID: 50},
+			// Nika(40) kills Hioshi(20)
+			{Type: "killed", SourceID: 40, TargetID: 20},
+		},
+	}
+
+	playerCount, killCount, playerKillCount, sides := computeStats(manifest)
+
+	assert.Equal(t, 2, playerCount, "should count unique player names, not entities")
+	assert.Equal(t, 2, killCount)
+	assert.Equal(t, 2, playerKillCount, "both kills by players")
+	assert.Equal(t, 2, sides["GUER"].Players, "unique players on GUER side")
+	assert.Equal(t, 5, sides["GUER"].Units, "all unit entities count")
+	assert.Equal(t, 2, sides["GUER"].Kills, "both kills sourced from GUER")
+	assert.Equal(t, 2, sides["GUER"].Dead)
+}
+
+func TestComputeStats_EmptyNameNotDeduplicated(t *testing.T) {
+	manifest := &storage.Manifest{
+		Entities: []storage.EntityDef{
+			// Two distinct unnamed player entities — should each count
+			{ID: 1, Type: "unit", Name: "", Side: "WEST", IsPlayer: true},
+			{ID: 2, Type: "unit", Name: "", Side: "WEST", IsPlayer: true},
+			// Named player with respawn — should count once
+			{ID: 3, Type: "unit", Name: "Alice", Side: "WEST", IsPlayer: true},
+			{ID: 4, Type: "unit", Name: "Alice", Side: "WEST", IsPlayer: true},
+		},
+	}
+
+	playerCount, _, _, sides := computeStats(manifest)
+
+	assert.Equal(t, 3, playerCount, "2 unnamed + 1 Alice")
+	assert.Equal(t, 3, sides["WEST"].Players, "2 unnamed + 1 Alice on WEST")
+	assert.Equal(t, 4, sides["WEST"].Units, "all 4 unit entities")
+}
+
+func TestComputeStats_IgnoresNonPlayerSides(t *testing.T) {
+	manifest := &storage.Manifest{
+		Entities: []storage.EntityDef{
+			{ID: 1, Type: "unit", Name: "A", Side: "UNKNOWN", IsPlayer: true},
+			{ID: 2, Type: "unit", Name: "B", Side: "GLOBAL", IsPlayer: true},
+			{ID: 3, Type: "unit", Name: "C", Side: "", IsPlayer: true},
+			{ID: 4, Type: "unit", Name: "D", Side: "WEST", IsPlayer: true},
+		},
+	}
+
+	playerCount, _, _, sides := computeStats(manifest)
+
+	assert.Equal(t, 4, playerCount, "all are unique players")
+	assert.Equal(t, 1, sides["WEST"].Players, "only WEST counted in sides")
+	_, hasUnknown := sides["UNKNOWN"]
+	assert.False(t, hasUnknown)
+}
+
 func TestWorker_CleanupInterrupted(t *testing.T) {
 	dir := t.TempDir()
 
