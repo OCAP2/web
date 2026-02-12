@@ -1,29 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
-import { MAP_COLORS } from "../constants";
 
 describe("getMapColor", () => {
-  it("returns known colors for predefined maps", () => {
-    expect(getMapColor("altis")).toBe("#4A9EFF");
-    expect(getMapColor("Altis")).toBe("#4A9EFF");
-    expect(getMapColor("stratis")).toBe("#A78BFA");
-    expect(getMapColor("tanoa")).toBe("#FF9F43");
-  });
-
-  it("is case-insensitive for known maps", () => {
-    for (const name of Object.keys(MAP_COLORS)) {
-      expect(getMapColor(name.toUpperCase())).toBe(getMapColor(name));
-    }
-  });
-
-  it("returns a hex color for unknown maps", () => {
-    expect(getMapColor("mycustommap")).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    expect(getMapColor("sahrani")).toMatch(/^#[0-9A-Fa-f]{6}$/);
+  it("returns a hex color from the palette", () => {
+    expect(FALLBACK_PALETTE).toContain(getMapColor("altis"));
+    expect(FALLBACK_PALETTE).toContain(getMapColor("stratis"));
+    expect(FALLBACK_PALETTE).toContain(getMapColor("tanoa"));
   });
 
   it("is deterministic", () => {
     expect(getMapColor("chernarus")).toBe(getMapColor("chernarus"));
     expect(getMapColor("takistan")).toBe(getMapColor("takistan"));
+    expect(getMapColor("altis")).toBe(getMapColor("altis"));
+  });
+
+  it("returns a hex color for unknown maps", () => {
+    expect(getMapColor("mycustommap")).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(getMapColor("sahrani")).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 });
 

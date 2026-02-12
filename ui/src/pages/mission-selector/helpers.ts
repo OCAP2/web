@@ -1,5 +1,5 @@
 import type { Operation } from "../../data/types";
-import { MAP_COLORS, STATUS_MAP } from "./constants";
+import { STATUS_MAP } from "./constants";
 
 // Curated palette for unknown maps — perceptually distinct, readable on dark backgrounds.
 // 37 entries (prime) to reduce modulo collisions.
@@ -59,7 +59,19 @@ export function relativeDate(dateStr: string, locale = "en"): string {
 }
 
 export function getMapColor(worldName: string): string {
-  return MAP_COLORS[worldName.toLowerCase()] || hashColor(worldName);
+  return hashColor(worldName);
+}
+
+export function getTagColor(tag: string): { bg: string; color: string; border: string } {
+  const hex = hashColor(tag);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return {
+    bg: `rgba(${r},${g},${b},0.12)`,
+    color: hex,
+    border: `rgba(${r},${g},${b},0.2)`,
+  };
 }
 
 export function getStatusInfo(op: Operation): { labelKey: string; color: string; icon: string; key: string } {

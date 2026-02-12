@@ -1,7 +1,8 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import { useI18n } from "../../ui/hooks/useLocale";
-import { TAG_COLORS, STATUS_MAP, C } from "./constants";
+import { STATUS_MAP } from "./constants";
+import { getTagColor } from "./helpers";
 import { Icons } from "./icons";
 import styles from "./MissionSelector.module.css";
 
@@ -18,7 +19,7 @@ export function StatPill(props: { icon: JSX.Element; value: string | number; lab
 }
 
 export function TagBadge(props: { tag: string; clickable?: boolean; active?: boolean; onClick?: () => void }) {
-  const tc = () => TAG_COLORS[props.tag] || { bg: "rgba(255,255,255,0.06)", color: C.muted, border: "rgba(255,255,255,0.1)" };
+  const tc = () => getTagColor(props.tag);
   const isActive = () => props.active !== false;
   return (
     <button

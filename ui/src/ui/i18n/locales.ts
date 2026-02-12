@@ -56,7 +56,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "déconnecté",
   },
   captured_something: {
-    ru: "captured something",
+    ru: "захватил что-то",
     en: "captured something",
     de: "hat irgendwas gekapert",
     cs: "něco zabral",
@@ -301,12 +301,12 @@ export const translations: Record<string, Record<Locale, string>> = {
     de: "Streaming",
     cs: "Streamování",
     it: "Streaming",
-    fr: "Streaming",
+    fr: "En diffusion",
   },
   list_compilation: {
     ru: "Составления списка...",
     en: "List compilation...",
-    de: "Auflisting der Erstellungen...",
+    de: "Liste wird erstellt...",
     cs: "Seznam kompilací...",
     it: "Caricamento lista...",
     fr: "Compilation de la liste...",
@@ -354,7 +354,7 @@ export const translations: Record<string, Record<Locale, string>> = {
   "show-experimental": {
     ru: "Enable experimental mode: .",
     en: "Enable experimental mode: .",
-    de: "Aktiviert experimentaller Modus: .",
+    de: "Experimentellen Modus aktivieren: .",
     cs: "Povolit experimentální režim: .",
     it: "Abilita modalità sperimentale: .",
     fr: "Activer le mode expérimental : .",
@@ -364,7 +364,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: "Language:",
     de: "Sprache:",
     cs: "Jazyk:",
-    it: "Lingua",
+    it: "Lingua:",
     fr: "Langue :",
   },
   time_elapsed: {
@@ -394,13 +394,13 @@ export const translations: Record<string, Record<Locale, string>> = {
   not_available: {
     ru: " недоступен",
     en: " not available",
-    de: " nicht Verfügbar",
+    de: " nicht verfügbar",
     cs: " není k dispozici",
     it: " non disponibile",
     fr: " non disponible",
   },
   is_hacking_terminal: {
-    ru: " is hacking terminal",
+    ru: " взламывает терминал",
     en: " is hacking terminal",
     de: " hackt das Terminal",
     cs: " hackuje terminál",
@@ -408,7 +408,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: " pirate le terminal",
   },
   interrupted_hack: {
-    ru: " has interrupted the hack",
+    ru: " прервал взлом",
     en: " has interrupted the hack",
     de: " hat den Hack unterbrochen",
     cs: " přerušil hackování",
@@ -424,7 +424,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "Version serveur : ",
   },
   "version-extension": {
-    ru: "Pасширения bерсия : ",
+    ru: "Версия расширения: ",
     en: "Extension version: ",
     de: "Erweiterungs Version: ",
     cs: "Verze rozšíření: ",
@@ -432,7 +432,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "Version extension : ",
   },
   "version-addon": {
-    ru: "Aддона bерсия: ",
+    ru: "Версия аддона: ",
     en: "Addon version: ",
     de: "Addon Version: ",
     cs: "Verze addonu: ",
