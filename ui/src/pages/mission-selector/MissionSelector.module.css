@@ -494,6 +494,19 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* ── Virtual scrolling ── */
+.virtualContainer {
+  position: relative;
+  width: 100%;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
 /* ── Mission row ── */
 .missionRow {
   display: grid;

@@ -17,6 +17,7 @@
     "@bufbuild/protobuf": "^2.11.0",
     "@maplibre/maplibre-gl-leaflet": "^0.0.22",
     "@solidjs/router": "^0.15.4",
+    "@tanstack/solid-virtual": "^3.13.18",
     "leaflet": "^1.9.0",
     "leaflet-rotatedmarker": "^0.2.0",
     "maplibre-gl": "^4.7.0",

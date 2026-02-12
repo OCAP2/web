@@ -1,6 +1,7 @@
 import { createSignal, createMemo, Show, For, onMount, onCleanup } from "solid-js";
 import type { JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { Operation } from "../../data/types";
 import { ApiClient, type BuildInfo } from "../../data/api-client";
 import { useI18n } from "../../ui/hooks/useLocale";
@@ -35,6 +36,7 @@ export function MissionSelector(): JSX.Element {
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
 
   let searchRef: HTMLInputElement | undefined;
+  let scrollRef: HTMLDivElement | undefined;
 
   // Fetch operations
   onMount(async () => {
@@ -80,6 +82,7 @@ export function MissionSelector(): JSX.Element {
         nextIdx = currentIdx < 0 ? list.length - 1 : Math.max(currentIdx - 1, 0);
       }
       setSelectedId(list[nextIdx].id);
+      virtualizer.scrollToIndex(nextIdx, { align: "auto" });
     }
   };
 
@@ -127,6 +130,14 @@ export function MissionSelector(): JSX.Element {
       return sd === "desc" ? -cmp : cmp;
     });
     return result;
+  });
+
+  const virtualizer = createVirtualizer({
+    get count() { return filtered().length; },
+    getScrollElement: () => scrollRef ?? null,
+    estimateSize: () => 61,
+    overscan: 10,
+    initialRect: { width: 0, height: 800 },
   });
 
   const selectedOp = createMemo(() => {
@@ -314,7 +325,7 @@ export function MissionSelector(): JSX.Element {
             </div>
 
             {/* Rows */}
-            <div class={styles.tableBody} data-testid="operations-list">
+            <div ref={scrollRef} class={styles.tableBody} data-testid="operations-list">
               <Show when={loading()}>
                 <div data-testid="loading-indicator" style={{
                   display: "flex", "align-items": "center", "justify-content": "center",
@@ -331,17 +342,24 @@ export function MissionSelector(): JSX.Element {
                   <span class={styles.emptyHint}>{t("adjust_filters")}</span>
                 </div>
               </Show>
-              <For each={filtered()}>
-                {(op, i) => (
-                  <MissionRow
-                    op={op}
-                    selected={selectedId() === op.id}
-                    onSelect={setSelectedId}
-                    onLaunch={handleLaunch}
-                    index={i()}
-                  />
-                )}
-              </For>
+              <div class={styles.virtualContainer} style={{ height: `${virtualizer.getTotalSize()}px` }}>
+                <For each={virtualizer.getVirtualItems()}>
+                  {(vItem) => {
+                    const op = () => filtered()[vItem.index];
+                    return (
+                      <div class={styles.virtualRow} style={{ height: `${vItem.size}px`, transform: `translateY(${vItem.start}px)` }}>
+                        <MissionRow
+                          op={op()}
+                          selected={selectedId() === op().id}
+                          onSelect={setSelectedId}
+                          onLaunch={handleLaunch}
+                          index={vItem.index}
+                        />
+                      </div>
+                    );
+                  }}
+                </For>
+              </div>
             </div>
 
             {/* Footer */}

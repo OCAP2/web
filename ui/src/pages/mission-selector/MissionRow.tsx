@@ -1,4 +1,4 @@
-import { Show, createEffect } from "solid-js";
+import { Show } from "solid-js";
 import type { Operation } from "../../data/types";
 import { useI18n } from "../../ui/hooks/useLocale";
 import { Icons } from "./icons";
@@ -17,22 +17,11 @@ export function MissionRow(props: {
   const mapColor = () => getMapColor(props.op.worldName);
   const status = () => getStatusInfo(props.op);
   const ready = () => isOpReady(props.op);
-  const delay = () => `${Math.min(props.index * 0.03, 0.3)}s`;
-
-  let rowRef: HTMLDivElement | undefined;
-
-  createEffect(() => {
-    if (props.selected && rowRef?.scrollIntoView) {
-      rowRef.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  });
 
   return (
     <div
-      ref={rowRef}
       data-testid={`operation-${props.op.id}`}
       class={`${styles.missionRow} ${props.selected ? styles.missionRowSelected : ""}`}
-      style={{ animation: `stagger 0.3s ease-out ${delay()} both` }}
       onClick={() => props.onSelect(props.op.id)}
     >
       {/* Mission Name */}
