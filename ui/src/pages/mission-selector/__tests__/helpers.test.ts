@@ -28,6 +28,11 @@ describe("formatDuration", () => {
   it("rounds 0.5 up", () => {
     expect(formatDuration(90.5)).toBe("1m 31s");
   });
+
+  it("carries over to the next unit when rounding up", () => {
+    expect(formatDuration(59.6)).toBe("1m 0s");
+    expect(formatDuration(3599.5)).toBe("1h 0m 0s");
+  });
 });
 
 describe("getMapColor", () => {
