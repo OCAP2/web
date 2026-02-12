@@ -5,14 +5,18 @@
 	"db": "data.db",
 	"markers": "assets/markers",
 	"ammo": "assets/ammo",
+	"fonts": "assets/fonts",
 	"maps": "maps",
 	"data": "data",
+	"static": "",
 	"logger": false,
 	"customize": {
 		"websiteURL": "",
 		"websiteLogo": "",
 		"websiteLogoSize": "32px",
-		"disableKillCount": false
+		"disableKillCount": false,
+		"headerTitle": "",
+		"headerSubtitle": ""
 	},
 	"conversion": {
 		"enabled": false,
