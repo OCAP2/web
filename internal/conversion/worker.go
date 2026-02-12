@@ -236,7 +236,7 @@ func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKil
 		if ent.Type == "unit" {
 			if ent.IsPlayer {
 				entityIsPlayer[ent.ID] = true
-				if !seenPlayerName[ent.Name] {
+				if ent.Name == "" || !seenPlayerName[ent.Name] {
 					seenPlayerName[ent.Name] = true
 					playerCount++
 				}
@@ -246,12 +246,16 @@ func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKil
 				sc := sides[ent.Side]
 				sc.Units++
 				if ent.IsPlayer {
-					if seenPlayerSide[ent.Name] == nil {
-						seenPlayerSide[ent.Name] = make(map[string]bool)
-					}
-					if !seenPlayerSide[ent.Name][ent.Side] {
-						seenPlayerSide[ent.Name][ent.Side] = true
+					if ent.Name == "" {
 						sc.Players++
+					} else {
+						if seenPlayerSide[ent.Name] == nil {
+							seenPlayerSide[ent.Name] = make(map[string]bool)
+						}
+						if !seenPlayerSide[ent.Name][ent.Side] {
+							seenPlayerSide[ent.Name][ent.Side] = true
+							sc.Players++
+						}
 					}
 				}
 				sides[ent.Side] = sc

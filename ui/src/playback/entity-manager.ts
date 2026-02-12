@@ -79,8 +79,14 @@ export class EntityManager {
   getBySide(side: Side): Unit[] {
     const units = this.getUnits().filter((u) => u.side === side);
     // Deduplicate: key by "group\0name", keep the entity with the most frames.
+    // Skip dedup for units with empty names — they are distinct AI/unnamed entities.
     const best = new Map<string, Unit>();
+    const unnamed: Unit[] = [];
     for (const u of units) {
+      if (!u.name) {
+        unnamed.push(u);
+        continue;
+      }
       const key = `${u.groupName}\0${u.name}`;
       const existing = best.get(key);
       if (
@@ -90,7 +96,7 @@ export class EntityManager {
         best.set(key, u);
       }
     }
-    return [...best.values()];
+    return [...best.values(), ...unnamed];
   }
 
   /** Create and register a new Group. */
