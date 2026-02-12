@@ -347,7 +347,7 @@ export function MissionSelector(): JSX.Element {
             {/* Footer */}
             <div class={styles.footer}>
               <div class={styles.footerLeft}>
-                <a href="https://github.com/OCAP2/web" target="_blank" rel="noopener noreferrer" class={styles.footerGithub}>
+                <a href="https://github.com/OCAP2/OCAP" target="_blank" rel="noopener noreferrer" class={styles.footerGithub}>
                   <Icons.GitHub />
                   <span>OCAP2</span>
                   <Icons.ExternalLink />
