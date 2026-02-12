@@ -319,6 +319,7 @@ jobs:
           cp ${{ matrix.binary }} release/
           cp -r assets/markers release/assets/
           cp -r assets/ammo release/assets/
+          cp -r assets/fonts release/assets/
           cp setting.json.example release/
           cd release && ${{ matrix.archiver }} ../${{ matrix.archive }} .
 
