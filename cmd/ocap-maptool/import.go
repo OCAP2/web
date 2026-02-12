@@ -71,7 +71,9 @@ func importGradMehDir(ctx context.Context, tools maptool.ToolSet, dir, mapsDir s
 
 	pipeline := buildGradMehPipeline(tools)
 	pipeline.OnProgress = func(p maptool.Progress) {
-		log.Printf("[%d/%d] %s: %s", p.StageNum, p.TotalStages, p.Stage, p.Message)
+		if p.Message != "" {
+			log.Printf("[%d/%d] %s: %s", p.StageNum, p.TotalStages, p.Stage, p.Message)
+		}
 	}
 
 	job := &maptool.Job{

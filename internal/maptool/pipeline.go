@@ -183,6 +183,8 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 	job.StartedAt = time.Now()
 	job.mu.Unlock()
 
+	pipelineStart := time.Now()
+
 	for i, stage := range p.stages {
 		if err := ctx.Err(); err != nil {
 			job.setStatus(StatusCancelled, "")
@@ -196,6 +198,7 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 			TotalStages: len(p.stages),
 		})
 
+		stageStart := time.Now()
 		if err := stage.Run(ctx, job); err != nil {
 			if stage.Optional {
 				p.reportProgress(job, Progress{
@@ -210,8 +213,10 @@ func (p *Pipeline) Run(ctx context.Context, job *Job) error {
 			job.setStatus(StatusFailed, err.Error())
 			return fmt.Errorf("stage %s: %w", stage.Name, err)
 		}
+		log.Printf("[%d/%d] %s completed in %s", i+1, len(p.stages), stage.Name, time.Since(stageStart).Round(time.Millisecond))
 	}
 
+	log.Printf("Pipeline completed in %s", time.Since(pipelineStart).Round(time.Millisecond))
 	job.setStatus(StatusDone, "")
 	return nil
 }
