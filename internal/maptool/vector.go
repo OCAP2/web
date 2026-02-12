@@ -8,7 +8,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // geoJSONSource represents a discovered geojson.gz file with its layer name.
@@ -218,32 +222,40 @@ func NewProcessGeoJSONStage() Stage {
 			var layerFiles []LayerFile
 			var layerNames []string
 
-			// Process GeoJSON layers from grad_meh export
+			// Process GeoJSON layers from grad_meh export (in parallel)
 			layers, err := DiscoverGeoJSONLayers(job.InputPath)
 			if err != nil {
 				return fmt.Errorf("discover layers: %w", err)
 			}
 			log.Printf("Found %d GeoJSON layers", len(layers))
 
-			for _, src := range layers {
-				// Skip bush layer (too dense, Python skips it too)
-				if src.Name == "bush" {
-					log.Printf("Skipping bush layer (too dense for vector tiles)")
-					continue
+			{
+				var mu sync.Mutex
+				g, _ := errgroup.WithContext(ctx)
+				for _, src := range layers {
+					if src.Name == "bush" {
+						log.Printf("Skipping bush layer (too dense for vector tiles)")
+						continue
+					}
+					g.Go(func() error {
+						name := src.Name
+						if canonical, ok := layerNameAliases[name]; ok {
+							log.Printf("Renaming layer %s → %s", name, canonical)
+							name = canonical
+						}
+						outPath := filepath.Join(tmpDir, name+".geojson")
+						if err := ProcessGeoJSONGz(src.Path, outPath); err != nil {
+							log.Printf("WARNING: skipping layer %s: %v", name, err)
+							return nil
+						}
+						mu.Lock()
+						layerFiles = append(layerFiles, LayerFile{Name: name, Path: outPath})
+						layerNames = append(layerNames, name)
+						mu.Unlock()
+						return nil
+					})
 				}
-				// Normalize layer names (e.g. "mounts" → "mount")
-				name := src.Name
-				if canonical, ok := layerNameAliases[name]; ok {
-					log.Printf("Renaming layer %s → %s", name, canonical)
-					name = canonical
-				}
-				outPath := filepath.Join(tmpDir, name+".geojson")
-				if err := ProcessGeoJSONGz(src.Path, outPath); err != nil {
-					log.Printf("WARNING: skipping layer %s: %v", name, err)
-					continue
-				}
-				layerFiles = append(layerFiles, LayerFile{Name: name, Path: outPath})
-				layerNames = append(layerNames, name)
+				g.Wait()
 			}
 
 			// Add sea polygon file if available (from generate_contours stage)
@@ -330,29 +342,42 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 				return fmt.Errorf("create mbtiles dir: %w", err)
 			}
 
-			// Per-layer tippecanoe + tile-join approach (matching Python arma3-maptiler)
-			var mbtilesFiles []string
+			// Per-layer tippecanoe in parallel, then tile-join to merge.
+			var (
+				mu           sync.Mutex
+				mbtilesFiles []string
+			)
+			g, ctx := errgroup.WithContext(ctx)
+			g.SetLimit(max(1, runtime.NumCPU()/2))
 			for _, lf := range job.LayerFiles {
-				mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")
-				args := []string{
-					"-o", mbPath,
-					"-f",
-					"--minimum-zoom=8",
-					"--maximum-zoom=17",
-				}
-				if categorizeLayer(lf.Name) == "icons" {
-					args = append(args, "-r1", "--no-feature-limit", "--no-tile-size-limit")
-				} else {
-					args = append(args, "--coalesce-densest-as-needed", "--extend-zooms-if-still-dropping")
-				}
-				args = append(args, "--layer="+lf.Name, lf.Path)
+				g.Go(func() error {
+					mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")
+					args := []string{
+						"-o", mbPath,
+						"-f",
+						"--minimum-zoom=8",
+						"--maximum-zoom=17",
+					}
+					if categorizeLayer(lf.Name) == "icons" {
+						args = append(args, "-r1", "--no-feature-limit", "--no-tile-size-limit")
+					} else {
+						args = append(args, "--coalesce-densest-as-needed", "--extend-zooms-if-still-dropping")
+					}
+					args = append(args, "--layer="+lf.Name, lf.Path)
 
-				log.Printf("tippecanoe: processing layer %s", lf.Name)
-				if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
-					log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
-					continue
-				}
-				mbtilesFiles = append(mbtilesFiles, mbPath)
+					log.Printf("tippecanoe: processing layer %s", lf.Name)
+					if err := runCmd(ctx, tippeTool.Path, args...); err != nil {
+						log.Printf("WARNING: tippecanoe failed for layer %s: %v", lf.Name, err)
+						return nil // non-fatal
+					}
+					mu.Lock()
+					mbtilesFiles = append(mbtilesFiles, mbPath)
+					mu.Unlock()
+					return nil
+				})
+			}
+			if err := g.Wait(); err != nil {
+				return err
 			}
 
 			// tile-join to merge all per-layer MBTiles

@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // contourIntervals maps interval values to their file suffixes.
@@ -41,52 +44,68 @@ func NewGenerateContoursStage(tools ToolSet) Stage {
 			}
 
 			job.ContourFiles = make(map[string]string)
+			var mu sync.Mutex
+
+			// Run all contour intervals + sea polygons in parallel.
+			g, ctx := errgroup.WithContext(ctx)
 
 			for _, ci := range contourIntervals {
-				outputPath := filepath.Join(contourDir, fmt.Sprintf("contours%s.geojson", ci.suffix))
-				args := []string{
-					"-a", "elevation",
-					"-nln", "contours-line",
-					"-i", fmt.Sprintf("%d", ci.interval),
+				g.Go(func() error {
+					outputPath := filepath.Join(contourDir, fmt.Sprintf("contours%s.geojson", ci.suffix))
+					args := []string{
+						"-a", "elevation",
+						"-nln", "contours-line",
+						"-i", fmt.Sprintf("%d", ci.interval),
+						"-f", "GeoJSON",
+						job.DEMPath,
+						outputPath,
+					}
+
+					log.Printf("Generating %dm contours", ci.interval)
+					if err := runCmd(ctx, gdalContour.Path, args...); err != nil {
+						log.Printf("WARNING: gdal_contour %dm failed: %v", ci.interval, err)
+						return nil // non-fatal
+					}
+
+					mu.Lock()
+					job.ContourFiles[ci.suffix] = outputPath
+					mu.Unlock()
+					log.Printf("Generated contours%s.geojson", ci.suffix)
+					return nil
+				})
+			}
+
+			// Sea polygons run in parallel with contour intervals.
+			g.Go(func() error {
+				seaPath := filepath.Join(contourDir, "sea.geojson")
+				seaArgs := []string{
+					"-p",           // polygon mode
+					"-amax", "ELEV_MAX",
+					"-amin", "ELEV_MIN",
+					"-b", "1",
+					"-i", "5000",   // single interval covering full range
 					"-f", "GeoJSON",
 					job.DEMPath,
-					outputPath,
+					seaPath,
 				}
-
-				log.Printf("Generating %dm contours", ci.interval)
-				if err := runCmd(ctx, gdalContour.Path, args...); err != nil {
-					log.Printf("WARNING: gdal_contour %dm failed: %v", ci.interval, err)
-					continue
+				log.Printf("Generating sea polygons from DEM")
+				if err := runCmd(ctx, gdalContour.Path, seaArgs...); err != nil {
+					log.Printf("WARNING: sea polygon generation failed: %v", err)
+				} else {
+					mu.Lock()
+					job.SeaFile = seaPath
+					mu.Unlock()
+					log.Printf("Generated sea.geojson")
 				}
+				return nil
+			})
 
-				job.ContourFiles[ci.suffix] = outputPath
-				log.Printf("Generated contours%s.geojson", ci.suffix)
+			if err := g.Wait(); err != nil {
+				return err
 			}
 
 			if len(job.ContourFiles) == 0 {
 				return fmt.Errorf("no contour files generated")
-			}
-
-			// Generate sea polygons from DEM (land/water split).
-			// Uses gdal_contour -p with a large interval to create polygons
-			// with ELEV_MAX/ELEV_MIN properties for filtering land vs water.
-			seaPath := filepath.Join(contourDir, "sea.geojson")
-			seaArgs := []string{
-				"-p",           // polygon mode
-				"-amax", "ELEV_MAX",
-				"-amin", "ELEV_MIN",
-				"-b", "1",
-				"-i", "5000",   // single interval covering full range
-				"-f", "GeoJSON",
-				job.DEMPath,
-				seaPath,
-			}
-			log.Printf("Generating sea polygons from DEM")
-			if err := runCmd(ctx, gdalContour.Path, seaArgs...); err != nil {
-				log.Printf("WARNING: sea polygon generation failed: %v", err)
-			} else {
-				job.SeaFile = seaPath
-				log.Printf("Generated sea.geojson")
 			}
 
 			return nil

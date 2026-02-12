@@ -192,7 +192,7 @@ func NewGenerateHillshadeStage(tools ToolSet) Stage {
 				if err := runCmd(ctx, ht.gdalTranslate,
 					"-of", "GTiff",
 					"-colorinterp_4", "alpha",
-					"-co", "TILED=YES", "-co", "COMPRESS=LZW",
+					"-co", "TILED=YES", "-co", "COMPRESS=LZW", "-co", "NUM_THREADS=ALL_CPUS",
 					mergeVrt, hillshadeRgba,
 				); err != nil {
 					return fmt.Errorf("gdal_translate (RGBA): %w", err)

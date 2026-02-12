@@ -32,6 +32,7 @@ func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name str
 	os.Remove(output)
 
 	args := []string{
+		"--config", "GDAL_NUM_THREADS", "ALL_CPUS",
 		"-of", "MBTILES",
 		"-co", "TYPE=baselayer",
 		"-co", "QUALITY=80",
@@ -53,7 +54,8 @@ func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name str
 // AddOverviews adds overview levels to an MBTiles file using gdaladdo.
 func AddOverviews(ctx context.Context, gdalAddo, mbtiles string) error {
 	log.Printf("gdaladdo %s", mbtiles)
-	return runCmd(ctx, gdalAddo, "-r", "average", mbtiles, "2", "4", "8", "16")
+	return runCmd(ctx, gdalAddo, "--config", "GDAL_NUM_THREADS", "ALL_CPUS",
+		"-r", "average", mbtiles, "2", "4", "8", "16")
 }
 
 // MBTilesToPMTiles converts MBTiles to PMTiles using the pmtiles CLI.
