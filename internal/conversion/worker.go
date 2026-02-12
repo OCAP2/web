@@ -227,20 +227,32 @@ func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKil
 	sides = make(server.SideComposition)
 
 	// Build entity lookups
+	// Deduplicate players by name: respawns/JIPs create new entities for the same player.
 	entityIsPlayer := make(map[uint32]bool)
 	entitySide := make(map[uint32]string)
+	seenPlayerName := make(map[string]bool)
+	seenPlayerSide := make(map[string]map[string]bool) // name -> set of sides already counted
 	for _, ent := range manifest.Entities {
 		if ent.Type == "unit" {
 			if ent.IsPlayer {
-				playerCount++
 				entityIsPlayer[ent.ID] = true
+				if !seenPlayerName[ent.Name] {
+					seenPlayerName[ent.Name] = true
+					playerCount++
+				}
 			}
 			if ent.Side != "" && ent.Side != "UNKNOWN" && ent.Side != "GLOBAL" {
 				entitySide[ent.ID] = ent.Side
 				sc := sides[ent.Side]
 				sc.Units++
 				if ent.IsPlayer {
-					sc.Players++
+					if seenPlayerSide[ent.Name] == nil {
+						seenPlayerSide[ent.Name] = make(map[string]bool)
+					}
+					if !seenPlayerSide[ent.Name][ent.Side] {
+						seenPlayerSide[ent.Name][ent.Side] = true
+						sc.Players++
+					}
 				}
 				sides[ent.Side] = sc
 			}

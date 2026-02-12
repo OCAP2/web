@@ -462,10 +462,10 @@ describe("EntityManager", () => {
 
   describe("getBySide", () => {
     it("filters units by side", () => {
-      mgr.addEntity(unitDef({ id: 1, side: "WEST" }));
-      mgr.addEntity(unitDef({ id: 2, side: "EAST" }));
-      mgr.addEntity(unitDef({ id: 3, side: "WEST" }));
-      mgr.addEntity(unitDef({ id: 4, side: "GUER" }));
+      mgr.addEntity(unitDef({ id: 1, name: "Alpha1", side: "WEST" }));
+      mgr.addEntity(unitDef({ id: 2, name: "Bravo1", side: "EAST" }));
+      mgr.addEntity(unitDef({ id: 3, name: "Alpha2", side: "WEST" }));
+      mgr.addEntity(unitDef({ id: 4, name: "Guer1", side: "GUER" }));
 
       const west = mgr.getBySide("WEST");
       expect(west).toHaveLength(2);
@@ -480,6 +480,20 @@ describe("EntityManager", () => {
 
       const civ = mgr.getBySide("CIV");
       expect(civ).toHaveLength(0);
+    });
+
+    it("deduplicates respawned players by name+group, keeping longest-lived", () => {
+      // Same player "Hioshi" in group "Hades", 3 lives (respawns)
+      mgr.addEntity(unitDef({ id: 10, name: "Hioshi", groupName: "Hades", side: "GUER", startFrame: 100, endFrame: 200 }));
+      mgr.addEntity(unitDef({ id: 20, name: "Hioshi", groupName: "Hades", side: "GUER", startFrame: 300, endFrame: 900 })); // longest
+      mgr.addEntity(unitDef({ id: 30, name: "Hioshi", groupName: "Hades", side: "GUER", startFrame: 950, endFrame: 1000 }));
+      // Different player in same group
+      mgr.addEntity(unitDef({ id: 40, name: "Nika", groupName: "Hades", side: "GUER", startFrame: 0, endFrame: 500 }));
+
+      const guer = mgr.getBySide("GUER");
+      expect(guer).toHaveLength(2); // Hioshi (deduped) + Nika
+      const hioshi = guer.find((u) => u.name === "Hioshi")!;
+      expect(hioshi.id).toBe(20); // longest life (600 frames)
     });
 
     it("does not return vehicles", () => {
