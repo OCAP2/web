@@ -1,5 +1,34 @@
 import { describe, it, expect } from "vitest";
-import { getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
+import { formatDuration, getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
+
+describe("formatDuration", () => {
+  it("returns zero for non-positive values", () => {
+    expect(formatDuration(0)).toBe("0m 0s");
+    expect(formatDuration(-5)).toBe("0m 0s");
+  });
+
+  it("formats seconds only", () => {
+    expect(formatDuration(45)).toBe("0m 45s");
+  });
+
+  it("formats minutes and seconds", () => {
+    expect(formatDuration(125)).toBe("2m 5s");
+  });
+
+  it("formats hours, minutes and seconds", () => {
+    expect(formatDuration(3661)).toBe("1h 1m 1s");
+    expect(formatDuration(8128)).toBe("2h 15m 28s");
+  });
+
+  it("rounds fractional seconds instead of showing decimals", () => {
+    expect(formatDuration(8128.863000000000284)).toBe("2h 15m 29s");
+    expect(formatDuration(12065.224987999999939)).toBe("3h 21m 5s");
+  });
+
+  it("rounds 0.5 up", () => {
+    expect(formatDuration(90.5)).toBe("1m 31s");
+  });
+});
 
 describe("getMapColor", () => {
   it("returns a hex color from the palette", () => {
