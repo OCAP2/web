@@ -96,16 +96,18 @@ func restyleWorld(mapsDir, worldName string) error {
 	}
 
 	// 3. Build StyleConfig — same logic as NewGenerateStylesStage
+	mapBase := "images/maps/" + meta.WorldName
 	styleCfg := maptool.StyleConfig{
 		WorldName:      meta.WorldName,
-		URLPrefix:      "images/maps/" + meta.WorldName + "/tiles",
+		URLPrefix:      mapBase + "/tiles",
+		StylesPrefix:   mapBase + "/styles",
 		VectorLayers:   meta.FeatureLayers,
 		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),
 		HasHillshade:     hasFile("hillshade.pmtiles"),
 		HasBathymetry:    hasFile("bathymetry.pmtiles"),
 		HasColorRelief:   hasFile("color-relief.pmtiles"),
-		GlyphsURL:      "../../fonts/{fontstack}/{range}.pbf",
+		GlyphsURL:      "images/maps/fonts/{fontstack}/{range}.pbf",
 	}
 
 	// 4. Generate all style variants

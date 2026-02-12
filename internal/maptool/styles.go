@@ -1156,7 +1156,8 @@ const (
 // StyleConfig holds the parameters for generating a style document.
 type StyleConfig struct {
 	WorldName        string
-	URLPrefix        string // e.g. "images/maps/stratis"
+	URLPrefix        string // e.g. "images/maps/stratis/tiles" — base for tile sources
+	StylesPrefix     string // e.g. "images/maps/stratis/styles" — base for sprite files
 	VectorLayers     []string
 	HasSatellite     bool
 	HasHeightmap     bool
@@ -1213,7 +1214,7 @@ func GenerateStyleDocument(cfg StyleConfig, variant StyleVariant) map[string]int
 		"name":    cfg.WorldName + "-" + string(variant),
 		"sources": sources,
 		"layers":  layers,
-		"sprite":  spriteName,
+		"sprite":  assetPath(cfg.StylesPrefix, spriteName),
 		"glyphs":  cfg.GlyphsURL,
 	}
 	return doc

@@ -102,31 +102,30 @@ func NewGenerateStylesStage() Stage {
 		Run: func(ctx context.Context, job *Job) error {
 			worldName := job.WorldName
 
-			tilesPrefix := "images/maps/" + worldName
+			mapBase := "images/maps/" + worldName
+			tilesPrefix := mapBase
+			stylesPrefix := mapBase
 			stylesDir := job.OutputDir
 			if job.SubDirs {
-				tilesPrefix += "/tiles"
+				tilesPrefix = mapBase + "/tiles"
+				stylesPrefix = mapBase + "/styles"
 				stylesDir = job.StylesOutputDir()
 				if err := os.MkdirAll(stylesDir, 0755); err != nil {
 					return fmt.Errorf("create styles dir: %w", err)
 				}
 			}
 
-			glyphsURL := "../fonts/{fontstack}/{range}.pbf"
-			if job.SubDirs {
-				glyphsURL = "../../fonts/{fontstack}/{range}.pbf"
-			}
-
 			styleCfg := StyleConfig{
 				WorldName:      worldName,
 				URLPrefix:      tilesPrefix,
+				StylesPrefix:   stylesPrefix,
 				VectorLayers:   job.VectorLayers,
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,
 				HasHillshade:     job.HasHillshade,
 				HasBathymetry:    job.HasBathymetry,
 				HasColorRelief:   job.HasColorRelief,
-				GlyphsURL:      glyphsURL,
+				GlyphsURL:      "images/maps/fonts/{fontstack}/{range}.pbf",
 			}
 
 			variants := []struct {
