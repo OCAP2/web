@@ -132,12 +132,6 @@ export function MissionSelector(): JSX.Element {
     return id ? operations().find((o) => o.id === id) ?? null : null;
   });
 
-  const serverVersion = () => {
-    const info = buildInfo();
-    if (!info) return "—";
-    return info.BuildVersion || info.BuildCommit || "—";
-  };
-
   const hasFilters = () => search() || tagFilter() || mapFilter();
 
   const clearFilters = () => {
@@ -350,11 +344,21 @@ export function MissionSelector(): JSX.Element {
                   <Icons.ExternalLink />
                 </a>
                 <div class={styles.dividerShort} />
-                <div class={styles.footerVersions}>
-                  <span class={styles.footerVersion}>
-                    {t("server")} <span class={styles.footerVersionValue}>{serverVersion()}</span>
-                  </span>
-                </div>
+                <Show when={buildInfo()}>
+                  {(info) => (
+                    <div class={styles.footerVersions}>
+                      <span class={styles.footerVersion}>
+                        <span class={styles.footerVersionValue}>{info().BuildVersion}</span>
+                      </span>
+                      <span class={styles.footerVersion}>
+                        <span class={styles.footerVersionValue}>{info().BuildCommit}</span>
+                      </span>
+                      <span class={styles.footerVersion}>
+                        <span class={styles.footerVersionValue}>{info().BuildDate}</span>
+                      </span>
+                    </div>
+                  )}
+                </Show>
                 <div class={styles.dividerShort} />
                 <span class={styles.footerMadeWith}>
                   <span class={styles.footerHeart}><Icons.Heart /></span> {t("made_with_love")}

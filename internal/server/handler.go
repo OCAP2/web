@@ -23,9 +23,9 @@ import (
 const CacheDuration = 7 * 24 * time.Hour
 
 var (
-	BuildVersion string
-	BuildCommit  string
-	BuildDate    string
+	BuildVersion = "dev"
+	BuildCommit  = "unknown"
+	BuildDate    = "unknown"
 )
 
 // ConversionTrigger triggers async conversion of an operation
