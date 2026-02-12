@@ -213,6 +213,33 @@ describe("MissionSelector", () => {
     await vi.waitFor(() => expect(queryByTestId("operation-1")).not.toBeNull());
   });
 
+  it("does not crash when rapidly toggling tag filters", async () => {
+    const { findByTestId, queryByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const findTagButton = (tag: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent === tag && b !== queryByTestId("operation-1")?.querySelector("button"),
+      );
+
+    const tvtButton = findTagButton("TvT")!;
+    const coopButton = findTagButton("COOP")!;
+    expect(tvtButton).toBeDefined();
+    expect(coopButton).toBeDefined();
+
+    // Rapidly toggle between tag filters
+    fireEvent.click(coopButton);
+    fireEvent.click(tvtButton);
+    fireEvent.click(coopButton);
+    fireEvent.click(coopButton); // toggle off
+
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-1")).not.toBeNull();
+      expect(queryByTestId("operation-2")).not.toBeNull();
+      expect(queryByTestId("operation-3")).not.toBeNull();
+    });
+  });
+
   // ── Map filter ──
 
   it("filters by map when map button is clicked", async () => {
@@ -232,6 +259,35 @@ describe("MissionSelector", () => {
       expect(queryByTestId("operation-3")).toBeNull();
     });
     expect(queryByTestId("operation-2")).not.toBeNull();
+  });
+
+  it("does not crash when rapidly toggling map filters", async () => {
+    const { findByTestId, queryByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const findMapButton = (name: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === name,
+      );
+
+    const altisButton = findMapButton("Altis")!;
+    const stratisButton = findMapButton("Stratis")!;
+    expect(altisButton).toBeDefined();
+    expect(stratisButton).toBeDefined();
+
+    // Rapidly toggle between filters — previously caused
+    // "Cannot read properties of undefined (reading 'storageFormat')"
+    // when virtualizer held stale indices after filtered list shrank
+    fireEvent.click(stratisButton);
+    fireEvent.click(altisButton);
+    fireEvent.click(stratisButton);
+    fireEvent.click(stratisButton); // toggle off
+
+    await vi.waitFor(() => {
+      expect(queryByTestId("operation-1")).not.toBeNull();
+      expect(queryByTestId("operation-2")).not.toBeNull();
+      expect(queryByTestId("operation-3")).not.toBeNull();
+    });
   });
 
   // ── Clear filters ──

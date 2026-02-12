@@ -364,18 +364,22 @@ export function MissionSelector(): JSX.Element {
                   {(vItem) => {
                     const op = () => filtered()[vItem.index];
                     return (
-                      <div class={styles.virtualRow} style={{ height: `${vItem.size}px`, transform: `translateY(${vItem.start}px)` }}>
-                        <MissionRow
-                          op={op()}
-                          selected={selectedId() === op().id}
-                          onSelect={setSelectedId}
-                          onLaunch={handleLaunch}
-                          index={vItem.index}
-                          showPlayers={hasPlayerData()}
-                          showKills={hasKillData()}
-                          gridColumns={gridColumns()}
-                        />
-                      </div>
+                      <Show when={op()}>
+                        {(o) => (
+                          <div class={styles.virtualRow} style={{ height: `${vItem.size}px`, transform: `translateY(${vItem.start}px)` }}>
+                            <MissionRow
+                              op={o()}
+                              selected={selectedId() === o().id}
+                              onSelect={setSelectedId}
+                              onLaunch={handleLaunch}
+                              index={vItem.index}
+                              showPlayers={hasPlayerData()}
+                              showKills={hasKillData()}
+                              gridColumns={gridColumns()}
+                            />
+                          </div>
+                        )}
+                      </Show>
                     );
                   }}
                 </For>
