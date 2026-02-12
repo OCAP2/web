@@ -231,7 +231,7 @@ func NewProcessGeoJSONStage() Stage {
 
 			{
 				var mu sync.Mutex
-				g, _ := errgroup.WithContext(ctx)
+				var g errgroup.Group
 				for _, src := range layers {
 					if src.Name == "bush" {
 						log.Printf("Skipping bush layer (too dense for vector tiles)")
@@ -347,7 +347,7 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 				mu           sync.Mutex
 				mbtilesFiles []string
 			)
-			g, ctx := errgroup.WithContext(ctx)
+			var g errgroup.Group
 			g.SetLimit(max(1, runtime.NumCPU()/2))
 			for _, lf := range job.LayerFiles {
 				g.Go(func() error {
