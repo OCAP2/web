@@ -23,6 +23,7 @@ type mockRepo struct {
 	schemaVersion map[int64]uint32
 	chunkCount    map[int64]int
 	byStatus      map[string][]server.Operation
+	stats         map[int64][3]string // playerCount, killCount, sideComposition
 }
 
 func newMockRepo() *mockRepo {
@@ -34,6 +35,7 @@ func newMockRepo() *mockRepo {
 		schemaVersion: make(map[int64]uint32),
 		chunkCount:    make(map[int64]int),
 		byStatus:      make(map[string][]server.Operation),
+		stats:         make(map[int64][3]string),
 	}
 }
 
@@ -71,6 +73,15 @@ func (m *mockRepo) SelectByStatus(ctx context.Context, status string) ([]server.
 func (m *mockRepo) UpdateChunkCount(ctx context.Context, id int64, count int) error {
 	m.chunkCount[id] = count
 	return nil
+}
+
+func (m *mockRepo) UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition server.SideComposition) error {
+	m.stats[id] = [3]string{fmt.Sprintf("%d", playerCount), fmt.Sprintf("%d", killCount), fmt.Sprintf("%v", sideComposition)}
+	return nil
+}
+
+func (m *mockRepo) SelectStatsBackfill(ctx context.Context) ([]server.Operation, error) {
+	return nil, nil
 }
 
 func (m *mockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {
@@ -497,6 +508,14 @@ func (m *errorMockRepo) SelectByStatus(ctx context.Context, status string) ([]se
 		return nil, m.selectByStatusErr
 	}
 	return m.byStatus[status], nil
+}
+
+func (m *errorMockRepo) UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition server.SideComposition) error {
+	return nil
+}
+
+func (m *errorMockRepo) SelectStatsBackfill(ctx context.Context) ([]server.Operation, error) {
+	return nil, nil
 }
 
 func (m *errorMockRepo) ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error) {

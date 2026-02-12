@@ -58,6 +58,20 @@ func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifes
 		}
 	}
 
+	// Parse events — array format: [frameNum, "type", ...]
+	if events, ok := data["events"].([]interface{}); ok {
+		for _, evt := range events {
+			evtArr, ok := evt.([]interface{})
+			if !ok || len(evtArr) < 2 {
+				continue
+			}
+			event := parseEventArray(evtArr)
+			if event != nil {
+				manifest.Events = append(manifest.Events, *event)
+			}
+		}
+	}
+
 	return manifest, nil
 }
 
@@ -128,4 +142,24 @@ func getFloat64(m map[string]interface{}, key string) float64 {
 
 func getUint32(m map[string]interface{}, key string) uint32 {
 	return uint32(getFloat64(m, key))
+}
+
+func getArrFloat64(arr []interface{}, idx int) float64 {
+	if idx >= len(arr) {
+		return 0
+	}
+	if v, ok := arr[idx].(float64); ok {
+		return v
+	}
+	return 0
+}
+
+func getArrString(arr []interface{}, idx int) string {
+	if idx >= len(arr) {
+		return ""
+	}
+	if v, ok := arr[idx].(string); ok {
+		return v
+	}
+	return ""
 }

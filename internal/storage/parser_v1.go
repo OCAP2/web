@@ -130,8 +130,13 @@ func (p *ParserV1) calculateEndFrame(em map[string]interface{}, startFrame uint3
 	return startFrame + uint32(len(positions)) - 1
 }
 
-// parseEvent converts a JSON event array to schema-agnostic Event
+// parseEvent delegates to the package-level parseEventArray.
 func (p *ParserV1) parseEvent(evtArr []interface{}) *Event {
+	return parseEventArray(evtArr)
+}
+
+// parseEventArray converts a JSON event array to schema-agnostic Event.
+func parseEventArray(evtArr []interface{}) *Event {
 	if len(evtArr) < 2 {
 		return nil
 	}

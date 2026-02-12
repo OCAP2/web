@@ -1,8 +1,7 @@
-import { Show, createSignal, createEffect, on } from "solid-js";
+import { Show, For, createSignal, createEffect, on } from "solid-js";
 import type { Operation } from "../../data/types";
 import { useI18n } from "../../ui/hooks/useLocale";
-// C and SIDE_COLORS needed when force composition / combat summary are uncommented
-// import { C, SIDE_COLORS } from "./constants";
+import { C, SIDE_COLORS, SIDE_HEX } from "./constants";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
 import { StatPill, TagBadge, StatusBadge } from "./components";
@@ -77,42 +76,108 @@ export function DetailSidebar(props: {
         <div class={styles.sidebarStatsGrid}>
           <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.op.date, locale())} label={t("data")} />
           <StatPill icon={<Icons.Clock />} value={formatDuration(props.op.missionDuration)} label={t("durability")} />
-          <StatPill icon={<Icons.Users />} value={"\u2014"} label={t("players")} />
+          <StatPill icon={<Icons.Users />} value={(props.op.playerCount ?? 0) > 0 ? props.op.playerCount! : "\u2014"} label={t("players")} />
         </div>
 
-        {/* Force composition — uncomment when data is available
-        <div>
-          <div class={styles.sidebarSectionLabel}>{t("force_composition")}</div>
-          <div class={styles.sidebarSideRow}>
-            <div class={styles.sidebarSideDot} style={{ background: SIDE_COLORS.BLUFOR }} />
-            <span class={styles.sidebarSideName} style={{ color: SIDE_COLORS.BLUFOR }}>BLUFOR</span>
-            <div class={styles.sidebarSideBar}>
-              <div class={styles.sidebarSideBarFill} style={{ width: "100%", background: SIDE_COLORS.BLUFOR }} />
-            </div>
-            <span class={styles.sidebarSideCount}>&mdash;</span>
-          </div>
-        </div>
-        */}
+        {/* Force Composition — per-side stat cards */}
+        <Show when={props.op.sideComposition && Object.keys(props.op.sideComposition).length > 0}>
+          {(_) => {
+            const SIDE_ORDER: Record<string, number> = { EAST: 0, WEST: 1, GUER: 2, CIV: 3 };
+            const entries = () =>
+              Object.entries(props.op.sideComposition!)
+                .sort(([a], [b]) => (SIDE_ORDER[a] ?? 99) - (SIDE_ORDER[b] ?? 99));
+            return (
+              <div>
+                <div class={styles.sidebarSectionLabel}>{t("force_composition")}</div>
+                <div class={styles.sideCardStack}>
+                  <For each={entries()}>
+                    {([side, count]) => {
+                      const color = () => SIDE_COLORS[side] ?? C.muted;
+                      const hex = () => SIDE_HEX[side] ?? "#667788";
+                      const dead = () => count.dead ?? 0;
+                      const kills = () => count.kills ?? 0;
+                      const alive = () => count.units - dead();
+                      return (
+                        <div class={styles.sideCard} style={{ background: `${hex()}08`, "border-color": `${hex()}18` }}>
+                          <div class={styles.sideCardHeader}>
+                            <div class={styles.sideCardName}>
+                              <div class={styles.sidebarSideDot} style={{ background: color() }} />
+                              <span style={{ color: color() }}>{side}</span>
+                            </div>
+                            <Show when={count.players > 0} fallback={
+                              <span class={styles.sideCardBadgeAi}>{t("ai_only")}</span>
+                            }>
+                              <span class={styles.sideCardBadgePlayers}>
+                                {count.players} {count.players === 1 ? t("player_singular") : t("players_label")}
+                              </span>
+                            </Show>
+                          </div>
+                          <div class={styles.sideCardStats}>
+                            <div class={styles.sideCardStat}>
+                              <div class={styles.sideCardStatValue}>{count.units.toLocaleString()}</div>
+                              <div class={styles.sideCardStatLabel}>{t("total")}</div>
+                            </div>
+                            <div class={styles.sideCardStat}>
+                              <div class={styles.sideCardStatValue} style={{ color: alive() > 0 ? C.green : C.dimmer }}>{alive().toLocaleString()}</div>
+                              <div class={styles.sideCardStatLabel}>{t("alive")}</div>
+                            </div>
+                            <div class={styles.sideCardStat}>
+                              <div class={styles.sideCardStatValue} style={{ color: dead() > 0 ? C.red : C.dimmer }}>{dead().toLocaleString()}</div>
+                              <div class={styles.sideCardStatLabel}>{t("dead")}</div>
+                            </div>
+                            <div class={styles.sideCardStat}>
+                              <div class={styles.sideCardStatValue} style={{ color: kills() > 0 ? C.orange : C.dimmer }}>{kills().toLocaleString()}</div>
+                              <div class={styles.sideCardStatLabel}>{t("kills_label")}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+            );
+          }}
+        </Show>
 
-        {/* Combat summary — uncomment when data is available
-        <div class={styles.sidebarCombat}>
-          <div class={styles.sidebarCombatItem}>
-            <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
-            <div>
-              <div class={styles.sidebarCombatValue} style={{ color: C.red }}>&mdash;</div>
-              <div class={styles.sidebarCombatLabel}>{t("total_kills")}</div>
-            </div>
-          </div>
-          <div class={styles.sidebarCombatDivider} />
-          <div class={styles.sidebarCombatItem}>
-            <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
-            <div>
-              <div class={styles.sidebarCombatValue} style={{ color: C.orange }}>&mdash;</div>
-              <div class={styles.sidebarCombatLabel}>{t("kills_per_min")}</div>
-            </div>
-          </div>
-        </div>
-        */}
+        {/* Combat Summary — grid layout */}
+        <Show when={(props.op.killCount ?? 0) > 0}>
+          {(_) => {
+            const kills = () => props.op.killCount!;
+            const playerKills = () => props.op.playerKillCount ?? 0;
+            const killsPerMin = () => {
+              const dur = props.op.missionDuration;
+              return dur > 0 ? (kills() / (dur / 60)).toFixed(1) : "\u2014";
+            };
+            return (
+              <div class={styles.sidebarCombatGrid}>
+                <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,74,74,0.04)", "border-color": "rgba(255,74,74,0.08)" }}>
+                  <div class={styles.sidebarCombatCellTop}>
+                    <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
+                    <span class={styles.sidebarCombatCellValue} style={{ color: C.red }}>{kills().toLocaleString()}</span>
+                  </div>
+                  <div class={styles.sidebarCombatCellLabel}>{t("total_kills")}</div>
+                </div>
+                <Show when={playerKills() > 0}>
+                  <div class={styles.sidebarCombatCell} style={{ background: "rgba(74,158,255,0.04)", "border-color": "rgba(74,158,255,0.08)" }}>
+                    <div class={styles.sidebarCombatCellTop}>
+                      <span style={{ color: `${C.blue}88` }}><Icons.Users /></span>
+                      <span class={styles.sidebarCombatCellValue} style={{ color: C.blue }}>{playerKills().toLocaleString()}</span>
+                    </div>
+                    <div class={styles.sidebarCombatCellLabel}>{t("player_kills")}</div>
+                  </div>
+                </Show>
+                <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,184,74,0.04)", "border-color": "rgba(255,184,74,0.08)" }}>
+                  <div class={styles.sidebarCombatCellTop}>
+                    <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
+                    <span class={styles.sidebarCombatCellValue} style={{ color: C.orange }}>{killsPerMin()}</span>
+                  </div>
+                  <div class={styles.sidebarCombatCellLabel}>{t("kills_per_min")}</div>
+                </div>
+              </div>
+            );
+          }}
+        </Show>
       </div>
 
       {/* Launch Button */}

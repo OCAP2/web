@@ -44,6 +44,10 @@ interface RawOperation {
   conversionStatus?: string;
   schemaVersion?: number;
   chunkCount?: number;
+  player_count?: number;
+  kill_count?: number;
+  player_kill_count?: number;
+  side_composition?: Record<string, { players: number; units: number; dead: number; kills: number }>;
 }
 
 function mapOperation(raw: RawOperation): Operation {
@@ -59,6 +63,10 @@ function mapOperation(raw: RawOperation): Operation {
     conversionStatus: raw.conversionStatus,
     schemaVersion: raw.schemaVersion,
     chunkCount: raw.chunkCount,
+    playerCount: raw.player_count,
+    killCount: raw.kill_count,
+    playerKillCount: raw.player_kill_count,
+    sideComposition: raw.side_composition,
   };
 }
 

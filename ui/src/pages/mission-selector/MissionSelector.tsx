@@ -103,6 +103,19 @@ export function MissionSelector(): JSX.Element {
   const uniqueMaps = createMemo(() => [...new Set(operations().map((o) => o.worldName))]);
   const uniqueTags = createMemo(() => [...new Set(operations().map((o) => o.tag).filter(Boolean))] as string[]);
 
+  const hasPlayerData = createMemo(() => operations().some(op => (op.playerCount ?? 0) > 0));
+  const hasKillData = createMemo(() => operations().some(op => (op.killCount ?? 0) > 0));
+  const maxPlayers = createMemo(() => Math.max(0, ...operations().map(op => op.playerCount ?? 0)));
+  const totalKills = createMemo(() => operations().reduce((s, op) => s + (op.killCount ?? 0), 0));
+
+  const gridColumns = createMemo(() => {
+    let cols = "1fr 130px 100px";
+    if (hasPlayerData()) cols += " 70px";
+    if (hasKillData()) cols += " 70px";
+    cols += " 70px 100px 40px";
+    return cols;
+  });
+
   const filtered = createMemo(() => {
     let result = [...operations()];
     const s = search().toLowerCase();
@@ -196,10 +209,12 @@ export function MissionSelector(): JSX.Element {
             <div class={styles.statsArea}>
               <div class={styles.statPills}>
                 <StatPill icon={<Icons.Globe />} value={uniqueMaps().length} label={t("maps_label")} />
-                {/* Uncomment when data is available
-                <StatPill icon={<Icons.Users />} value={"\u2014"} label={t("max_players")} />
-                <StatPill icon={<Icons.Crosshair />} value={"\u2014"} label={t("total_kills")} />
-                */}
+                <Show when={hasPlayerData()}>
+                  <StatPill icon={<Icons.Users />} value={maxPlayers()} label={t("max_players")} />
+                </Show>
+                <Show when={hasKillData()}>
+                  <StatPill icon={<Icons.Crosshair />} value={totalKills()} label={t("total_kills")} />
+                </Show>
               </div>
 
               <div class={styles.divider} />
@@ -311,14 +326,16 @@ export function MissionSelector(): JSX.Element {
         <div class={styles.mainContent}>
           <div class={styles.tableArea}>
             {/* Column Headers */}
-            <div class={styles.tableHeader}>
+            <div class={styles.tableHeader} style={{ "grid-template-columns": gridColumns() }}>
               <SortHeader label={t("mission")} sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label={t("data")} sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label={t("durability")} sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
-              {/* Uncomment when data is available
-              <span class={styles.colLabel}>{t("players")}</span>
-              <span class={styles.colLabel}>KILLS</span>
-              */}
+              <Show when={hasPlayerData()}>
+                <span class={styles.colLabel}>{t("players")}</span>
+              </Show>
+              <Show when={hasKillData()}>
+                <span class={styles.colLabel}>{t("total_kills")}</span>
+              </Show>
               <span class={styles.colLabel}>{t("tag")}</span>
               <span class={styles.colLabelRight}>{t("status")}</span>
               <span />
@@ -354,6 +371,9 @@ export function MissionSelector(): JSX.Element {
                           onSelect={setSelectedId}
                           onLaunch={handleLaunch}
                           index={vItem.index}
+                          showPlayers={hasPlayerData()}
+                          showKills={hasKillData()}
+                          gridColumns={gridColumns()}
                         />
                       </div>
                     );

@@ -27,6 +27,14 @@ export const SIDE_COLORS: Record<string, string> = {
   CIV:    C.purple,
 };
 
+/** Raw hex side colors for inline style interpolation (hex alpha, rgba). */
+export const SIDE_HEX: Record<string, string> = {
+  BLUFOR: "#4A9EFF", WEST: "#4A9EFF",
+  OPFOR:  "#FF4A4A", EAST: "#FF4A4A",
+  IND:    "#2DD4A0", GUER: "#2DD4A0",
+  CIV:    "#A78BFA",
+};
+
 export const LOCALE_LABELS: Record<Locale, { label: string; flag: string }> = {
   cs: { label: "\u010Ce\u0161tina",  flag: "\uD83C\uDDE8\uD83C\uDDFF" },
   de: { label: "Deutsch",  flag: "\uD83C\uDDE9\uD83C\uDDEA" },

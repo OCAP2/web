@@ -432,6 +432,8 @@
   flex-shrink: 0;
 }
 
+/* Note: grid-template-columns is overridden inline when optional columns are visible */
+
 .sortButton {
   background: none;
   border: none;
@@ -806,13 +808,7 @@
   margin-bottom: 10px;
 }
 
-.sidebarSideRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
+/* ── Force composition — side cards ── */
 
 .sidebarSideDot {
   width: 8px;
@@ -820,50 +816,120 @@
   border-radius: 2px;
 }
 
-.sidebarSideName {
-  font-size: 11px;
-  font-family: var(--ms-font-mono);
-  font-weight: 600;
-  width: 70px;
-}
-
-.sidebarSideBar {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.sidebarSideBarFill {
-  height: 100%;
-  border-radius: 2px;
-  opacity: 0.6;
-  transition: width 0.4s ease;
-}
-
-.sidebarSideCount {
-  font-size: 12px;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
-  font-weight: 500;
-  width: 24px;
-  text-align: right;
-}
-
-.sidebarCombat {
+.sideCardStack {
   display: flex;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 10px;
-  background: rgba(255, 74, 74, 0.04);
-  border: 1px solid rgba(255, 74, 74, 0.08);
+  flex-direction: column;
+  gap: 6px;
 }
 
-.sidebarCombatItem {
+.sideCard {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.sideCardHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sideCardName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--ms-font-mono);
+  font-weight: 700;
+}
+
+.sideCardBadgePlayers {
+  font-size: 9px;
+  font-family: var(--ms-font-mono);
+  font-weight: 600;
+  color: var(--ms-accent-blue);
+  background: rgba(74, 158, 255, 0.1);
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.sideCardBadgeAi {
+  font-size: 9px;
+  font-family: var(--ms-font-mono);
+  font-weight: 500;
+  color: var(--ms-text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+.sideCardStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 4px;
+}
+
+.sideCardStat {
+  text-align: center;
+  padding: 6px 4px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+}
+
+.sideCardStatValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ms-text-muted);
+  font-family: var(--ms-font-mono);
+  line-height: 1;
+}
+
+.sideCardStatLabel {
+  font-size: 8px;
+  color: var(--ms-text-dim);
+  font-family: var(--ms-font-mono);
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ── Combat summary — grid cells ── */
+
+.sidebarCombatGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
+}
+
+.sidebarCombatCell {
+  padding: 12px 10px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid;
+}
+
+.sidebarCombatCellTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.sidebarCombatCellValue {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--ms-font-mono);
+}
+
+.sidebarCombatCellLabel {
+  font-size: 9px;
+  color: var(--ms-text-dim);
+  font-family: var(--ms-font-mono);
+  letter-spacing: 0.05em;
 }
 
 .sidebarCombatIcon {
@@ -872,24 +938,6 @@
 
 .sidebarCombatIconOrange {
   color: rgba(255, 184, 74, 0.53);
-}
-
-.sidebarCombatValue {
-  font-size: 20px;
-  font-weight: 700;
-  font-family: var(--ms-font-mono);
-}
-
-.sidebarCombatLabel {
-  font-size: 9px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
-  letter-spacing: 0.05em;
-}
-
-.sidebarCombatDivider {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.06);
 }
 
 .sidebarLaunchArea {

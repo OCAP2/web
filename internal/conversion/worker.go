@@ -17,12 +17,14 @@ import (
 type OperationRepo interface {
 	SelectPending(ctx context.Context, limit int) ([]server.Operation, error)
 	SelectByStatus(ctx context.Context, status string) ([]server.Operation, error)
+	SelectStatsBackfill(ctx context.Context) ([]server.Operation, error)
 	ResetConversionStatus(ctx context.Context, fromStatus, toStatus string) (int64, error)
 	UpdateConversionStatus(ctx context.Context, id int64, status string) error
 	UpdateStorageFormat(ctx context.Context, id int64, format string) error
 	UpdateMissionDuration(ctx context.Context, id int64, duration float64) error
 	UpdateSchemaVersion(ctx context.Context, id int64, version uint32) error
 	UpdateChunkCount(ctx context.Context, id int64, count int) error
+	UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition server.SideComposition) error
 }
 
 // Worker handles background conversion of JSON recordings to protobuf format
@@ -115,6 +117,9 @@ func (w *Worker) Start(ctx context.Context) {
 	// Clean up any interrupted conversions from previous run
 	w.cleanupInterrupted(ctx)
 
+	// Backfill stats for existing completed operations
+	w.backfillStats(ctx)
+
 	// Run immediately on start
 	w.processOnce(ctx)
 
@@ -179,7 +184,7 @@ func (w *Worker) convertOperation(ctx context.Context, op server.Operation) erro
 		return fmt.Errorf("conversion failed: %w", err)
 	}
 
-	// Read manifest to get duration info
+	// Read manifest to get duration info and compute stats
 	manifest, err := w.engine.GetManifest(ctx, op.Filename)
 	if err != nil {
 		slog.Warn("failed to read manifest for duration", "error", err)
@@ -191,6 +196,12 @@ func (w *Worker) convertOperation(ctx context.Context, op server.Operation) erro
 		}
 		if err := w.repo.UpdateChunkCount(ctx, op.ID, int(manifest.ChunkCount)); err != nil {
 			slog.Warn("failed to update chunk count", "error", err)
+		}
+
+		// Compute and store operation stats
+		playerCount, killCount, playerKillCount, sides := computeStats(manifest)
+		if err := w.repo.UpdateOperationStats(ctx, op.ID, playerCount, killCount, playerKillCount, sides); err != nil {
+			slog.Warn("failed to update operation stats", "error", err)
 		}
 	}
 
@@ -209,6 +220,93 @@ func (w *Worker) convertOperation(ctx context.Context, op server.Operation) erro
 // ConvertOne converts a single operation by ID (for CLI/manual use)
 func (w *Worker) ConvertOne(ctx context.Context, id int64, filename string) error {
 	return w.convertOperation(ctx, server.Operation{ID: id, Filename: filename})
+}
+
+// computeStats derives player count, kill count, player kill count, and side composition from a manifest.
+func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKillCount int, sides server.SideComposition) {
+	sides = make(server.SideComposition)
+
+	// Build entity lookups
+	entityIsPlayer := make(map[uint32]bool)
+	entitySide := make(map[uint32]string)
+	for _, ent := range manifest.Entities {
+		if ent.Type == "unit" {
+			if ent.IsPlayer {
+				playerCount++
+				entityIsPlayer[ent.ID] = true
+			}
+			if ent.Side != "" && ent.Side != "UNKNOWN" && ent.Side != "GLOBAL" {
+				entitySide[ent.ID] = ent.Side
+				sc := sides[ent.Side]
+				sc.Units++
+				if ent.IsPlayer {
+					sc.Players++
+				}
+				sides[ent.Side] = sc
+			}
+		}
+	}
+
+	for _, evt := range manifest.Events {
+		if evt.Type == "killed" {
+			killCount++
+			if entityIsPlayer[evt.SourceID] {
+				playerKillCount++
+			}
+			// Per-side kill attribution
+			if sourceSide, ok := entitySide[evt.SourceID]; ok {
+				sc := sides[sourceSide]
+				sc.Kills++
+				sides[sourceSide] = sc
+			}
+			// Per-side death tracking
+			if targetSide, ok := entitySide[evt.TargetID]; ok {
+				sc := sides[targetSide]
+				sc.Dead++
+				sides[targetSide] = sc
+			}
+		}
+	}
+	return
+}
+
+// backfillStats populates stats for completed operations that don't have them yet.
+func (w *Worker) backfillStats(ctx context.Context) {
+	ops, err := w.repo.SelectStatsBackfill(ctx)
+	if err != nil {
+		slog.Error("failed to select operations for stats backfill", "error", err)
+		return
+	}
+	if len(ops) == 0 {
+		return
+	}
+
+	slog.Info("backfilling operation stats", "count", len(ops))
+	filled := 0
+	for _, op := range ops {
+		// Try protobuf engine first, fall back to JSON
+		manifest, err := w.engine.GetManifest(ctx, op.Filename)
+		if err != nil {
+			jsonEngine := storage.NewJSONEngine(w.dataDir)
+			manifest, err = jsonEngine.GetManifest(ctx, op.Filename)
+			if err != nil {
+				slog.Debug("skipping stats backfill", "operation_id", op.ID, "error", err)
+				continue
+			}
+		}
+		playerCount, killCount, playerKillCount, sides := computeStats(manifest)
+		if playerCount == 0 && killCount == 0 {
+			continue
+		}
+		if err := w.repo.UpdateOperationStats(ctx, op.ID, playerCount, killCount, playerKillCount, sides); err != nil {
+			slog.Warn("failed to backfill stats", "operation_id", op.ID, "error", err)
+			continue
+		}
+		filled++
+	}
+	if filled > 0 {
+		slog.Info("stats backfill completed", "filled", filled, "total", len(ops))
+	}
 }
 
 // TriggerConversion starts an async conversion for the given operation.

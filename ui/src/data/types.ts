@@ -159,6 +159,10 @@ export interface Operation {
   conversionStatus?: string;
   schemaVersion?: number;
   chunkCount?: number;
+  playerCount?: number;
+  killCount?: number;
+  playerKillCount?: number;
+  sideComposition?: Record<string, { players: number; units: number; dead: number; kills: number }>;
 }
 
 /** Per-world map configuration (from map.json). */

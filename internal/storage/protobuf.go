@@ -66,6 +66,18 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 		})
 	}
 
+	for _, evt := range pbManifest.Events {
+		manifest.Events = append(manifest.Events, Event{
+			FrameNum: evt.FrameNum,
+			Type:     evt.Type,
+			SourceID: evt.SourceId,
+			TargetID: evt.TargetId,
+			Message:  evt.Message,
+			Distance: evt.Distance,
+			Weapon:   evt.Weapon,
+		})
+	}
+
 	return manifest, nil
 }
 

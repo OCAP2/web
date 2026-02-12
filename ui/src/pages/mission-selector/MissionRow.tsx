@@ -12,6 +12,9 @@ export function MissionRow(props: {
   onSelect: (id: string) => void;
   onLaunch: (op: Operation) => void;
   index: number;
+  showPlayers?: boolean;
+  showKills?: boolean;
+  gridColumns?: string;
 }) {
   const { locale } = useI18n();
   const mapColor = () => getMapColor(props.op.worldName);
@@ -22,6 +25,7 @@ export function MissionRow(props: {
     <div
       data-testid={`operation-${props.op.id}`}
       class={`${styles.missionRow} ${props.selected ? styles.missionRowSelected : ""}`}
+      style={props.gridColumns ? { "grid-template-columns": props.gridColumns } : undefined}
       onClick={() => props.onSelect(props.op.id)}
     >
       {/* Mission Name */}
@@ -51,19 +55,21 @@ export function MissionRow(props: {
       {/* Duration */}
       <div class={styles.rowDuration}>{formatDuration(props.op.missionDuration)}</div>
 
-      {/* Players — uncomment when data is available
-      <div class={styles.rowPlayers}>
-        <span class={styles.rowPlayersIcon}><Icons.Users /></span>
-        <span class={styles.rowPlayersValue}>&mdash;</span>
-      </div>
-      */}
+      <Show when={props.showPlayers}>
+        <div class={styles.rowPlayers}>
+          <span class={styles.rowPlayersIcon}><Icons.Users /></span>
+          <span class={styles.rowPlayersValue}>{(props.op.playerCount ?? 0) > 0 ? props.op.playerCount : "\u2014"}</span>
+        </div>
+      </Show>
 
-      {/* Kills — uncomment when data is available
-      <div class={styles.rowKills}>
-        <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
-        <span class={styles.rowKillsValue} style={{ color: "var(--ms-text-dimmer)" }}>&mdash;</span>
-      </div>
-      */}
+      <Show when={props.showKills}>
+        <div class={styles.rowKills}>
+          <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
+          <span class={styles.rowKillsValue} style={{ color: (props.op.killCount ?? 0) > 0 ? "var(--ms-text-muted)" : "var(--ms-text-dimmer)" }}>
+            {(props.op.killCount ?? 0) > 0 ? props.op.killCount : "\u2014"}
+          </span>
+        </div>
+      </Show>
 
       {/* Tag */}
       <Show when={props.op.tag} fallback={<span />}>
