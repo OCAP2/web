@@ -155,7 +155,9 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 				"websiteURL": "https://example.com",
 				"websiteLogo": "/logo.png",
 				"websiteLogoSize": "64px",
-				"disableKillCount": true
+				"disableKillCount": true,
+				"headerTitle": "My Community",
+				"headerSubtitle": "After Action Reviews"
 			}
 		}`
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -171,6 +173,8 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "/logo.png", setting.Customize.WebsiteLogo)
 		assert.Equal(t, "64px", setting.Customize.WebsiteLogoSize)
 		assert.True(t, setting.Customize.DisableKillCount)
+		assert.Equal(t, "My Community", setting.Customize.HeaderTitle)
+		assert.Equal(t, "After Action Reviews", setting.Customize.HeaderSubtitle)
 	})
 
 	t.Run("conversion values from config", func(t *testing.T) {

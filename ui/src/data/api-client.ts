@@ -7,6 +7,8 @@ export interface CustomizeConfig {
   websiteLogo?: string;
   websiteLogoSize?: string;
   disableKillCount?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
 }
 
 export interface BuildInfo {

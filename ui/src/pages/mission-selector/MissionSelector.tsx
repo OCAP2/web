@@ -4,6 +4,7 @@ import { useNavigate } from "@solidjs/router";
 import type { Operation } from "../../data/types";
 import { ApiClient, type BuildInfo } from "../../data/api-client";
 import { useI18n } from "../../ui/hooks/useLocale";
+import { useCustomize } from "../../ui/hooks/useCustomize";
 import { LOCALES } from "../../ui/i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
@@ -19,6 +20,7 @@ export function MissionSelector(): JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const api = new ApiClient();
+  const customize = useCustomize();
 
   // State
   const [operations, setOperations] = createSignal<Operation[]>([]);
@@ -158,18 +160,25 @@ export function MissionSelector(): JSX.Element {
           <div class={styles.headerRow}>
             <div class={styles.logoArea}>
               <img src={`${import.meta.env.BASE_URL}ocap-logo.png`} height="60" alt="OCAP" />
-              {/* <div class={styles.logoWrap}>
-                <OcapLogoSvg />
-              </div>
+              <Show when={customize().websiteLogo}>
+                {(logo) => {
+                  const img = <img src={logo()} height="60" alt="" />;
+                  return customize().websiteURL
+                    ? <a href={customize().websiteURL} target="_blank" rel="noopener noreferrer">{img}</a>
+                    : img;
+                }}
+              </Show>
               <div>
                 <div class={styles.titleGroup}>
-                  <span class={styles.title}>OCAP</span>
-                  <span class={styles.versionBadge}>v2</span>
+                  <span class={styles.title}>{customize().headerTitle || "OCAP"}</span>
+                  <Show when={!customize().headerTitle}>
+                    <span class={styles.versionBadge}>v2</span>
+                  </Show>
                 </div>
                 <div class={styles.subtitle}>
-                  Operation Capture and Playback &middot; {operations().length} {t("recordings")}
+                  {customize().headerSubtitle || <>Operation Capture and Playback &middot; {operations().length} {t("recordings")}</>}
                 </div>
-              </div> */}
+              </div>
             </div>
 
             {/* Right side: stats + language */}

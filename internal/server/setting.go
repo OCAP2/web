@@ -37,6 +37,8 @@ type Customize struct {
 	WebsiteLogo      string `json:"websiteLogo" yaml:"websiteLogo"`
 	WebsiteLogoSize  string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
 	DisableKillCount bool   `json:"disableKillCount" yaml:"disableKillCount"`
+	HeaderTitle      string `json:"headerTitle" yaml:"headerTitle"`
+	HeaderSubtitle   string `json:"headerSubtitle" yaml:"headerSubtitle"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -72,7 +74,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("conversion.retryFailed", false)
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
