@@ -208,11 +208,12 @@ func TestConverter_ConvertGzipped(t *testing.T) {
 
 	f, err := os.Create(inputPath)
 	require.NoError(t, err, "create gzip file")
+	defer f.Close()
+
 	gw := gzip.NewWriter(f)
 	_, err = gw.Write(jsonData)
 	require.NoError(t, err, "write gzip")
-	gw.Close()
-	f.Close()
+	require.NoError(t, gw.Close())
 
 	// Convert
 	converter := NewConverter(DefaultChunkSize)
