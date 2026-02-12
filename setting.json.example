@@ -5,7 +5,6 @@
 	"db": "data.db",
 	"markers": "assets/markers",
 	"ammo": "assets/ammo",
-	"fonts": "assets/fonts",
 	"maps": "maps",
 	"data": "data",
 	"static": "",

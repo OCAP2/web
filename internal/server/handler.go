@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OCAP2/web/internal/fonts"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -374,9 +375,13 @@ func (h *Handler) GetFont(c echo.Context) error {
 	fontstack := filepath.Base(c.Param("fontstack"))
 	rangeParam := filepath.Base(c.Param("range"))
 
-	absolutePath := filepath.Join(h.setting.Fonts, fontstack, rangeParam)
+	f, err := fonts.GlyphsFS.Open(path.Join("glyphs", fontstack, rangeParam))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	defer f.Close()
 
-	return c.File(absolutePath)
+	return c.Stream(http.StatusOK, "application/x-protobuf", f)
 }
 
 func (h *Handler) GetMapTitle(c echo.Context) error {
