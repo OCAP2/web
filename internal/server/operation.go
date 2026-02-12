@@ -68,6 +68,28 @@ func NewRepoOperation(pathDB string) (*RepoOperation, error) {
 	return r, nil
 }
 
+// runMigration executes a set of SQL statements atomically within a transaction,
+// then records the new version number.
+func (r *RepoOperation) runMigration(version int, statements ...string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin v%d migration: %w", version, err)
+	}
+	defer tx.Rollback()
+
+	for _, stmt := range statements {
+		if _, err = tx.Exec(stmt); err != nil {
+			return fmt.Errorf("v%d migration failed: %w", version, err)
+		}
+	}
+
+	if _, err = tx.Exec(`INSERT INTO version (db) VALUES (?)`, version); err != nil {
+		return fmt.Errorf("v%d set version: %w", version, err)
+	}
+
+	return tx.Commit()
+}
+
 func (r *RepoOperation) migration() (err error) {
 	_, err = r.db.Exec(`
 		CREATE TABLE IF NOT EXISTS version (
@@ -98,122 +120,64 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	if version < 1 {
-		_, err = r.db.Exec(`
-			UPDATE operations SET type = 'PvE' WHERE type = 'pve';
-			UPDATE operations SET type = 'TvT' WHERE type = 'tvt';
-		`)
-		if err != nil {
-			return fmt.Errorf("merge db to v1 failed: %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (1)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 1: %w", err)
+		if err = r.runMigration(1,
+			`UPDATE operations SET type = 'PvE' WHERE type = 'pve'`,
+			`UPDATE operations SET type = 'TvT' WHERE type = 'tvt'`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 2 {
-		_, err = r.db.Exec(`
-			ALTER TABLE operations RENAME COLUMN type TO tag;
-		`)
-		if err != nil {
-			return fmt.Errorf("merge db to v2 failed: %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (2)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 2: %w", err)
+		if err = r.runMigration(2,
+			`ALTER TABLE operations RENAME COLUMN type TO tag`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 3 {
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN storage_format TEXT DEFAULT 'json'`)
-		if err != nil {
-			return fmt.Errorf("merge db to v3 failed (storage_format): %w", err)
-		}
-
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN conversion_status TEXT DEFAULT 'completed'`)
-		if err != nil {
-			return fmt.Errorf("merge db to v3 failed (conversion_status): %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (3)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 3: %w", err)
+		if err = r.runMigration(3,
+			`ALTER TABLE operations ADD COLUMN storage_format TEXT DEFAULT 'json'`,
+			`ALTER TABLE operations ADD COLUMN conversion_status TEXT DEFAULT 'completed'`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 4 {
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN schema_version INTEGER DEFAULT 1`)
-		if err != nil {
-			return fmt.Errorf("merge db to v4 failed (schema_version): %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (4)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 4: %w", err)
+		if err = r.runMigration(4,
+			`ALTER TABLE operations ADD COLUMN schema_version INTEGER DEFAULT 1`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 5 {
-		// Strip legacy .json.gz and .json suffixes from filenames
-		_, err = r.db.Exec(`
-			UPDATE operations SET filename = REPLACE(filename, '.json.gz', '') WHERE filename LIKE '%.json.gz';
-			UPDATE operations SET filename = REPLACE(filename, '.json', '') WHERE filename LIKE '%.json';
-		`)
-		if err != nil {
-			return fmt.Errorf("merge db to v5 failed (normalize filenames): %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (5)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 5: %w", err)
+		if err = r.runMigration(5,
+			`UPDATE operations SET filename = REPLACE(filename, '.json.gz', '') WHERE filename LIKE '%.json.gz'`,
+			`UPDATE operations SET filename = REPLACE(filename, '.json', '') WHERE filename LIKE '%.json'`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 6 {
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN chunk_count INTEGER DEFAULT 0`)
-		if err != nil {
-			return fmt.Errorf("merge db to v6 failed (chunk_count): %w", err)
-		}
-
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (6)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 6: %w", err)
+		if err = r.runMigration(6,
+			`ALTER TABLE operations ADD COLUMN chunk_count INTEGER DEFAULT 0`,
+		); err != nil {
+			return err
 		}
 	}
 
 	if version < 7 {
-		tx, err := r.db.Begin()
-		if err != nil {
-			return fmt.Errorf("failed to begin transaction for v7 migration: %w", err)
-		}
-		defer tx.Rollback()
-
-		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN player_count INTEGER DEFAULT 0`)
-		if err != nil {
-			return fmt.Errorf("merge db to v7 failed (player_count): %w", err)
-		}
-		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN kill_count INTEGER DEFAULT 0`)
-		if err != nil {
-			return fmt.Errorf("merge db to v7 failed (kill_count): %w", err)
-		}
-		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN side_composition TEXT DEFAULT '{}'`)
-		if err != nil {
-			return fmt.Errorf("merge db to v7 failed (side_composition): %w", err)
-		}
-		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN player_kill_count INTEGER DEFAULT 0`)
-		if err != nil {
-			return fmt.Errorf("merge db to v7 failed (player_kill_count): %w", err)
-		}
-
-		_, err = tx.Exec(`INSERT INTO version (db) VALUES (7)`)
-		if err != nil {
-			return fmt.Errorf("failed to increase version 7: %w", err)
-		}
-
-		if err = tx.Commit(); err != nil {
-			return fmt.Errorf("failed to commit v7 migration: %w", err)
+		if err = r.runMigration(7,
+			`ALTER TABLE operations ADD COLUMN player_count INTEGER DEFAULT 0`,
+			`ALTER TABLE operations ADD COLUMN kill_count INTEGER DEFAULT 0`,
+			`ALTER TABLE operations ADD COLUMN side_composition TEXT DEFAULT '{}'`,
+			`ALTER TABLE operations ADD COLUMN player_kill_count INTEGER DEFAULT 0`,
+		); err != nil {
+			return err
 		}
 	}
 
