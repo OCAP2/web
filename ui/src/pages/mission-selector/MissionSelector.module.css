@@ -700,6 +700,12 @@
   object-fit: cover;
 }
 
+.sidebarHeroFallback {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+}
+
 .sidebarHeroOverlay {
   position: absolute;
   inset: 0;

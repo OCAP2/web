@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { Show, createSignal, createEffect, on } from "solid-js";
 import type { Operation } from "../../data/types";
 import { useI18n } from "../../ui/hooks/useLocale";
 // C and SIDE_COLORS needed when force composition / combat summary are uncommented
@@ -17,16 +17,39 @@ export function DetailSidebar(props: {
   const mapColor = () => getMapColor(props.op.worldName);
   const status = () => getStatusInfo(props.op);
   const ready = () => isOpReady(props.op);
+  const [previewFailed, setPreviewFailed] = createSignal(false);
+
+  // Reset when switching to a different map
+  createEffect(on(() => props.op.worldName, () => setPreviewFailed(false)));
 
   return (
     <div class={styles.sidebar}>
       {/* Map Hero */}
-      <div class={styles.sidebarHero}>
-        <img
-          src={`/images/maps/${encodeURIComponent(props.op.worldName)}/preview_512.png`}
-          alt=""
-          class={styles.sidebarHeroImg}
-        />
+      <div class={styles.sidebarHero} style={{ background: `linear-gradient(135deg, ${mapColor()}15, ${mapColor()}05)` }}>
+        <Show when={!previewFailed()} fallback={
+          <>
+            <svg width="100%" height="100%" class={styles.sidebarHeroFallback}>
+              <defs>
+                <pattern id="detailGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke={mapColor()} stroke-width="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#detailGrid)"/>
+            </svg>
+            <svg width="100%" height="100%" class={styles.sidebarHeroFallback} style={{ opacity: "0.25" }}>
+              <ellipse cx="50%" cy="50%" rx="80" ry="50" fill="none" stroke={mapColor()} stroke-width="1"/>
+              <ellipse cx="50%" cy="50%" rx="120" ry="75" fill="none" stroke={mapColor()} stroke-width="0.7"/>
+              <ellipse cx="50%" cy="50%" rx="160" ry="100" fill="none" stroke={mapColor()} stroke-width="0.5"/>
+            </svg>
+          </>
+        }>
+          <img
+            src={`${import.meta.env.BASE_URL}images/maps/${encodeURIComponent(props.op.worldName)}/preview_512.png`}
+            alt=""
+            class={styles.sidebarHeroImg}
+            onError={() => setPreviewFailed(true)}
+          />
+        </Show>
         <div class={styles.sidebarHeroOverlay} />
         <div style={{ "text-align": "center", "z-index": "1" }}>
           <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.op.worldName}</div>
