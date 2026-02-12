@@ -92,6 +92,7 @@ func NewGenerateColorReliefStage(tools ToolSet) Stage {
 			if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mbtilesPath, outputPath); err != nil {
 				return err
 			}
+			os.Remove(mbtilesPath)
 
 			job.HasColorRelief = true
 			log.Printf("Generated %s", outputPath)

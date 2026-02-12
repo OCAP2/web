@@ -63,6 +63,7 @@ func NewGenerateHeightmapStage(tools ToolSet) Stage {
 			if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mbtilesPath, outputPath); err != nil {
 				return err
 			}
+			os.Remove(mbtilesPath)
 
 			job.HasHeightmap = true
 			log.Printf("Generated %s", outputPath)

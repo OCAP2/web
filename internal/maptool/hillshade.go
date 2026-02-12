@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 )
 
@@ -56,7 +57,11 @@ func rasterToPMTiles(ctx context.Context, ht hillshadeTools, inputTif, mbtilesPa
 		}
 	}
 
-	return MBTilesToPMTiles(ctx, ht.pmtiles, mbtilesPath, outputPath)
+	if err := MBTilesToPMTiles(ctx, ht.pmtiles, mbtilesPath, outputPath); err != nil {
+		return err
+	}
+	os.Remove(mbtilesPath)
+	return nil
 }
 
 // NewGenerateBathymetryStage creates a pipeline stage that generates a hillshade

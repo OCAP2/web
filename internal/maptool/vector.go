@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -348,7 +347,7 @@ func NewGradMehVectorTilesStage(tools ToolSet) Stage {
 				mbtilesFiles []string
 			)
 			var g errgroup.Group
-			g.SetLimit(max(1, runtime.NumCPU()/2))
+			g.SetLimit(4)
 			for _, lf := range job.LayerFiles {
 				g.Go(func() error {
 					mbPath := filepath.Join(mbtilesDir, lf.Name+".mbtiles")

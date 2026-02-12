@@ -203,7 +203,11 @@ func NewGenerateSatellitePMTilesStage(tools ToolSet) Stage {
 			}
 
 			outputPath := filepath.Join(job.TilesOutputDir(), "satellite.pmtiles")
-			return MBTilesToPMTiles(ctx, pmtilesBin.Path, mbtilesPath, outputPath)
+			if err := MBTilesToPMTiles(ctx, pmtilesBin.Path, mbtilesPath, outputPath); err != nil {
+				return err
+			}
+			os.Remove(mbtilesPath)
+			return nil
 		},
 	}
 }
