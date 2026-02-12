@@ -113,6 +113,16 @@ export class ApiClient {
   }
 
   /**
+   * Fetch a single operation by ID or filename.
+   * GET {baseUrl}/api/v1/operations/{id}
+   */
+  async getOperation(id: string): Promise<Operation> {
+    const url = `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`;
+    const data = await this.fetchJson<RawOperation>(url);
+    return mapOperation(data);
+  }
+
+  /**
    * Fetch raw mission data (gzipped JSON served as a static file).
    * GET {baseUrl}/data/{filename}.json.gz
    */

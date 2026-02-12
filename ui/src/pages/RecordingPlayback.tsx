@@ -159,17 +159,10 @@ export function RecordingPlayback(): JSX.Element {
     const id = decodeURIComponent(params.id);
     void (async () => {
       try {
-        const ops = await api.getOperations();
-        const match = ops.find(
-          (o) => o.filename === id || o.id === id,
-        );
-        if (match) {
-          await loadOperation(match);
-        } else {
-          showHint("Operation not found");
-        }
+        const op = await api.getOperation(id);
+        await loadOperation(op);
       } catch {
-        showHint("Failed to load operation");
+        showHint("Operation not found");
       }
     })();
   });

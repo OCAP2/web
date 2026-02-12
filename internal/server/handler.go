@@ -91,6 +91,10 @@ func NewHandler(
 		"/api/v1/operations",
 		hdlr.GetOperations,
 	)
+	g.GET(
+		"/api/v1/operations/:id",
+		hdlr.GetOperation,
+	)
 	g.POST(
 		"/api/v1/operations/add",
 		hdlr.StoreOperation,
@@ -189,6 +193,22 @@ func (h *Handler) GetOperations(c echo.Context) error {
 	}
 
 	return c.JSONPretty(http.StatusOK, ops, "\t")
+}
+
+func (h *Handler) GetOperation(c echo.Context) error {
+	ctx := c.Request().Context()
+	id := c.Param("id")
+
+	// Try by ID first, then by filename
+	op, err := h.repoOperation.GetByID(ctx, id)
+	if err != nil {
+		op, err = h.repoOperation.GetByFilename(ctx, id)
+		if err != nil {
+			return echo.ErrNotFound
+		}
+	}
+
+	return c.JSONPretty(http.StatusOK, op, "\t")
 }
 
 func (h *Handler) GetCustomize(c echo.Context) error {

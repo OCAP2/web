@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -183,26 +184,36 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	if version < 7 {
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN player_count INTEGER DEFAULT 0`)
+		tx, err := r.db.Begin()
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction for v7 migration: %w", err)
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN player_count INTEGER DEFAULT 0`)
 		if err != nil {
 			return fmt.Errorf("merge db to v7 failed (player_count): %w", err)
 		}
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN kill_count INTEGER DEFAULT 0`)
+		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN kill_count INTEGER DEFAULT 0`)
 		if err != nil {
 			return fmt.Errorf("merge db to v7 failed (kill_count): %w", err)
 		}
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN side_composition TEXT DEFAULT '{}'`)
+		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN side_composition TEXT DEFAULT '{}'`)
 		if err != nil {
 			return fmt.Errorf("merge db to v7 failed (side_composition): %w", err)
 		}
-		_, err = r.db.Exec(`ALTER TABLE operations ADD COLUMN player_kill_count INTEGER DEFAULT 0`)
+		_, err = tx.Exec(`ALTER TABLE operations ADD COLUMN player_kill_count INTEGER DEFAULT 0`)
 		if err != nil {
 			return fmt.Errorf("merge db to v7 failed (player_kill_count): %w", err)
 		}
 
-		_, err = r.db.Exec(`INSERT INTO version (db) VALUES (7)`)
+		_, err = tx.Exec(`INSERT INTO version (db) VALUES (7)`)
 		if err != nil {
 			return fmt.Errorf("failed to increase version 7: %w", err)
+		}
+
+		if err = tx.Commit(); err != nil {
+			return fmt.Errorf("failed to commit v7 migration: %w", err)
 		}
 	}
 
@@ -369,10 +380,10 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
 		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount,
 		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount)
-	op.SideComposition = unmarshalSideComposition(sideRaw)
 	if err != nil {
 		return nil, err
 	}
+	op.SideComposition = unmarshalSideComposition(sideRaw)
 	return &op, nil
 }
 
@@ -387,10 +398,10 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
 		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount,
 		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount)
-	op.SideComposition = unmarshalSideComposition(sideRaw)
 	if err != nil {
 		return nil, err
 	}
+	op.SideComposition = unmarshalSideComposition(sideRaw)
 	return &op, nil
 }
 
@@ -516,6 +527,7 @@ func unmarshalSideComposition(raw string) SideComposition {
 	// Fall back to old format: {"WEST":100}
 	var legacy map[string]int
 	if err := json.Unmarshal([]byte(raw), &legacy); err != nil {
+		slog.Warn("failed to unmarshal side_composition", "raw", raw, "error", err)
 		return nil
 	}
 	sc = make(SideComposition, len(legacy))
