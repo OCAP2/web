@@ -7,8 +7,7 @@ import { useI18n } from "../../ui/hooks/useLocale";
 import { LOCALES } from "../../ui/i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
-import { formatDuration, getMapColor, isOpReady } from "./helpers";
-import { OcapLogoSvg } from "./OcapLogoSvg";
+import { getMapColor, isOpReady } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
@@ -30,7 +29,6 @@ export function MissionSelector(): JSX.Element {
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [sortBy, setSortBy] = createSignal("date");
   const [sortDir, setSortDir] = createSignal("desc");
-  const [launched, setLaunched] = createSignal<Operation | null>(null);
   const [langOpen, setLangOpen] = createSignal(false);
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
 
@@ -150,37 +148,22 @@ export function MissionSelector(): JSX.Element {
 
   // Launch handler
   const handleLaunch = (op: Operation) => {
-    setLaunched(op);
-    setTimeout(() => {
-      const id = op.filename ?? op.id;
-      navigate(`/recording/${encodeURIComponent(id)}`);
-    }, 2000);
+    const id = op.filename ?? op.id;
+    navigate(`/loading/${encodeURIComponent(id)}`, {
+      state: {
+        missionName: op.missionName,
+        worldName: op.worldName,
+        missionDuration: op.missionDuration,
+      },
+    });
   };
-
-  // ── Loading transition ──
-  const launchedOp = () => launched();
   return (
-    <Show when={!launchedOp()} fallback={
-      <div class={styles.loadingScreen} data-testid="loading-screen">
-        <div class={styles.loadingContent}>
-          <div class={styles.loadingLogo}>
-            <OcapLogoSvg size={56} />
-          </div>
-          <div class={styles.loadingTitle}>{t("loading_mission")} {launchedOp()!.missionName}</div>
-          <div class={styles.loadingSubtitle}>{launchedOp()!.worldName} &middot; {formatDuration(launchedOp()!.missionDuration)}</div>
-          <div class={styles.loadingBarTrack}>
-            <div class={styles.loadingBarFill} />
-          </div>
-          <div class={styles.loadingHint}>{t("initializing_engine")}</div>
-        </div>
-      </div>
-    }>
       <div data-testid="mission-selector" class={styles.page}>
         {/* ── Header ── */}
         <header class={styles.header}>
           <div class={styles.headerRow}>
             <div class={styles.logoArea}>
-              <img src="ocap-logo.png" height="60" alt="OCAP" />
+              <img src={`${import.meta.env.BASE_URL}ocap-logo.png`} height="60" alt="OCAP" />
               {/* <div class={styles.logoWrap}>
                 <OcapLogoSvg />
               </div>
@@ -374,7 +357,7 @@ export function MissionSelector(): JSX.Element {
                 </div>
                 <div class={styles.dividerShort} />
                 <span class={styles.footerMadeWith}>
-                  {t("made_with_love")} <span class={styles.footerHeart}><Icons.Heart /></span>
+                  <span class={styles.footerHeart}><Icons.Heart /></span> {t("made_with_love")}
                 </span>
               </div>
               <span class={styles.footerCenter}>
@@ -413,6 +396,5 @@ export function MissionSelector(): JSX.Element {
           </Show>
         </div>
       </div>
-    </Show>
   );
 }

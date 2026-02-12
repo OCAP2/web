@@ -4,6 +4,7 @@ import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../ui/hooks/useLocale";
 import { CustomizeProvider } from "../../../ui/hooks/useCustomize";
 import { MissionSelector } from "..";
+import { LoadingTransition } from "../../LoadingTransition";
 import type { Operation } from "../../../data/types";
 
 // ─── Helpers ───
@@ -60,6 +61,7 @@ function renderPage() {
   return render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
       <Route path="/" component={MissionSelector} />
+      <Route path="/loading/:id" component={LoadingTransition} />
     </Router>
   ));
 }
@@ -67,7 +69,11 @@ function renderPage() {
 // ─── Tests ───
 
 describe("MissionSelector", () => {
-  beforeEach(() => mockFetchWith(mockOperations));
+  beforeEach(() => {
+    // Reset URL to / so the router starts fresh after tests that navigate away
+    window.history.replaceState(null, "", "/");
+    mockFetchWith(mockOperations);
+  });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
   // ── Rendering ──
