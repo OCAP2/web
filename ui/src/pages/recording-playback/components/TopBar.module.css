@@ -56,6 +56,33 @@
   flex-shrink: 0;
 }
 
+.branding {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.brandTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.brandSubtitle {
+  font-size: 10px;
+  color: var(--text-dimmer);
+  white-space: nowrap;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
 .missionInfo {
   display: flex;
   flex-direction: column;

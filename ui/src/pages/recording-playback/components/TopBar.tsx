@@ -168,6 +168,19 @@ export function TopBar(props: TopBarProps): JSX.Element {
             );
           }}
         </Show>
+        <Show when={customize().headerTitle}>
+          {(title) => (
+            <div class={styles.branding}>
+              <span class={styles.brandTitle}>{title()}</span>
+              <Show when={customize().headerSubtitle}>
+                {(sub) => <span class={styles.brandSubtitle}>{sub()}</span>}
+              </Show>
+            </div>
+          )}
+        </Show>
+        <Show when={customize().websiteLogo || customize().headerTitle}>
+          <div class={styles.divider} />
+        </Show>
         <div class={styles.missionInfo}>
           <span class={styles.missionName}>{props.missionName()}</span>
           <span class={styles.missionSubtitle}>
