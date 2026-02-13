@@ -438,8 +438,8 @@ describe("JsonDecoder.decodeManifest", () => {
       endFrame: 100,
       captureDelay: 1,
       times: [
-        { frameNum: 0, systemTimeUtc: "2025-01-15T12:00:00Z" },
-        { frameNum: 100, systemTimeUtc: "2025-01-15T12:05:00Z" },
+        { frameNum: 0, systemTimeUTC: "2025-01-15T12:00:00Z" },
+        { frameNum: 100, systemTimeUTC: "2025-01-15T12:05:00Z" },
       ],
     };
 
