@@ -4,7 +4,9 @@ import type { PlaybackEngine } from "../playback/engine";
 // ─── UI panel visibility signals ───
 
 export const [leftPanelVisible, setLeftPanelVisible] = createSignal(true);
-export const [rightPanelVisible, setRightPanelVisible] = createSignal(true);
+
+/** Active tab in the side panel: "units" | "events" | "stats" | "chat" */
+export const [activePanelTab, setActivePanelTab] = createSignal("units");
 
 // ─── Shortcut handler ───
 
@@ -16,8 +18,8 @@ let handler: ((e: KeyboardEvent) => void) | null = null;
  *
  * Shortcuts:
  * - Space: toggle play/pause
- * - 'e': toggle left panel visibility
- * - 'r': toggle right panel visibility
+ * - 'e': toggle side panel visibility
+ * - 'r': toggle events tab (open panel → events if closed or on another tab; close if already on events)
  *
  * Shortcuts are ignored when the active element is an input or textarea.
  */
@@ -41,7 +43,17 @@ export function registerShortcuts(engine: PlaybackEngine): void {
         setLeftPanelVisible((v) => !v);
         break;
       case "r":
-        setRightPanelVisible((v) => !v);
+        if (!leftPanelVisible()) {
+          // Panel closed → open it and switch to events
+          setLeftPanelVisible(true);
+          setActivePanelTab("events");
+        } else if (activePanelTab() === "events") {
+          // Panel open on events → close it
+          setLeftPanelVisible(false);
+        } else {
+          // Panel open on another tab → switch to events
+          setActivePanelTab("events");
+        }
         break;
     }
   };

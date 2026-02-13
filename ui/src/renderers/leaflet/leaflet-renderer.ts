@@ -976,6 +976,34 @@ export class LeafletRenderer implements MapRenderer {
       return;
     }
 
+    if (layer === "mapIcons") {
+      if (!this.mapIconsLayer) return;
+      if (visible) {
+        if (!this.map.hasLayer(this.mapIconsLayer)) {
+          this.mapIconsLayer.addTo(this.map);
+        }
+      } else {
+        if (this.map.hasLayer(this.mapIconsLayer)) {
+          this.map.removeLayer(this.mapIconsLayer);
+        }
+      }
+      return;
+    }
+
+    if (layer === "buildings3D") {
+      if (!this.buildings3DLayer) return;
+      if (visible) {
+        if (!this.map.hasLayer(this.buildings3DLayer)) {
+          this.buildings3DLayer.addTo(this.map);
+        }
+      } else {
+        if (this.map.hasLayer(this.buildings3DLayer)) {
+          this.map.removeLayer(this.buildings3DLayer);
+        }
+      }
+      return;
+    }
+
     const group = this.layers[layer as LayerGroupKey];
     if (!group) return;
 
@@ -1015,16 +1043,9 @@ export class LeafletRenderer implements MapRenderer {
   // ==================== Overlay control ====================
 
   private addOverlayControl(): void {
-    if (!this.gridLayer) return;
-
-    const overlays: Record<string, L.Layer> = {
-      "Units and Vehicles": this.layers.entities,
-      "Selected Side Markers": this.layers.systemMarkers,
-      "Editor/Briefing Markers": this.layers.briefingMarkers,
-      "Projectile Markers": this.layers.projectileMarkers,
-      "Coordinate Grid": this.gridLayer,
-    };
-
+    // Layer visibility is now controlled by the TopBar UI component
+    // via setLayerVisible(). Create MapLibre toggle layers if needed
+    // so setLayerVisible("mapIcons"/"buildings3D") works.
     if (this.maplibreLayer) {
       this.mapIconsLayer = this.createMapLibreToggleLayer((vis) =>
         this.setMapLibreIconVisibility(vis),
@@ -1032,16 +1053,9 @@ export class LeafletRenderer implements MapRenderer {
       this.buildings3DLayer = this.createMapLibreToggleLayer((vis) =>
         this.setBuildings3DVisibility(vis),
       );
-      overlays["Map Icons"] = this.mapIconsLayer;
-      overlays["3D Buildings"] = this.buildings3DLayer;
+      this.mapIconsLayer.addTo(this.map);
+      this.buildings3DLayer.addTo(this.map);
     }
-
-    L.control
-      .layers({}, overlays, {
-        position: "bottomright",
-        collapsed: false,
-      })
-      .addTo(this.map);
   }
 
   private createMapLibreToggleLayer(

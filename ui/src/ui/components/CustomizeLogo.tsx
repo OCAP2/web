@@ -17,7 +17,7 @@ export function CustomizeLogo(): JSX.Element {
         const size = () => customize().websiteLogoSize ?? "32px";
         const left = () =>
           leftPanelVisible()
-            ? "calc(var(--left-panel-width) + 25px)"
+            ? "calc(var(--pb-panel-width) + 25px)"
             : "25px";
         const img = () => (
           <img

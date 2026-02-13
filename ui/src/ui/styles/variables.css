@@ -64,4 +64,9 @@
   --ms-side-civ: #A78BFA;
   --ms-font-mono: 'JetBrains Mono', monospace;
   --ms-font-heading: 'Outfit', sans-serif;
+
+  /* ── Playback page dimensions ── */
+  --pb-top-height: 48px;
+  --pb-bottom-height: 72px;
+  --pb-panel-width: 370px;
 }

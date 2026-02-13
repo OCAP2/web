@@ -1,0 +1,237 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--pb-top-height, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(10, 15, 20, 0.95) 0%, rgba(10, 15, 20, 0.7) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 20;
+  animation: fadeIn 0.4s ease-out;
+  box-sizing: border-box;
+}
+
+/* ── Left section ── */
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.logoMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #4A9EFF, #2DD4A0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  color: #0a0f14;
+  flex-shrink: 0;
+}
+
+.missionInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.missionName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e6ed;
+  font-family: var(--ms-font-heading, 'Outfit', sans-serif);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.missionSubtitle {
+  font-size: 10px;
+  color: #556677;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Center section ── */
+
+.center {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.forceIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forceDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.forceAlive {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+}
+
+.forceTotal {
+  font-size: 10px;
+  color: #445566;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+}
+
+/* ── Right section ── */
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #8899aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+
+.actionBtn:hover {
+  filter: brightness(1.15);
+}
+
+.layerBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(13, 21, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8899aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: filter 0.15s ease;
+}
+
+.layerBtn:hover {
+  filter: brightness(1.15);
+}
+
+.layerDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: rgba(13, 21, 32, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.layerLabel {
+  font-size: 10px;
+  color: #556677;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  letter-spacing: 0.1em;
+  padding: 4px 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.layerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.layerItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.layerCheckbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.layerCheckboxActive {
+  border: 1px solid #4A9EFF;
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.layerCheckboxInactive {
+  border: 1px solid #445566;
+  background: transparent;
+}
+
+.layerCheckboxDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #4A9EFF;
+}
+
+.layerItemText {
+  font-size: 11px;
+  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+}
+
+.layerItemTextActive {
+  color: #c8d4e0;
+}
+
+.layerItemTextInactive {
+  color: #556677;
+}

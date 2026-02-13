@@ -84,7 +84,9 @@ export type RenderLayer =
   | "briefingMarkers"
   | "systemMarkers"
   | "projectileMarkers"
-  | "grid";
+  | "grid"
+  | "mapIcons"
+  | "buildings3D";
 
 export type RendererEvent = "zoom" | "dragstart" | "click";
 

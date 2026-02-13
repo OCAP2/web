@@ -1,5 +1,6 @@
-import { onMount, onCleanup, createSignal, createEffect } from "solid-js";
+import { onMount, onCleanup, createSignal, createEffect, createMemo } from "solid-js";
 import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import type { WorldConfig, Operation } from "../data/types";
 import type { MarkerHandle, LineHandle } from "../renderers/renderer.types";
@@ -11,20 +12,29 @@ import type { DecoderStrategy } from "../data/decoders/decoder.interface";
 import { ChunkManager } from "../data/chunk-manager";
 import { PlaybackEngine } from "../playback/engine";
 import { MarkerManager } from "../playback/marker-manager";
+import { formatElapsedTime } from "../playback/time";
 import { LeafletRenderer } from "../renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "../renderers/renderer.interface";
 import { EngineProvider } from "../ui/hooks/useEngine";
 import { RendererProvider } from "../ui/hooks/useRenderer";
 import { MapContainer } from "../ui/components/MapContainer";
-import { TopPanel } from "../ui/components/TopPanel";
-import { LeftPanel } from "../ui/components/LeftPanel";
-import { RightPanel } from "../ui/components/RightPanel";
-import { BottomPanel } from "../ui/components/BottomPanel";
+import { TopBar } from "../ui/components/playback/TopBar";
+import { SidePanel } from "../ui/components/playback/SidePanel";
+import { BottomBar } from "../ui/components/playback/BottomBar";
+import { MapControls } from "../ui/components/playback/MapControls";
+import { KeyboardHints } from "../ui/components/playback/KeyboardHints";
 import { AboutModal } from "../ui/components/AboutModal";
 import { CounterDisplay } from "../ui/components/CounterDisplay";
 import { CustomizeLogo } from "../ui/components/CustomizeLogo";
 import { Hint, showHint, hintMessage, hintVisible } from "../ui/components/Hint";
-import { registerShortcuts, unregisterShortcuts, leftPanelVisible } from "../ui/shortcuts";
+import {
+  registerShortcuts,
+  unregisterShortcuts,
+  leftPanelVisible,
+  activePanelTab,
+  setActivePanelTab,
+  setLeftPanelVisible,
+} from "../ui/shortcuts";
 
 /**
  * Playback page at `/recording/:id`.
@@ -48,6 +58,12 @@ export function RecordingPlayback(): JSX.Element {
   const [aboutOpen, setAboutOpen] = createSignal(false);
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
   const [addonVersion, setAddonVersion] = createSignal<string | undefined>(undefined);
+
+  // ─── Derived signals for TopBar ───
+  const mapName = createMemo(() => worldConfig()?.worldName ?? "");
+  const duration = createMemo(() =>
+    formatElapsedTime(engine.endFrame(), engine.captureDelayMs()),
+  );
 
   async function loadOperation(op: Operation): Promise<void> {
     try {
@@ -145,10 +161,10 @@ export function RecordingPlayback(): JSX.Element {
     markerManager.updateFrame(frame);
   });
 
-  // Sync left panel visibility to CSS custom property
+  // Sync side panel visibility to CSS custom property
   createEffect(() => {
     const offset = leftPanelVisible()
-      ? "calc(var(--left-panel-width) + 10px)"
+      ? "calc(var(--pb-panel-width) + 16px)"
       : "10px";
     document.documentElement.style.setProperty("--leaflet-left-offset", offset);
   });
@@ -180,16 +196,28 @@ export function RecordingPlayback(): JSX.Element {
     <EngineProvider engine={engine}>
       <RendererProvider renderer={renderer}>
         <MapContainer renderer={renderer} worldConfig={worldConfig()} />
-        <TopPanel
+        <TopBar
           missionName={missionName}
+          mapName={mapName}
+          duration={duration}
           operationId={operationId}
           operationFilename={operationFilename}
+          worldConfig={worldConfig}
           onInfoClick={() => setAboutOpen(true)}
           onBack={() => navigate("/")}
         />
-        <LeftPanel />
-        <RightPanel />
-        <BottomPanel />
+        <Show when={leftPanelVisible()}>
+          <SidePanel
+            activeTab={activePanelTab}
+            onTabChange={setActivePanelTab}
+          />
+        </Show>
+        <BottomBar
+          panelOpen={leftPanelVisible}
+          onTogglePanel={() => setLeftPanelVisible((v) => !v)}
+        />
+        <MapControls worldConfig={worldConfig} />
+        <KeyboardHints />
         <CustomizeLogo />
         <CounterDisplay />
         <AboutModal

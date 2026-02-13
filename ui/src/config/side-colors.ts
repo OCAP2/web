@@ -16,6 +16,22 @@ export const SIDE_COLORS_DARK: Record<Side, string> = {
   CIV: "#650080",
 };
 
+/** Redesign UI colors for side indicators. */
+export const SIDE_COLORS_UI: Record<Side, string> = {
+  WEST: "#4A9EFF",
+  EAST: "#FF4A4A",
+  GUER: "#2DD4A0",
+  CIV: "#A78BFA",
+};
+
+/** Translucent background variants for redesign UI. */
+export const SIDE_BG_COLORS: Record<Side, string> = {
+  WEST: "rgba(74,158,255,0.12)",
+  EAST: "rgba(255,74,74,0.12)",
+  GUER: "rgba(45,212,160,0.12)",
+  CIV: "rgba(167,139,250,0.12)",
+};
+
 /** CSS class name for each side. */
 export const SIDE_CLASS: Record<Side, string> = {
   WEST: "blufor",

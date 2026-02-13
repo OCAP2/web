@@ -93,6 +93,11 @@ export class EventManager {
         // Attach current score to the event (even for self-kills)
         event.causerKillScore = causer.killCount - causer.teamKillCount * 2;
       }
+
+      // Increment death count for the victim
+      if (victim instanceof Unit) {
+        victim.deathCount++;
+      }
     }
   }
 

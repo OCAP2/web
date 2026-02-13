@@ -5,9 +5,9 @@ import {
   registerShortcuts,
   unregisterShortcuts,
   leftPanelVisible,
-  rightPanelVisible,
+  activePanelTab,
   setLeftPanelVisible,
-  setRightPanelVisible,
+  setActivePanelTab,
 } from "../shortcuts";
 
 function createEngine(): PlaybackEngine {
@@ -35,7 +35,7 @@ describe("shortcuts", () => {
     engine = createEngine();
     // Reset panel visibility signals to defaults
     setLeftPanelVisible(true);
-    setRightPanelVisible(true);
+    setActivePanelTab("units");
   });
 
   afterEach(() => {
@@ -65,13 +65,29 @@ describe("shortcuts", () => {
     expect(leftPanelVisible()).toBe(true);
   });
 
-  it("'r' key toggles right panel signal", () => {
+  it("'r' key opens panel to events when panel is closed", () => {
     registerShortcuts(engine);
-    expect(rightPanelVisible()).toBe(true);
+    setLeftPanelVisible(false);
     fireKey("r");
-    expect(rightPanelVisible()).toBe(false);
+    expect(leftPanelVisible()).toBe(true);
+    expect(activePanelTab()).toBe("events");
+  });
+
+  it("'r' key closes panel when already on events tab", () => {
+    registerShortcuts(engine);
+    setLeftPanelVisible(true);
+    setActivePanelTab("events");
     fireKey("r");
-    expect(rightPanelVisible()).toBe(true);
+    expect(leftPanelVisible()).toBe(false);
+  });
+
+  it("'r' key switches to events tab when on another tab", () => {
+    registerShortcuts(engine);
+    setLeftPanelVisible(true);
+    setActivePanelTab("units");
+    fireKey("r");
+    expect(leftPanelVisible()).toBe(true);
+    expect(activePanelTab()).toBe("events");
   });
 
   it("unregisterShortcuts removes handler", () => {
