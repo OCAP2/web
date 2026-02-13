@@ -183,33 +183,56 @@ func TestGetOperations(t *testing.T) {
 }
 
 func TestGetCustomize(t *testing.T) {
-	hdlr := Handler{
-		setting: Setting{
-			Customize: Customize{
-				WebsiteURL:       "https://example.com",
-				WebsiteLogo:      "/logo.png",
-				WebsiteLogoSize:  "64px",
-				DisableKillCount: true,
+	t.Run("enabled", func(t *testing.T) {
+		hdlr := Handler{
+			setting: Setting{
+				Customize: Customize{
+					Enabled:          true,
+					WebsiteURL:       "https://example.com",
+					WebsiteLogo:      "/logo.png",
+					WebsiteLogoSize:  "64px",
+					DisableKillCount: true,
+				},
 			},
-		},
-	}
+		}
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/customize", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/customize", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-	err := hdlr.GetCustomize(c)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
+		err := hdlr.GetCustomize(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
 
-	var result Customize
-	err = json.Unmarshal(rec.Body.Bytes(), &result)
-	assert.NoError(t, err)
-	assert.Equal(t, "https://example.com", result.WebsiteURL)
-	assert.Equal(t, "/logo.png", result.WebsiteLogo)
-	assert.Equal(t, "64px", result.WebsiteLogoSize)
-	assert.True(t, result.DisableKillCount)
+		var result Customize
+		err = json.Unmarshal(rec.Body.Bytes(), &result)
+		assert.NoError(t, err)
+		assert.Equal(t, "https://example.com", result.WebsiteURL)
+		assert.Equal(t, "/logo.png", result.WebsiteLogo)
+		assert.Equal(t, "64px", result.WebsiteLogoSize)
+		assert.True(t, result.DisableKillCount)
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		hdlr := Handler{
+			setting: Setting{
+				Customize: Customize{
+					Enabled: false,
+				},
+			},
+		}
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/customize", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetCustomize(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+		assert.Empty(t, rec.Body.Bytes())
+	})
 }
 
 func TestGetVersion(t *testing.T) {

@@ -212,6 +212,9 @@ func (h *Handler) GetOperation(c echo.Context) error {
 }
 
 func (h *Handler) GetCustomize(c echo.Context) error {
+	if !h.setting.Customize.Enabled {
+		return c.NoContent(http.StatusNoContent)
+	}
 	return c.JSONPretty(http.StatusOK, h.setting.Customize, "\t")
 }
 

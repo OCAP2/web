@@ -33,6 +33,7 @@ type Conversion struct {
 }
 
 type Customize struct {
+	Enabled          bool   `json:"enabled" yaml:"enabled"`
 	WebsiteURL       string `json:"websiteURL" yaml:"websiteURL"`
 	WebsiteLogo      string `json:"websiteLogo" yaml:"websiteLogo"`
 	WebsiteLogoSize  string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
@@ -65,6 +66,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "")
 	viper.SetDefault("logger", false)
+	viper.SetDefault("customize.enabled", false)
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 	viper.SetDefault("conversion.enabled", false)
 	viper.SetDefault("conversion.interval", "5m")
@@ -74,7 +76,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("conversion.retryFailed", false)
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

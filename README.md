@@ -142,6 +142,7 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_FONTS` | Path to fonts | `/usr/local/ocap/fonts` |
 | `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
 | `OCAP_LOGGER` | Enable request logging | `false` |
+| `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
 | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
 | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
 | `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
