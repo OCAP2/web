@@ -30,9 +30,11 @@ export class EventManager {
     return this.frameIndex.get(frame) ?? [];
   }
 
-  /** Return all events where frameNum <= frame (for the event log). */
+  /** Return all events where frameNum <= frame (for the event log), sorted ascending by frame. */
   getActiveEvents(frame: number): GameEvent[] {
-    return this.events.filter((event) => event.frameNum <= frame);
+    return this.events
+      .filter((event) => event.frameNum <= frame)
+      .sort((a, b) => a.frameNum - b.frameNum);
   }
 
   /** Return all registered events. */

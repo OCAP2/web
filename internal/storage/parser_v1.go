@@ -1,6 +1,8 @@
 // Package storage provides versioned parsers for JSON input formats.
 package storage
 
+import "strings"
+
 func init() {
 	RegisterParser(&ParserV1{})
 }
@@ -150,6 +152,58 @@ func parseEventArray(evtArr []interface{}) *Event {
 	if event.Type == "connected" || event.Type == "disconnected" {
 		if len(evtArr) > 2 {
 			event.Message = toString(evtArr[2])
+		}
+		return event
+	}
+
+	// General events: [frameNum, "generalEvent", "message"]
+	if event.Type == "generalEvent" {
+		if len(evtArr) > 2 {
+			event.Message = toString(evtArr[2])
+		}
+		return event
+	}
+
+	// End mission: [frameNum, "endMission", [side, message]] or [frameNum, "endMission", "message"]
+	if event.Type == "endMission" {
+		if len(evtArr) > 2 {
+			if arr, ok := evtArr[2].([]interface{}); ok {
+				parts := make([]string, len(arr))
+				for i, v := range arr {
+					parts[i] = toString(v)
+				}
+				event.Message = strings.Join(parts, ",")
+			} else {
+				event.Message = toString(evtArr[2])
+			}
+		}
+		return event
+	}
+
+	// Captured events: [frameNum, "captured"/"capturedFlag", [unitName, ...]]
+	if event.Type == "captured" || event.Type == "capturedFlag" {
+		if len(evtArr) > 2 {
+			if arr, ok := evtArr[2].([]interface{}); ok {
+				parts := make([]string, len(arr))
+				for i, v := range arr {
+					parts[i] = toString(v)
+				}
+				event.Message = strings.Join(parts, ",")
+			}
+		}
+		return event
+	}
+
+	// Terminal hack events: [frameNum, "terminalHack*", [unitName, ...]]
+	if event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
+		if len(evtArr) > 2 {
+			if arr, ok := evtArr[2].([]interface{}); ok {
+				parts := make([]string, len(arr))
+				for i, v := range arr {
+					parts[i] = toString(v)
+				}
+				event.Message = strings.Join(parts, ",")
+			}
 		}
 		return event
 	}

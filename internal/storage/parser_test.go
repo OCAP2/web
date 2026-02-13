@@ -718,6 +718,92 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		require.NotNil(t, evt)
 		assert.Equal(t, float32(0.0), evt.Distance, "invalid type")
 	})
+
+	// ── generalEvent ──
+
+	t.Run("generalEvent with message", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{0.0, "generalEvent", "Recording started."})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(0), evt.FrameNum)
+		assert.Equal(t, "generalEvent", evt.Type)
+		assert.Equal(t, "Recording started.", evt.Message)
+		assert.Equal(t, uint32(0), evt.SourceID, "should not be set")
+		assert.Equal(t, uint32(0), evt.TargetID, "should not be set")
+	})
+
+	t.Run("generalEvent without message", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{10.0, "generalEvent"})
+		require.NotNil(t, evt)
+		assert.Equal(t, "generalEvent", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	// ── endMission ──
+
+	t.Run("endMission with [side, message] tuple", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission", []interface{}{"WEST", "Mission complete"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(376), evt.FrameNum)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Equal(t, "WEST,Mission complete", evt.Message)
+	})
+
+	t.Run("endMission with empty string", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission", ""})
+		require.NotNil(t, evt)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	t.Run("endMission without data", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission"})
+		require.NotNil(t, evt)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	// ── captured / capturedFlag ──
+
+	t.Run("captured with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{200.0, "captured", []interface{}{"Player1", "blue", "flag_carrier"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(200), evt.FrameNum)
+		assert.Equal(t, "captured", evt.Type)
+		assert.Equal(t, "Player1,blue,flag_carrier", evt.Message)
+	})
+
+	t.Run("capturedFlag with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{210.0, "capturedFlag", []interface{}{"Player1", "blue"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "capturedFlag", evt.Type)
+		assert.Equal(t, "Player1,blue", evt.Message)
+	})
+
+	// ── terminalHack ──
+
+	t.Run("terminalHackStarted with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{220.0, "terminalHackStarted", []interface{}{"Player1", "blue", "red", "terminal_1"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(220), evt.FrameNum)
+		assert.Equal(t, "terminalHackStarted", evt.Type)
+		assert.Equal(t, "Player1,blue,red,terminal_1", evt.Message)
+	})
+
+	t.Run("terminalHackCanceled with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{230.0, "terminalHackCanceled", []interface{}{"Player1", "blue", "red", "terminal_1"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "terminalHackCanceled", evt.Type)
+		assert.Equal(t, "Player1,blue,red,terminal_1", evt.Message)
+	})
+
+	// ── respawnTickets ──
+
+	t.Run("respawnTickets with data", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{0.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "respawnTickets", evt.Type)
+		// respawnTickets doesn't use Message — it's a counter event handled separately
+	})
 }
 
 func TestParserV1_parseMarker_EdgeCases(t *testing.T) {
