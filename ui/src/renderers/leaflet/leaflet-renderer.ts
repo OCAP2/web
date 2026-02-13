@@ -849,6 +849,18 @@ export class LeafletRenderer implements MapRenderer {
         interactive: false,
         rotationOrigin: "50% 50%",
       } as any);
+
+      // Add popup with marker text (matching old frontend's marker popup behaviour)
+      if (def.text) {
+        const popup = L.popup({
+          autoPan: false,
+          autoClose: false,
+          closeButton: false,
+          className: "leaflet-popup-unit",
+        });
+        popup.setContent(def.text);
+        (layer as L.Marker).bindPopup(popup).openPopup();
+      }
     }
 
     layer.addTo(this.layers.briefingMarkers);

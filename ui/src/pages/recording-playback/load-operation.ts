@@ -46,7 +46,10 @@ export async function loadOperation(
     engine.loadOperation(manifest);
   }
 
-  markerManager.loadMarkers(manifest.markers);
+  markerManager.loadMarkers(manifest.markers, (id) => {
+    const entity = engine.entityManager.getEntity(id);
+    return entity?.name ?? null;
+  });
 
   return {
     worldConfig: world,

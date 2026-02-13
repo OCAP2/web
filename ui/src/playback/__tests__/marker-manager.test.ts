@@ -428,3 +428,115 @@ describe("MarkerManager.setSideFilter", () => {
     expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
   });
 });
+
+// ─── MarkerManager popup text (ICON markers) ───
+
+describe("MarkerManager ICON marker popup text", () => {
+  const entityLookup = (id: number) => {
+    const names: Record<number, string> = { 1: "Kevin", 2: "Anna" };
+    return names[id] ?? null;
+  };
+
+  it("system marker (player=-1) uses just the text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: -1, text: "Objective Alpha" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Objective Alpha" }),
+    );
+  });
+
+  it("system marker with no text passes undefined", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: -1 })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: undefined }),
+    );
+  });
+
+  it("player-owned non-GLOBAL marker shows SIDE PlayerName Text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: 1, side: "WEST", text: "80,4" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "WEST Kevin 80,4" }),
+    );
+  });
+
+  it("player-owned GLOBAL marker shows just text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: 1, side: "GLOBAL", text: "Supply" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Supply" }),
+    );
+  });
+
+  it("projectile marker (magIcons) on GLOBAL shows PlayerName Text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("magIcons/gear_M67.paa", { player: 1, side: "GLOBAL", text: "" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Kevin" }),
+    );
+  });
+
+  it("objective marker (Terminal in text) shows just text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: 1, side: "WEST", text: "Terminal Alpha" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Terminal Alpha" }),
+    );
+  });
+
+  it("system marker type on GLOBAL has no popup text", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("ObjectMarker", { player: 1, side: "GLOBAL", text: "border" })],
+      entityLookup,
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: undefined }),
+    );
+  });
+
+  it("works without entity lookup (no names)", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers(
+      [makeDef("mil_dot", { player: 1, side: "WEST", text: "Mark" })],
+    );
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "WEST Mark" }),
+    );
+  });
+});

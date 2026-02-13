@@ -146,8 +146,48 @@ export function findPositionIndex(
 
 // ─── Marker state tracking ───
 
+const SYSTEM_MARKER_TYPES = ["ObjectMarker", "moduleCoverMap", "safeStart"];
+
+/**
+ * Build popup text for an ICON marker, matching the old frontend's
+ * _createMarker popup text logic.
+ */
+function buildMarkerPopupText(
+  def: MarkerDef,
+  getEntityName: (id: number) => string | null,
+): string {
+  if (def.shape !== "ICON") return "";
+  const text = def.text ?? "";
+
+  // No player — system marker
+  if (def.player === -1) return text;
+
+  const playerName = getEntityName(def.player) ?? "";
+
+  // Objectives (Terminal, Sector)
+  if (text.includes("Terminal") || text.includes("Sector")) return text;
+
+  // System marker types on GLOBAL — no popup
+  if (SYSTEM_MARKER_TYPES.includes(def.type) && def.side === "GLOBAL") return "";
+
+  // Projectiles (magIcons, Minefield, mil_triangle) on GLOBAL
+  if (
+    (def.type.includes("magIcons") || def.type === "Minefield" || def.type === "mil_triangle") &&
+    def.side === "GLOBAL"
+  ) {
+    return [playerName, text].filter(Boolean).join(" ");
+  }
+
+  // Other GLOBAL markers
+  if (def.side === "GLOBAL") return text;
+
+  // Normal player marks (non-GLOBAL side)
+  return [def.side, playerName, text].filter(Boolean).join(" ");
+}
+
 interface TrackedMarker {
   def: MarkerDef;
+  popupText: string;
   handle: BriefingMarkerHandle | null;
   /** Last applied position index — skip update when unchanged. */
   lastPosIndex: number;
@@ -195,8 +235,12 @@ export class MarkerManager {
    * Filters out marker types that should not be rendered
    * (matching the old frontend's creation-time filtering).
    */
-  loadMarkers(defs: MarkerDef[]): void {
+  loadMarkers(
+    defs: MarkerDef[],
+    getEntityName?: (id: number) => string | null,
+  ): void {
     this.clear();
+    const lookup = getEntityName ?? (() => null);
 
     let skipped = 0;
     for (const def of defs) {
@@ -206,7 +250,8 @@ export class MarkerManager {
         continue;
       }
 
-      this.markers.push({ def, handle: null, lastPosIndex: -1 });
+      const popupText = buildMarkerPopupText(def, lookup);
+      this.markers.push({ def, popupText, handle: null, lastPosIndex: -1 });
     }
 
     console.log(
@@ -250,7 +295,7 @@ export class MarkerManager {
             shape: tracked.def.shape,
             type: tracked.def.type,
             color: tracked.def.color,
-            text: tracked.def.text,
+            text: tracked.popupText || undefined,
             side: tracked.def.side,
             size: tracked.def.size,
             brush: tracked.def.brush,
