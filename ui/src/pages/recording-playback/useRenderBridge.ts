@@ -4,7 +4,7 @@ import { SIDE_COLORS_DARK } from "../../config/side-colors";
 import type { PlaybackEngine } from "../../playback/engine";
 import type { MarkerManager } from "../../playback/marker-manager";
 import type { MapRenderer } from "../../renderers/renderer.interface";
-import { leftPanelVisible } from "./shortcuts";
+import { leftPanelVisible, activeSide } from "./shortcuts";
 
 /**
  * Syncs engine snapshots to renderer markers, updates briefing markers
@@ -68,6 +68,11 @@ export function useRenderBridge(
         );
       }
     }
+  });
+
+  // Side filter → briefing markers
+  createEffect(() => {
+    markerManager.setSideFilter(activeSide());
   });
 
   // Frame → briefing markers

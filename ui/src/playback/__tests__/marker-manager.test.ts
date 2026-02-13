@@ -310,3 +310,121 @@ describe("MarkerManager.updateFrame keyframe skipping", () => {
     expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(2);
   });
 });
+
+// ─── MarkerManager.setSideFilter ───
+
+describe("MarkerManager.setSideFilter", () => {
+  it("only creates markers matching the active side", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    mgr.setSideFilter("WEST");
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("always shows GLOBAL markers regardless of side filter", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "GLOBAL" }),
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    mgr.setSideFilter("WEST");
+    mgr.updateFrame(0);
+    // GLOBAL + WEST = 2
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+  });
+
+  it("removes visible markers when switching to a different side", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    mgr.setSideFilter("WEST");
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Switch to EAST — WEST marker should be removed
+    mgr.setSideFilter("EAST");
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // EAST marker created on next updateFrame
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps GLOBAL markers when switching sides", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "GLOBAL" }),
+      makeDef("mil_dot", { side: "WEST" }),
+    ]);
+
+    mgr.setSideFilter("WEST");
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Switch to EAST — WEST removed, GLOBAL kept
+    mgr.setSideFilter("EAST");
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows all markers when filter is null", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+      makeDef("mil_dot", { side: "GUER" }),
+    ]);
+
+    mgr.setSideFilter(null);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(3);
+  });
+
+  it("removes non-matching markers that were created before filter was set", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    // No filter — both created
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Set filter — EAST removed immediately
+    mgr.setSideFilter("WEST");
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a no-op when setting the same side twice", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    mgr.setSideFilter("WEST");
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Same side again — no removal, no re-creation
+    mgr.setSideFilter("WEST");
+    expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
+  });
+});

@@ -160,9 +160,34 @@ interface TrackedMarker {
 export class MarkerManager {
   private markers: TrackedMarker[] = [];
   private renderer: MapRenderer;
+  private sideFilter: string | null = null;
 
   constructor(renderer: MapRenderer) {
     this.renderer = renderer;
+  }
+
+  /**
+   * Set which side's markers are visible.
+   * Markers matching `side` or "GLOBAL" are shown; others are hidden.
+   * Pass `null` to show all markers.
+   */
+  setSideFilter(side: string | null): void {
+    if (this.sideFilter === side) return;
+    this.sideFilter = side;
+
+    // Remove markers that no longer match the filter
+    for (const tracked of this.markers) {
+      if (tracked.handle && !this.matchesSideFilter(tracked.def.side)) {
+        this.renderer.removeBriefingMarker(tracked.handle);
+        tracked.handle = null;
+        tracked.lastPosIndex = -1;
+      }
+    }
+  }
+
+  private matchesSideFilter(markerSide: string): boolean {
+    if (this.sideFilter === null) return true;
+    return markerSide === this.sideFilter || markerSide === "GLOBAL";
   }
 
   /**
@@ -202,6 +227,16 @@ export class MarkerManager {
       );
 
       if (posIndex >= 0) {
+        // Skip markers that don't match the active side filter
+        if (!this.matchesSideFilter(tracked.def.side)) {
+          if (tracked.handle) {
+            this.renderer.removeBriefingMarker(tracked.handle);
+            tracked.handle = null;
+            tracked.lastPosIndex = -1;
+          }
+          continue;
+        }
+
         // Skip update if the marker is already showing this keyframe
         if (tracked.handle && posIndex === tracked.lastPosIndex) {
           continue;

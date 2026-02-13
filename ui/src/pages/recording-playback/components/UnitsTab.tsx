@@ -5,6 +5,7 @@ import type { Unit } from "../../../playback/entities/unit";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
+import { activeSide, setActiveSide } from "../shortcuts";
 import { CrosshairIcon, ChevronRightIcon } from "./Icons";
 import styles from "./SidePanel.module.css";
 
@@ -25,7 +26,6 @@ interface GroupData {
 export function UnitsTab(): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
-  const [activeSide, setActiveSide] = createSignal<Side>("WEST");
   const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
 
   const unitsForSide = (side: Side): Unit[] => {

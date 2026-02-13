@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import type { Side } from "../../data/types";
 import type { PlaybackEngine } from "../../playback/engine";
 
 // ─── UI panel visibility signals ───
@@ -7,6 +8,9 @@ export const [leftPanelVisible, setLeftPanelVisible] = createSignal(true);
 
 /** Active tab in the side panel: "units" | "events" | "stats" | "chat" */
 export const [activePanelTab, setActivePanelTab] = createSignal("units");
+
+/** Currently selected side in the units tab — drives briefing marker filtering. */
+export const [activeSide, setActiveSide] = createSignal<Side>("WEST");
 
 // ─── Shortcut handler ───
 
