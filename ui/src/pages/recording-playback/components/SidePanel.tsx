@@ -42,7 +42,8 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
           >
             <tab.Icon size={14} />
             <span class={styles.tabLabel}>{tab.label}</span>
-            {tab.id === "events" && killCount() > 0 && (
+            {/* TODO: repurpose badge for unread/new events, not total kill count */}
+            {false && tab.id === "events" && killCount() > 0 && (
               <span class={styles.tabBadge}>
                 {killCount() > 99 ? "99" : killCount()}
               </span>
