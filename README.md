@@ -129,6 +129,8 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 
 ### Environment Variables
 
+#### Server & Paths
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OCAP_LISTEN` | Server address | `0.0.0.0:5000` |
@@ -142,6 +144,11 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_FONTS` | Path to fonts | `/usr/local/ocap/fonts` |
 | `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
 | `OCAP_LOGGER` | Enable request logging | `false` |
+
+#### Customization
+
+| Variable | Description | Default |
+|----------|-------------|---------|
 | `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
 | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
 | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
@@ -149,6 +156,11 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
 | `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | |
 | `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | |
+
+#### Conversion
+
+| Variable | Description | Default |
+|----------|-------------|---------|
 | `OCAP_CONVERSION_ENABLED` | Enable automatic conversion | `false` |
 | `OCAP_CONVERSION_INTERVAL` | Conversion check interval | `5m` |
 | `OCAP_CONVERSION_BATCHSIZE` | Max recordings to convert per interval | `1` |
