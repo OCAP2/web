@@ -1,12 +1,11 @@
 import { createMemo, Switch, Match } from "solid-js";
 import type { Accessor, JSX } from "solid-js";
-import { UsersIcon, ActivityIcon, BarChartIcon, MessageSquareIcon } from "./Icons";
+import { UsersIcon, ActivityIcon, BarChartIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
 import { UnitsTab } from "./UnitsTab";
 import { EventsTab } from "./EventsTab";
 import { StatsTab } from "./StatsTab";
-import { ChatTab } from "./ChatTab";
 import styles from "./SidePanel.module.css";
 
 export interface SidePanelProps {
@@ -30,7 +29,6 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
     { id: "units", label: "Units", Icon: UsersIcon },
     { id: "events", label: "Events", Icon: ActivityIcon },
     { id: "stats", label: "Stats", Icon: BarChartIcon },
-    { id: "chat", label: "Chat", Icon: MessageSquareIcon },
   ] as const;
 
   return (
@@ -62,9 +60,6 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
         </Match>
         <Match when={props.activeTab() === "stats"}>
           <StatsTab />
-        </Match>
-        <Match when={props.activeTab() === "chat"}>
-          <ChatTab />
         </Match>
       </Switch>
     </div>
