@@ -1,7 +1,7 @@
 import { onMount, onCleanup, createSignal, createMemo } from "solid-js";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
-import { useParams, useNavigate } from "@solidjs/router";
+import { useParams, useNavigate, useLocation } from "@solidjs/router";
 import type { WorldConfig } from "../../data/types";
 import { ApiClient } from "../../data/api-client";
 import { PlaybackEngine } from "../../playback/engine";
@@ -11,6 +11,10 @@ import { LeafletRenderer } from "../../renderers/leaflet/leaflet-renderer";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { EngineProvider } from "../../hooks/useEngine";
 import { RendererProvider } from "../../hooks/useRenderer";
+import { useI18n } from "../../hooks/useLocale";
+import { OcapLogoSvg } from "../mission-selector/OcapLogoSvg";
+import { formatDuration } from "../mission-selector/helpers";
+import loadingStyles from "../LoadingTransition.module.css";
 import { MapContainer } from "./components/MapContainer";
 import { TopBar } from "./components/TopBar";
 import { SidePanel } from "./components/SidePanel";
@@ -32,9 +36,17 @@ import {
 import { loadOperation } from "./load-operation";
 import { useRenderBridge } from "./useRenderBridge";
 
+interface LocationState {
+  missionName?: string;
+  worldName?: string;
+  missionDuration?: number;
+}
+
 export function RecordingPlayback(): JSX.Element {
   const params = useParams<{ id: string; name: string }>();
   const navigate = useNavigate();
+  const location = useLocation<LocationState>();
+  const { t } = useI18n();
   const api = new ApiClient();
   const renderer: MapRenderer = new LeafletRenderer();
   const engine = new PlaybackEngine(renderer);
@@ -48,6 +60,9 @@ export function RecordingPlayback(): JSX.Element {
   const [aboutOpen, setAboutOpen] = createSignal(false);
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
   const [addonVersion, setAddonVersion] = createSignal<string | undefined>(undefined);
+  const [loading, setLoading] = createSignal(true);
+
+  const locState = () => location.state as LocationState | undefined;
 
   const mapName = createMemo(() => worldConfig()?.worldName ?? "");
   const duration = createMemo(() =>
@@ -66,6 +81,7 @@ export function RecordingPlayback(): JSX.Element {
         op = await api.getOperation(id);
       } catch {
         showHint("Operation not found");
+        setLoading(false);
         return;
       }
       try {
@@ -82,6 +98,8 @@ export function RecordingPlayback(): JSX.Element {
       } catch (err) {
         console.error("Failed to load operation:", err);
         showHint("Failed to load operation data");
+      } finally {
+        setLoading(false);
       }
     })();
   });
@@ -128,6 +146,30 @@ export function RecordingPlayback(): JSX.Element {
           addonVersion={addonVersion}
         />
         <Hint message={hintMessage} visible={hintVisible} />
+        <div
+          class={loadingStyles.loadingScreen}
+          data-testid="loading-screen"
+          style={{
+            opacity: loading() ? 1 : 0,
+            "pointer-events": loading() ? "auto" : "none",
+          }}
+        >
+          <div class={loadingStyles.loadingContent}>
+            <div class={loadingStyles.loadingLogo}>
+              <OcapLogoSvg size={56} />
+            </div>
+            <div class={loadingStyles.loadingTitle}>
+              {t("loading_mission")} {locState()?.missionName ?? ""}
+            </div>
+            <div class={loadingStyles.loadingSubtitle}>
+              {locState()?.worldName ?? ""} &middot; {formatDuration(locState()?.missionDuration ?? 0)}
+            </div>
+            <div class={loadingStyles.loadingBarTrack}>
+              <div class={loadingStyles.loadingBarFill} />
+            </div>
+            <div class={loadingStyles.loadingHint}>{t("initializing_engine")}</div>
+          </div>
+        </div>
       </RendererProvider>
     </EngineProvider>
   );
