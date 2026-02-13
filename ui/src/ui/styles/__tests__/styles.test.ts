@@ -15,19 +15,26 @@ describe("CSS style files", () => {
       expect(css.length).toBeGreaterThan(0);
     });
 
-    it("defines panel dimension custom properties", () => {
-      expect(css).toContain("--top-panel-height");
-      expect(css).toContain("--bottom-panel-height");
-      expect(css).toContain("--left-panel-width");
-      expect(css).toContain("--right-panel-width");
+    it("defines accent color custom properties", () => {
+      expect(css).toContain("--accent-blue");
+      expect(css).toContain("--accent-red");
+      expect(css).toContain("--accent-green");
+      expect(css).toContain("--accent-purple");
+      expect(css).toContain("--accent-orange");
     });
 
     it("defines base color custom properties", () => {
       expect(css).toContain("--bg-dark");
       expect(css).toContain("--bg-panel");
+      expect(css).toContain("--bg-surface");
       expect(css).toContain("--text-primary");
       expect(css).toContain("--text-muted");
       expect(css).toContain("--highlight");
+    });
+
+    it("defines font custom properties", () => {
+      expect(css).toContain("--font-mono");
+      expect(css).toContain("--font-heading");
     });
 
     it("defines bright side color custom properties", () => {

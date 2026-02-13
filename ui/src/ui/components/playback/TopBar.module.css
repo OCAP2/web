@@ -41,8 +41,8 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 800;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
-  color: #0a0f14;
+  font-family: var(--font-mono);
+  color: var(--bg-dark);
   flex-shrink: 0;
 }
 
@@ -55,8 +55,8 @@
 .missionName {
   font-size: 14px;
   font-weight: 600;
-  color: #e0e6ed;
-  font-family: var(--ms-font-heading, 'Outfit', sans-serif);
+  color: var(--text-primary);
+  font-family: var(--font-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -64,8 +64,8 @@
 
 .missionSubtitle {
   font-size: 10px;
-  color: #556677;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -95,13 +95,13 @@
 .forceAlive {
   font-size: 12px;
   font-weight: 600;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-mono);
 }
 
 .forceTotal {
   font-size: 10px;
-  color: #445566;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
 }
 
 /* ── Right section ── */
@@ -118,7 +118,7 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #8899aa;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,7 +139,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #8899aa;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,8 +170,8 @@
 
 .layerLabel {
   font-size: 10px;
-  color: #556677;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
   letter-spacing: 0.1em;
   padding: 4px 8px;
   font-weight: 600;
@@ -207,12 +207,12 @@
 }
 
 .layerCheckboxActive {
-  border: 1px solid #4A9EFF;
+  border: 1px solid var(--accent-blue);
   background: rgba(74, 158, 255, 0.2);
 }
 
 .layerCheckboxInactive {
-  border: 1px solid #445566;
+  border: 1px solid var(--text-dimmest);
   background: transparent;
 }
 
@@ -220,18 +220,18 @@
   width: 8px;
   height: 8px;
   border-radius: 2px;
-  background: #4A9EFF;
+  background: var(--accent-blue);
 }
 
 .layerItemText {
   font-size: 11px;
-  font-family: var(--ms-font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-mono);
 }
 
 .layerItemTextActive {
-  color: #c8d4e0;
+  color: var(--text-secondary);
 }
 
 .layerItemTextInactive {
-  color: #556677;
+  color: var(--text-dimmer);
 }

@@ -299,12 +299,12 @@ export function MissionSelector(): JSX.Element {
                         class={styles.mapButton}
                         style={{
                           background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
-                          color: active() ? color : "var(--ms-text-dimmer)",
+                          color: active() ? color : "var(--text-dimmer)",
                           border: `1px solid ${active() ? color + "30" : "rgba(255,255,255,0.05)"}`,
                         }}
                         onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
                       >
-                        <div class={styles.mapDot} style={{ background: active() ? color : "var(--ms-text-dimmer)" }} />
+                        <div class={styles.mapDot} style={{ background: active() ? color : "var(--text-dimmer)" }} />
                         {mapName}
                       </button>
                     );
@@ -346,7 +346,7 @@ export function MissionSelector(): JSX.Element {
               <Show when={loading()}>
                 <div data-testid="loading-indicator" style={{
                   display: "flex", "align-items": "center", "justify-content": "center",
-                  padding: "40px", color: "var(--ms-text-dim)", "font-family": "var(--ms-font-mono)",
+                  padding: "40px", color: "var(--text-dim)", "font-family": "var(--font-mono)",
                   "font-size": "12px",
                 }}>
                   {t("loading")}

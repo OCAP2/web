@@ -19,7 +19,7 @@
   width: var(--pb-panel-width, 370px);
   display: flex;
   flex-direction: column;
-  background: rgba(13, 21, 32, 0.88);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 12px;
@@ -47,22 +47,22 @@
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #556677;
+  color: var(--text-dimmer);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   transition: all 0.2s;
   position: relative;
 }
 
 .tab:hover {
-  color: #8899aa;
+  color: var(--text-muted);
 }
 
 .tabActive {
-  border-bottom-color: #4A9EFF;
-  color: #e0e6ed;
+  border-bottom-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
 .tabLabel {
@@ -76,7 +76,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #FF4A4A;
+  background: var(--accent-red);
   color: #fff;
   font-size: 8px;
   font-weight: 700;
@@ -105,7 +105,7 @@
   background: transparent;
   cursor: pointer;
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.05em;
   transition: all 0.2s;
@@ -156,7 +156,7 @@
 }
 
 .groupChevron {
-  color: #556677;
+  color: var(--text-dimmer);
   transition: transform 0.2s;
   display: flex;
 }
@@ -166,22 +166,22 @@
 }
 
 .groupName {
-  color: #8899aa;
+  color: var(--text-muted);
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 
 .groupCount {
   margin-left: auto;
-  color: #445566;
+  color: var(--text-dimmest);
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .groupAlive {
-  color: #2DD4A0;
+  color: var(--accent-green);
 }
 
 .groupAliveSlash {
@@ -234,23 +234,23 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .unitNameAlive {
-  color: #c8d4e0;
+  color: var(--text-secondary);
 }
 
 .unitNameDead {
-  color: #556677;
+  color: var(--text-dimmer);
 }
 
 .unitAiBadge {
   font-size: 9px;
-  color: #445566;
+  color: var(--text-dimmest);
   background: rgba(255, 255, 255, 0.04);
   padding: 1px 4px;
   border-radius: 3px;
@@ -258,8 +258,8 @@
 
 .unitRole {
   font-size: 9px;
-  color: #445566;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
 }
 
 .unitKills {
@@ -268,8 +268,8 @@
   align-items: center;
   gap: 3px;
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #FF4A4A;
+  font-family: var(--font-mono);
+  color: var(--accent-red);
   background: rgba(255, 74, 74, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
@@ -292,14 +292,14 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 6px 10px;
-  color: #c8d4e0;
+  color: var(--text-secondary);
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   outline: none;
 }
 
 .filterInput::placeholder {
-  color: #445566;
+  color: var(--text-dimmest);
 }
 
 .filterInput:focus {
@@ -312,7 +312,7 @@
   border: none;
   cursor: pointer;
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   transition: all 0.15s;
 }
 
@@ -322,7 +322,7 @@
 
 .filterToggleInactive {
   background: rgba(255, 255, 255, 0.04);
-  color: #556677;
+  color: var(--text-dimmer);
 }
 
 /* ── Event rows ── */
@@ -364,12 +364,12 @@
 
 .eventNames {
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   text-align: left;
 }
 
 .eventArrow {
-  color: #556677;
+  color: var(--text-dimmer);
 }
 
 .eventMeta {
@@ -381,8 +381,8 @@
 
 .eventTime {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #445566;
+  font-family: var(--font-mono);
+  color: var(--text-dimmest);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -390,14 +390,14 @@
 
 .eventDistance {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #556677;
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
 }
 
 .eventWeapon {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #445566;
+  font-family: var(--font-mono);
+  color: var(--text-dimmest);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -406,8 +406,8 @@
 
 .eventMessage {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #8899aa;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   text-align: left;
 }
 
@@ -422,8 +422,8 @@
 
 .statsLabel {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #556677;
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
   letter-spacing: 0.1em;
   font-weight: 600;
   text-transform: uppercase;
@@ -443,7 +443,7 @@
 .forceCardLabel {
   font-size: 10px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   margin-bottom: 8px;
 }
 
@@ -475,13 +475,13 @@
 .forceStatNum {
   font-size: 14px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .forceStatLabel {
   font-size: 9px;
-  color: #556677;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
 }
 
 /* ── Leaderboard ── */
@@ -505,16 +505,16 @@
 
 .leaderboardRank {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #445566;
+  font-family: var(--font-mono);
+  color: var(--text-dimmest);
   width: 16px;
   text-align: right;
 }
 
 .leaderboardName {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #c8d4e0;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -523,16 +523,16 @@
 
 .leaderboardKills {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #FF4A4A;
+  font-family: var(--font-mono);
+  color: var(--accent-red);
   min-width: 20px;
   text-align: right;
 }
 
 .leaderboardDeaths {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #FFB84A;
+  font-family: var(--font-mono);
+  color: var(--accent-orange);
   min-width: 20px;
   text-align: right;
 }
@@ -560,8 +560,8 @@
 
 .placeholder {
   font-size: 12px;
-  color: #556677;
+  color: var(--text-dimmer);
   padding: 32px;
   text-align: center;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }

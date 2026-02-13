@@ -25,7 +25,7 @@ export function TagBadge(props: { tag: string; clickable?: boolean; active?: boo
     <button
       class={`${styles.tagBadge} ${props.clickable ? styles.tagBadgeClickable : ""}`}
       style={{
-        color: isActive() ? tc().color : "var(--ms-text-dimmer)",
+        color: isActive() ? tc().color : "var(--text-dimmer)",
         background: isActive() ? tc().bg : "rgba(255,255,255,0.02)",
         "border-color": isActive() ? tc().border : "rgba(255,255,255,0.05)",
       }}

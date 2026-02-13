@@ -37,12 +37,12 @@ function eventIcon(event: GameEvent): JSX.Element {
 
 function eventColor(event: GameEvent): string {
   if (event instanceof HitKilledEvent) {
-    return event.type === "killed" ? "#FF4A4A" : "#FFB84A";
+    return event.type === "killed" ? "var(--accent-red)" : "var(--accent-orange)";
   }
   if (event instanceof ConnectEvent) {
-    return event.type === "connected" ? "#2DD4A0" : "#888";
+    return event.type === "connected" ? "var(--accent-green)" : "#888";
   }
-  if (event instanceof EndMissionEvent) return "#A78BFA";
+  if (event instanceof EndMissionEvent) return "var(--accent-purple)";
   return "#888";
 }
 
@@ -123,7 +123,7 @@ export function EventsTab(): JSX.Element {
           }}
           style={showHits() ? {
             background: "rgba(255,74,74,0.15)",
-            color: "#FF4A4A",
+            color: "var(--accent-red)",
           } : undefined}
           onClick={() => setShowHits(!showHits())}
         >
@@ -136,7 +136,7 @@ export function EventsTab(): JSX.Element {
           }}
           style={showConnects() ? {
             background: "rgba(45,212,160,0.15)",
-            color: "#2DD4A0",
+            color: "var(--accent-green)",
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
         >
@@ -211,7 +211,7 @@ export function EventsTab(): JSX.Element {
                             {event.side}
                           </span>
                           {" \u2014 "}
-                          <span style={{ color: "#c8d4e0" }}>{event.message}</span>
+                          <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                         </span>
                         <span class={styles.eventMeta}>
                           <span class={styles.eventTime}>

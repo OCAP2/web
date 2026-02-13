@@ -118,7 +118,7 @@ export function UnitsTab(): JSX.Element {
                 classList={{ [styles.sideTabActive]: isActive() }}
                 style={{
                   background: isActive() ? SIDE_BG_COLORS[side] : "transparent",
-                  color: isActive() ? SIDE_COLORS_UI[side] : "#556677",
+                  color: isActive() ? SIDE_COLORS_UI[side] : "var(--text-dimmer)",
                 }}
                 onClick={() => setActiveSide(side)}
               >

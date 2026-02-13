@@ -106,18 +106,18 @@ export function StatsTab(): JSX.Element {
                           class={styles.forceStatNum}
                           style={{ color: SIDE_COLORS_UI[stat.side] }}
                         >
-                          {stat.alive}<span style={{ color: "#445566", "font-size": "10px" }}>/{stat.total}</span>
+                          {stat.alive}<span style={{ color: "var(--text-dimmest)", "font-size": "10px" }}>/{stat.total}</span>
                         </div>
                         <div class={styles.forceStatLabel}>Alive</div>
                       </div>
                       <div>
-                        <div class={styles.forceStatNum} style={{ color: "#FF4A4A" }}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--accent-red)" }}>
                           {stat.kills}
                         </div>
                         <div class={styles.forceStatLabel}>Kills</div>
                       </div>
                       <div>
-                        <div class={styles.forceStatNum} style={{ color: "#FFB84A" }}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--accent-orange)" }}>
                           {stat.deaths}
                         </div>
                         <div class={styles.forceStatLabel}>Deaths</div>
@@ -140,13 +140,13 @@ export function StatsTab(): JSX.Element {
                 style={{ "margin-bottom": "4px" }}
               >
                 <span class={styles.leaderboardRank}>#</span>
-                <span class={styles.leaderboardName} style={{ color: "#556677", "font-size": "9px" }}>
+                <span class={styles.leaderboardName} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   Name
                 </span>
-                <span class={styles.leaderboardKills} style={{ color: "#556677", "font-size": "9px" }}>
+                <span class={styles.leaderboardKills} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   K
                 </span>
-                <span class={styles.leaderboardDeaths} style={{ color: "#556677", "font-size": "9px" }}>
+                <span class={styles.leaderboardDeaths} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   D
                 </span>
               </div>

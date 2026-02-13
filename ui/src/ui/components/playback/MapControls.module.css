@@ -16,13 +16,13 @@
   background: rgba(13, 21, 32, 0.85);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #8899aa;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-weight: 300;
 }
 
@@ -50,20 +50,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .styleBtnDefault {
   background: rgba(13, 21, 32, 0.85);
-  color: #556677;
+  color: var(--text-dimmer);
 }
 
 .styleBtnActive {
   background: rgba(74, 158, 255, 0.15);
   border-color: rgba(74, 158, 255, 0.3);
-  color: #4A9EFF;
+  color: var(--accent-blue);
 }
 
 .styleBtn:hover {
@@ -111,11 +111,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   padding: 1px 6px;
-  font: 9px "JetBrains Mono", monospace;
-  color: #667788;
+  font: 9px var(--font-mono);
+  color: var(--text-dim);
 }
 
 .hintAction {
-  font: 9px "JetBrains Mono", monospace;
-  color: #445566;
+  font: 9px var(--font-mono);
+  color: var(--text-dimmest);
 }

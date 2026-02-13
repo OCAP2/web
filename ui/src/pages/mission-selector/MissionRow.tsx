@@ -65,7 +65,7 @@ export function MissionRow(props: {
       <Show when={props.showKills}>
         <div class={styles.rowKills}>
           <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
-          <span class={styles.rowKillsValue} style={{ color: (props.op.killCount ?? 0) > 0 ? "var(--ms-text-muted)" : "var(--ms-text-dimmer)" }}>
+          <span class={styles.rowKillsValue} style={{ color: (props.op.killCount ?? 0) > 0 ? "var(--text-muted)" : "var(--text-dimmer)" }}>
             {(props.op.killCount ?? 0) > 0 ? props.op.killCount : "\u2014"}
           </span>
         </div>
