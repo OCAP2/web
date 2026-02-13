@@ -203,6 +203,8 @@ export class ProtobufDecoder implements DecoderStrategy {
       times: pb.times.map((t) => ({
         frameNum: t.frameNum,
         systemTimeUtc: t.systemTimeUtc,
+        date: t.date || undefined,
+        timeMultiplier: t.timeMultiplier || undefined,
       })),
       extensionVersion: pb.extensionVersion || undefined,
       addonVersion: pb.addonVersion || undefined,

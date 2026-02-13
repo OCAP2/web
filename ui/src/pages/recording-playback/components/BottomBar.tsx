@@ -3,7 +3,8 @@ import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
 import { useI18n } from "../../../hooks/useLocale";
-import { formatElapsedTime } from "../../../playback/time";
+import { formatTime } from "../../../playback/time";
+import type { TimeMode } from "../../../playback/time";
 import {
   MapIcon,
   SkipBackIcon,
@@ -29,33 +30,62 @@ const NAME_MODE_KEYS: Record<NameMode, string> = {
   none: "names_none",
 };
 
+const TIME_MODES: TimeMode[] = ["elapsed", "mission", "system"];
+const TIME_MODE_KEYS: Record<TimeMode, string> = {
+  elapsed: "time_elapsed",
+  mission: "time_mission",
+  system: "time_system",
+};
+
 export function BottomBar(props: BottomBarProps): JSX.Element {
   const engine = useEngine();
   const renderer = useRenderer();
   const { t } = useI18n();
 
+  // ── Time display ──
+  const [timeMode, setTimeMode] = createSignal<TimeMode>("elapsed");
+
   const currentTime = () =>
-    formatElapsedTime(engine.currentFrame(), engine.captureDelayMs());
+    formatTime(engine.currentFrame(), timeMode(), engine.timeConfig);
 
   const totalTime = () =>
-    formatElapsedTime(engine.endFrame(), engine.captureDelayMs());
+    formatTime(engine.endFrame(), timeMode(), engine.timeConfig);
+
+  const isTimeModeAvailable = (mode: TimeMode): boolean => {
+    if (mode === "elapsed") return true;
+    if (mode === "system") {
+      const times = engine.timeConfig.times;
+      return !!times && times.length > 0;
+    }
+    if (mode === "mission") {
+      return !!engine.timeConfig.missionDate;
+    }
+    return false;
+  };
+
+  // ── Time mode dropdown ──
+  const [timeModeOpen, setTimeModeOpen] = createSignal(false);
+  let timeModeRef: HTMLDivElement | undefined;
 
   // ── Names dropdown ──
   const [namesOpen, setNamesOpen] = createSignal(false);
   const [nameMode, setNameMode] = createSignal<NameMode>("all");
   let namesRef: HTMLDivElement | undefined;
 
-  const handleNamesClickOutside = (e: MouseEvent) => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (timeModeRef && !timeModeRef.contains(e.target as Node)) {
+      setTimeModeOpen(false);
+    }
     if (namesRef && !namesRef.contains(e.target as Node)) {
       setNamesOpen(false);
     }
   };
 
   onMount(() => {
-    document.addEventListener("pointerdown", handleNamesClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
   });
   onCleanup(() => {
-    document.removeEventListener("pointerdown", handleNamesClickOutside);
+    document.removeEventListener("pointerdown", handleClickOutside);
   });
 
   return (
@@ -122,10 +152,40 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
         <div class={styles.controlsRight}>
           <SpeedSelector />
 
-          <button class={`${styles.speedBtn} ${styles.dropdownWide}`} disabled style={{ opacity: 0.5 }}>
-            {t("elapsed")}
-            <ChevronDownIcon />
-          </button>
+          <div ref={timeModeRef} style={{ position: "relative" }}>
+            <button
+              class={`${styles.speedBtn} ${styles.dropdownWide}`}
+              onClick={() => setTimeModeOpen((v) => !v)}
+            >
+              {t(TIME_MODE_KEYS[timeMode()])}
+              <ChevronDownIcon />
+            </button>
+            <Show when={timeModeOpen()}>
+              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
+                <For each={TIME_MODES}>
+                  {(mode) => {
+                    const available = () => isTimeModeAvailable(mode);
+                    return (
+                      <button
+                        class={styles.speedOption}
+                        classList={{
+                          [styles.speedOptionActive]: timeMode() === mode,
+                          [styles.speedOptionDisabled]: !available(),
+                        }}
+                        disabled={!available()}
+                        onClick={() => {
+                          setTimeMode(mode);
+                          setTimeModeOpen(false);
+                        }}
+                      >
+                        {t(TIME_MODE_KEYS[mode])}
+                      </button>
+                    );
+                  }}
+                </For>
+              </div>
+            </Show>
+          </div>
 
           <div ref={namesRef} style={{ position: "relative" }}>
             <button

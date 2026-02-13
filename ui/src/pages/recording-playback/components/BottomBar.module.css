@@ -258,6 +258,11 @@
   font-weight: 700;
 }
 
+.speedOptionDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Wider variant for text-heavy dropdowns (names, time mode) */
 .dropdownWide {
   min-width: 100px;

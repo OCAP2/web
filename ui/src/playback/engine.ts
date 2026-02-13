@@ -1,6 +1,7 @@
 import { createSignal, type Accessor } from "solid-js";
 
 import type { Manifest, EntityDef, EventDef } from "../data/types";
+import type { TimeConfig } from "./time";
 import type { ChunkManager } from "../data/chunk-manager";
 import type { MapRenderer } from "../renderers/renderer.interface";
 import type { EntitySnapshot } from "./types";
@@ -181,6 +182,18 @@ export class PlaybackEngine {
   }
   get captureDelayMs(): Accessor<number> {
     return this._captureDelayMs;
+  }
+  get timeConfig(): TimeConfig {
+    const times = this.manifest?.times;
+    // Extract mission date and time multiplier from the first time sample
+    // (matches the old system's detectTimes logic)
+    const first = times?.[0];
+    return {
+      captureDelayMs: this._captureDelayMs(),
+      times,
+      missionDate: first?.date,
+      missionTimeMultiplier: first?.timeMultiplier,
+    };
   }
 
   // ─── Commands ───
