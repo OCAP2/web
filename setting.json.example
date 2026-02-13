@@ -1,12 +1,15 @@
 {
+	"listen": "127.0.0.1:5000",
+	"prefixURL": "",
+	"secret": "change-me",
+	"db": "data.db",
+	"data": "data",
+	"static": "",
+	"markers": "assets/markers",
 	"ammo": "assets/ammo",
-	"conversion": {
-		"batchSize": 1,
-		"chunkSize": 300,
-		"enabled": false,
-		"interval": "5m",
-		"retryFailed": false
-	},
+	"fonts": "assets/fonts",
+	"maps": "maps",
+	"logger": false,
 	"customize": {
 		"disableKillCount": false,
 		"enabled": false,
@@ -16,14 +19,11 @@
 		"websiteLogoSize": "32px",
 		"websiteURL": ""
 	},
-	"data": "data",
-	"db": "data.db",
-	"fonts": "assets/fonts",
-	"listen": "127.0.0.1:5000",
-	"logger": false,
-	"maps": "maps",
-	"markers": "assets/markers",
-	"prefixURL": "",
-	"secret": "change-me",
-	"static": ""
+	"conversion": {
+		"batchSize": 1,
+		"chunkSize": 300,
+		"enabled": false,
+		"interval": "5m",
+		"retryFailed": false
+	}
 }
