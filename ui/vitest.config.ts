@@ -10,5 +10,16 @@ export default defineConfig({
     transformMode: {
       web: [/\.[jt]sx?$/],
     },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary", "json"],
+      reportOnFailure: true,
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/__tests__/**",
+        "src/**/*.test.{ts,tsx}",
+        "src/test-setup.ts",
+      ],
+    },
   },
 });
