@@ -1,24 +1,36 @@
-import { createSignal, createMemo, For } from "solid-js";
-import type { JSX, Accessor } from "solid-js";
-import type { WorldConfig } from "../../../data/types";
+import { createSignal, createMemo, createEffect, Show, For } from "solid-js";
+import type { JSX } from "solid-js";
 import { useRenderer } from "../../hooks/useRenderer";
 import styles from "./MapControls.module.css";
-
-export interface MapControlsProps {
-  worldConfig: Accessor<WorldConfig | undefined>;
-}
-
-interface StyleOption {
-  name: string;
-  available: boolean;
-}
 
 /**
  * Map zoom controls (right-center) and style switcher (bottom-right).
  */
-export function MapControls(props: MapControlsProps): JSX.Element {
+export function MapControls(): JSX.Element {
   const renderer = useRenderer();
-  const [activeStyle, setActiveStyle] = createSignal("Topo");
+  const [activeStyle, setActiveStyle] = createSignal(0);
+  const [hoveredPreview, setHoveredPreview] = createSignal<string | null>(null);
+
+  // Poll styles from renderer (they populate asynchronously after probing)
+  const [styleList, setStyleList] = createSignal(renderer.getMapStyles());
+  createEffect(() => {
+    // Re-read styles periodically until all previews are loaded
+    const id = setInterval(() => {
+      const current = renderer.getMapStyles();
+      setStyleList([...current]);
+      // Stop polling once all available styles have previews (or after 15s)
+      const allLoaded = current
+        .filter((s) => s.available)
+        .every((s) => s.previewUrl);
+      if (allLoaded && current.length > 0) clearInterval(id);
+    }, 500);
+    setTimeout(() => clearInterval(id), 15_000);
+  });
+
+  // Sync active index from renderer
+  createEffect(() => {
+    setActiveStyle(renderer.getActiveStyleIndex());
+  });
 
   const handleZoomIn = () => {
     const zoom = renderer.getZoom();
@@ -30,15 +42,16 @@ export function MapControls(props: MapControlsProps): JSX.Element {
     renderer.setView(renderer.getCenter(), zoom - 1);
   };
 
-  const styleOptions = createMemo((): StyleOption[] => {
-    const wc = props.worldConfig();
-    return [
-      { name: "Topo", available: wc?.hasTopo ?? false },
-      { name: "Dark", available: wc?.hasTopoDark ?? false },
-      { name: "Relief", available: wc?.hasTopoRelief ?? false },
-      { name: "Sat", available: wc?.hasColorRelief ?? false },
-    ];
-  });
+  const handleStyleClick = (index: number) => {
+    renderer.setMapStyle(index);
+    setActiveStyle(index);
+  };
+
+  const availableStyles = createMemo(() =>
+    styleList()
+      .map((s, i) => ({ ...s, index: i }))
+      .filter((s) => s.available),
+  );
 
   return (
     <>
@@ -54,24 +67,36 @@ export function MapControls(props: MapControlsProps): JSX.Element {
           {"\u2212"}
         </button>
       </div>
-      <div class={styles.styleSwitcher}>
-        <For each={styleOptions()}>
-          {(opt) => (
-            <button
-              class={`${styles.styleBtn} ${
-                activeStyle() === opt.name
-                  ? styles.styleBtnActive
-                  : styles.styleBtnDefault
-              }`}
-              onClick={() => setActiveStyle(opt.name)}
-              disabled={!opt.available}
-              title={opt.name}
-            >
-              {opt.name}
-            </button>
-          )}
-        </For>
-      </div>
+      <Show when={availableStyles().length > 1}>
+        <div class={styles.styleSwitcher}>
+          <For each={availableStyles()}>
+            {(opt) => (
+              <button
+                class={`${styles.styleBtn} ${
+                  activeStyle() === opt.index
+                    ? styles.styleBtnActive
+                    : styles.styleBtnDefault
+                }`}
+                onClick={() => handleStyleClick(opt.index)}
+                title={opt.label}
+                onMouseEnter={() => setHoveredPreview(opt.previewUrl ?? null)}
+                onMouseLeave={() => setHoveredPreview(null)}
+              >
+                {opt.label}
+              </button>
+            )}
+          </For>
+        </div>
+        <Show when={hoveredPreview()}>
+          <div class={styles.previewTooltip}>
+            <img
+              class={styles.previewImage}
+              src={hoveredPreview()!}
+              alt="Style preview"
+            />
+          </div>
+        </Show>
+      </Show>
     </>
   );
 }

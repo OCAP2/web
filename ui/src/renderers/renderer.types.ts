@@ -88,6 +88,12 @@ export type RenderLayer =
   | "mapIcons"
   | "buildings3D";
 
+export interface MapStyleInfo {
+  label: string;
+  available: boolean;
+  previewUrl?: string;
+}
+
 export type RendererEvent = "zoom" | "dragstart" | "click";
 
 export interface RendererControls {

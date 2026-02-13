@@ -216,7 +216,7 @@ export function RecordingPlayback(): JSX.Element {
           panelOpen={leftPanelVisible}
           onTogglePanel={() => setLeftPanelVisible((v) => !v)}
         />
-        <MapControls worldConfig={worldConfig} />
+        <MapControls />
         <KeyboardHints />
         <CustomizeLogo />
         <CounterDisplay />

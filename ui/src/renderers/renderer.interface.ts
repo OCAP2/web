@@ -12,6 +12,7 @@ import type {
   PulseHandle,
   PulseOpts,
   RenderLayer,
+  MapStyleInfo,
   RendererEvent,
   RendererControls,
 } from "./renderer.types";
@@ -50,6 +51,11 @@ export interface MapRenderer {
 
   // Layer visibility
   setLayerVisible(layer: RenderLayer, visible: boolean): void;
+
+  // Map styles
+  getMapStyles(): MapStyleInfo[];
+  getActiveStyleIndex(): number;
+  setMapStyle(index: number): void;
 
   // Settings
   setSmoothingEnabled(enabled: boolean): void;

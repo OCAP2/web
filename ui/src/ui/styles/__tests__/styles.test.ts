@@ -110,16 +110,8 @@ describe("CSS style files", () => {
       expect(css).toContain(".leaflet-div-icon");
     });
 
-    it("contains basemap switcher styles", () => {
-      expect(css).toContain(".basemaps");
-      expect(css).toContain(".basemaps.closed .basemap");
-      expect(css).toContain(".basemap.active img");
-    });
-
-    it("contains maplibre style switcher styles", () => {
-      expect(css).toContain(".maplibre-styles");
-      expect(css).toContain(".maplibre-styles.closed .maplibre-style-item");
-      expect(css).toContain(".maplibre-style-item.active img");
+    it("contains scale ruler dark theme", () => {
+      expect(css).toContain(".leaflet-control-scale-line");
     });
   });
 
@@ -138,13 +130,13 @@ describe("CSS style files", () => {
 
   describe("CSS Modules", () => {
     const moduleFiles = [
-      "TopPanel.module.css",
       "MissionModal.module.css",
       "Hint.module.css",
       "CounterDisplay.module.css",
-      "LeftPanel.module.css",
-      "RightPanel.module.css",
-      "BottomPanel.module.css",
+      "playback/TopBar.module.css",
+      "playback/BottomBar.module.css",
+      "playback/SidePanel.module.css",
+      "playback/MapControls.module.css",
     ];
 
     for (const file of moduleFiles) {
@@ -155,50 +147,6 @@ describe("CSS style files", () => {
         expect(content.length).toBeGreaterThan(0);
       });
     }
-
-    it("BottomPanel.module.css uses custom properties", () => {
-      const css = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
-      expect(css).toContain("var(--bottom-panel-height)");
-      expect(css).toContain("var(--bg-panel-overlay)");
-      expect(css).toContain("var(--event-timeline-bg)");
-    });
-
-    it("BottomPanel.module.css contains toggle active/inactive rules", () => {
-      const css = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
-      expect(css).toContain(":global(.active)");
-      expect(css).toContain(":global(.inactive)");
-    });
-
-    it("LeftPanel.module.css uses custom properties", () => {
-      const css = readFileSync(resolve(componentsDir, "LeftPanel.module.css"), "utf-8");
-      expect(css).toContain("var(--top-panel-height)");
-      expect(css).toContain("var(--left-panel-width)");
-      expect(css).toContain("var(--bg-panel)");
-    });
-
-    it("RightPanel.module.css uses custom properties", () => {
-      const css = readFileSync(resolve(componentsDir, "RightPanel.module.css"), "utf-8");
-      expect(css).toContain("var(--top-panel-height)");
-      expect(css).toContain("var(--right-panel-width)");
-      expect(css).toContain("var(--bg-panel)");
-    });
-
-    it("TopPanel.module.css uses custom properties", () => {
-      const css = readFileSync(resolve(componentsDir, "TopPanel.module.css"), "utf-8");
-      expect(css).toContain("var(--top-panel-height)");
-      expect(css).toContain("var(--bg-dark)");
-    });
-
-    it("module files contain responsive breakpoints", () => {
-      const leftCss = readFileSync(resolve(componentsDir, "LeftPanel.module.css"), "utf-8");
-      const rightCss = readFileSync(resolve(componentsDir, "RightPanel.module.css"), "utf-8");
-      const bottomCss = readFileSync(resolve(componentsDir, "BottomPanel.module.css"), "utf-8");
-      const topCss = readFileSync(resolve(componentsDir, "TopPanel.module.css"), "utf-8");
-      expect(leftCss).toContain("@media");
-      expect(rightCss).toContain("@media");
-      expect(bottomCss).toContain("@media");
-      expect(topCss).toContain("@media");
-    });
   });
 
   describe("entities.css", () => {

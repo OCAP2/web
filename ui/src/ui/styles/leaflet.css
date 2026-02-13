@@ -54,51 +54,6 @@
   text-align: center;
 }
 
-/* ==========================================================================
-   Basemap & MapLibre Style Switcher
-   ========================================================================== */
-
-.basemaps,
-.maplibre-styles {
-  padding: 4px;
-}
-
-.basemaps.closed .basemap {
-  display: none;
-}
-.basemaps.closed .basemap.alt {
-  display: inline-block;
-}
-
-.maplibre-styles.closed .maplibre-style-item {
-  display: none;
-}
-.maplibre-styles.closed .maplibre-style-item.alt {
-  display: inline-block;
-}
-
-.basemap,
-.maplibre-style-item {
-  display: inline-block;
-  cursor: pointer;
-}
-
-.basemap img,
-.maplibre-style-item img {
-  width: 64px;
-  border: 2px solid #fff;
-  margin: 0 2px;
-  border-radius: 40px;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
-}
-
-.basemap.active img,
-.maplibre-style-item.active img {
-  border-color: orange;
-  box-shadow: 2px 2px 4px #000;
-}
-
-
 /* Scale ruler dark theme */
 .leaflet-control-scale-line {
   background: var(--bg-modal);
