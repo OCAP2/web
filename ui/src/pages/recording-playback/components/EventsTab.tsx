@@ -11,7 +11,7 @@ import type { GameEvent } from "../../../playback/events/game-event";
 import { SIDE_COLORS_UI } from "../../../config/side-colors";
 import type { Side } from "../../../data/types";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, ZapIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon } from "./Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon } from "./Icons";
 import styles from "./SidePanel.module.css";
 
 function sideColor(side?: string): string {
@@ -28,7 +28,7 @@ function eventIcon(event: GameEvent): JSX.Element {
   if (event instanceof HitKilledEvent) {
     return event.type === "killed"
       ? <SkullIcon size={16} />
-      : <ZapIcon size={16} />;
+      : <BulletIcon size={16} />;
   }
   if (event instanceof ConnectEvent) return <LinkIcon size={16} />;
   if (event instanceof EndMissionEvent) return <TargetIcon size={16} />;
@@ -49,7 +49,7 @@ function eventColor(event: GameEvent): string {
 export function EventsTab(): JSX.Element {
   const engine = useEngine();
   const [filterText, setFilterText] = createSignal("");
-  const [showHits, setShowHits] = createSignal(true);
+  const [showHits, setShowHits] = createSignal(false);
   const [showConnects, setShowConnects] = createSignal(false);
 
   const filteredEvents = createMemo(() => {
@@ -97,7 +97,7 @@ export function EventsTab(): JSX.Element {
   const handleEventClick = (event: GameEvent) => {
     engine.seekTo(event.frameNum);
     if (event instanceof HitKilledEvent) {
-      engine.followEntity(event.victimId);
+      engine.panToEntity(event.victimId);
     }
   };
 
@@ -168,14 +168,23 @@ export function EventsTab(): JSX.Element {
                           <span style={{ color: sideColor(event.victimSide) }}>
                             {event.victimName ?? "Unknown"}
                           </span>
-                          {" "}
-                          <span class={styles.eventArrow}>
-                            {"\u2190"}
-                          </span>
-                          {" "}
-                          <span style={{ color: sideColor(event.causerSide) }}>
-                            {event.causerName ?? "Unknown"}
-                          </span>
+                          {event.victimId === event.causedById ? (
+                            <>
+                              {" "}
+                              <span class={styles.eventArrow}>(suicide)</span>
+                            </>
+                          ) : (
+                            <>
+                              {" "}
+                              <span class={styles.eventArrow}>
+                                {"\u2190"}
+                              </span>
+                              {" "}
+                              <span style={{ color: sideColor(event.causerSide) }}>
+                                {event.causerName ?? "Unknown"}
+                              </span>
+                            </>
+                          )}
                         </span>
                         <span class={styles.eventMeta}>
                           <span class={styles.eventTime}>

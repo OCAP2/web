@@ -236,8 +236,17 @@ export class PlaybackEngine {
     }
   }
 
+  /** Pan the camera to an entity's current position without following it. */
+  panToEntity(id: number): void {
+    const snap = this._entitySnapshots().get(id);
+    if (snap) {
+      this.renderer.setView(snap.position);
+    }
+  }
+
   followEntity(id: number): void {
     this._setFollowTarget(id);
+    this.panToEntity(id);
   }
 
   unfollowEntity(): void {

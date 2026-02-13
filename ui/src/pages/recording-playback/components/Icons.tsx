@@ -96,6 +96,14 @@ export const ZapIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const BulletIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 16 16" fill="currentColor" width={s(p.size) - 2} height={s(p.size) - 2}>
+    {/* Horizontal bullet: rounded tip on right, flat casing on left */}
+    <rect x="1" y="5.5" width="7" height="5" rx=".5" />
+    <path d="M8 5.5h1.5c2.5 0 5.5 2.5 5.5 2.5s-3 2.5-5.5 2.5H8V5.5z" />
+  </svg>
+);
+
 export const LinkIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size) - 4} height={s(p.size) - 4}>
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
