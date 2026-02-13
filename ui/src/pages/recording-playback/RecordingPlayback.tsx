@@ -22,6 +22,7 @@ import { BottomBar } from "./components/BottomBar";
 import { MapControls } from "./components/MapControls";
 import { AboutModal } from "./components/AboutModal";
 import { CounterDisplay } from "./components/CounterDisplay";
+import { FollowIndicator } from "./components/FollowIndicator";
 import { CustomizeLogo } from "./components/CustomizeLogo";
 import { Hint, showHint, hintMessage, hintVisible } from "./components/Hint";
 import {
@@ -143,6 +144,7 @@ export function RecordingPlayback(): JSX.Element {
           extensionVersion={extensionVersion}
           addonVersion={addonVersion}
         />
+        <FollowIndicator />
         <Hint message={hintMessage} visible={hintVisible} />
         <div
           class={loadingStyles.loadingScreen}

@@ -175,7 +175,11 @@ export function UnitsTab(): JSX.Element {
                             [styles.unitRowSelected]: followed(),
                             [styles.unitRowDead]: !alive(),
                           }}
-                          onClick={() => engine.followEntity(unit.id)}
+                          onClick={() =>
+                            engine.followTarget() === unit.id
+                              ? engine.unfollowEntity()
+                              : engine.followEntity(unit.id)
+                          }
                         >
                           <span
                             class={styles.unitIcon}

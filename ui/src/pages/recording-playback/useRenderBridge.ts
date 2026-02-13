@@ -76,6 +76,11 @@ export function useRenderBridge(
     markerManager.updateFrame(frame);
   });
 
+  // Auto-unfollow on map drag
+  renderer.on("dragstart", () => {
+    engine.unfollowEntity();
+  });
+
   // Side panel visibility → CSS custom property
   createEffect(() => {
     const offset = leftPanelVisible()
