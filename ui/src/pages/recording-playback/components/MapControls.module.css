@@ -57,7 +57,7 @@
 
 .styleBtnDefault {
   background: rgba(13, 21, 32, 0.85);
-  color: var(--text-dimmer);
+  color: var(--text-secondary);
 }
 
 .styleBtnActive {
