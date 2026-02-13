@@ -131,13 +131,28 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `OCAP_LISTEN` | Server address | `0.0.0.0:5000` |
+| `OCAP_PREFIXURL` | URL prefix for all routes | |
 | `OCAP_SECRET` | Secret for authorizing record uploads | *required* |
+| `OCAP_DB` | Path to SQLite database | `/var/lib/ocap/db/data.db` |
+| `OCAP_DATA` | Path to recording storage | `/var/lib/ocap/data` |
+| `OCAP_MAPS` | Path to map tiles | `/var/lib/ocap/maps` |
+| `OCAP_MARKERS` | Path to marker icons | `/usr/local/ocap/markers` |
+| `OCAP_AMMO` | Path to ammo icons | `/usr/local/ocap/ammo` |
+| `OCAP_FONTS` | Path to fonts | `/usr/local/ocap/fonts` |
+| `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
+| `OCAP_LOGGER` | Enable request logging | `false` |
 | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
 | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
 | `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
-| `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
+| `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
+| `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | |
+| `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | |
 | `OCAP_CONVERSION_ENABLED` | Enable automatic conversion | `false` |
 | `OCAP_CONVERSION_INTERVAL` | Conversion check interval | `5m` |
+| `OCAP_CONVERSION_BATCHSIZE` | Max recordings to convert per interval | `1` |
+| `OCAP_CONVERSION_CHUNKSIZE` | Frames per chunk | `300` |
+| `OCAP_CONVERSION_RETRYFAILED` | Retry previously failed conversions | `false` |
 
 ### Volumes
 
