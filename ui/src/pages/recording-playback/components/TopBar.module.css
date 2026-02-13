@@ -139,9 +139,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(13, 21, 32, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-muted);
   display: flex;
@@ -161,7 +159,7 @@
   top: 100%;
   right: 0;
   margin-top: 6px;
-  background: rgba(13, 21, 32, 0.95);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -238,4 +236,31 @@
 
 .layerItemTextInactive {
   color: var(--text-dimmer);
+}
+
+/* ── Copied toast ── */
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.copiedToast {
+  position: absolute;
+  top: var(--pb-top-height);
+  right: 0;
+  padding: 4px 10px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: toastIn 0.15s ease-out;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
 }

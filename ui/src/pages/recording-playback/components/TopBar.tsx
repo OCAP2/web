@@ -114,14 +114,23 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
   // ── Share ──
 
+  const [showCopied, setShowCopied] = createSignal(false);
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
   const handleShare = () => {
     const id = props.operationId();
     if (!id) return;
     const name = props.operationFilename?.() ?? id;
     const url = new URL(window.location.origin);
     url.pathname = `/recording/${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
-    void navigator.clipboard.writeText(url.toString());
+    void navigator.clipboard.writeText(url.toString()).then(() => {
+      clearTimeout(copiedTimer);
+      setShowCopied(true);
+      copiedTimer = setTimeout(() => setShowCopied(false), 2000);
+    });
   };
+
+  onCleanup(() => clearTimeout(copiedTimer));
 
   // ── Download ──
 
@@ -231,9 +240,14 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
         {/* Share */}
         <Show when={props.operationId()}>
-          <button class={styles.actionBtn} title="Share" onClick={handleShare}>
-            <ShareIcon size={16} />
-          </button>
+          <div style={{ position: "relative" }}>
+            <button class={styles.actionBtn} title="Share" onClick={handleShare}>
+              <ShareIcon size={16} />
+            </button>
+            <Show when={showCopied()}>
+              <div class={styles.copiedToast}>Link copied!</div>
+            </Show>
+          </div>
         </Show>
 
         {/* Info */}
