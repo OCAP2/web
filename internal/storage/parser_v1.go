@@ -180,22 +180,8 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return event
 	}
 
-	// Captured events: [frameNum, "captured"/"capturedFlag", [unitName, ...]]
-	if event.Type == "captured" || event.Type == "capturedFlag" {
-		if len(evtArr) > 2 {
-			if arr, ok := evtArr[2].([]interface{}); ok {
-				parts := make([]string, len(arr))
-				for i, v := range arr {
-					parts[i] = toString(v)
-				}
-				event.Message = strings.Join(parts, ",")
-			}
-		}
-		return event
-	}
-
-	// Terminal hack events: [frameNum, "terminalHack*", [unitName, ...]]
-	if event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
+	// Captured and terminal hack events: [frameNum, "type", [data, ...]]
+	if event.Type == "captured" || event.Type == "capturedFlag" || event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
 		if len(evtArr) > 2 {
 			if arr, ok := evtArr[2].([]interface{}); ok {
 				parts := make([]string, len(arr))
