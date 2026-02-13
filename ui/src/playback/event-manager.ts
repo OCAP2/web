@@ -104,14 +104,13 @@ export class EventManager {
   /**
    * Compute per-unit kill and death counts up to (and including) the given frame.
    * Only counts "killed" events on Unit victims (not vehicles), matching resolveReferences logic.
-   * Events are pre-sorted by frame, so we stop early once past the target frame.
    */
   getKillDeathCounts(frame: number): { kills: Map<number, number>; deaths: Map<number, number> } {
     const kills = new Map<number, number>();
     const deaths = new Map<number, number>();
 
     for (const event of this.events) {
-      if (event.frameNum > frame) break;
+      if (event.frameNum > frame) continue;
       if (!(event instanceof HitKilledEvent)) continue;
       if (event.type !== "killed") continue;
       if (event.victimIsVehicle) continue;
