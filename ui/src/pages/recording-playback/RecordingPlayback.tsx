@@ -20,7 +20,6 @@ import { TopBar } from "./components/TopBar";
 import { SidePanel } from "./components/SidePanel";
 import { BottomBar } from "./components/BottomBar";
 import { MapControls } from "./components/MapControls";
-import { KeyboardHints } from "./components/KeyboardHints";
 import { AboutModal } from "./components/AboutModal";
 import { CounterDisplay } from "./components/CounterDisplay";
 import { CustomizeLogo } from "./components/CustomizeLogo";
@@ -136,7 +135,6 @@ export function RecordingPlayback(): JSX.Element {
           onTogglePanel={() => setLeftPanelVisible((v) => !v)}
         />
         <MapControls />
-        <KeyboardHints />
         <CustomizeLogo />
         <CounterDisplay />
         <AboutModal

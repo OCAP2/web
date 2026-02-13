@@ -88,34 +88,3 @@
   height: 192px;
   object-fit: cover;
 }
-
-.hints {
-  position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 12px;
-  z-index: 10;
-  opacity: 0.4;
-}
-
-.hintItem {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.hintKey {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  padding: 1px 6px;
-  font: 9px var(--font-mono);
-  color: var(--text-dim);
-}
-
-.hintAction {
-  font: 9px var(--font-mono);
-  color: var(--text-dimmest);
-}

@@ -65,31 +65,6 @@ describe("shortcuts", () => {
     expect(leftPanelVisible()).toBe(true);
   });
 
-  it("'r' key opens panel to events when panel is closed", () => {
-    registerShortcuts(engine);
-    setLeftPanelVisible(false);
-    fireKey("r");
-    expect(leftPanelVisible()).toBe(true);
-    expect(activePanelTab()).toBe("events");
-  });
-
-  it("'r' key closes panel when already on events tab", () => {
-    registerShortcuts(engine);
-    setLeftPanelVisible(true);
-    setActivePanelTab("events");
-    fireKey("r");
-    expect(leftPanelVisible()).toBe(false);
-  });
-
-  it("'r' key switches to events tab when on another tab", () => {
-    registerShortcuts(engine);
-    setLeftPanelVisible(true);
-    setActivePanelTab("units");
-    fireKey("r");
-    expect(leftPanelVisible()).toBe(true);
-    expect(activePanelTab()).toBe("events");
-  });
-
   it("unregisterShortcuts removes handler", () => {
     const removeSpy = vi.spyOn(document, "removeEventListener");
     registerShortcuts(engine);

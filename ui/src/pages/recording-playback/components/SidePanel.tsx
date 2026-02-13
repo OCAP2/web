@@ -63,6 +63,7 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
           <StatsTab />
         </Match>
       </Switch>
+
     </div>
   );
 }

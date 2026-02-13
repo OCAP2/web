@@ -4,7 +4,8 @@ import { ApiClient, type BuildInfo } from "../../../data/api-client";
 import { useI18n } from "../../../hooks/useLocale";
 import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
-import styles from "./MissionModal.module.css";
+import { XIcon } from "./Icons";
+import styles from "./AboutModal.module.css";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   ru: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
@@ -43,37 +44,66 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
 
   return (
     <Show when={props.open()}>
-      <div data-testid="about-modal" class={styles.modalOverlay} onClick={(e) => {
+      <div data-testid="about-modal" class={styles.overlay} onClick={(e) => {
         if (e.target === e.currentTarget) props.onClose();
       }}>
-        <div class={styles.modalBase}>
-          <div class={styles.modalHeader}>
-            <span>{t("info")}</span>
+        <div class={styles.modal}>
+          {/* Header */}
+          <div class={styles.header}>
+            <span class={styles.headerTitle}>{t("info")}</span>
+            <button class={styles.closeBtn} onClick={() => props.onClose()}>
+              <XIcon size={14} />
+            </button>
           </div>
-          <div class={styles.modalBody} style={{ "min-width": "0", "min-height": "0", padding: "10px 15px" }}>
-            <img src="ocap-logo.png" height="60" alt="OCAP" />
-            <h4>Operation Capture And Playback</h4>
-            <a href="https://github.com/OCAP2/OCAP" target="_blank">GitHub Link</a>
-            <br />
-            <span>{t("version-server")}{serverVersion()}</span>
-            <br />
-            <Show when={props.extensionVersion?.()}>
-              <span>{t("version-extension")}{props.extensionVersion!()}</span>
-              <br />
-            </Show>
-            <Show when={props.addonVersion?.()}>
-              <span>{t("version-addon")}{props.addonVersion!()}</span>
-              <br />
-            </Show>
-            <br /><br />
-            <span>{t("play-pause")}</span><br />
-            <span>{t("show-hide-left-panel")}</span><br />
-            <span>{t("show-hide-right-panel")}</span>
-            <br /><br />
-            <label>
-              {t("language")}{" "}
+
+          {/* Body */}
+          <div class={styles.body}>
+            <img src={`${import.meta.env.BASE_URL}ocap-logo.png`} height="48" alt="OCAP" />
+            <span class={styles.appName}>Operation Capture And Playback</span>
+            <a class={styles.link} href="https://github.com/OCAP2/OCAP" target="_blank">
+              github.com/OCAP2/OCAP
+            </a>
+
+            {/* Versions */}
+            <div class={styles.section}>
+              <div class={styles.sectionLabel}>Versions</div>
+              <div class={styles.row}>
+                <span class={styles.rowLabel}>{t("version-server")}</span>
+                <span class={styles.rowValue}>{serverVersion()}</span>
+              </div>
+              <Show when={props.extensionVersion?.()}>
+                <div class={styles.row}>
+                  <span class={styles.rowLabel}>{t("version-extension")}</span>
+                  <span class={styles.rowValue}>{props.extensionVersion!()}</span>
+                </div>
+              </Show>
+              <Show when={props.addonVersion?.()}>
+                <div class={styles.row}>
+                  <span class={styles.rowLabel}>{t("version-addon")}</span>
+                  <span class={styles.rowValue}>{props.addonVersion!()}</span>
+                </div>
+              </Show>
+            </div>
+
+            {/* Shortcuts */}
+            <div class={styles.section}>
+              <div class={styles.sectionLabel}>Shortcuts</div>
+              <div class={styles.row}>
+                <kbd>Space</kbd>
+                <span class={styles.rowValue}>Play / Pause</span>
+              </div>
+              <div class={styles.row}>
+                <kbd>E</kbd>
+                <span class={styles.rowValue}>Toggle side panel</span>
+              </div>
+            </div>
+
+            {/* Language */}
+            <div class={styles.section}>
+              <div class={styles.sectionLabel}>{t("language")}</div>
               <select
                 data-testid="language-select"
+                class={styles.langSelect}
                 value={locale()}
                 onChange={(e) => setLocale(e.currentTarget.value as Locale)}
               >
@@ -81,16 +111,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
                   {(loc) => <option value={loc}>{LOCALE_LABELS[loc]}</option>}
                 </For>
               </select>
-            </label>
-          </div>
-          <div class={styles.modalFooter} style={{ "margin-top": "0", "padding": "3px 0px" }}>
-            <button
-              data-testid="about-close-button"
-              class={styles.modalButton}
-              onClick={() => props.onClose()}
-            >
-              {t("close")}
-            </button>
+            </div>
           </div>
         </div>
       </div>

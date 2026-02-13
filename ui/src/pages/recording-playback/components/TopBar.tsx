@@ -137,7 +137,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
   const downloadHref = () => {
     const filename = props.operationFilename?.() ?? props.operationId();
     if (!filename) return "#";
-    return `data/${encodeURIComponent(filename)}.json.gz`;
+    return `${import.meta.env.BASE_URL}data/${encodeURIComponent(filename)}.json.gz`;
   };
 
   return (

@@ -49,6 +49,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           >
             <MapIcon size={12} />
             Panel
+            <kbd>E</kbd>
           </button>
 
           <span class={styles.timeDisplay}>

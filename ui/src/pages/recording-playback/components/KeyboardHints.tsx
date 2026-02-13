@@ -15,10 +15,6 @@ export function KeyboardHints(): JSX.Element {
         <kbd class={styles.hintKey}>E</kbd>
         <span class={styles.hintAction}>Panel</span>
       </div>
-      <div class={styles.hintItem}>
-        <kbd class={styles.hintKey}>R</kbd>
-        <span class={styles.hintAction}>Events</span>
-      </div>
     </div>
   );
 }
