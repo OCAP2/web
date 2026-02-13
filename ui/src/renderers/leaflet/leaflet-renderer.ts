@@ -367,7 +367,7 @@ export class LeafletRenderer implements MapRenderer {
           worldSizeDeg / 2,
           worldSizeDeg / 2,
         ];
-        const styleLabels = ["Topo", "Dark", "Relief", "Sat"];
+        const styleLabels = ["Topo", "Topo Dark", "Color Relief", "Topo Relief"];
         const probes = styleCandidates.map((c, i) => {
           const ctrl = new AbortController();
           return fetch(c.url, { method: "HEAD", signal: ctrl.signal })
@@ -538,7 +538,7 @@ export class LeafletRenderer implements MapRenderer {
     this.addOverlayControl();
 
     // Populate map style info for UI
-    const styleLabels = ["Topo", "Dark", "Relief", "Sat"];
+    const styleLabels = ["Topo", "Topo Dark", "Color Relief", "Topo Relief"];
     const styleFlags = [
       world.hasTopo !== false,
       !!world.hasTopoDark,
