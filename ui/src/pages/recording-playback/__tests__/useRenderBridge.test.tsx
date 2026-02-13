@@ -5,7 +5,7 @@ import { MarkerManager } from "../../../playback/marker-manager";
 import { PlaybackEngine } from "../../../playback/engine";
 import { useRenderBridge } from "../useRenderBridge";
 import { setLeftPanelVisible } from "../shortcuts";
-import { unitDef, makeManifest } from "./test-helpers";
+import { unitDef, vehicleDef, makeManifest } from "./test-helpers";
 import type { RendererEvent } from "../../../renderers/renderer.types";
 
 /**
@@ -320,6 +320,170 @@ describe("useRenderBridge", () => {
     await flush();
 
     expect(createSpy.mock.calls.length).toBe(countAfterInit);
+
+    dispose();
+  });
+
+  it("vehicle marker shows crew count and member names", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "Driver" }),
+          unitDef({ id: 2, name: "Gunner" }),
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1, 2] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    // Find the updateEntityMarker call for the vehicle (id=50)
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    const name = (vehicleCall![1] as any).name as string;
+    expect(name).toContain("<u>HMMWV</u>");
+    expect(name).toContain("<i>(2)</i>");
+    expect(name).toContain("Driver");
+    expect(name).toContain("Gunner");
+
+    dispose();
+  });
+
+  it("vehicle with no crew shows name with (0)", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1 },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    const name = (vehicleCall![1] as any).name as string;
+    expect(name).toBe("HMMWV <i>(0)</i>");
+
+    dispose();
+  });
+
+  it("vehicle crew display updates when crew changes", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest(
+          [
+            unitDef({ id: 1, name: "Driver", startFrame: 0, endFrame: 50 }),
+            unitDef({ id: 2, name: "Gunner", startFrame: 0, endFrame: 50 }),
+            vehicleDef({
+              id: 50,
+              name: "HMMWV",
+              startFrame: 0,
+              endFrame: 50,
+              positions: [
+                { position: [300, 400], direction: 90, alive: 1, crewIds: [1] },
+                { position: [300, 400], direction: 90, alive: 1, crewIds: [1, 2] },
+              ],
+            }),
+          ],
+          [],
+          50,
+        ),
+      );
+    });
+
+    await flush();
+
+    // Frame 0: only Driver in crew
+    let vehicleCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    let lastName = (vehicleCalls[vehicleCalls.length - 1]![1] as any).name as string;
+    expect(lastName).toContain("<i>(1)</i>");
+    expect(lastName).toContain("Driver");
+    expect(lastName).not.toContain("Gunner");
+
+    // Seek to frame 1: both Driver and Gunner in crew
+    engine.seekTo(1);
+    await flush();
+
+    vehicleCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    lastName = (vehicleCalls[vehicleCalls.length - 1]![1] as any).name as string;
+    expect(lastName).toContain("<i>(2)</i>");
+    expect(lastName).toContain("Driver");
+    expect(lastName).toContain("Gunner");
+
+    dispose();
+  });
+
+  it("vehicle display name escapes HTML in names", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "<script>alert(1)</script>" }),
+          vehicleDef({
+            id: 50,
+            name: "Tank & <APC>",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("Tank"),
+    );
+    expect(vehicleCall).toBeDefined();
+    const name = (vehicleCall![1] as any).name as string;
+    expect(name).toContain("Tank &amp; &lt;APC&gt;");
+    expect(name).toContain("&lt;script&gt;");
+    expect(name).not.toContain("<script>");
 
     dispose();
   });
