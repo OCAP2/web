@@ -131,6 +131,19 @@ function convertEvent(pb: PbEvent): EventDef | null {
         side: pb.message?.split(",")[0] ?? "",
         message: pb.message?.split(",").slice(1).join(",") ?? "",
       };
+    case "generalEvent":
+      return { frameNum, type, message: pb.message ?? "" };
+    case "captured":
+    case "capturedFlag":
+      return {
+        frameNum,
+        type,
+        unitName: pb.message?.split(",")[0] ?? "",
+        objectType: pb.message?.split(",")[1] ?? (type === "capturedFlag" ? "flag" : ""),
+      };
+    case "terminalHackStarted":
+    case "terminalHackCanceled":
+      return { frameNum, type, unitName: pb.message ?? "" };
     default:
       return null;
   }
@@ -190,6 +203,8 @@ export class ProtobufDecoder implements DecoderStrategy {
       times: pb.times.map((t) => ({
         frameNum: t.frameNum,
         systemTimeUtc: t.systemTimeUtc,
+        date: t.date || undefined,
+        timeMultiplier: t.timeMultiplier || undefined,
       })),
       extensionVersion: pb.extensionVersion || undefined,
       addonVersion: pb.addonVersion || undefined,

@@ -496,6 +496,117 @@ describe("EventManager", () => {
     });
   });
 
+  describe("getKillDeathCounts", () => {
+    let entityMgr: EntityManager;
+
+    beforeEach(() => {
+      entityMgr = new EntityManager();
+      entityMgr.addEntity(unitDef({ id: 1, name: "Alpha", side: "WEST" }));
+      entityMgr.addEntity(unitDef({ id: 2, name: "Bravo", side: "EAST" }));
+      entityMgr.addEntity(unitDef({ id: 3, name: "Charlie", side: "WEST" }));
+      entityMgr.addEntity(vehicleDef({ id: 10, name: "HMMWV" }));
+    });
+
+    it("returns empty maps when no events exist", () => {
+      const { kills, deaths } = mgr.getKillDeathCounts(100);
+      expect(kills.size).toBe(0);
+      expect(deaths.size).toBe(0);
+    });
+
+    it("counts kills and deaths up to the given frame", () => {
+      // Unit 1 kills Unit 2 at frame 50
+      mgr.addEvent(new HitKilledEvent(50, "killed", 1, 2, 1, 200, "M4A1"));
+      mgr.resolveReferences(entityMgr);
+
+      // Before the kill
+      const before = mgr.getKillDeathCounts(49);
+      expect(before.kills.get(1)).toBeUndefined();
+      expect(before.deaths.get(2)).toBeUndefined();
+
+      // At the kill frame
+      const at = mgr.getKillDeathCounts(50);
+      expect(at.kills.get(1)).toBe(1);
+      expect(at.deaths.get(2)).toBe(1);
+
+      // After the kill
+      const after = mgr.getKillDeathCounts(100);
+      expect(after.kills.get(1)).toBe(1);
+      expect(after.deaths.get(2)).toBe(1);
+    });
+
+    it("accumulates multiple kills by the same unit", () => {
+      mgr.addEvent(new HitKilledEvent(50, "killed", 1, 2, 1, 200, "M4A1"));
+      mgr.addEvent(new HitKilledEvent(80, "killed", 2, 3, 1, 150, "M4A1"));
+      mgr.resolveReferences(entityMgr);
+
+      const midway = mgr.getKillDeathCounts(60);
+      expect(midway.kills.get(1)).toBe(1);
+
+      const end = mgr.getKillDeathCounts(100);
+      expect(end.kills.get(1)).toBe(2);
+      expect(end.deaths.get(2)).toBe(1);
+      expect(end.deaths.get(3)).toBe(1);
+    });
+
+    it("does not count self-kills as kills but counts them as deaths", () => {
+      // Unit 1 kills self at frame 30
+      mgr.addEvent(new HitKilledEvent(30, "killed", 1, 1, 1, 0, "Grenade"));
+      mgr.resolveReferences(entityMgr);
+
+      const { kills, deaths } = mgr.getKillDeathCounts(100);
+      expect(kills.get(1)).toBeUndefined();
+      expect(deaths.get(1)).toBe(1);
+    });
+
+    it("skips vehicle victims", () => {
+      // Unit 1 destroys vehicle 10 at frame 40
+      mgr.addEvent(new HitKilledEvent(40, "killed", 1, 10, 1, 100, "RPG"));
+      mgr.resolveReferences(entityMgr);
+
+      const { kills, deaths } = mgr.getKillDeathCounts(100);
+      expect(kills.get(1)).toBeUndefined();
+      expect(deaths.get(10)).toBeUndefined();
+    });
+
+    it("ignores hit events (only counts killed)", () => {
+      mgr.addEvent(new HitKilledEvent(20, "hit", 1, 2, 1, 100, "M4A1"));
+      mgr.resolveReferences(entityMgr);
+
+      const { kills, deaths } = mgr.getKillDeathCounts(100);
+      expect(kills.size).toBe(0);
+      expect(deaths.size).toBe(0);
+    });
+
+    it("ignores non-HitKilledEvent events", () => {
+      mgr.addEvent(new ConnectEvent(10, "connected", 1, "Alpha"));
+      mgr.addEvent(new GameEvent(20, "endMission", 1));
+
+      const { kills, deaths } = mgr.getKillDeathCounts(100);
+      expect(kills.size).toBe(0);
+      expect(deaths.size).toBe(0);
+    });
+
+    it("works correctly when events are not sorted by frame", () => {
+      // Add events out of frame order (the bug that was fixed)
+      mgr.addEvent(new HitKilledEvent(80, "killed", 2, 3, 1, 150, "M4A1"));
+      mgr.addEvent(new ConnectEvent(10, "connected", 1, "Alpha"));
+      mgr.addEvent(new HitKilledEvent(50, "killed", 1, 2, 1, 200, "M4A1"));
+      mgr.resolveReferences(entityMgr);
+
+      // At frame 60: only the frame-50 kill should count
+      const at60 = mgr.getKillDeathCounts(60);
+      expect(at60.kills.get(1)).toBe(1);
+      expect(at60.deaths.get(2)).toBe(1);
+      expect(at60.deaths.get(3)).toBeUndefined();
+
+      // At frame 100: both kills should count
+      const at100 = mgr.getKillDeathCounts(100);
+      expect(at100.kills.get(1)).toBe(2);
+      expect(at100.deaths.get(2)).toBe(1);
+      expect(at100.deaths.get(3)).toBe(1);
+    });
+  });
+
   describe("clear", () => {
     it("removes all events", () => {
       mgr.addEvent(new GameEvent(10, "hit", 1));

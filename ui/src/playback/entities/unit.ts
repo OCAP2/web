@@ -14,6 +14,7 @@ export class Unit extends Entity {
   readonly groupName: string;
   killCount: number;
   teamKillCount: number;
+  deathCount: number;
   isInVehicle: boolean;
   private _framesFired: Array<[number, ArmaCoord]> | null;
 
@@ -38,6 +39,7 @@ export class Unit extends Entity {
     this.groupName = groupName;
     this.killCount = 0;
     this.teamKillCount = 0;
+    this.deathCount = 0;
     this.isInVehicle = false;
     this._framesFired = framesFired;
   }

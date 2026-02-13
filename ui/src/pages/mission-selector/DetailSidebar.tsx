@@ -1,6 +1,6 @@
 import { Show, For, createSignal, createEffect, on } from "solid-js";
 import type { Operation } from "../../data/types";
-import { useI18n } from "../../ui/hooks/useLocale";
+import { useI18n } from "../../hooks/useLocale";
 import { C, SIDE_COLORS, SIDE_HEX } from "./constants";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";

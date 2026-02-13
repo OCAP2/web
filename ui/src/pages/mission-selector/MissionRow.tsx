@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import type { Operation } from "../../data/types";
-import { useI18n } from "../../ui/hooks/useLocale";
+import { useI18n } from "../../hooks/useLocale";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, relativeDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
 import { TagBadge, StatusBadge } from "./components";
@@ -65,7 +65,7 @@ export function MissionRow(props: {
       <Show when={props.showKills}>
         <div class={styles.rowKills}>
           <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
-          <span class={styles.rowKillsValue} style={{ color: (props.op.killCount ?? 0) > 0 ? "var(--ms-text-muted)" : "var(--ms-text-dimmer)" }}>
+          <span class={styles.rowKillsValue} style={{ color: (props.op.killCount ?? 0) > 0 ? "var(--text-muted)" : "var(--text-dimmer)" }}>
             {(props.op.killCount ?? 0) > 0 ? props.op.killCount : "\u2014"}
           </span>
         </div>

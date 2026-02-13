@@ -718,6 +718,92 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		require.NotNil(t, evt)
 		assert.Equal(t, float32(0.0), evt.Distance, "invalid type")
 	})
+
+	// ── generalEvent ──
+
+	t.Run("generalEvent with message", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{0.0, "generalEvent", "Recording started."})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(0), evt.FrameNum)
+		assert.Equal(t, "generalEvent", evt.Type)
+		assert.Equal(t, "Recording started.", evt.Message)
+		assert.Equal(t, uint32(0), evt.SourceID, "should not be set")
+		assert.Equal(t, uint32(0), evt.TargetID, "should not be set")
+	})
+
+	t.Run("generalEvent without message", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{10.0, "generalEvent"})
+		require.NotNil(t, evt)
+		assert.Equal(t, "generalEvent", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	// ── endMission ──
+
+	t.Run("endMission with [side, message] tuple", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission", []interface{}{"WEST", "Mission complete"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(376), evt.FrameNum)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Equal(t, "WEST,Mission complete", evt.Message)
+	})
+
+	t.Run("endMission with empty string", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission", ""})
+		require.NotNil(t, evt)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	t.Run("endMission without data", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission"})
+		require.NotNil(t, evt)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Empty(t, evt.Message)
+	})
+
+	// ── captured / capturedFlag ──
+
+	t.Run("captured with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{200.0, "captured", []interface{}{"Player1", "blue", "flag_carrier"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(200), evt.FrameNum)
+		assert.Equal(t, "captured", evt.Type)
+		assert.Equal(t, "Player1,blue,flag_carrier", evt.Message)
+	})
+
+	t.Run("capturedFlag with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{210.0, "capturedFlag", []interface{}{"Player1", "blue"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "capturedFlag", evt.Type)
+		assert.Equal(t, "Player1,blue", evt.Message)
+	})
+
+	// ── terminalHack ──
+
+	t.Run("terminalHackStarted with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{220.0, "terminalHackStarted", []interface{}{"Player1", "blue", "red", "terminal_1"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, uint32(220), evt.FrameNum)
+		assert.Equal(t, "terminalHackStarted", evt.Type)
+		assert.Equal(t, "Player1,blue,red,terminal_1", evt.Message)
+	})
+
+	t.Run("terminalHackCanceled with data array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{230.0, "terminalHackCanceled", []interface{}{"Player1", "blue", "red", "terminal_1"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "terminalHackCanceled", evt.Type)
+		assert.Equal(t, "Player1,blue,red,terminal_1", evt.Message)
+	})
+
+	// ── respawnTickets ──
+
+	t.Run("respawnTickets with data", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{0.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "respawnTickets", evt.Type)
+		// respawnTickets doesn't use Message — it's a counter event handled separately
+	})
 }
 
 func TestParserV1_parseMarker_EdgeCases(t *testing.T) {
@@ -1064,6 +1150,156 @@ func TestParserV1_calculateEndFrame_SparseVehicle(t *testing.T) {
 		}
 		endFrame := p.calculateEndFrame(em, 0)
 		assert.Equal(t, uint32(999), endFrame, "from last sparse range")
+	})
+}
+
+func TestParserV1_parseFramesFired(t *testing.T) {
+	p := &ParserV1{}
+
+	t.Run("no framesFired key returns nil", func(t *testing.T) {
+		em := map[string]interface{}{}
+		result := p.parseFramesFired(em)
+		assert.Nil(t, result)
+	})
+
+	t.Run("framesFired wrong type returns nil", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": "not an array",
+		}
+		result := p.parseFramesFired(em)
+		assert.Nil(t, result)
+	})
+
+	t.Run("empty framesFired array", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{},
+		}
+		result := p.parseFramesFired(em)
+		require.NotNil(t, result)
+		assert.Empty(t, result)
+	})
+
+	t.Run("valid fired frame with [x, y, z]", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{10.0, []interface{}{100.0, 200.0, 5.0}},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		assert.Equal(t, uint32(10), result[0].FrameNum)
+		assert.Equal(t, float32(100.0), result[0].PosX)
+		assert.Equal(t, float32(200.0), result[0].PosY)
+		assert.Equal(t, float32(5.0), result[0].PosZ)
+	})
+
+	t.Run("valid fired frame with [x, y] only", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{20.0, []interface{}{300.0, 400.0}},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		assert.Equal(t, uint32(20), result[0].FrameNum)
+		assert.Equal(t, float32(300.0), result[0].PosX)
+		assert.Equal(t, float32(400.0), result[0].PosY)
+		assert.Equal(t, float32(0.0), result[0].PosZ)
+	})
+
+	t.Run("multiple fired frames", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{5.0, []interface{}{100.0, 200.0, 0.0}},
+				[]interface{}{15.0, []interface{}{150.0, 250.0, 1.0}},
+				[]interface{}{25.0, []interface{}{200.0, 300.0, 2.0}},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 3)
+		assert.Equal(t, uint32(5), result[0].FrameNum)
+		assert.Equal(t, uint32(15), result[1].FrameNum)
+		assert.Equal(t, uint32(25), result[2].FrameNum)
+	})
+
+	t.Run("invalid entry not an array is skipped", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				"not an array",
+				[]interface{}{10.0, []interface{}{100.0, 200.0, 0.0}},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		assert.Equal(t, uint32(10), result[0].FrameNum)
+	})
+
+	t.Run("entry too short is skipped", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{10.0}, // Only 1 element, need 2
+				[]interface{}{20.0, []interface{}{100.0, 200.0, 0.0}},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		assert.Equal(t, uint32(20), result[0].FrameNum)
+	})
+
+	t.Run("position not an array", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{10.0, "not a pos array"},
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		// FrameNum is parsed but position stays zero
+		assert.Equal(t, uint32(10), result[0].FrameNum)
+		assert.Equal(t, float32(0.0), result[0].PosX)
+		assert.Equal(t, float32(0.0), result[0].PosY)
+	})
+
+	t.Run("position array too short", func(t *testing.T) {
+		em := map[string]interface{}{
+			"framesFired": []interface{}{
+				[]interface{}{10.0, []interface{}{100.0}}, // Only 1 coord
+			},
+		}
+		result := p.parseFramesFired(em)
+		require.Len(t, result, 1)
+		assert.Equal(t, float32(0.0), result[0].PosX, "not enough coords")
+	})
+
+	t.Run("entity with framesFired through Parse", func(t *testing.T) {
+		data := map[string]interface{}{
+			"worldName":    "Altis",
+			"missionName":  "Test",
+			"endFrame":     10.0,
+			"captureDelay": 1.0,
+			"entities": []interface{}{
+				map[string]interface{}{
+					"id":            0.0,
+					"type":          "unit",
+					"name":          "Shooter",
+					"startFrameNum": 0.0,
+					"positions": []interface{}{
+						[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "Shooter", 1.0},
+					},
+					"framesFired": []interface{}{
+						[]interface{}{3.0, []interface{}{100.0, 200.0, 5.0}},
+						[]interface{}{7.0, []interface{}{105.0, 205.0, 5.0}},
+					},
+				},
+			},
+		}
+		result, err := p.Parse(data, 100)
+		require.NoError(t, err)
+		require.Len(t, result.Entities, 1)
+		require.Len(t, result.Entities[0].FramesFired, 2)
+		assert.Equal(t, uint32(3), result.Entities[0].FramesFired[0].FrameNum)
+		assert.Equal(t, uint32(7), result.Entities[0].FramesFired[1].FrameNum)
+		assert.Equal(t, float32(100.0), result.Entities[0].FramesFired[0].PosX)
 	})
 }
 

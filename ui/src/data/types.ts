@@ -136,7 +136,7 @@ export interface Manifest {
   entities: EntityDef[];
   events: EventDef[];
   markers: MarkerDef[];
-  times: Array<{ frameNum: number; systemTimeUtc: string }>;
+  times: Array<{ frameNum: number; systemTimeUtc: string; date?: string; timeMultiplier?: number }>;
   extensionVersion?: string;
   addonVersion?: string;
 }

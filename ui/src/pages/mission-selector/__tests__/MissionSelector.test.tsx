@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
-import { Router, Route } from "@solidjs/router";
-import { I18nProvider } from "../../../ui/hooks/useLocale";
-import { CustomizeProvider } from "../../../ui/hooks/useCustomize";
+import { Router, Route, useLocation } from "@solidjs/router";
+import { I18nProvider } from "../../../hooks/useLocale";
+import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { MissionSelector } from "..";
-import { LoadingTransition } from "../../LoadingTransition";
 import type { Operation } from "../../../data/types";
 
 // ─── Helpers ───
@@ -57,11 +56,22 @@ function mockFetchWith(ops: Operation[]) {
   } as Response);
 }
 
+/** Lightweight stub that renders location state without needing Leaflet/engine */
+function RecordingStub() {
+  const location = useLocation();
+  const state = () => location.state as { missionName?: string; worldName?: string } | undefined;
+  return (
+    <div data-testid="loading-screen">
+      {state()?.missionName} {state()?.worldName}
+    </div>
+  );
+}
+
 function renderPage() {
   return render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
       <Route path="/" component={MissionSelector} />
-      <Route path="/loading/:id/:name" component={LoadingTransition} />
+      <Route path="/recording/:id/:name" component={RecordingStub} />
     </Router>
   ));
 }

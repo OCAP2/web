@@ -1,0 +1,275 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── BottomBar ─── */
+
+.bottomBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--pb-bottom-height);
+  background: linear-gradient(0deg, rgba(10, 15, 20, 0.97) 0%, rgba(10, 15, 20, 0.85) 100%);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+  animation: fadeIn 0.4s ease-out 0.1s both;
+}
+
+.timelineRow {
+  padding: 8px 0 0;
+}
+
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+}
+
+.controlsLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.controlsCenter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  justify-content: flex-end;
+}
+
+/* ─── Timeline Scrubber ─── */
+
+.scrubberWrap {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.scrubberTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.scrubberProgress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4A9EFF, #60b4ff);
+  pointer-events: none;
+}
+
+.scrubberProgressSmooth {
+  transition: width 0.1s linear;
+}
+
+.eventMarker {
+  position: absolute;
+  top: -3px;
+  width: 4px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--accent-red);
+  opacity: 0.7;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.playhead {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  border: 2px solid #0d1520;
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
+  pointer-events: none;
+}
+
+.playheadSmooth {
+  transition: left 0.1s linear;
+}
+
+.hoverTooltip {
+  position: absolute;
+  bottom: 16px;
+  transform: translateX(-50%);
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Playback Controls ─── */
+
+.panelToggle {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-dimmer);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.panelToggleActive {
+  background: rgba(74, 158, 255, 0.12);
+  border-color: rgba(74, 158, 255, 0.2);
+  color: var(--accent-blue);
+}
+
+.timeDisplay {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.timeSeparator {
+  color: var(--text-dimmest);
+  margin: 0 6px;
+}
+
+.timeDimmed {
+  color: var(--text-dimmer);
+}
+
+.skipBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.playBtnPlay {
+  background: linear-gradient(135deg, #4A9EFF, #3585dd);
+  box-shadow: 0 2px 12px rgba(74, 158, 255, 0.3);
+}
+
+.playBtnPause {
+  background: rgba(74, 158, 255, 0.15);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  box-shadow: none;
+}
+
+/* ─── Speed Selector ─── */
+
+.speedBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speedPopup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.speedOption {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 16px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.speedOptionActive {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.speedOptionDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Wider variant for text-heavy dropdowns (names, time mode) */
+.dropdownWide {
+  min-width: 100px;
+  justify-content: space-between;
+}
+
+.dropdownPopupWide {
+  min-width: 140px;
+}
+

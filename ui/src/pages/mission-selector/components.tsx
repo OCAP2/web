@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
-import { useI18n } from "../../ui/hooks/useLocale";
+import { useI18n } from "../../hooks/useLocale";
 import { STATUS_MAP } from "./constants";
 import { getTagColor } from "./helpers";
 import { Icons } from "./icons";
@@ -25,7 +25,7 @@ export function TagBadge(props: { tag: string; clickable?: boolean; active?: boo
     <button
       class={`${styles.tagBadge} ${props.clickable ? styles.tagBadgeClickable : ""}`}
       style={{
-        color: isActive() ? tc().color : "var(--ms-text-dimmer)",
+        color: isActive() ? tc().color : "var(--text-dimmer)",
         background: isActive() ? tc().bg : "rgba(255,255,255,0.02)",
         "border-color": isActive() ? tc().border : "rgba(255,255,255,0.05)",
       }}

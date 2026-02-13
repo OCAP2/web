@@ -1,16 +1,19 @@
 .loadingScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
-  background: var(--ms-bg-dark);
+  background: var(--bg-dark);
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s ease-out;
+  z-index: 10000;
+  transition: opacity 0.4s ease-out;
 }
 
 .loadingContent {
   text-align: center;
-  animation: fadeIn 0.4s ease-out;
 }
 
 .loadingLogo {
@@ -22,15 +25,15 @@
 .loadingTitle {
   font-size: 16px;
   font-weight: 600;
-  color: var(--ms-text-primary);
-  font-family: var(--ms-font-heading);
+  color: var(--text-primary);
+  font-family: var(--font-heading);
   margin-bottom: 6px;
 }
 
 .loadingSubtitle {
   font-size: 11px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   margin-bottom: 24px;
 }
 
@@ -46,14 +49,14 @@
 .loadingBarFill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--ms-accent-blue), var(--ms-accent-green));
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
   animation: loadBar 2s ease-in-out forwards;
 }
 
 .loadingHint {
   font-size: 10px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
   margin-top: 12px;
   animation: loadPulse 1.5s ease-in-out infinite;
 }

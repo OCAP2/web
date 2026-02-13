@@ -59,7 +59,7 @@ interface RawJsonOperation {
   entities?: RawJsonEntity[];
   events?: RawJsonEvent[];
   Markers?: RawJsonMarker[];
-  times?: Array<{ frameNum: number; systemTimeUTC: string }>;
+  times?: Array<{ frameNum: number; systemTimeUTC: string; date?: string; timeMultiplier?: number }>;
 }
 
 // ───────── Side index lookup ─────────
@@ -344,6 +344,8 @@ export class JsonDecoder implements DecoderStrategy {
     const times = (data.times ?? []).map((t) => ({
       frameNum: t.frameNum,
       systemTimeUtc: t.systemTimeUTC,
+      date: t.date || undefined,
+      timeMultiplier: t.timeMultiplier || undefined,
     }));
 
     return {

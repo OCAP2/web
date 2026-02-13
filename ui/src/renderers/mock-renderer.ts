@@ -109,7 +109,23 @@ export class MockRenderer implements MapRenderer {
     // no-op
   }
 
+  getMapStyles(): import("./renderer.types").MapStyleInfo[] {
+    return [];
+  }
+
+  getActiveStyleIndex(): number {
+    return 0;
+  }
+
+  setMapStyle(_index: number): void {
+    // no-op
+  }
+
   setSmoothingEnabled(_enabled: boolean): void {
+    // no-op
+  }
+
+  setNameDisplayMode(_mode: "players" | "all" | "none"): void {
     // no-op
   }
 

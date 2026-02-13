@@ -21,11 +21,7 @@ import type {
   RendererControls,
 } from "../renderer.types";
 import { entityIcon } from "./leaflet-icons";
-import {
-  createScaleControl,
-  createBasemapControl,
-  createMaplibreStyleControl,
-} from "./leaflet-controls";
+import { createScaleControl } from "./leaflet-controls";
 import type { StyleCandidate } from "./leaflet-controls";
 import { createGridLayer } from "./leaflet-grid";
 import {
@@ -169,6 +165,11 @@ export class LeafletRenderer implements MapRenderer {
   private mapIconsLayer: L.LayerGroup | null = null;
   private buildings3DLayer: L.LayerGroup | null = null;
 
+  // Map style state
+  private _mapStyles: import("../renderer.types").MapStyleInfo[] = [];
+  private _activeStyleIndex = 0;
+  private _styleSwitchFn: ((index: number) => void) | null = null;
+
   // Legacy-mode state
   private imageSize = 0;
   private multiplier = 1;
@@ -243,7 +244,7 @@ export class LeafletRenderer implements MapRenderer {
       zoomAnimation: true,
       fadeAnimation: true,
       crs: L.CRS.EPSG3857,
-      attributionControl: true,
+      attributionControl: false,
       zoomSnap: 1,
       zoomDelta: 1,
       closePopupOnClick: false,
@@ -361,16 +362,51 @@ export class LeafletRenderer implements MapRenderer {
           });
         }
 
-        // MapLibre style switcher (added after overlay → appears above it)
+        // Probe style availability and generate previews for the UI
         const previewCenter: [number, number] = [
           worldSizeDeg / 2,
           worldSizeDeg / 2,
         ];
-        createMaplibreStyleControl(mlLayer, styleCandidates, {
-          center: previewCenter,
-          zoom: 12,
-          transformRequest,
-        }).addTo(this.map);
+        const styleLabels = ["Topo", "Topo Dark", "Color Relief", "Topo Relief"];
+        const probes = styleCandidates.map((c, i) => {
+          const ctrl = new AbortController();
+          return fetch(c.url, { method: "HEAD", signal: ctrl.signal })
+            .then((res) => { ctrl.abort(); return { index: i, ok: res.ok }; })
+            .catch(() => ({ index: i, ok: false }));
+        });
+        const activeIdx = savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0;
+        this._activeStyleIndex = activeIdx;
+        this._mapStyles = styleCandidates.map((c, i) => ({
+          label: styleLabels[i] ?? c.label,
+          available: false, // updated after probes
+        }));
+        this._styleSwitchFn = (index: number) => {
+          const glMap2 = mlLayer.getMaplibreMap?.();
+          if (!glMap2 || index < 0 || index >= styleCandidates.length) return;
+          glMap2.setStyle(styleCandidates[index].url);
+          this._activeStyleIndex = index;
+          try { localStorage.setItem("ocap-maplibre-style", String(index)); } catch { /* noop */ }
+        };
+        Promise.all(probes).then((results) => {
+          for (const r of results) {
+            this._mapStyles[r.index] = { ...this._mapStyles[r.index], available: r.ok };
+          }
+          // Generate preview thumbnails
+          for (const r of results) {
+            if (!r.ok) continue;
+            this._renderStylePreview(
+              styleCandidates[r.index].url,
+              [previewCenter[1], previewCenter[0]],
+              12,
+              transformRequest,
+              (dataUrl) => {
+                if (dataUrl) {
+                  this._mapStyles[r.index] = { ...this._mapStyles[r.index], previewUrl: dataUrl };
+                }
+              },
+            );
+          }
+        });
       })();
     } else {
       // No style URL — add overlay control immediately
@@ -419,7 +455,7 @@ export class LeafletRenderer implements MapRenderer {
       zoomAnimation: true,
       fadeAnimation: true,
       crs: OCAP_CRS,
-      attributionControl: true,
+      attributionControl: false,
       zoomSnap: 1,
       zoomDelta: 1,
       closePopupOnClick: false,
@@ -499,22 +535,70 @@ export class LeafletRenderer implements MapRenderer {
       }
     }
 
-    // Overlay control (added before basemap so basemap appears above in
-    // Leaflet's bottom corner, which prepends new controls)
     this.addOverlayControl();
 
-    // Add first layer to map; basemap control handles switching
+    // Populate map style info for UI
+    const styleLabels = ["Topo", "Topo Dark", "Color Relief", "Topo Relief"];
+    const styleFlags = [
+      world.hasTopo !== false,
+      !!world.hasTopoDark,
+      !!world.hasTopoRelief,
+      !!world.hasColorRelief,
+    ];
+    this._mapStyles = styleLabels.map((label, i) => ({
+      label,
+      available: styleFlags[i] && baseLayers.length > 0,
+    }));
+
+    // Generate preview thumbnails from tile URLs
     if (baseLayers.length > 0) {
-      if (baseLayers.length >= 2) {
-        createBasemapControl(baseLayers, {
-          tileX: 2,
-          tileY: 6,
-          tileZ: 4,
-        }).addTo(this.map);
-      } else {
-        baseLayers[0].addTo(this.map);
+      const tileZ = 4;
+      const tileX = 2;
+      const tileY = 6;
+      let layerIdx = 0;
+      for (let i = 0; i < styleFlags.length; i++) {
+        if (!styleFlags[i]) continue;
+        if (layerIdx >= baseLayers.length) break;
+        const layer = baseLayers[layerIdx];
+        const url = L.Util.template((layer as any)._url, {
+          s: (layer as any)._getSubdomain?.({ x: tileX, y: tileY }) ?? "",
+          x: tileX, y: tileY, z: tileZ,
+          ...layer.options,
+        });
+        this._mapStyles[i] = { ...this._mapStyles[i], previewUrl: url };
+        layerIdx++;
       }
     }
+
+    // Add first layer and set up switching
+    let activeLayer: L.TileLayer | null = null;
+    if (baseLayers.length > 0) {
+      baseLayers[0].addTo(this.map);
+      activeLayer = baseLayers[0];
+      this._activeStyleIndex = 0;
+    }
+
+    // Map style indices (0=Topo, 1=Dark, 2=Relief, 3=Sat) to baseLayers array indices
+    const indexToLayer = new Map<number, L.TileLayer>();
+    {
+      let layerIdx = 0;
+      for (let i = 0; i < styleFlags.length; i++) {
+        if (!styleFlags[i]) continue;
+        if (layerIdx >= baseLayers.length) break;
+        indexToLayer.set(i, baseLayers[layerIdx]);
+        layerIdx++;
+      }
+    }
+
+    this._styleSwitchFn = (index: number) => {
+      const layer = indexToLayer.get(index);
+      if (!layer || layer === activeLayer) return;
+      if (activeLayer) this.map.removeLayer(activeLayer);
+      layer.addTo(this.map);
+      layer.bringToBack();
+      activeLayer = layer;
+      this._activeStyleIndex = index;
+    };
 
     // Fit to tile bounds
     this.map.fitBounds(mapBounds);
@@ -976,6 +1060,34 @@ export class LeafletRenderer implements MapRenderer {
       return;
     }
 
+    if (layer === "mapIcons") {
+      if (!this.mapIconsLayer) return;
+      if (visible) {
+        if (!this.map.hasLayer(this.mapIconsLayer)) {
+          this.mapIconsLayer.addTo(this.map);
+        }
+      } else {
+        if (this.map.hasLayer(this.mapIconsLayer)) {
+          this.map.removeLayer(this.mapIconsLayer);
+        }
+      }
+      return;
+    }
+
+    if (layer === "buildings3D") {
+      if (!this.buildings3DLayer) return;
+      if (visible) {
+        if (!this.map.hasLayer(this.buildings3DLayer)) {
+          this.buildings3DLayer.addTo(this.map);
+        }
+      } else {
+        if (this.map.hasLayer(this.buildings3DLayer)) {
+          this.map.removeLayer(this.buildings3DLayer);
+        }
+      }
+      return;
+    }
+
     const group = this.layers[layer as LayerGroupKey];
     if (!group) return;
 
@@ -1012,19 +1124,84 @@ export class LeafletRenderer implements MapRenderer {
     this.nameDisplayMode = mode;
   }
 
+  // ==================== Map styles ====================
+
+  getMapStyles(): import("../renderer.types").MapStyleInfo[] {
+    return this._mapStyles;
+  }
+
+  getActiveStyleIndex(): number {
+    return this._activeStyleIndex;
+  }
+
+  setMapStyle(index: number): void {
+    if (this._styleSwitchFn) {
+      this._styleSwitchFn(index);
+    }
+  }
+
+  /**
+   * Render a 128x128 MapLibre preview thumbnail off-screen.
+   */
+  private _renderStylePreview(
+    styleUrl: string,
+    center: [number, number],
+    zoom: number,
+    transformRequest: ((url: string, resourceType: string) => any) | undefined,
+    callback: (dataUrl: string | null) => void,
+  ): void {
+    const div = document.createElement("div");
+    div.style.cssText =
+      "width:128px;height:128px;position:absolute;left:-9999px;top:-9999px;visibility:hidden";
+    document.body.appendChild(div);
+
+    import("maplibre-gl")
+      .then((maplibregl) => {
+        const mapOpts: any = {
+          container: div,
+          style: styleUrl,
+          center,
+          zoom,
+          interactive: false,
+          attributionControl: false,
+          preserveDrawingBuffer: true,
+        };
+        if (transformRequest) {
+          mapOpts.transformRequest = transformRequest;
+        }
+        const miniMap = new maplibregl.Map(mapOpts);
+
+        const timeoutId = setTimeout(() => {
+          if (div.parentNode) {
+            try { miniMap.remove(); } catch { /* noop */ }
+            document.body.removeChild(div);
+          }
+        }, 10_000);
+
+        miniMap.once("idle", () => {
+          clearTimeout(timeoutId);
+          if (!div.parentNode) return;
+          try {
+            callback(miniMap.getCanvas().toDataURL());
+          } catch {
+            callback(null);
+          }
+          miniMap.remove();
+          document.body.removeChild(div);
+        });
+      })
+      .catch(() => {
+        callback(null);
+        if (div.parentNode) document.body.removeChild(div);
+      });
+  }
+
   // ==================== Overlay control ====================
 
   private addOverlayControl(): void {
-    if (!this.gridLayer) return;
-
-    const overlays: Record<string, L.Layer> = {
-      "Units and Vehicles": this.layers.entities,
-      "Selected Side Markers": this.layers.systemMarkers,
-      "Editor/Briefing Markers": this.layers.briefingMarkers,
-      "Projectile Markers": this.layers.projectileMarkers,
-      "Coordinate Grid": this.gridLayer,
-    };
-
+    // Layer visibility is now controlled by the TopBar UI component
+    // via setLayerVisible(). Create MapLibre toggle layers if needed
+    // so setLayerVisible("mapIcons"/"buildings3D") works.
     if (this.maplibreLayer) {
       this.mapIconsLayer = this.createMapLibreToggleLayer((vis) =>
         this.setMapLibreIconVisibility(vis),
@@ -1032,16 +1209,9 @@ export class LeafletRenderer implements MapRenderer {
       this.buildings3DLayer = this.createMapLibreToggleLayer((vis) =>
         this.setBuildings3DVisibility(vis),
       );
-      overlays["Map Icons"] = this.mapIconsLayer;
-      overlays["3D Buildings"] = this.buildings3DLayer;
+      this.mapIconsLayer.addTo(this.map);
+      this.buildings3DLayer.addTo(this.map);
     }
-
-    L.control
-      .layers({}, overlays, {
-        position: "bottomright",
-        collapsed: false,
-      })
-      .addTo(this.map);
   }
 
   private createMapLibreToggleLayer(

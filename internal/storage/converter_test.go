@@ -427,3 +427,200 @@ func TestConverter_InvalidFormat(t *testing.T) {
 	err = converter.Convert(ctx, inputPath, outputPath, "invalid_format")
 	assert.Error(t, err, "expected error for invalid format")
 }
+
+// TestConverter_AllEventTypes verifies that ALL event types survive the full
+// JSON → Parse → Protobuf Write → Protobuf Read roundtrip with correct data.
+// This uses the exact event formats produced by the Arma 3 extension.
+func TestConverter_AllEventTypes(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Event Roundtrip Test",
+		"endFrame":     400.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0.0, "type": "unit", "name": "Player1", "side": "WEST",
+				"startFrameNum": 0.0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "Player1", 1.0},
+				},
+			},
+		},
+		"events": []interface{}{
+			// generalEvent — recording started
+			[]interface{}{0.0, "generalEvent", "Recording started."},
+			// generalEvent — mission started
+			[]interface{}{0.0, "generalEvent", "Mission has started!"},
+			// respawnTickets
+			[]interface{}{0.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}},
+			[]interface{}{30.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}},
+			// generalEvent — recording paused
+			[]interface{}{376.0, "generalEvent", "Recording paused."},
+			// endMission with [side, message] tuple
+			[]interface{}{376.0, "endMission", []interface{}{"WEST", "Mission complete"}},
+			// endMission with plain string (empty)
+			[]interface{}{376.0, "endMission", ""},
+			// killed — old extension format: [frameNum, type, victimId, [killerId, weapon], distance]
+			[]interface{}{1.0, "killed", 0.0, []interface{}{0.0, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]"}, 0.0},
+			[]interface{}{125.0, "killed", 9.0, []interface{}{0.0, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]"}, 74.0},
+			// hit — old extension format
+			[]interface{}{50.0, "hit", 0.0, []interface{}{0.0, "pistol"}, 25.0},
+			// connected / disconnected
+			[]interface{}{0.0, "connected", "[RMC] DoS"},
+			[]interface{}{300.0, "disconnected", "[VRG] mEss1a"},
+			// captured — [frameNum, "captured", [unitName, unitColor, objectType, ...]]
+			[]interface{}{200.0, "captured", []interface{}{"Player1", "blue", "flag_carrier"}},
+			// capturedFlag — [frameNum, "capturedFlag", [unitName, unitColor, ...]]
+			[]interface{}{210.0, "capturedFlag", []interface{}{"Player1", "blue", "somePos", "anotherPos"}},
+			// terminalHackStarted — [frameNum, type, [unitName, unitColor, ...]]
+			[]interface{}{220.0, "terminalHackStarted", []interface{}{"Player1", "blue", "red", "terminal_1"}},
+			// terminalHackCanceled
+			[]interface{}{230.0, "terminalHackCanceled", []interface{}{"Player1", "blue", "red", "terminal_1"}},
+		},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+
+	// Write test JSON
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	// Convert JSON → protobuf
+	converter := NewConverter(DefaultChunkSize)
+	ctx := context.Background()
+	require.NoError(t, converter.Convert(ctx, inputPath, outputPath, "protobuf"))
+
+	// Read back the protobuf manifest
+	manifestPath := filepath.Join(outputPath, "manifest.pb")
+	manifestData, err := os.ReadFile(manifestPath)
+	require.NoError(t, err)
+
+	var manifest pbv1.Manifest
+	require.NoError(t, proto.Unmarshal(manifestData, &manifest))
+
+	// Build a lookup: type+frameNum → event for easier assertions
+	events := manifest.Events
+	require.Len(t, events, 16, "all 16 events must survive roundtrip")
+
+	// Helper to find events by type
+	findEvents := func(typ string) []*pbv1.Event {
+		var result []*pbv1.Event
+		for _, e := range events {
+			if e.Type == typ {
+				result = append(result, e)
+			}
+		}
+		return result
+	}
+
+	// ── generalEvent ──
+	generals := findEvents("generalEvent")
+	require.Len(t, generals, 3, "3 generalEvent events")
+	// Verify messages are preserved (order matches input)
+	generalMessages := make([]string, len(generals))
+	for i, g := range generals {
+		generalMessages[i] = g.Message
+	}
+	assert.Contains(t, generalMessages, "Recording started.")
+	assert.Contains(t, generalMessages, "Mission has started!")
+	assert.Contains(t, generalMessages, "Recording paused.")
+
+	// Verify frame numbers
+	for _, g := range generals {
+		if g.Message == "Recording paused." {
+			assert.Equal(t, uint32(376), g.FrameNum)
+		} else {
+			assert.Equal(t, uint32(0), g.FrameNum)
+		}
+	}
+
+	// ── respawnTickets ──
+	tickets := findEvents("respawnTickets")
+	require.Len(t, tickets, 2, "2 respawnTickets events")
+	assert.Equal(t, uint32(0), tickets[0].FrameNum)
+	assert.Equal(t, uint32(30), tickets[1].FrameNum)
+
+	// ── endMission ──
+	endMissions := findEvents("endMission")
+	require.Len(t, endMissions, 2, "2 endMission events")
+	// The one with [side, message] should have "WEST,Mission complete"
+	var foundEndWithMessage bool
+	var foundEndEmpty bool
+	for _, em := range endMissions {
+		assert.Equal(t, uint32(376), em.FrameNum)
+		if em.Message == "WEST,Mission complete" {
+			foundEndWithMessage = true
+		}
+		if em.Message == "" {
+			foundEndEmpty = true
+		}
+	}
+	assert.True(t, foundEndWithMessage, "endMission with side,message tuple")
+	assert.True(t, foundEndEmpty, "endMission with empty string")
+
+	// ── killed ──
+	killed := findEvents("killed")
+	require.Len(t, killed, 2, "2 killed events")
+	// First killed: frame 1, victim 0, killer 0, weapon "Katiba..."
+	k0 := killed[0]
+	assert.Equal(t, uint32(1), k0.FrameNum)
+	assert.Equal(t, uint32(0), k0.TargetId)
+	assert.Equal(t, uint32(0), k0.SourceId)
+	assert.Equal(t, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]", k0.Weapon)
+	assert.Equal(t, float32(0.0), k0.Distance)
+	// Second killed: frame 125, victim 9, killer 0, distance 74
+	k1 := killed[1]
+	assert.Equal(t, uint32(125), k1.FrameNum)
+	assert.Equal(t, uint32(9), k1.TargetId)
+	assert.Equal(t, uint32(0), k1.SourceId)
+	assert.Equal(t, float32(74.0), k1.Distance)
+
+	// ── hit ──
+	hits := findEvents("hit")
+	require.Len(t, hits, 1, "1 hit event")
+	assert.Equal(t, uint32(50), hits[0].FrameNum)
+	assert.Equal(t, "pistol", hits[0].Weapon)
+	assert.Equal(t, float32(25.0), hits[0].Distance)
+
+	// ── connected ──
+	connected := findEvents("connected")
+	require.Len(t, connected, 1, "1 connected event")
+	assert.Equal(t, uint32(0), connected[0].FrameNum)
+	assert.Equal(t, "[RMC] DoS", connected[0].Message)
+
+	// ── disconnected ──
+	disconnected := findEvents("disconnected")
+	require.Len(t, disconnected, 1, "1 disconnected event")
+	assert.Equal(t, uint32(300), disconnected[0].FrameNum)
+	assert.Equal(t, "[VRG] mEss1a", disconnected[0].Message)
+
+	// ── captured ──
+	captured := findEvents("captured")
+	require.Len(t, captured, 1, "1 captured event")
+	assert.Equal(t, uint32(200), captured[0].FrameNum)
+	assert.Contains(t, captured[0].Message, "Player1", "unitName in message")
+	assert.Contains(t, captured[0].Message, "flag_carrier", "objectType in message")
+
+	// ── capturedFlag ──
+	capturedFlag := findEvents("capturedFlag")
+	require.Len(t, capturedFlag, 1, "1 capturedFlag event")
+	assert.Equal(t, uint32(210), capturedFlag[0].FrameNum)
+	assert.Contains(t, capturedFlag[0].Message, "Player1")
+
+	// ── terminalHackStarted ──
+	hackStarted := findEvents("terminalHackStarted")
+	require.Len(t, hackStarted, 1, "1 terminalHackStarted event")
+	assert.Equal(t, uint32(220), hackStarted[0].FrameNum)
+	assert.Contains(t, hackStarted[0].Message, "Player1")
+
+	// ── terminalHackCanceled ──
+	hackCanceled := findEvents("terminalHackCanceled")
+	require.Len(t, hackCanceled, 1, "1 terminalHackCanceled event")
+	assert.Equal(t, uint32(230), hackCanceled[0].FrameNum)
+	assert.Contains(t, hackCanceled[0].Message, "Player1")
+}

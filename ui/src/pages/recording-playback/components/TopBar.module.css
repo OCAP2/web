@@ -1,0 +1,266 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--pb-top-height, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(10, 15, 20, 0.95) 0%, rgba(10, 15, 20, 0.7) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 20;
+  animation: fadeIn 0.4s ease-out;
+  box-sizing: border-box;
+}
+
+/* ── Left section ── */
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: filter 0.15s ease;
+}
+
+.backBtn:hover {
+  filter: brightness(1.15);
+}
+
+.missionInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.missionName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.missionSubtitle {
+  font-size: 10px;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Center section ── */
+
+.center {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.forceIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forceDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.forceAlive {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.forceTotal {
+  font-size: 10px;
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
+}
+
+/* ── Right section ── */
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+
+.actionBtn:hover {
+  filter: brightness(1.15);
+}
+
+.layerBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: filter 0.15s ease;
+}
+
+.layerBtn:hover {
+  filter: brightness(1.15);
+}
+
+.layerDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.layerLabel {
+  font-size: 10px;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  padding: 4px 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.layerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.layerItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.layerCheckbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.layerCheckboxActive {
+  border: 1px solid var(--accent-blue);
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.layerCheckboxInactive {
+  border: 1px solid var(--text-dimmest);
+  background: transparent;
+}
+
+.layerCheckboxDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent-blue);
+}
+
+.layerItemText {
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.layerItemTextActive {
+  color: var(--text-secondary);
+}
+
+.layerItemTextInactive {
+  color: var(--text-dimmer);
+}
+
+/* ── Copied toast ── */
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.copiedToast {
+  position: absolute;
+  top: var(--pb-top-height);
+  right: 0;
+  padding: 4px 10px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: toastIn 0.15s ease-out;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}

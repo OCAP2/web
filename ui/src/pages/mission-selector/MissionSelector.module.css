@@ -10,8 +10,8 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: var(--ms-bg-dark);
-  color: var(--ms-text-secondary);
+  background: var(--bg-dark);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
   font-family: 'Segoe UI', -apple-system, sans-serif;
@@ -53,16 +53,16 @@
 .title {
   font-size: 22px;
   font-weight: 800;
-  color: var(--ms-text-primary);
-  font-family: var(--ms-font-heading);
+  color: var(--text-primary);
+  font-family: var(--font-heading);
   letter-spacing: -0.02em;
 }
 
 .versionBadge {
   font-size: 10px;
   font-weight: 600;
-  color: var(--ms-accent-blue);
-  font-family: var(--ms-font-mono);
+  color: var(--accent-blue);
+  font-family: var(--font-mono);
   background: rgba(74, 158, 255, 0.1);
   border: 1px solid rgba(74, 158, 255, 0.2);
   border-radius: 4px;
@@ -72,8 +72,8 @@
 
 .subtitle {
   font-size: 11px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
 }
 
 .statsArea {
@@ -98,11 +98,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--ms-text-secondary);
+  color: var(--text-secondary);
 }
 
 .statPillIcon {
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
   height: 18px;
   width: 18px;
 }
@@ -110,13 +110,13 @@
 .statPillNumber {
   font-size: 16px;
   font-weight: 700;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
 }
 
 .statPillLabel {
   font-size: 9px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -147,9 +147,9 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  color: var(--ms-text-muted);
+  color: var(--text-muted);
   font-size: 12px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   transition: all 0.15s;
 }
 
@@ -201,8 +201,8 @@
 .langDropdownTitle {
   padding: 6px 12px;
   font-size: 9px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
   letter-spacing: 0.1em;
   font-weight: 600;
 }
@@ -235,19 +235,19 @@
 
 .langOptionLabel {
   font-size: 12px;
-  font-family: var(--ms-font-mono);
-  color: var(--ms-text-muted);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 .langOptionLabelActive {
-  color: var(--ms-accent-blue);
+  color: var(--accent-blue);
   font-weight: 600;
 }
 
 .langOptionCheck {
   margin-left: auto;
-  color: var(--ms-accent-blue);
+  color: var(--accent-blue);
   font-size: 11px;
 }
 
@@ -271,7 +271,7 @@
 .searchIcon {
   position: absolute;
   left: 12px;
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
   display: flex;
 }
 
@@ -281,9 +281,9 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  color: var(--ms-text-secondary);
+  color: var(--text-secondary);
   font-size: 13px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   outline: none;
   transition: border-color 0.2s;
 }
@@ -293,19 +293,12 @@
 }
 
 .searchInput::placeholder {
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
 }
 
 .searchKbd {
   position: absolute;
   right: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-family: var(--ms-font-mono);
-  color: var(--ms-text-dimmer);
 }
 
 .tagFilters {
@@ -315,7 +308,7 @@
 }
 
 .tagIcon {
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
   margin-right: 4px;
 }
 
@@ -327,7 +320,7 @@
 }
 
 .mapIcon {
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
   margin-right: 4px;
 }
 
@@ -339,7 +332,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 10px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 600;
   text-transform: uppercase;
   transition: all 0.2s;
@@ -361,7 +354,7 @@
   background: rgba(255, 74, 74, 0.1);
   color: #FF6B6B;
   font-size: 10px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 
@@ -375,7 +368,7 @@
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.04em;
   border-radius: 6px;
@@ -394,7 +387,7 @@
   align-items: center;
   gap: 5px;
   font-size: 10px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 500;
 }
 
@@ -444,26 +437,26 @@
   gap: 4px;
   padding: 0;
   font-size: 10px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   transition: color 0.15s;
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
 }
 
 .sortButton:hover {
-  color: var(--ms-text-secondary);
+  color: var(--text-secondary);
 }
 
 .sortButtonActive {
-  color: var(--ms-text-secondary);
+  color: var(--text-secondary);
 }
 
 .colLabel {
   font-size: 10px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -530,7 +523,7 @@
 
 .missionRowSelected {
   background: rgba(74, 158, 255, 0.06);
-  border-left-color: var(--ms-accent-blue);
+  border-left-color: var(--accent-blue);
 }
 
 .missionRowSelected:hover {
@@ -563,8 +556,8 @@
 .rowMissionName {
   font-size: 13px;
   font-weight: 600;
-  color: var(--ms-text-primary);
-  font-family: var(--ms-font-heading);
+  color: var(--text-primary);
+  font-family: var(--font-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -572,8 +565,8 @@
 
 .rowMapName {
   font-size: 10px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   margin-top: 1px;
   text-transform: uppercase;
 }
@@ -586,20 +579,20 @@
 
 .rowDateValue {
   font-size: 12px;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .rowDateRelative {
   font-size: 9px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
 }
 
 .rowDuration {
   font-size: 12px;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .rowPlayers {
@@ -609,13 +602,13 @@
 }
 
 .rowPlayersIcon {
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
 }
 
 .rowPlayersValue {
   font-size: 12px;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .rowKills {
@@ -630,7 +623,7 @@
 
 .rowKillsValue {
   font-size: 12px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
 }
 
 .rowStatus {
@@ -649,7 +642,7 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--ms-accent-blue), #3585dd);
+  background: linear-gradient(135deg, var(--accent-blue), #3585dd);
   border: none;
   cursor: pointer;
   color: #fff;
@@ -677,20 +670,20 @@
 
 .emptyText {
   font-size: 13px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
 }
 
 .emptyHint {
   font-size: 11px;
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
 }
 
 /* ── Detail sidebar ── */
 .sidebar {
   width: 340px;
   flex-shrink: 0;
-  background: var(--ms-bg-panel-header);
+  background: var(--bg-panel-header);
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
@@ -731,15 +724,15 @@
 .sidebarHeroMapName {
   font-size: 28px;
   font-weight: 700;
-  font-family: var(--ms-font-heading);
+  font-family: var(--font-heading);
   opacity: 0.8;
   text-transform: uppercase;
 }
 
 .sidebarHeroTerrain {
   font-size: 11px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   margin-top: 4px;
 }
 
@@ -753,7 +746,7 @@
   background: rgba(0, 0, 0, 0.3);
   border: none;
   cursor: pointer;
-  color: var(--ms-text-muted);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -775,8 +768,8 @@
 .sidebarTitle {
   font-size: 18px;
   font-weight: 700;
-  color: var(--ms-text-primary);
-  font-family: var(--ms-font-heading);
+  color: var(--text-primary);
+  font-family: var(--font-heading);
   margin-bottom: 4px;
 }
 
@@ -802,8 +795,8 @@
 
 .sidebarSectionLabel {
   font-size: 10px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   letter-spacing: 0.1em;
   font-weight: 600;
   margin-bottom: 10px;
@@ -841,15 +834,15 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 700;
 }
 
 .sideCardBadgePlayers {
   font-size: 9px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--ms-accent-blue);
+  color: var(--accent-blue);
   background: rgba(74, 158, 255, 0.1);
   padding: 2px 7px;
   border-radius: 3px;
@@ -858,9 +851,9 @@
 
 .sideCardBadgeAi {
   font-size: 9px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   font-weight: 500;
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
   background: rgba(255, 255, 255, 0.04);
   padding: 2px 7px;
   border-radius: 3px;
@@ -882,15 +875,15 @@
 .sideCardStatValue {
   font-size: 14px;
   font-weight: 700;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   line-height: 1;
 }
 
 .sideCardStatLabel {
   font-size: 8px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   letter-spacing: 0.08em;
   margin-top: 3px;
   font-weight: 600;
@@ -923,13 +916,13 @@
 .sidebarCombatCellValue {
   font-size: 18px;
   font-weight: 700;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
 }
 
 .sidebarCombatCellLabel {
   font-size: 9px;
-  color: var(--ms-text-dim);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
   letter-spacing: 0.05em;
 }
 
@@ -953,7 +946,7 @@
   border: none;
   font-size: 13px;
   font-weight: 700;
-  font-family: var(--ms-font-heading);
+  font-family: var(--font-heading);
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
@@ -964,7 +957,7 @@
 
 .launchButtonReady {
   cursor: pointer;
-  background: linear-gradient(135deg, var(--ms-accent-blue), #3585dd);
+  background: linear-gradient(135deg, var(--accent-blue), #3585dd);
   color: #fff;
   box-shadow: 0 4px 20px rgba(74, 158, 255, 0.25);
 }
@@ -976,7 +969,7 @@
 .launchButtonDisabled {
   cursor: not-allowed;
   background: rgba(255, 255, 255, 0.04);
-  color: var(--ms-text-dimmer);
+  color: var(--text-dimmer);
 }
 
 .launchArrow {
@@ -1005,16 +998,16 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
   text-decoration: none;
   font-size: 11px;
-  font-family: var(--ms-font-mono);
+  font-family: var(--font-mono);
   transition: color 0.15s;
   cursor: pointer;
 }
 
 .footerGithub:hover {
-  color: var(--ms-text-muted);
+  color: var(--text-muted);
 }
 
 .footerVersions {
@@ -1024,31 +1017,31 @@
 
 .footerVersion {
   font-size: 10px;
-  font-family: var(--ms-font-mono);
-  color: var(--ms-text-dimmer);
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
 }
 
 .footerVersionValue {
-  color: var(--ms-text-dim);
+  color: var(--text-dim);
 }
 
 .footerMadeWith {
   font-size: 10px;
-  color: var(--ms-text-dimmest);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
 .footerHeart {
-  color: var(--ms-accent-red);
+  color: var(--accent-red);
 }
 
 .footerCenter {
   font-size: 10px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
 }
 
 .footerRight {
@@ -1063,19 +1056,13 @@
 }
 
 .footerKbd {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-size: 9px;
-  font-family: var(--ms-font-mono);
-  color: var(--ms-text-dim);
+  /* base kbd styles from base.css */
 }
 
 .footerAction {
   font-size: 9px;
-  color: var(--ms-text-dimmer);
-  font-family: var(--ms-font-mono);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
 }
 
 /* ── Side dots ── */
@@ -1099,8 +1086,8 @@
 
 .sideDotCount {
   font-size: 10px;
-  color: var(--ms-text-muted);
-  font-family: var(--ms-font-mono);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 /* ── Loading screen ── */

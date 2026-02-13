@@ -2,8 +2,7 @@ import { render } from "solid-js/web";
 import { Router, Route } from "@solidjs/router";
 import { App } from "./App";
 import { MissionSelector } from "./pages/mission-selector";
-import { LoadingTransition } from "./pages/LoadingTransition";
-import { RecordingPlayback } from "./pages/RecordingPlayback";
+import { RecordingPlayback } from "./pages/recording-playback";
 
 // Backwards compat: redirect ?op=<id> to /recording/<id>/<id>
 const params = new URLSearchParams(window.location.search);
@@ -21,7 +20,6 @@ if (root) {
     () => (
       <Router root={App}>
         <Route path="/" component={MissionSelector} />
-        <Route path="/loading/:id/:name" component={LoadingTransition} />
         <Route path="/recording/:id/:name" component={RecordingPlayback} />
       </Router>
     ),

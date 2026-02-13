@@ -30,9 +30,11 @@ export class EventManager {
     return this.frameIndex.get(frame) ?? [];
   }
 
-  /** Return all events where frameNum <= frame (for the event log). */
+  /** Return all events where frameNum <= frame (for the event log), sorted ascending by frame. */
   getActiveEvents(frame: number): GameEvent[] {
-    return this.events.filter((event) => event.frameNum <= frame);
+    return this.events
+      .filter((event) => event.frameNum <= frame)
+      .sort((a, b) => a.frameNum - b.frameNum);
   }
 
   /** Return all registered events. */
@@ -93,7 +95,38 @@ export class EventManager {
         // Attach current score to the event (even for self-kills)
         event.causerKillScore = causer.killCount - causer.teamKillCount * 2;
       }
+
+      // Increment death count for the victim
+      if (victim instanceof Unit) {
+        victim.deathCount++;
+      }
     }
+  }
+
+  /**
+   * Compute per-unit kill and death counts up to (and including) the given frame.
+   * Only counts "killed" events on Unit victims (not vehicles), matching resolveReferences logic.
+   */
+  getKillDeathCounts(frame: number): { kills: Map<number, number>; deaths: Map<number, number> } {
+    const kills = new Map<number, number>();
+    const deaths = new Map<number, number>();
+
+    for (const event of this.events) {
+      if (event.frameNum > frame) continue;
+      if (!(event instanceof HitKilledEvent)) continue;
+      if (event.type !== "killed") continue;
+      if (event.victimIsVehicle) continue;
+
+      // Death for victim
+      deaths.set(event.victimId, (deaths.get(event.victimId) ?? 0) + 1);
+
+      // Kill for causer (non-self kills only)
+      if (event.causedById !== event.victimId) {
+        kills.set(event.causedById, (kills.get(event.causedById) ?? 0) + 1);
+      }
+    }
+
+    return { kills, deaths };
   }
 
   /** Remove all events and clear the frame index. */

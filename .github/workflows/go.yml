@@ -26,15 +26,39 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
-          cache: true
+          cache: false
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-gomod-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-gomod-
 
       - name: Run tests
         run: |
           mkdir -p "$GOTMPDIR"
-          go test -coverprofile=cover.out -coverpkg=./cmd/...,./internal/... ./...
+          go test -coverprofile=cover.raw -coverpkg=./cmd/...,./internal/... ./...
         env:
           GOTMPDIR: ${{ runner.temp }}/go-work
           TMPDIR: ${{ runner.temp }}
+
+      - name: Deduplicate coverage profile
+        run: |
+          head -1 cover.raw > cover.out
+          tail -n +2 cover.raw | sort | python3 -c "
+          import sys
+          from collections import defaultdict
+          entries = defaultdict(lambda: (0, 0))
+          for line in sys.stdin:
+              parts = line.strip().rsplit(' ', 2)
+              if len(parts) == 3:
+                  key, stmts, count = parts[0], int(parts[1]), int(parts[2])
+                  old_s, old_c = entries[key]
+                  entries[key] = (max(stmts, old_s), max(count, old_c))
+          for key in sorted(entries):
+              s, c = entries[key]
+              print(f'{key} {s} {c}')
+          " >> cover.out
 
       - name: Build
         run: go build -o ocap-webserver ./cmd/ocap-webserver

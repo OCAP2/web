@@ -1,0 +1,10 @@
+/* ==========================================================================
+   Responsive Breakpoints — Global overrides only
+   Component-specific responsive rules live in their respective .module.css files.
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .leaflet-left {
+    left: 10px;
+  }
+}

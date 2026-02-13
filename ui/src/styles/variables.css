@@ -1,0 +1,44 @@
+:root {
+  /* ── Accent palette ── */
+  --accent-blue: #4A9EFF;
+  --accent-red: #FF4A4A;
+  --accent-green: #2DD4A0;
+  --accent-purple: #A78BFA;
+  --accent-orange: #FFB84A;
+
+  /* ── Text scale ── */
+  --text-primary: #e5ebf1;
+  --text-secondary: #cfd9e4;
+  --text-muted: #96a7b8;
+  --text-dim: #6b7e90;
+  --text-dimmer: #5b6f82;
+  --text-dimmest: #4c6174;
+
+  /* ── Backgrounds ── */
+  --bg-dark: #0a0f14;
+  --bg-panel: rgba(13, 21, 32, 0.88);
+  --bg-panel-header: rgba(13, 21, 32, 0.6);
+  --bg-surface: #151e2b;
+  --bg-surface-hover: #1a2332;
+
+  /* ── Fonts ── */
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-heading: 'Outfit', sans-serif;
+
+  /* ── Legacy (MissionModal, Hint, leaflet scale) ── */
+  --highlight: rgba(205, 134, 20, 0.9);
+  --bg-modal: rgba(0, 0, 0, 0.7);
+  --bg-modal-header: rgba(155, 0, 0, 0.9);
+
+  /* ── Side colors: map markers ── */
+  --side-blufor: #00a8ff;  --side-opfor: #ff0000;
+  --side-ind: #00cc00;     --side-civ: #c900ff;
+  --side-blufor-dark: #004D99;  --side-opfor-dark: #800000;
+  --side-ind-dark: #007F00;     --side-civ-dark: #650080;
+  --color-dead: #333333;  --color-hit: #FF8800;
+
+  /* ── Playback layout ── */
+  --pb-top-height: 48px;
+  --pb-bottom-height: 90px;
+  --pb-panel-width: 370px;
+}

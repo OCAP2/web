@@ -1,14 +1,14 @@
-import type { Locale } from "../../ui/i18n/i18n";
+import type { Locale } from "../../i18n/i18n";
 
 // All accent colors in one place — CSS vars for inline styles
 export const C = {
-  blue:    "var(--ms-accent-blue)",
-  red:     "var(--ms-accent-red)",
-  green:   "var(--ms-accent-green)",
-  purple:  "var(--ms-accent-purple)",
-  orange:  "var(--ms-accent-orange)",
-  muted:   "var(--ms-text-muted)",
-  dimmer:  "var(--ms-text-dimmer)",
+  blue:    "var(--accent-blue)",
+  red:     "var(--accent-red)",
+  green:   "var(--accent-green)",
+  purple:  "var(--accent-purple)",
+  orange:  "var(--accent-orange)",
+  muted:   "var(--text-muted)",
+  dimmer:  "var(--text-dimmer)",
 } as const;
 
 // Labels are i18n keys — resolve via t() at render time

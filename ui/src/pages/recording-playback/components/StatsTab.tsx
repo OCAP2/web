@@ -1,0 +1,180 @@
+import { createMemo, For, Show } from "solid-js";
+import type { JSX } from "solid-js";
+import type { Side } from "../../../data/types";
+import { Unit } from "../../../playback/entities/unit";
+import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
+import { useEngine } from "../../../hooks/useEngine";
+import { useI18n } from "../../../hooks/useLocale";
+import styles from "./SidePanel.module.css";
+
+const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
+
+const SIDE_LABELS: Record<Side, string> = {
+  WEST: "BLUFOR",
+  EAST: "OPFOR",
+  GUER: "IND",
+  CIV: "CIV",
+};
+
+interface SideStats {
+  side: Side;
+  total: number;
+  alive: number;
+  kills: number;
+  deaths: number;
+}
+
+interface LeaderboardEntry {
+  name: string;
+  side: Side;
+  kills: number;
+  deaths: number;
+}
+
+export function StatsTab(): JSX.Element {
+  const engine = useEngine();
+  const { t } = useI18n();
+
+  // Frame-aware kill/death counts
+  const killDeathCounts = createMemo(() =>
+    engine.eventManager.getKillDeathCounts(engine.currentFrame()),
+  );
+
+  const sideStats = createMemo((): SideStats[] => {
+    const snaps = engine.entitySnapshots();
+    const units = engine.entityManager.getUnits();
+    const { kills, deaths } = killDeathCounts();
+    return SIDES.map((side) => {
+      const sideUnits = units.filter((u) => u.side === side);
+      const total = sideUnits.length;
+      let alive = 0;
+      for (const u of sideUnits) {
+        const snap = snaps.get(u.id);
+        if (snap && snap.alive) alive++;
+      }
+      const sideKills = sideUnits.reduce((s, u) => s + (kills.get(u.id) ?? 0), 0);
+      const sideDeaths = sideUnits.reduce((s, u) => s + (deaths.get(u.id) ?? 0), 0);
+      return { side, total, alive, kills: sideKills, deaths: sideDeaths };
+    }).filter((s) => s.total > 0);
+  });
+
+  const leaderboard = createMemo((): LeaderboardEntry[] => {
+    const units = engine.entityManager.getUnits();
+    const { kills, deaths } = killDeathCounts();
+    return units
+      .filter((u) => (kills.get(u.id) ?? 0) > 0 || (deaths.get(u.id) ?? 0) > 0)
+      .sort((a, b) => (kills.get(b.id) ?? 0) - (kills.get(a.id) ?? 0))
+      .map((u) => ({
+        name: u.name || `Unit ${u.id}`,
+        side: u.side,
+        kills: kills.get(u.id) ?? 0,
+        deaths: deaths.get(u.id) ?? 0,
+      }));
+  });
+
+  return (
+    <div class={styles.tabContent}>
+      <div class={styles.statsContainer}>
+        {/* Force summary */}
+        <div>
+          <div class={styles.statsLabel}>{t("force_summary")}</div>
+          <div class={styles.forceSummary} style={{ "margin-top": "8px" }}>
+            <For each={sideStats()}>
+              {(stat) => {
+                const pct = () => stat.total > 0 ? (stat.alive / stat.total) * 100 : 0;
+                return (
+                  <div
+                    class={styles.forceCard}
+                    style={{
+                      background: SIDE_BG_COLORS[stat.side],
+                      border: `1px solid ${SIDE_COLORS_UI[stat.side]}20`,
+                    }}
+                  >
+                    <div
+                      class={styles.forceCardLabel}
+                      style={{ color: SIDE_COLORS_UI[stat.side] }}
+                    >
+                      {SIDE_LABELS[stat.side]}
+                    </div>
+                    <div class={styles.forceCardRow}>
+                      <span style={{ "font-size": "10px", color: "var(--text-dimmer)" }}>{t("strength")}</span>
+                      <span style={{ "font-size": "11px", "font-family": "var(--font-mono)" }}>
+                        <span style={{ color: "var(--accent-green)" }}>{stat.alive}</span>
+                        <span style={{ opacity: 0.4 }}>/{stat.total}</span>
+                      </span>
+                    </div>
+                    <div class={styles.forceStrengthBar}>
+                      <div
+                        class={styles.forceStrengthFill}
+                        style={{
+                          width: pct() + "%",
+                          background: SIDE_COLORS_UI[stat.side],
+                        }}
+                      />
+                    </div>
+                    <div class={styles.forceStats}>
+                      <div style={{ "text-align": "center" }}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--accent-red)" }}>
+                          {stat.kills}
+                        </div>
+                        <div class={styles.forceStatLabel}>{t("kills_label")}</div>
+                      </div>
+                      <div style={{ "text-align": "center" }}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--accent-orange)" }}>
+                          {stat.deaths}
+                        </div>
+                        <div class={styles.forceStatLabel}>{t("deaths_label")}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            </For>
+          </div>
+        </div>
+
+        {/* Leaderboard */}
+        <Show when={leaderboard().length > 0}>
+          <div>
+            <div class={styles.statsLabel}>{t("leaderboard")}</div>
+            <div class={styles.leaderboard} style={{ "margin-top": "8px" }}>
+              <div
+                class={styles.leaderboardRow}
+                style={{ "margin-bottom": "4px" }}
+              >
+                <span class={styles.leaderboardRank}>#</span>
+                <span class={styles.leaderboardName} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
+                  {t("name")}
+                </span>
+                <span class={styles.leaderboardKills} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
+                  K
+                </span>
+                <span class={styles.leaderboardDeaths} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
+                  D
+                </span>
+              </div>
+              <For each={leaderboard()}>
+                {(entry, i) => (
+                  <div
+                    class={styles.leaderboardRow}
+                    classList={{ [styles.leaderboardRowAlt]: i() % 2 === 1 }}
+                  >
+                    <span class={styles.leaderboardRank}>{i() + 1}</span>
+                    <span
+                      class={styles.leaderboardName}
+                      style={{ color: SIDE_COLORS_UI[entry.side] }}
+                    >
+                      {entry.name}
+                    </span>
+                    <span class={styles.leaderboardKills}>{entry.kills}</span>
+                    <span class={styles.leaderboardDeaths}>{entry.deaths}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+      </div>
+    </div>
+  );
+}
