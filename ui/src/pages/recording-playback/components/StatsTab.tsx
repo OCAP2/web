@@ -75,7 +75,7 @@ export function StatsTab(): JSX.Element {
       <div class={styles.statsContainer}>
         {/* Force summary */}
         <div>
-          <div class={styles.statsLabel}>FORCES</div>
+          <div class={styles.statsLabel}>FORCE SUMMARY</div>
           <div class={styles.forceSummary} style={{ "margin-top": "8px" }}>
             <For each={sideStats()}>
               {(stat) => {
@@ -83,13 +83,23 @@ export function StatsTab(): JSX.Element {
                 return (
                   <div
                     class={styles.forceCard}
-                    style={{ background: SIDE_BG_COLORS[stat.side] }}
+                    style={{
+                      background: SIDE_BG_COLORS[stat.side],
+                      border: `1px solid ${SIDE_COLORS_UI[stat.side]}20`,
+                    }}
                   >
                     <div
                       class={styles.forceCardLabel}
                       style={{ color: SIDE_COLORS_UI[stat.side] }}
                     >
                       {SIDE_LABELS[stat.side]}
+                    </div>
+                    <div class={styles.forceCardRow}>
+                      <span style={{ "font-size": "10px", color: "var(--text-dimmer)" }}>Strength</span>
+                      <span style={{ "font-size": "11px", "font-family": "var(--font-mono)" }}>
+                        <span style={{ color: "var(--accent-green)" }}>{stat.alive}</span>
+                        <span style={{ opacity: 0.4 }}>/{stat.total}</span>
+                      </span>
                     </div>
                     <div class={styles.forceStrengthBar}>
                       <div
@@ -101,26 +111,17 @@ export function StatsTab(): JSX.Element {
                       />
                     </div>
                     <div class={styles.forceStats}>
-                      <div>
-                        <div
-                          class={styles.forceStatNum}
-                          style={{ color: SIDE_COLORS_UI[stat.side] }}
-                        >
-                          {stat.alive}<span style={{ color: "var(--text-dimmest)", "font-size": "10px" }}>/{stat.total}</span>
-                        </div>
-                        <div class={styles.forceStatLabel}>Alive</div>
-                      </div>
-                      <div>
+                      <div style={{ "text-align": "center" }}>
                         <div class={styles.forceStatNum} style={{ color: "var(--accent-red)" }}>
                           {stat.kills}
                         </div>
-                        <div class={styles.forceStatLabel}>Kills</div>
+                        <div class={styles.forceStatLabel}>kills</div>
                       </div>
-                      <div>
+                      <div style={{ "text-align": "center" }}>
                         <div class={styles.forceStatNum} style={{ color: "var(--accent-orange)" }}>
                           {stat.deaths}
                         </div>
-                        <div class={styles.forceStatLabel}>Deaths</div>
+                        <div class={styles.forceStatLabel}>deaths</div>
                       </div>
                     </div>
                   </div>
