@@ -236,6 +236,99 @@ describe("briefing marker SVG renderer", () => {
     expect(lastCall.opacity).toBe(0);
   });
 
+  it("RECTANGLE rotates clockwise from north (matching Arma convention)", () => {
+    // A narrow rectangle [5, 100] at direction=90° (east) should be
+    // wider in X (lng) than in Y (lat). Before the fix, the rotation
+    // was counter-clockwise, mirroring the shape.
+    const handle = renderer.createBriefingMarker({
+      shape: "RECTANGLE",
+      type: "mil_dot",
+      color: "008000",
+      side: "GLOBAL",
+      size: [5, 100],
+      brush: "solidborder",
+    });
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000],
+      direction: 90,
+      alpha: 1,
+    });
+
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const latlngs = polygon.getLatLngs()[0] as L.LatLng[];
+    expect(latlngs.length).toBe(4);
+
+    const lngs = latlngs.map((ll) => ll.lng);
+    const lats = latlngs.map((ll) => ll.lat);
+    const lngSpan = Math.max(...lngs) - Math.min(...lngs);
+    const latSpan = Math.max(...lats) - Math.min(...lats);
+
+    // Long axis (100) along east-west → lngSpan >> latSpan
+    expect(lngSpan).toBeGreaterThan(latSpan * 5);
+  });
+
+  it("RECTANGLE at direction=45 has long axis pointing NE", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "RECTANGLE",
+      type: "mil_dot",
+      color: "008000",
+      side: "GLOBAL",
+      size: [5, 100],
+      brush: "solid",
+    });
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000],
+      direction: 45,
+      alpha: 1,
+    });
+
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const latlngs = polygon.getLatLngs()[0] as L.LatLng[];
+
+    // Find the point furthest from center in the +lng direction (east).
+    // For CW 45° from north, the top of the rectangle should be NE of
+    // center — both higher lat AND higher lng.
+    const centerLat = latlngs.reduce((s, ll) => s + ll.lat, 0) / 4;
+    const centerLng = latlngs.reduce((s, ll) => s + ll.lng, 0) / 4;
+
+    // The point with max lng should also have lat > center (NE quadrant)
+    const eastmost = latlngs.reduce((a, b) => (b.lng > a.lng ? b : a));
+    expect(eastmost.lng).toBeGreaterThan(centerLng);
+    // In legacy mode higher Arma Y = higher lat, so NE = higher lat + higher lng
+    expect(eastmost.lat).toBeGreaterThan(centerLat);
+  });
+
+  it("ELLIPSE rotates clockwise from north", () => {
+    // An elongated ellipse [20, 100] at direction=90° should extend
+    // more in X (lng) than Y (lat).
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE",
+      type: "mil_circle",
+      color: "FF0000",
+      side: "WEST",
+      size: [20, 100],
+    });
+
+    renderer.updateBriefingMarker(handle, {
+      position: [5000, 5000],
+      direction: 90,
+      alpha: 1,
+    });
+
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const latlngs = polygon.getLatLngs()[0] as L.LatLng[];
+
+    const lngs = latlngs.map((ll) => ll.lng);
+    const lats = latlngs.map((ll) => ll.lat);
+    const lngSpan = Math.max(...lngs) - Math.min(...lngs);
+    const latSpan = Math.max(...lats) - Math.min(...lats);
+
+    // Long axis (100) along east-west → lngSpan >> latSpan
+    expect(lngSpan).toBeGreaterThan(latSpan * 3);
+  });
+
   it("removeBriefingMarker cleans up pattern from SVG defs", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ELLIPSE",

@@ -862,7 +862,9 @@ export class LeafletRenderer implements MapRenderer {
       const [cx, cy] = state.position;
       const rx = internal.size?.[0] ?? 100;
       const ry = internal.size?.[1] ?? 100;
-      const rad = state.direction * (Math.PI / 180);
+      // Negate angle: Arma directions are clockwise from north,
+      // standard rotation matrix is counter-clockwise
+      const rad = -state.direction * (Math.PI / 180);
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
 
@@ -886,7 +888,9 @@ export class LeafletRenderer implements MapRenderer {
       const [cx, cy] = state.position;
       const sx = internal.size?.[0] ?? 100;
       const sy = internal.size?.[1] ?? 100;
-      const rad = state.direction * (Math.PI / 180);
+      // Negate angle: Arma directions are clockwise from north,
+      // standard rotation matrix is counter-clockwise
+      const rad = -state.direction * (Math.PI / 180);
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
 
