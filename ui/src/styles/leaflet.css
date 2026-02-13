@@ -12,7 +12,7 @@
 }
 
 .leaflet-bottom {
-  bottom: calc(var(--pb-bottom-height, 72px) + 8px);
+  bottom: calc(var(--pb-bottom-height, 90px) + 8px);
 }
 
 
