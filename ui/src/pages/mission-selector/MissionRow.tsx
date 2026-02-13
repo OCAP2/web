@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import type { Operation } from "../../data/types";
-import { useI18n } from "../../ui/hooks/useLocale";
+import { useI18n } from "../../hooks/useLocale";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, relativeDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
 import { TagBadge, StatusBadge } from "./components";

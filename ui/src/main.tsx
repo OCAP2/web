@@ -3,7 +3,7 @@ import { Router, Route } from "@solidjs/router";
 import { App } from "./App";
 import { MissionSelector } from "./pages/mission-selector";
 import { LoadingTransition } from "./pages/LoadingTransition";
-import { RecordingPlayback } from "./pages/RecordingPlayback";
+import { RecordingPlayback } from "./pages/recording-playback";
 
 // Backwards compat: redirect ?op=<id> to /recording/<id>/<id>
 const params = new URLSearchParams(window.location.search);

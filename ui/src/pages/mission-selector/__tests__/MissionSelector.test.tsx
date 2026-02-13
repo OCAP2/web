@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
-import { I18nProvider } from "../../../ui/hooks/useLocale";
-import { CustomizeProvider } from "../../../ui/hooks/useCustomize";
+import { I18nProvider } from "../../../hooks/useLocale";
+import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { MissionSelector } from "..";
 import { LoadingTransition } from "../../LoadingTransition";
 import type { Operation } from "../../../data/types";

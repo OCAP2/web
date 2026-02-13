@@ -1,7 +1,7 @@
 import { onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import { useParams, useNavigate, useLocation } from "@solidjs/router";
-import { useI18n } from "../ui/hooks/useLocale";
+import { useI18n } from "../hooks/useLocale";
 import { OcapLogoSvg } from "./mission-selector/OcapLogoSvg";
 import { formatDuration } from "./mission-selector/helpers";
 import styles from "./LoadingTransition.module.css";

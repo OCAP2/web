@@ -1,4 +1,4 @@
-import type { Locale } from "../../ui/i18n/i18n";
+import type { Locale } from "../../i18n/i18n";
 
 // All accent colors in one place — CSS vars for inline styles
 export const C = {

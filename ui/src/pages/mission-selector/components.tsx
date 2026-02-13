@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
-import { useI18n } from "../../ui/hooks/useLocale";
+import { useI18n } from "../../hooks/useLocale";
 import { STATUS_MAP } from "./constants";
 import { getTagColor } from "./helpers";
 import { Icons } from "./icons";
