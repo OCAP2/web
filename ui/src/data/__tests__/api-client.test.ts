@@ -195,6 +195,15 @@ describe("ApiClient", () => {
       );
       expect(result).toEqual(data);
     });
+
+    it("returns empty config on 204 No Content", async () => {
+      mockFetchJson(null, 204);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getCustomize();
+
+      expect(result).toEqual({});
+    });
   });
 
   // ─── getVersion ───

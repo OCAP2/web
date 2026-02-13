@@ -136,9 +136,20 @@ export class ApiClient {
    * GET {baseUrl}/api/v1/customize
    */
   async getCustomize(): Promise<CustomizeConfig> {
-    return this.fetchJson<CustomizeConfig>(
-      `${this.baseUrl}/api/v1/customize`,
-    );
+    const response = await fetch(`${this.baseUrl}/api/v1/customize`, {
+      cache: "no-cache",
+    });
+    if (response.status === 204) {
+      return {};
+    }
+    if (!response.ok) {
+      throw new ApiError(
+        `GET customize failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+    return response.json() as Promise<CustomizeConfig>;
   }
 
   /**
