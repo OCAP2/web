@@ -156,6 +156,8 @@ export function RecordingPlayback(): JSX.Element {
   onMount(() => {
     registerShortcuts(engine);
 
+    // The :name param is purely cosmetic (for human-readable URLs).
+    // The operation is always fetched by :id; filename is derived from the response.
     const id = decodeURIComponent(params.id);
     void (async () => {
       try {
