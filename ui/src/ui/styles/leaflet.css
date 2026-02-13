@@ -7,13 +7,12 @@
 }
 
 .leaflet-left {
-  left: var(--leaflet-left-offset, 360px);
-  top: 50px;
+  left: var(--leaflet-left-offset, 10px);
   transition: left 0.3s ease;
 }
 
 .leaflet-bottom {
-  bottom: 65px;
+  bottom: calc(var(--pb-bottom-height, 72px) + 8px);
 }
 
 .leaflet-popup {

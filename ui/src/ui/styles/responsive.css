@@ -6,6 +6,5 @@
 @media (max-width: 768px) {
   .leaflet-left {
     left: 10px;
-    top: 50px;
   }
 }
