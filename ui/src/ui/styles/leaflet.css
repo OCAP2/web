@@ -15,6 +15,7 @@
   bottom: calc(var(--pb-bottom-height, 72px) + 8px);
 }
 
+
 .leaflet-popup {
   pointer-events: none;
 }
@@ -97,25 +98,6 @@
   box-shadow: 2px 2px 4px #000;
 }
 
-/* Overlay layer control (always-expanded, dark theme) */
-.leaflet-control-layers {
-  background: var(--bg-panel);
-  color: var(--text-primary);
-  border-radius: 4px;
-}
-
-.leaflet-control-layers-expanded {
-  background: var(--bg-panel);
-  color: var(--text-primary);
-}
-
-.leaflet-control-layers-separator {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.leaflet-control-layers label {
-  color: var(--text-primary);
-}
 
 /* Scale ruler dark theme */
 .leaflet-control-scale-line {
