@@ -73,8 +73,20 @@ export const CrosshairIcon = (p: IconProps): JSX.Element => (
 );
 
 export const SkullIcon = (p: IconProps): JSX.Element => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width={s(p.size) - 4} height={s(p.size) - 4}>
-    <path d="M12 2C6.48 2 2 6.48 2 12c0 3.31 1.61 6.24 4.09 8.06V22h3v-1h1.82v1h2.18v-1H15v1h3v-1.94C20.39 18.24 22 15.31 22 12c0-5.52-4.48-10-10-10zM9 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
+  <svg viewBox="0 0 16 16" fill="currentColor" width={s(p.size)} height={s(p.size)}>
+    {/* Cranium */}
+    <path d="M8 1C4.7 1 2 3.5 2 6.5c0 1.8.9 3.4 2.3 4.5H5v1h6v-1h.7C12.1 9.9 14 8.3 14 6.5 14 3.5 11.3 1 8 1z" />
+    {/* Eye holes */}
+    <ellipse cx="5.8" cy="6.5" rx="1.3" ry="1.5" fill="var(--bg-base, #0d1520)" />
+    <ellipse cx="10.2" cy="6.5" rx="1.3" ry="1.5" fill="var(--bg-base, #0d1520)" />
+    {/* Nose */}
+    <path d="M7.3 9.2L8 10l.7-.8-.3-.7h-.8z" fill="var(--bg-base, #0d1520)" />
+    {/* Jaw / teeth row */}
+    <rect x="5" y="12.5" width="6" height="2.5" rx=".5" />
+    {/* Teeth gaps */}
+    <rect x="6.2" y="12.5" width=".6" height="2.5" fill="var(--bg-base, #0d1520)" />
+    <rect x="7.7" y="12.5" width=".6" height="2.5" fill="var(--bg-base, #0d1520)" />
+    <rect x="9.2" y="12.5" width=".6" height="2.5" fill="var(--bg-base, #0d1520)" />
   </svg>
 );
 
