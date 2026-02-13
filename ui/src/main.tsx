@@ -5,13 +5,13 @@ import { MissionSelector } from "./pages/mission-selector";
 import { LoadingTransition } from "./pages/LoadingTransition";
 import { RecordingPlayback } from "./pages/RecordingPlayback";
 
-// Backwards compat: redirect ?op=<id> to /recording/<id>
+// Backwards compat: redirect ?op=<id> to /recording/<id>/<id>
 const params = new URLSearchParams(window.location.search);
 const op = params.get("op");
 if (op) {
   const url = new URL(window.location.href);
   url.searchParams.delete("op");
-  url.pathname = `/recording/${encodeURIComponent(op)}`;
+  url.pathname = `/recording/${encodeURIComponent(op)}/${encodeURIComponent(op)}`;
   window.history.replaceState(null, "", url.toString());
 }
 
@@ -21,8 +21,8 @@ if (root) {
     () => (
       <Router root={App}>
         <Route path="/" component={MissionSelector} />
-        <Route path="/loading/:id" component={LoadingTransition} />
-        <Route path="/recording/:id" component={RecordingPlayback} />
+        <Route path="/loading/:id/:name" component={LoadingTransition} />
+        <Route path="/recording/:id/:name" component={RecordingPlayback} />
       </Router>
     ),
     root,

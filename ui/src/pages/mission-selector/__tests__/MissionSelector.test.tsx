@@ -61,7 +61,7 @@ function renderPage() {
   return render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
       <Route path="/" component={MissionSelector} />
-      <Route path="/loading/:id" component={LoadingTransition} />
+      <Route path="/loading/:id/:name" component={LoadingTransition} />
     </Router>
   ));
 }

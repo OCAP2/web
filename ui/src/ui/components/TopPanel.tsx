@@ -20,10 +20,11 @@ export interface TopPanelProps {
  */
 export function TopPanel(props: TopPanelProps): JSX.Element {
   const handleShare = () => {
-    const id = props.operationFilename?.() ?? props.operationId();
+    const id = props.operationId();
     if (!id) return;
+    const name = props.operationFilename?.() ?? id;
     const url = new URL(window.location.origin);
-    url.pathname = `/recording/${encodeURIComponent(id)}`;
+    url.pathname = `/recording/${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
     void navigator.clipboard.writeText(url.toString());
   };
 

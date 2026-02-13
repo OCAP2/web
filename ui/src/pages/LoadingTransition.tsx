@@ -13,7 +13,7 @@ interface LocationState {
 }
 
 export function LoadingTransition(): JSX.Element {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{ id: string; name: string }>();
   const navigate = useNavigate();
   const location = useLocation<LocationState>();
   const { t } = useI18n();
@@ -22,7 +22,7 @@ export function LoadingTransition(): JSX.Element {
 
   onMount(() => {
     setTimeout(() => {
-      navigate(`/recording/${params.id}`, { replace: true });
+      navigate(`/recording/${params.id}/${params.name}`, { replace: true });
     }, 2000);
   });
 

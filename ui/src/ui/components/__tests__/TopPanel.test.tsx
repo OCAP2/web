@@ -62,7 +62,7 @@ describe("TopPanel", () => {
     expect(onInfo).toHaveBeenCalledTimes(1);
   });
 
-  it("share button copies URL with /recording/:id path to clipboard", async () => {
+  it("share button copies URL with /recording/:id/:name path to clipboard", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: { writeText },
@@ -78,10 +78,10 @@ describe("TopPanel", () => {
 
     expect(writeText).toHaveBeenCalledTimes(1);
     const calledUrl = writeText.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("/recording/op-42");
+    expect(calledUrl).toContain("/recording/op-42/op-42");
   });
 
-  it("share button uses operationFilename over operationId", async () => {
+  it("share button uses operationFilename as name segment", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: { writeText },
@@ -97,7 +97,7 @@ describe("TopPanel", () => {
     fireEvent.click(getByTestId("share-button"));
 
     const calledUrl = writeText.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("/recording/my_mission");
+    expect(calledUrl).toContain("/recording/42/my_mission");
   });
 
   it("hides share and download buttons when no operationId", () => {

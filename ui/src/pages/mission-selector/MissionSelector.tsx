@@ -168,8 +168,8 @@ export function MissionSelector(): JSX.Element {
 
   // Launch handler
   const handleLaunch = (op: Operation) => {
-    const id = op.filename ?? op.id;
-    navigate(`/loading/${encodeURIComponent(id)}`, {
+    const name = op.filename ?? op.id;
+    navigate(`/loading/${encodeURIComponent(op.id)}/${encodeURIComponent(name)}`, {
       state: {
         missionName: op.missionName,
         worldName: op.worldName,

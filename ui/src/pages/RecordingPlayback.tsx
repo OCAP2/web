@@ -33,7 +33,7 @@ import { registerShortcuts, unregisterShortcuts, leftPanelVisible } from "../ui/
  * by the route param, and disposes everything on unmount.
  */
 export function RecordingPlayback(): JSX.Element {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{ id: string; name: string }>();
   const navigate = useNavigate();
   const api = new ApiClient();
   const renderer: MapRenderer = new LeafletRenderer();
