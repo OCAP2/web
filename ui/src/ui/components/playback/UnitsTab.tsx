@@ -61,6 +61,11 @@ export function UnitsTab(): JSX.Element {
     return snap ? !!snap.alive : true;
   };
 
+  // Frame-aware kill counts
+  const killDeathCounts = createMemo(() =>
+    engine.eventManager.getKillDeathCounts(engine.currentFrame()),
+  );
+
   const groups = createMemo((): GroupData[] => {
     const units = unitsForSide(activeSide());
     const groupMap = new Map<string, Unit[]>();
@@ -195,10 +200,10 @@ export function UnitsTab(): JSX.Element {
                               <span class={styles.unitRole}>{unit.role}</span>
                             </Show>
                           </span>
-                          <Show when={unit.killCount > 0}>
+                          <Show when={(killDeathCounts().kills.get(unit.id) ?? 0) > 0}>
                             <span class={styles.unitKills}>
                               <CrosshairIcon size={10} />
-                              {unit.killCount}
+                              {killDeathCounts().kills.get(unit.id)}
                             </span>
                           </Show>
                         </button>

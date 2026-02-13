@@ -33,9 +33,15 @@ interface LeaderboardEntry {
 export function StatsTab(): JSX.Element {
   const engine = useEngine();
 
+  // Frame-aware kill/death counts
+  const killDeathCounts = createMemo(() =>
+    engine.eventManager.getKillDeathCounts(engine.currentFrame()),
+  );
+
   const sideStats = createMemo((): SideStats[] => {
     const snaps = engine.entitySnapshots();
     const units = engine.entityManager.getUnits();
+    const { kills, deaths } = killDeathCounts();
     return SIDES.map((side) => {
       const sideUnits = units.filter((u) => u.side === side);
       const total = sideUnits.length;
@@ -44,22 +50,23 @@ export function StatsTab(): JSX.Element {
         const snap = snaps.get(u.id);
         if (snap && snap.alive) alive++;
       }
-      const kills = sideUnits.reduce((s, u) => s + u.killCount, 0);
-      const deaths = sideUnits.reduce((s, u) => s + u.deathCount, 0);
-      return { side, total, alive, kills, deaths };
+      const sideKills = sideUnits.reduce((s, u) => s + (kills.get(u.id) ?? 0), 0);
+      const sideDeaths = sideUnits.reduce((s, u) => s + (deaths.get(u.id) ?? 0), 0);
+      return { side, total, alive, kills: sideKills, deaths: sideDeaths };
     }).filter((s) => s.total > 0);
   });
 
   const leaderboard = createMemo((): LeaderboardEntry[] => {
     const units = engine.entityManager.getUnits();
+    const { kills, deaths } = killDeathCounts();
     return units
-      .filter((u) => u.killCount > 0 || u.deathCount > 0)
-      .sort((a, b) => b.killCount - a.killCount)
+      .filter((u) => (kills.get(u.id) ?? 0) > 0 || (deaths.get(u.id) ?? 0) > 0)
+      .sort((a, b) => (kills.get(b.id) ?? 0) - (kills.get(a.id) ?? 0))
       .map((u) => ({
         name: u.name || `Unit ${u.id}`,
         side: u.side,
-        kills: u.killCount,
-        deaths: u.deathCount,
+        kills: kills.get(u.id) ?? 0,
+        deaths: deaths.get(u.id) ?? 0,
       }));
   });
 
