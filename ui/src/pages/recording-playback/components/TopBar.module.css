@@ -50,6 +50,12 @@
   filter: brightness(1.15);
 }
 
+.customizeLogo {
+  object-fit: contain;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
 .missionInfo {
   display: flex;
   flex-direction: column;

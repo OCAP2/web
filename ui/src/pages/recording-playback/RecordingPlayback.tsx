@@ -23,7 +23,6 @@ import { MapControls } from "./components/MapControls";
 import { AboutModal } from "./components/AboutModal";
 import { CounterDisplay } from "./components/CounterDisplay";
 import { FollowIndicator } from "./components/FollowIndicator";
-import { CustomizeLogo } from "./components/CustomizeLogo";
 import { Hint, showHint, hintMessage, hintVisible } from "./components/Hint";
 import {
   registerShortcuts,
@@ -136,7 +135,6 @@ export function RecordingPlayback(): JSX.Element {
           onTogglePanel={() => setLeftPanelVisible((v) => !v)}
         />
         <MapControls />
-        <CustomizeLogo />
         <CounterDisplay />
         <AboutModal
           open={aboutOpen}

@@ -1,8 +1,0 @@
-.logo {
-  position: absolute;
-  bottom: 85px;
-  z-index: 1;
-  opacity: 0.8;
-  object-fit: contain;
-  transition: left 0.3s ease;
-}

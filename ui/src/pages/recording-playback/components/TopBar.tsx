@@ -3,6 +3,7 @@ import type { JSX, Accessor } from "solid-js";
 import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
+import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
 import { SIDE_COLORS_UI } from "../../../config/side-colors";
 import type { Side, WorldConfig } from "../../../data/types";
@@ -40,6 +41,7 @@ const SIDE_LABEL: Record<Side, string> = {
 export function TopBar(props: TopBarProps): JSX.Element {
   const engine = useEngine();
   const renderer = useRenderer();
+  const customize = useCustomize();
   const { t } = useI18n();
 
   // ── Force stats (center) ──
@@ -144,11 +146,28 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
   return (
     <div class={styles.topBar}>
-      {/* ── Left: logo + mission info ── */}
+      {/* ── Left: back + logo + mission info ── */}
       <div class={styles.left}>
         <button class={styles.backBtn} title={t("back_to_missions")} onClick={() => props.onBack?.()}>
           <ArrowLeftIcon size={16} />
         </button>
+        <Show when={customize().websiteLogo}>
+          {(logo) => {
+            const img = (
+              <img
+                class={styles.customizeLogo}
+                src={logo()}
+                alt=""
+                style={{ height: "28px" }}
+              />
+            );
+            return (
+              <Show when={customize().websiteURL} fallback={img}>
+                {(url) => <a href={url()} target="_blank" rel="noopener noreferrer">{img}</a>}
+              </Show>
+            );
+          }}
+        </Show>
         <div class={styles.missionInfo}>
           <span class={styles.missionName}>{props.missionName()}</span>
           <span class={styles.missionSubtitle}>
