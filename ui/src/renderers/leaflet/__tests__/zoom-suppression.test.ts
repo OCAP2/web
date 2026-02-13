@@ -329,6 +329,91 @@ describe("briefing marker SVG renderer", () => {
     expect(lngSpan).toBeGreaterThan(latSpan * 3);
   });
 
+  it("hides entity popups when zoomed out below threshold", () => {
+    const handle = renderer.createEntityMarker(1, {
+      position: [5000, 5000],
+      iconType: "man",
+      side: "WEST",
+      name: "Rifleman",
+      isPlayer: true,
+    });
+
+    const map = (renderer as any).map as L.Map;
+    const marker = (handle as any)._internal.marker as L.Marker;
+    const popup = marker.getPopup()!;
+
+    // Zoom above threshold first (>4 for legacy) — popup should be visible
+    map.setZoom(5, { animate: false });
+    renderer.updateEntityMarker(handle, {
+      position: [5000, 5000], direction: 0, alive: 1, side: "WEST",
+      name: "Rifleman", iconType: "man", isPlayer: true, isInVehicle: false,
+    });
+    expect((renderer as any).hideMarkerPopups).toBe(false);
+    expect(popup.getElement()?.style.display).not.toBe("none");
+
+    // Zoom below threshold (<=4) — popup should hide
+    map.setZoom(2, { animate: false });
+    renderer.updateEntityMarker(handle, {
+      position: [5000, 5000], direction: 0, alive: 1, side: "WEST",
+      name: "Rifleman", iconType: "man", isPlayer: true, isInVehicle: false,
+    });
+
+    expect((renderer as any).hideMarkerPopups).toBe(true);
+    expect(popup.getElement()?.style.display).toBe("none");
+  });
+
+  it("shows entity popups when zoomed above threshold", () => {
+    const handle = renderer.createEntityMarker(1, {
+      position: [5000, 5000],
+      iconType: "man",
+      side: "WEST",
+      name: "Rifleman",
+      isPlayer: true,
+    });
+
+    const map = (renderer as any).map as L.Map;
+
+    // First zoom out to hide
+    map.setZoom(2, { animate: false });
+    renderer.updateEntityMarker(handle, {
+      position: [5000, 5000],
+      direction: 0,
+      alive: 1,
+      side: "WEST",
+      name: "Rifleman",
+      iconType: "man",
+      isPlayer: true,
+      isInVehicle: false,
+    });
+    expect((renderer as any).hideMarkerPopups).toBe(true);
+
+    // Then zoom back in above threshold
+    map.setZoom(5, { animate: false });
+    renderer.updateEntityMarker(handle, {
+      position: [5000, 5000],
+      direction: 0,
+      alive: 1,
+      side: "WEST",
+      name: "Rifleman",
+      iconType: "man",
+      isPlayer: true,
+      isInVehicle: false,
+    });
+
+    expect((renderer as any).hideMarkerPopups).toBe(false);
+    const popup = (handle as any)._internal.marker.getPopup()!;
+    const popupEl = popup.getElement();
+    expect(popupEl?.style.display).not.toBe("none");
+  });
+
+  it("hideMarkerPopups is initially set based on starting zoom", () => {
+    // WORLD_CONFIG has maxZoom=4; legacy threshold is <=4
+    // The map starts at center zoom which is maxZoom
+    const hideMarkerPopups = (renderer as any).hideMarkerPopups as boolean;
+    // Starting zoom = maxZoom (4) which is <= threshold (4) → hidden
+    expect(hideMarkerPopups).toBe(true);
+  });
+
   it("removeBriefingMarker cleans up pattern from SVG defs", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ELLIPSE",

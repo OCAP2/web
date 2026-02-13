@@ -139,6 +139,7 @@ export class LeafletRenderer implements MapRenderer {
   private useMapLibreMode = false;
 
   private nameDisplayMode: "players" | "all" | "none" = "players";
+  private hideMarkerPopups = false;
 
   private layers: Record<LayerGroupKey, L.LayerGroup> = {
     entities: L.layerGroup(),
@@ -215,12 +216,19 @@ export class LeafletRenderer implements MapRenderer {
       group.addTo(this.map);
     }
 
+    // Set initial popup visibility based on starting zoom
+    const hideThreshold = this.useMapLibreMode ? 14 : 4;
+    this.hideMarkerPopups = this.map.getZoom() <= hideThreshold;
+
     // Forward Leaflet events
     this.map.on("zoomstart", () => {
       setZooming(container, true);
     });
     this.map.on("zoomend", () => {
       setZooming(container, false);
+      const hideThreshold = this.useMapLibreMode ? 14 : 4;
+      this.hideMarkerPopups = this.map.getZoom() <= hideThreshold;
+      this.refreshPopupVisibility();
       this.fireEvent("zoom", this.map.getZoom());
     });
     this.map.on("dragstart", () => {
@@ -755,6 +763,8 @@ export class LeafletRenderer implements MapRenderer {
         let display = "";
         if (state.isInVehicle) {
           display = "none";
+        } else if (this.hideMarkerPopups) {
+          display = "none";
         } else if (this.nameDisplayMode === "none") {
           display = "none";
         } else if (this.nameDisplayMode === "players" && !state.isPlayer) {
@@ -1126,6 +1136,30 @@ export class LeafletRenderer implements MapRenderer {
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
     this.nameDisplayMode = mode;
+    this.refreshPopupVisibility();
+  }
+
+  /**
+   * Re-evaluate popup visibility on all entity markers.
+   * Called when zoom or nameDisplayMode changes.
+   */
+  private refreshPopupVisibility(): void {
+    this.layers.entities.eachLayer((layer) => {
+      const marker = layer as L.Marker;
+      const popup = marker.getPopup();
+      if (!popup) return;
+      const popupEl = popup.getElement();
+      if (!popupEl) return;
+
+      let display = "";
+      if (this.hideMarkerPopups) {
+        display = "none";
+      } else if (this.nameDisplayMode === "none") {
+        display = "none";
+      }
+      // Note: per-entity filters (isPlayer, isInVehicle) are handled in updateEntityMarker
+      popupEl.style.display = display;
+    });
   }
 
   // ==================== Map styles ====================
