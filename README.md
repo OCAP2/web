@@ -1,6 +1,7 @@
 # OCAP Web component
 
-![Coverage](https://raw.githubusercontent.com/OCAP2/web/badges/.badges/main/coverage.svg)
+![Go Coverage](https://raw.githubusercontent.com/OCAP2/web/badges/.badges/main/coverage.svg)
+![UI Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/OCAP2/web/badges/ui-coverage.json)
 
 OCAP Web serves and plays back Arma 3 mission recordings. It supports both legacy JSON recordings and chunked Protobuf format for efficient streaming of large recordings.
 

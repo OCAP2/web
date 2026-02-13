@@ -23,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v6
 
@@ -36,10 +40,62 @@ jobs:
         run: npm ci
         working-directory: ui
 
-      - name: Test
-        run: npm test
+      - name: Test with coverage
+        run: npm run test:coverage
         working-directory: ui
 
       - name: Build
         run: npm run build
         working-directory: ui
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v6
+        if: github.ref_name == 'main'
+        with:
+          name: ui-coverage
+          path: ui/coverage/coverage-summary.json
+
+      - name: Download base coverage
+        id: download-base-coverage
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v14
+        with:
+          branch: main
+          workflow_conclusion: success
+          name: ui-coverage
+          path: ui/coverage-base/
+          if_no_artifact_found: warn
+
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          working-directory: ui
+          json-summary-compare-path: ${{ steps.download-base-coverage.outputs.found_artifact == 'true' && 'coverage-base/coverage-summary.json' || '' }}
+
+      - name: Push coverage badge
+        if: github.ref_name == 'main'
+        run: |
+          COVERAGE=$(node -p "require('./ui/coverage/coverage-summary.json').total.lines.pct")
+          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            COLOR="brightgreen"
+          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+
+          cd "$(mktemp -d)"
+          git init
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch origin badges --depth=1
+          git checkout badges
+
+          printf '{"schemaVersion":1,"label":"UI coverage","message":"%s%%","color":"%s"}\n' "$COVERAGE" "$COLOR" > ui-coverage.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui-coverage.json
+          git diff --staged --quiet || (git commit -m "Update UI coverage badge" && git push origin badges)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

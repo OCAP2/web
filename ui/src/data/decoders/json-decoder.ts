@@ -59,7 +59,7 @@ interface RawJsonOperation {
   entities?: RawJsonEntity[];
   events?: RawJsonEvent[];
   Markers?: RawJsonMarker[];
-  times?: Array<{ frameNum: number; systemTimeUtc: string }>;
+  times?: Array<{ frameNum: number; systemTimeUTC: string }>;
 }
 
 // ───────── Side index lookup ─────────
@@ -343,7 +343,7 @@ export class JsonDecoder implements DecoderStrategy {
       .filter((m): m is MarkerDef => m !== null);
     const times = (data.times ?? []).map((t) => ({
       frameNum: t.frameNum,
-      systemTimeUtc: t.systemTimeUtc,
+      systemTimeUtc: t.systemTimeUTC,
     }));
 
     return {
