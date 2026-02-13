@@ -1,7 +1,8 @@
-import { Show } from "solid-js";
+import { createSignal, onMount, onCleanup, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
+import { useI18n } from "../../../hooks/useLocale";
 import { formatElapsedTime } from "../../../playback/time";
 import {
   MapIcon,
@@ -9,6 +10,7 @@ import {
   PlayIcon,
   PauseIcon,
   SkipForwardIcon,
+  ChevronDownIcon,
 } from "./Icons";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { SpeedSelector } from "./SpeedSelector";
@@ -19,15 +21,42 @@ export interface BottomBarProps {
   onTogglePanel: () => void;
 }
 
+type NameMode = "all" | "players" | "none";
+const NAME_MODES: NameMode[] = ["all", "players", "none"];
+const NAME_MODE_KEYS: Record<NameMode, string> = {
+  all: "names_all",
+  players: "names_players",
+  none: "names_none",
+};
+
 export function BottomBar(props: BottomBarProps): JSX.Element {
   const engine = useEngine();
   const renderer = useRenderer();
+  const { t } = useI18n();
 
   const currentTime = () =>
     formatElapsedTime(engine.currentFrame(), engine.captureDelayMs());
 
   const totalTime = () =>
     formatElapsedTime(engine.endFrame(), engine.captureDelayMs());
+
+  // ── Names dropdown ──
+  const [namesOpen, setNamesOpen] = createSignal(false);
+  const [nameMode, setNameMode] = createSignal<NameMode>("all");
+  let namesRef: HTMLDivElement | undefined;
+
+  const handleNamesClickOutside = (e: MouseEvent) => {
+    if (namesRef && !namesRef.contains(e.target as Node)) {
+      setNamesOpen(false);
+    }
+  };
+
+  onMount(() => {
+    document.addEventListener("pointerdown", handleNamesClickOutside);
+  });
+  onCleanup(() => {
+    document.removeEventListener("pointerdown", handleNamesClickOutside);
+  });
 
   return (
     <div class={styles.bottomBar}>
@@ -48,7 +77,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
             onClick={props.onTogglePanel}
           >
             <MapIcon size={12} />
-            Panel
+            {t("panel")}
             <kbd>E</kbd>
           </button>
 
@@ -93,26 +122,41 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
         <div class={styles.controlsRight}>
           <SpeedSelector />
 
-          <select class={styles.styledSelect} disabled>
-            <option value="elapsed">Elapsed</option>
-            <option value="mission">Mission</option>
-            <option value="system">System</option>
-          </select>
+          <button class={`${styles.speedBtn} ${styles.dropdownWide}`} disabled style={{ opacity: 0.5 }}>
+            {t("elapsed")}
+            <ChevronDownIcon />
+          </button>
 
-          <select
-            class={styles.styledSelect}
-            onChange={(e) => {
-              const mode = e.currentTarget.value as
-                | "all"
-                | "players"
-                | "none";
-              renderer.setNameDisplayMode(mode);
-            }}
-          >
-            <option value="all">All Units</option>
-            <option value="players">Players Only</option>
-            <option value="none">No Names</option>
-          </select>
+          <div ref={namesRef} style={{ position: "relative" }}>
+            <button
+              class={`${styles.speedBtn} ${styles.dropdownWide}`}
+              onClick={() => setNamesOpen((v) => !v)}
+            >
+              {t(NAME_MODE_KEYS[nameMode()])}
+              <ChevronDownIcon />
+            </button>
+            <Show when={namesOpen()}>
+              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
+                <For each={NAME_MODES}>
+                  {(mode) => (
+                    <button
+                      class={styles.speedOption}
+                      classList={{
+                        [styles.speedOptionActive]: nameMode() === mode,
+                      }}
+                      onClick={() => {
+                        setNameMode(mode);
+                        renderer.setNameDisplayMode(mode);
+                        setNamesOpen(false);
+                      }}
+                    >
+                      {t(NAME_MODE_KEYS[mode])}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
         </div>
       </div>
     </div>

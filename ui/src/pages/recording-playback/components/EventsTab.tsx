@@ -1,6 +1,7 @@
 import { createSignal, createMemo, For, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
+import { useI18n } from "../../../hooks/useLocale";
 import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
 import { ConnectEvent } from "../../../playback/events/connect-event";
 import { EndMissionEvent } from "../../../playback/events/end-mission-event";
@@ -48,6 +49,7 @@ function eventColor(event: GameEvent): string {
 
 export function EventsTab(): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
   const [filterText, setFilterText] = createSignal("");
   const [showHits, setShowHits] = createSignal(false);
   const [showConnects, setShowConnects] = createSignal(false);
@@ -112,7 +114,7 @@ export function EventsTab(): JSX.Element {
         <input
           class={styles.filterInput}
           type="text"
-          placeholder="Search events..."
+          placeholder={t("search_events")}
           value={filterText()}
           onInput={(e) => setFilterText(e.currentTarget.value)}
         />
@@ -127,7 +129,7 @@ export function EventsTab(): JSX.Element {
           } : undefined}
           onClick={() => setShowHits(!showHits())}
         >
-          Hits
+          {t("hits")}
         </button>
         <button
           class={styles.filterToggle}
@@ -140,14 +142,14 @@ export function EventsTab(): JSX.Element {
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
         >
-          Conn
+          {t("connections")}
         </button>
       </div>
 
       {/* Event list */}
       <div class={styles.tabContent}>
         <Show when={filteredEvents().length > 0} fallback={
-          <div class={styles.placeholder}>No events to display</div>
+          <div class={styles.placeholder}>{t("no_events")}</div>
         }>
           <For each={filteredEvents()}>
             {(event) => {
@@ -171,7 +173,7 @@ export function EventsTab(): JSX.Element {
                           {event.victimId === event.causedById ? (
                             <>
                               {" "}
-                              <span class={styles.eventArrow}>(suicide)</span>
+                              <span class={styles.eventArrow}>({t("suicide")})</span>
                             </>
                           ) : (
                             <>
@@ -204,7 +206,7 @@ export function EventsTab(): JSX.Element {
                     ) : event instanceof ConnectEvent ? (
                       <>
                         <span class={styles.eventMessage}>
-                          {event.unitName} {event.type === "connected" ? "connected" : "disconnected"}
+                          {event.unitName} {event.type === "connected" ? t("connected") : t("disconnected")}
                         </span>
                         <span class={styles.eventMeta}>
                           <span class={styles.eventTime}>

@@ -79,7 +79,7 @@ export function RecordingPlayback(): JSX.Element {
       try {
         op = await api.getOperation(id);
       } catch {
-        showHint("Operation not found");
+        showHint(t("operation_not_found"));
         setLoading(false);
         return;
       }
@@ -96,7 +96,7 @@ export function RecordingPlayback(): JSX.Element {
         setAddonVersion(result.addonVersion);
       } catch (err) {
         console.error("Failed to load operation:", err);
-        showHint("Failed to load operation data");
+        showHint(t("load_failed"));
       } finally {
         setLoading(false);
       }

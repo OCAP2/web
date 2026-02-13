@@ -4,6 +4,7 @@ import type { Side } from "../../../data/types";
 import type { Unit } from "../../../playback/entities/unit";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
 import { useEngine } from "../../../hooks/useEngine";
+import { useI18n } from "../../../hooks/useLocale";
 import { CrosshairIcon, ChevronRightIcon } from "./Icons";
 import styles from "./SidePanel.module.css";
 
@@ -23,6 +24,7 @@ interface GroupData {
 
 export function UnitsTab(): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
   const [activeSide, setActiveSide] = createSignal<Side>("WEST");
   const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
 
@@ -51,7 +53,7 @@ export function UnitsTab(): JSX.Element {
     const sides = populatedSides();
     if (sides.length > 0) {
       const units = unitsForSide(activeSide());
-      const groups = new Set(units.map((u) => u.groupName || "Ungrouped"));
+      const groups = new Set(units.map((u) => u.groupName || t("ungrouped")));
       setExpandedGroups(groups);
     }
   });
@@ -70,7 +72,7 @@ export function UnitsTab(): JSX.Element {
     const units = unitsForSide(activeSide());
     const groupMap = new Map<string, Unit[]>();
     for (const u of units) {
-      const gn = u.groupName || "Ungrouped";
+      const gn = u.groupName || t("ungrouped");
       const arr = groupMap.get(gn);
       if (arr) {
         arr.push(u);
@@ -193,7 +195,7 @@ export function UnitsTab(): JSX.Element {
                             >
                               {unit.name || `Unit ${unit.id}`}
                               <Show when={!unit.isPlayer}>
-                                <span class={styles.unitAiBadge}>AI</span>
+                                <span class={styles.unitAiBadge}>{t("ai_label")}</span>
                               </Show>
                             </span>
                             <Show when={unit.role}>

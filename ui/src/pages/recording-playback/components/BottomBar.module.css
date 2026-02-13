@@ -258,21 +258,13 @@
   font-weight: 700;
 }
 
-/* ─── Styled Select ─── */
-
-.styledSelect {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 4px 24px 4px 8px;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238899aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 4px center;
-  background-size: 12px;
+/* Wider variant for text-heavy dropdowns (names, time mode) */
+.dropdownWide {
+  min-width: 100px;
+  justify-content: space-between;
 }
+
+.dropdownPopupWide {
+  min-width: 140px;
+}
+

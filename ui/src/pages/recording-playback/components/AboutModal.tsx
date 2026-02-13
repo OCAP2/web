@@ -4,16 +4,9 @@ import { ApiClient, type BuildInfo } from "../../../data/api-client";
 import { useI18n } from "../../../hooks/useLocale";
 import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
+import { LOCALE_LABELS } from "../../mission-selector/constants";
 import { XIcon } from "./Icons";
 import styles from "./AboutModal.module.css";
-
-const LOCALE_LABELS: Record<Locale, string> = {
-  ru: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
-  en: "English",
-  de: "Deutsch",
-  cs: "\u010ce\u0161tina",
-  it: "Italiano",
-};
 
 export interface AboutModalProps {
   open: Accessor<boolean>;
@@ -66,7 +59,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
 
             {/* Versions */}
             <div class={styles.section}>
-              <div class={styles.sectionLabel}>Versions</div>
+              <div class={styles.sectionLabel}>{t("versions")}</div>
               <div class={styles.row}>
                 <span class={styles.rowLabel}>{t("version-server")}</span>
                 <span class={styles.rowValue}>{serverVersion()}</span>
@@ -87,14 +80,14 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
 
             {/* Shortcuts */}
             <div class={styles.section}>
-              <div class={styles.sectionLabel}>Shortcuts</div>
+              <div class={styles.sectionLabel}>{t("shortcuts")}</div>
               <div class={styles.row}>
                 <kbd>Space</kbd>
-                <span class={styles.rowValue}>Play / Pause</span>
+                <span class={styles.rowValue}>{t("shortcut_play_pause")}</span>
               </div>
               <div class={styles.row}>
                 <kbd>E</kbd>
-                <span class={styles.rowValue}>Toggle side panel</span>
+                <span class={styles.rowValue}>{t("shortcut_toggle_panel")}</span>
               </div>
             </div>
 
@@ -108,7 +101,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
                 onChange={(e) => setLocale(e.currentTarget.value as Locale)}
               >
                 <For each={LOCALES}>
-                  {(loc) => <option value={loc}>{LOCALE_LABELS[loc]}</option>}
+                  {(loc) => <option value={loc}>{LOCALE_LABELS[loc]?.label}</option>}
                 </For>
               </select>
             </div>

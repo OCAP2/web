@@ -3,6 +3,7 @@ import type { JSX, Accessor } from "solid-js";
 import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
+import { useI18n } from "../../../hooks/useLocale";
 import { SIDE_COLORS_UI } from "../../../config/side-colors";
 import type { Side, WorldConfig } from "../../../data/types";
 import type { RenderLayer } from "../../../renderers/renderer.types";
@@ -39,6 +40,7 @@ const SIDE_LABEL: Record<Side, string> = {
 export function TopBar(props: TopBarProps): JSX.Element {
   const engine = useEngine();
   const renderer = useRenderer();
+  const { t } = useI18n();
 
   // ── Force stats (center) ──
 
@@ -99,15 +101,15 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
   const layerItems = createMemo(() => {
     const items: Array<{ key: string; label: string }> = [
-      { key: "entities", label: "Units & vehicles" },
-      { key: "systemMarkers", label: "Side markers" },
-      { key: "briefingMarkers", label: "Briefing markers" },
-      { key: "projectileMarkers", label: "Projectiles" },
-      { key: "grid", label: "Coordinate grid" },
+      { key: "entities", label: t("layer_entities") },
+      { key: "systemMarkers", label: t("layer_side_markers") },
+      { key: "briefingMarkers", label: t("layer_briefing_markers") },
+      { key: "projectileMarkers", label: t("layer_projectiles") },
+      { key: "grid", label: t("grid") },
     ];
     if (isMapLibre()) {
-      items.push({ key: "mapIcons", label: "Map icons" });
-      items.push({ key: "buildings3D", label: "3D Buildings" });
+      items.push({ key: "mapIcons", label: t("layer_map_icons") });
+      items.push({ key: "buildings3D", label: t("layer_buildings_3d") });
     }
     return items;
   });
@@ -144,7 +146,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
     <div class={styles.topBar}>
       {/* ── Left: logo + mission info ── */}
       <div class={styles.left}>
-        <button class={styles.backBtn} title="Back to missions" onClick={() => props.onBack?.()}>
+        <button class={styles.backBtn} title={t("back_to_missions")} onClick={() => props.onBack?.()}>
           <ArrowLeftIcon size={16} />
         </button>
         <div class={styles.missionInfo}>
@@ -182,14 +184,14 @@ export function TopBar(props: TopBarProps): JSX.Element {
         <div ref={layerRef} style={{ position: "relative" }}>
           <button
             class={styles.layerBtn}
-            title="Layers"
+            title={t("layers")}
             onClick={() => setLayersOpen((v) => !v)}
           >
             <LayersIcon size={16} />
           </button>
           <Show when={layersOpen()}>
             <div class={styles.layerDropdown}>
-              <div class={styles.layerLabel}>Layers</div>
+              <div class={styles.layerLabel}>{t("layers")}</div>
               <For each={layerItems()}>
                 {(item) => {
                   const active = () => !!layers()[item.key];
@@ -230,7 +232,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
         <Show when={props.operationId()}>
           <a
             class={styles.actionBtn}
-            title="Download"
+            title={t("download")}
             href={downloadHref()}
             download=""
           >
@@ -241,11 +243,11 @@ export function TopBar(props: TopBarProps): JSX.Element {
         {/* Share */}
         <Show when={props.operationId()}>
           <div style={{ position: "relative" }}>
-            <button class={styles.actionBtn} title="Share" onClick={handleShare}>
+            <button class={styles.actionBtn} title={t("share")} onClick={handleShare}>
               <ShareIcon size={16} />
             </button>
             <Show when={showCopied()}>
-              <div class={styles.copiedToast}>Link copied!</div>
+              <div class={styles.copiedToast}>{t("link_copied")}</div>
             </Show>
           </div>
         </Show>
@@ -253,7 +255,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
         {/* Info */}
         <button
           class={styles.actionBtn}
-          title="Information"
+          title={t("info")}
           onClick={() => props.onInfoClick?.()}
         >
           <InfoIcon size={16} />

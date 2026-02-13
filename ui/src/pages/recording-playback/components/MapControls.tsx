@@ -1,6 +1,7 @@
 import { createSignal, createMemo, createEffect, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useRenderer } from "../../../hooks/useRenderer";
+import { useI18n } from "../../../hooks/useLocale";
 import styles from "./MapControls.module.css";
 
 /**
@@ -8,6 +9,7 @@ import styles from "./MapControls.module.css";
  */
 export function MapControls(): JSX.Element {
   const renderer = useRenderer();
+  const { t } = useI18n();
   const [activeStyle, setActiveStyle] = createSignal(0);
   const [hoveredPreview, setHoveredPreview] = createSignal<string | null>(null);
 
@@ -56,13 +58,13 @@ export function MapControls(): JSX.Element {
   return (
     <>
       <div class={styles.zoomControls}>
-        <button class={styles.zoomBtn} onClick={handleZoomIn} title="Zoom in">
+        <button class={styles.zoomBtn} onClick={handleZoomIn} title={t("zoom_in")}>
           +
         </button>
         <button
           class={styles.zoomBtn}
           onClick={handleZoomOut}
-          title="Zoom out"
+          title={t("zoom_out")}
         >
           {"\u2212"}
         </button>

@@ -4,6 +4,7 @@ import type { Side } from "../../../data/types";
 import { Unit } from "../../../playback/entities/unit";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
 import { useEngine } from "../../../hooks/useEngine";
+import { useI18n } from "../../../hooks/useLocale";
 import styles from "./SidePanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
@@ -32,6 +33,7 @@ interface LeaderboardEntry {
 
 export function StatsTab(): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
 
   // Frame-aware kill/death counts
   const killDeathCounts = createMemo(() =>
@@ -75,7 +77,7 @@ export function StatsTab(): JSX.Element {
       <div class={styles.statsContainer}>
         {/* Force summary */}
         <div>
-          <div class={styles.statsLabel}>FORCE SUMMARY</div>
+          <div class={styles.statsLabel}>{t("force_summary")}</div>
           <div class={styles.forceSummary} style={{ "margin-top": "8px" }}>
             <For each={sideStats()}>
               {(stat) => {
@@ -95,7 +97,7 @@ export function StatsTab(): JSX.Element {
                       {SIDE_LABELS[stat.side]}
                     </div>
                     <div class={styles.forceCardRow}>
-                      <span style={{ "font-size": "10px", color: "var(--text-dimmer)" }}>Strength</span>
+                      <span style={{ "font-size": "10px", color: "var(--text-dimmer)" }}>{t("strength")}</span>
                       <span style={{ "font-size": "11px", "font-family": "var(--font-mono)" }}>
                         <span style={{ color: "var(--accent-green)" }}>{stat.alive}</span>
                         <span style={{ opacity: 0.4 }}>/{stat.total}</span>
@@ -115,13 +117,13 @@ export function StatsTab(): JSX.Element {
                         <div class={styles.forceStatNum} style={{ color: "var(--accent-red)" }}>
                           {stat.kills}
                         </div>
-                        <div class={styles.forceStatLabel}>kills</div>
+                        <div class={styles.forceStatLabel}>{t("kills_label")}</div>
                       </div>
                       <div style={{ "text-align": "center" }}>
                         <div class={styles.forceStatNum} style={{ color: "var(--accent-orange)" }}>
                           {stat.deaths}
                         </div>
-                        <div class={styles.forceStatLabel}>deaths</div>
+                        <div class={styles.forceStatLabel}>{t("deaths_label")}</div>
                       </div>
                     </div>
                   </div>
@@ -134,7 +136,7 @@ export function StatsTab(): JSX.Element {
         {/* Leaderboard */}
         <Show when={leaderboard().length > 0}>
           <div>
-            <div class={styles.statsLabel}>LEADERBOARD</div>
+            <div class={styles.statsLabel}>{t("leaderboard")}</div>
             <div class={styles.leaderboard} style={{ "margin-top": "8px" }}>
               <div
                 class={styles.leaderboardRow}
@@ -142,7 +144,7 @@ export function StatsTab(): JSX.Element {
               >
                 <span class={styles.leaderboardRank}>#</span>
                 <span class={styles.leaderboardName} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
-                  Name
+                  {t("name")}
                 </span>
                 <span class={styles.leaderboardKills} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   K

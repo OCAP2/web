@@ -2,6 +2,7 @@ import { createMemo, Switch, Match } from "solid-js";
 import type { Accessor, JSX } from "solid-js";
 import { UsersIcon, ActivityIcon, BarChartIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
+import { useI18n } from "../../../hooks/useLocale";
 import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
 import { UnitsTab } from "./UnitsTab";
 import { EventsTab } from "./EventsTab";
@@ -15,6 +16,7 @@ export interface SidePanelProps {
 
 export function SidePanel(props: SidePanelProps): JSX.Element {
   const engine = useEngine();
+  const { t } = useI18n();
 
   const killCount = createMemo(() => {
     const events = engine.eventManager.getAll();
@@ -26,10 +28,10 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
   });
 
   const tabs = [
-    { id: "units", label: "Units", Icon: UsersIcon },
-    { id: "events", label: "Events", Icon: ActivityIcon },
-    { id: "stats", label: "Stats", Icon: BarChartIcon },
-  ] as const;
+    { id: "units" as const, labelKey: "units", Icon: UsersIcon },
+    { id: "events" as const, labelKey: "events", Icon: ActivityIcon },
+    { id: "stats" as const, labelKey: "stats", Icon: BarChartIcon },
+  ];
 
   return (
     <div class={styles.panel}>
@@ -41,7 +43,7 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
             onClick={() => props.onTabChange(tab.id)}
           >
             <tab.Icon size={14} />
-            <span class={styles.tabLabel}>{tab.label}</span>
+            <span class={styles.tabLabel}>{t(tab.labelKey)}</span>
             {/* TODO: repurpose badge for unread/new events, not total kill count */}
             {false && tab.id === "events" && killCount() > 0 && (
               <span class={styles.tabBadge}>
