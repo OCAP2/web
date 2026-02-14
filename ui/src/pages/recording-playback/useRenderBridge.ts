@@ -43,6 +43,21 @@ function vehicleDisplayName(
 }
 
 /**
+ * Check if any crew member of a vehicle is a player.
+ * Used to determine vehicle popup visibility in "players" nameDisplayMode.
+ */
+function vehicleHasPlayerCrew(
+  vehicle: Vehicle,
+  entityManager: EntityManager,
+): boolean {
+  for (const id of vehicle.crew) {
+    const member = entityManager.getEntity(id);
+    if (member instanceof Unit && member.isPlayer) return true;
+  }
+  return false;
+}
+
+/**
  * Syncs engine snapshots to renderer markers, updates briefing markers
  * per frame, and keeps the CSS left-offset in sync with panel visibility.
  */
@@ -73,9 +88,12 @@ export function useRenderBridge(
     for (const [id, snap] of snapshots) {
       // Build display name: vehicles show crew count + member names
       let displayName = snap.name;
+      let isPlayer = snap.isPlayer;
       const entity = engine.entityManager.getEntity(id);
       if (entity instanceof Vehicle) {
         displayName = vehicleDisplayName(snap.name, entity, engine.entityManager);
+        // In "players" mode, show vehicle popup if any crew member is a player
+        isPlayer = vehicleHasPlayerCrew(entity, engine.entityManager);
       }
 
       let handle = markerHandles.get(id);
@@ -85,7 +103,7 @@ export function useRenderBridge(
           iconType: snap.iconType,
           side: snap.side,
           name: displayName,
-          isPlayer: snap.isPlayer,
+          isPlayer,
         });
         markerHandles.set(id, handle);
       }
@@ -96,7 +114,7 @@ export function useRenderBridge(
         side: snap.side,
         name: displayName,
         iconType: snap.iconType,
-        isPlayer: snap.isPlayer,
+        isPlayer,
         isInVehicle: snap.isInVehicle,
       });
 

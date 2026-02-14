@@ -530,6 +530,74 @@ describe("useRenderBridge", () => {
     dispose();
   });
 
+  it("vehicle isPlayer reflects whether any crew member is a player", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "PlayerDriver", isPlayer: true }),
+          unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1, 2] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    // Vehicle has a player crew member → isPlayer should be true
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    expect((vehicleCall![1] as any).isPlayer).toBe(true);
+
+    dispose();
+  });
+
+  it("vehicle isPlayer is false when no crew member is a player", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "AIDriver", isPlayer: false }),
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    expect((vehicleCall![1] as any).isPlayer).toBe(false);
+
+    dispose();
+  });
+
   it("vehicle display name escapes HTML in names", async () => {
     const { engine, renderer, markerManager } = createTestSetup();
     const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
