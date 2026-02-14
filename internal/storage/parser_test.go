@@ -540,6 +540,53 @@ func TestParserV1_Parse_EntityPositions(t *testing.T) {
 	assert.Equal(t, uint32(0), pos.CrewIDs[0])
 }
 
+func TestParserV1_Parse_UnitPositionsWithGroupAndSide(t *testing.T) {
+	p := &ParserV1{}
+	data := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Test",
+		"endFrame":     5.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id":            0.0,
+				"type":          "unit",
+				"name":          "Player1",
+				"side":          "WEST",
+				"startFrameNum": 0.0,
+				"isPlayer":      1.0,
+				"positions": []interface{}{
+					// 9-element format: [pos, dir, alive, inVehicle, name, isPlayer, role, groupID, side]
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "Player1", 1.0, "rifleman", "Alpha 1", "WEST"},
+					// Side changes mid-mission
+					[]interface{}{[]interface{}{101.0, 201.0, 0.0}, 91.0, 1.0, 0.0, "Player1", 1.0, "rifleman", "Bravo 1", "EAST"},
+					// Old 7-element format (no group/side)
+					[]interface{}{[]interface{}{102.0, 202.0, 0.0}, 92.0, 1.0, 0.0, "Player1", 1.0},
+				},
+			},
+		},
+	}
+
+	result, err := p.Parse(data, 100)
+	require.NoError(t, err)
+	require.Len(t, result.EntityPositions, 1)
+
+	positions := result.EntityPositions[0].Positions
+	require.Len(t, positions, 3)
+
+	// First position: has group and side
+	assert.Equal(t, "Alpha 1", positions[0].GroupName)
+	assert.Equal(t, "WEST", positions[0].Side)
+
+	// Second position: group and side changed
+	assert.Equal(t, "Bravo 1", positions[1].GroupName)
+	assert.Equal(t, "EAST", positions[1].Side)
+
+	// Third position: old format, no group/side
+	assert.Equal(t, "", positions[2].GroupName)
+	assert.Equal(t, "", positions[2].Side)
+}
+
 func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 	p := &ParserV1{}
 

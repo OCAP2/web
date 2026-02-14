@@ -508,6 +508,90 @@ describe("ProtobufDecoder.decodeChunk", () => {
     expect(chunk.entities.size).toBe(0);
   });
 
+  it("decodes per-frame groupName and side from entity state", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 2,
+      frames: [
+        {
+          frameNum: 0,
+          entities: [{
+            entityId: 1,
+            posX: 100.0,
+            posY: 200.0,
+            direction: 90,
+            alive: 1,
+            groupName: "Alpha 1",
+            side: "WEST",
+          }],
+        },
+        {
+          frameNum: 1,
+          entities: [{
+            entityId: 1,
+            posX: 105.0,
+            posY: 205.0,
+            direction: 95,
+            alive: 1,
+            groupName: "Bravo 1",
+            side: "EAST",
+          }],
+        },
+      ],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const states = chunk.entities.get(1)!;
+
+    expect(states[0].groupName).toBe("Alpha 1");
+    expect(states[0].side).toBe("WEST");
+
+    expect(states[1].groupName).toBe("Bravo 1");
+    expect(states[1].side).toBe("EAST");
+  });
+
+  it("maps INDEPENDENT to GUER and CIVILIAN to CIV in per-frame side", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 2,
+      frames: [
+        {
+          frameNum: 0,
+          entities: [{ entityId: 1, posX: 0, posY: 0, direction: 0, alive: 1, side: "INDEPENDENT" }],
+        },
+        {
+          frameNum: 1,
+          entities: [{ entityId: 1, posX: 0, posY: 0, direction: 0, alive: 1, side: "CIVILIAN" }],
+        },
+      ],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const states = chunk.entities.get(1)!;
+
+    expect(states[0].side).toBe("GUER");
+    expect(states[1].side).toBe("CIV");
+  });
+
+  it("omits groupName and side when absent in entity state", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 1,
+      frames: [{
+        frameNum: 0,
+        entities: [{ entityId: 1, posX: 10.0, posY: 20.0, direction: 0, alive: 1 }],
+      }],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const state = chunk.entities.get(1)![0];
+    expect(state.groupName).toBeUndefined();
+    expect(state.side).toBeUndefined();
+  });
+
   it("handles optional fields as undefined when absent", () => {
     const buffer = encodePb(PbChunk, {
       index: 0,

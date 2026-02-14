@@ -460,8 +460,6 @@ export class PlaybackEngine {
           }
         }
         if (entity instanceof Unit) {
-          const state = entity.positions?.[relativeFrame];
-          if (state?.side) snap.side = state.side;
           const target = entity.firedOnFrame(frame);
           if (target) snap.firedTarget = target;
         }

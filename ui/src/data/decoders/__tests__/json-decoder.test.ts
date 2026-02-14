@@ -607,6 +607,75 @@ describe("JsonDecoder.decodeManifest", () => {
     });
   });
 
+  it("decodes per-frame groupName and side from 9-element unit positions", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "Player1",
+          side: "WEST",
+          group: "Alpha 1",
+          isPlayer: 1,
+          startFrameNum: 0,
+          positions: [
+            // 9-element: [pos, dir, alive, inVehicle, name, isPlayer, role, groupID, side]
+            [[100, 200], 90, 1, 0, "Player1", 1, "rifleman", "Alpha 1", "WEST"],
+            // Side changes mid-mission
+            [[105, 205], 95, 1, 0, "Player1", 1, "rifleman", "Bravo 1", "EAST"],
+            // Old 7-element format: no group/side
+            [[110, 210], 100, 1, 0, "Player1", 1],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const positions = manifest.entities[0].positions!;
+
+    expect(positions[0].groupName).toBe("Alpha 1");
+    expect(positions[0].side).toBe("WEST");
+
+    expect(positions[1].groupName).toBe("Bravo 1");
+    expect(positions[1].side).toBe("EAST");
+
+    // Old format: no per-frame group/side
+    expect(positions[2].groupName).toBeUndefined();
+    expect(positions[2].side).toBeUndefined();
+  });
+
+  it("maps INDEPENDENT to GUER and CIVILIAN to CIV in per-frame side", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "P1",
+          side: "GUER",
+          startFrameNum: 0,
+          positions: [
+            [[0, 0], 0, 1, 0, "P1", 0, "", "G1", "INDEPENDENT"],
+            [[0, 0], 0, 1, 0, "P1", 0, "", "G2", "CIVILIAN"],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const positions = manifest.entities[0].positions!;
+
+    expect(positions[0].side).toBe("GUER");
+    expect(positions[1].side).toBe("CIV");
+  });
+
   it("maps sides correctly", () => {
     const sides = ["WEST", "EAST", "GUER", "CIV"];
     for (const side of sides) {
