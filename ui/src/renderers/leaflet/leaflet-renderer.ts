@@ -48,6 +48,9 @@ interface InternalMarkerHandle {
   iconKey: string;
   /** Track current popup name to avoid unnecessary setContent calls (which retrigger layout). */
   popupName: string;
+  /** Per-entity state for popup visibility — kept in sync by updateEntityMarker. */
+  isPlayer: boolean;
+  isInVehicle: boolean;
 }
 
 interface InternalBriefingHandle {
@@ -725,12 +728,18 @@ export class LeafletRenderer implements MapRenderer {
     marker.bindPopup(popup).openPopup();
 
     const iconKey = `${opts.iconType}:${opts.side}:1`;
-    return wrapMarker({ marker, id, lastDirection: 0, iconKey, popupName: opts.name });
+    const internal: InternalMarkerHandle = { marker, id, lastDirection: 0, iconKey, popupName: opts.name, isPlayer: opts.isPlayer, isInVehicle: false };
+    (marker as any)._ocapInternal = internal;
+    return wrapMarker(internal);
   }
 
   updateEntityMarker(handle: MarkerHandle, state: EntityMarkerState): void {
     const internal = unwrapMarker(handle);
     const marker = internal.marker;
+
+    // Keep per-entity state in sync for refreshPopupVisibility
+    internal.isPlayer = state.isPlayer;
+    internal.isInVehicle = state.isInVehicle;
 
     // Update position
     const latlng = this.armaToLatLng(state.position);
@@ -1164,13 +1173,17 @@ export class LeafletRenderer implements MapRenderer {
       const popupEl = popup.getElement();
       if (!popupEl) return;
 
+      const internal = (marker as any)._ocapInternal as InternalMarkerHandle | undefined;
       let display = "";
-      if (this.hideMarkerPopups) {
+      if (internal?.isInVehicle) {
+        display = "none";
+      } else if (this.hideMarkerPopups) {
         display = "none";
       } else if (this.nameDisplayMode === "none") {
         display = "none";
+      } else if (this.nameDisplayMode === "players" && internal && !internal.isPlayer) {
+        display = "none";
       }
-      // Note: per-entity filters (isPlayer, isInVehicle) are handled in updateEntityMarker
       popupEl.style.display = display;
     });
   }

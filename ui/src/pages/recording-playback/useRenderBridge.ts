@@ -50,11 +50,10 @@ function vehicleHasPlayerCrew(
   vehicle: Vehicle,
   entityManager: EntityManager,
 ): boolean {
-  for (const id of vehicle.crew) {
+  return vehicle.crew.some((id) => {
     const member = entityManager.getEntity(id);
-    if (member instanceof Unit && member.isPlayer) return true;
-  }
-  return false;
+    return member instanceof Unit && member.isPlayer;
+  });
 }
 
 /**

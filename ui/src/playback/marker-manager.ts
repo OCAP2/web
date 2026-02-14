@@ -192,19 +192,18 @@ function buildMarkerPopupText(
   // Objectives (Terminal, Sector)
   if (text.includes("Terminal") || text.includes("Sector")) return text;
 
-  // System marker types on GLOBAL — no popup
-  if (SYSTEM_MARKER_TYPES.includes(def.type) && def.side === "GLOBAL") return "";
+  if (def.side === "GLOBAL") {
+    // System marker types on GLOBAL — no popup
+    if (SYSTEM_MARKER_TYPES.includes(def.type)) return "";
 
-  // Projectiles (magIcons, Minefield, mil_triangle) on GLOBAL
-  if (
-    (def.type.includes("magIcons") || def.type === "Minefield" || def.type === "mil_triangle") &&
-    def.side === "GLOBAL"
-  ) {
-    return [playerName, text].filter(Boolean).join(" ");
+    // Projectiles (magIcons, Minefield, mil_triangle) on GLOBAL
+    if (def.type.includes("magIcons") || PROJECTILE_TYPES.includes(def.type)) {
+      return [playerName, text].filter(Boolean).join(" ");
+    }
+
+    // Other GLOBAL markers
+    return text;
   }
-
-  // Other GLOBAL markers
-  if (def.side === "GLOBAL") return text;
 
   // Normal player marks (non-GLOBAL side)
   return [def.side, playerName, text].filter(Boolean).join(" ");
