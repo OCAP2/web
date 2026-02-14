@@ -48,6 +48,7 @@
 
 .leaflet-popup-vehicle .leaflet-popup-content-wrapper {
   text-align: left;
+  min-width: 200px;
 }
 
 .leaflet-popup-unit .leaflet-popup-content-wrapper {
