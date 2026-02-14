@@ -674,6 +674,8 @@ type EntityState struct {
 	Name          string                 `protobuf:"bytes,9,opt,name=name,proto3" json:"name,omitempty"`
 	IsPlayer      bool                   `protobuf:"varint,10,opt,name=is_player,json=isPlayer,proto3" json:"is_player,omitempty"`
 	PosZ          float32                `protobuf:"fixed32,11,opt,name=pos_z,json=posZ,proto3" json:"pos_z,omitempty"`
+	GroupName     string                 `protobuf:"bytes,12,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
+	Side          string                 `protobuf:"bytes,13,opt,name=side,proto3" json:"side,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -783,6 +785,20 @@ func (x *EntityState) GetPosZ() float32 {
 		return x.PosZ
 	}
 	return 0
+}
+
+func (x *EntityState) GetGroupName() string {
+	if x != nil {
+		return x.GroupName
+	}
+	return ""
+}
+
+func (x *EntityState) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
 }
 
 type Event struct {
@@ -1155,7 +1171,7 @@ const file_ocap_proto_rawDesc = "" +
 	"\x06frames\x18\x04 \x03(\v2\x0e.ocap.v1.FrameR\x06frames\"V\n" +
 	"\x05Frame\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x120\n" +
-	"\bentities\x18\x02 \x03(\v2\x14.ocap.v1.EntityStateR\bentities\"\xac\x02\n" +
+	"\bentities\x18\x02 \x03(\v2\x14.ocap.v1.EntityStateR\bentities\"\xdf\x02\n" +
 	"\vEntityState\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\rR\bentityId\x12\x13\n" +
 	"\x05pos_x\x18\x02 \x01(\x02R\x04posX\x12\x13\n" +
@@ -1169,7 +1185,10 @@ const file_ocap_proto_rawDesc = "" +
 	"\x04name\x18\t \x01(\tR\x04name\x12\x1b\n" +
 	"\tis_player\x18\n" +
 	" \x01(\bR\bisPlayer\x12\x13\n" +
-	"\x05pos_z\x18\v \x01(\x02R\x04posZ\"\xc0\x01\n" +
+	"\x05pos_z\x18\v \x01(\x02R\x04posZ\x12\x1d\n" +
+	"\n" +
+	"group_name\x18\f \x01(\tR\tgroupName\x12\x12\n" +
+	"\x04side\x18\r \x01(\tR\x04side\"\xc0\x01\n" +
 	"\x05Event\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1b\n" +

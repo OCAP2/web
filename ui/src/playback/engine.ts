@@ -413,7 +413,7 @@ export class PlaybackEngine {
         const states = chunkData.entities.get(entity.id);
         if (states && states[frameInChunk]) {
           const state = states[frameInChunk];
-          let side: import("../data/types").Side | null = entity instanceof Unit ? entity.side : null;
+          let side: import("../data/types").Side | null = entity instanceof Unit ? (state.side ?? entity.side) : null;
           let isPlayer = entity instanceof Unit ? entity.isPlayer : false;
           if (entity instanceof Vehicle && state.crewIds?.length) {
             entity.setCrew(state.crewIds);
@@ -460,6 +460,8 @@ export class PlaybackEngine {
           }
         }
         if (entity instanceof Unit) {
+          const state = entity.positions?.[relativeFrame];
+          if (state?.side) snap.side = state.side;
           const target = entity.firedOnFrame(frame);
           if (target) snap.firedTarget = target;
         }

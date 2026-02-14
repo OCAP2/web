@@ -90,6 +90,8 @@ message EntityState {
   string name = 9;
   bool is_player = 10;
   float pos_z = 11;
+  string group_name = 12;
+  string side = 13;
 }
 
 message Event {

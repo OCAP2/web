@@ -118,8 +118,10 @@ function mapSide(rawSide: string): Side {
     case "EAST":
       return "EAST";
     case "GUER":
+    case "INDEPENDENT":
       return "GUER";
     case "CIV":
+    case "CIVILIAN":
       return "CIV";
     default:
       return "CIV";
@@ -135,7 +137,10 @@ function convertUnitPosition(frame: unknown[]): EntityState {
   const isInVehicle = vehicleField !== 0;
   const name = typeof frame[4] === "string" ? frame[4] : undefined;
   const isPlayer = frame[5] === 1 || frame[5] === true;
-  return {
+  // field[6] is currentRole (unused), field[7] is groupID, field[8] is side
+  const groupName = typeof frame[7] === "string" ? frame[7] : undefined;
+  const rawSide = typeof frame[8] === "string" ? frame[8] : undefined;
+  const state: EntityState = {
     position: toArmaCoord(pos),
     direction: dir,
     alive,
@@ -144,6 +149,9 @@ function convertUnitPosition(frame: unknown[]): EntityState {
     name: name || undefined,
     isPlayer,
   };
+  if (groupName) state.groupName = groupName;
+  if (rawSide) state.side = mapSide(rawSide);
+  return state;
 }
 
 function convertVehiclePosition(frame: unknown[]): EntityState {

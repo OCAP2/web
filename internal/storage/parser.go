@@ -83,6 +83,8 @@ type EntityPosition struct {
 	IsInVehicle bool
 	Name        string
 	IsPlayer    bool
+	GroupName   string
+	Side        string
 }
 
 // Parser converts JSON input to ParseResult

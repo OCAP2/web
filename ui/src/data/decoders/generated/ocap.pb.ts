@@ -100,6 +100,8 @@ export interface EntityState {
   name: string;
   isPlayer: boolean;
   posZ: number;
+  groupName: string;
+  side: string;
 }
 
 export interface Event {
@@ -848,6 +850,8 @@ function createBaseEntityState(): EntityState {
     name: "",
     isPlayer: false,
     posZ: 0,
+    groupName: "",
+    side: "",
   };
 }
 
@@ -887,6 +891,12 @@ export const EntityState: MessageFns<EntityState> = {
     }
     if (message.posZ !== 0) {
       writer.uint32(93).float(message.posZ);
+    }
+    if (message.groupName !== "") {
+      writer.uint32(98).string(message.groupName);
+    }
+    if (message.side !== "") {
+      writer.uint32(106).string(message.side);
     }
     return writer;
   },
@@ -996,6 +1006,22 @@ export const EntityState: MessageFns<EntityState> = {
           message.posZ = reader.float();
           continue;
         }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.groupName = reader.string();
+          continue;
+        }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.side = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1021,6 +1047,8 @@ export const EntityState: MessageFns<EntityState> = {
     message.name = object.name ?? "";
     message.isPlayer = object.isPlayer ?? false;
     message.posZ = object.posZ ?? 0;
+    message.groupName = object.groupName ?? "";
+    message.side = object.side ?? "";
     return message;
   },
 };

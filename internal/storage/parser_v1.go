@@ -457,6 +457,12 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 			if len(posArr) > 5 {
 				pos.IsPlayer = toFloat64(posArr[5]) == 1
 			}
+			if len(posArr) > 7 {
+				pos.GroupName = toString(posArr[7])
+			}
+			if len(posArr) > 8 {
+				pos.Side = toString(posArr[8])
+			}
 		} else if entityType == "vehicle" {
 			// Vehicle format: [[x, y, z], direction, alive, [crew_ids], [startFrame, endFrame]]
 			if len(posArr) > 3 {

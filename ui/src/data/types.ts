@@ -51,6 +51,10 @@ export interface EntityState {
   isInVehicle?: boolean;
   /** Whether this entity is a player this frame. */
   isPlayer?: boolean;
+  /** Per-frame group name (may change mid-mission). */
+  groupName?: string;
+  /** Per-frame side (may change mid-mission). */
+  side?: Side;
 }
 
 // --------------- Event discriminated union ---------------

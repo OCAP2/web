@@ -251,6 +251,8 @@ func (w *ProtobufWriterV1) getEntityStateAtFrame(ep EntityPositionData, frameNum
 				IsInVehicle: pos.IsInVehicle,
 				Name:        pos.Name,
 				IsPlayer:    pos.IsPlayer,
+				GroupName:   pos.GroupName,
+				Side:        pos.Side,
 			}
 		}
 	}

@@ -73,7 +73,7 @@ export class Unit extends Entity {
       position: state.position,
       direction: state.direction,
       alive: state.alive,
-      side: this.side,
+      side: state.side ?? this.side,
       name: state.name ?? this.name,
       iconType: this.iconType,
       isPlayer: this.isPlayer,

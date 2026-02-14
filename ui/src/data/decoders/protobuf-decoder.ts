@@ -53,6 +53,19 @@ function mapVehicleClass(vehicleClass: string): EntityType {
   }
 }
 
+/** Map a raw side string (from per-frame protobuf field) to the canonical Side type. */
+function mapSideString(raw: string): Side {
+  switch (raw) {
+    case "WEST": return "WEST";
+    case "EAST": return "EAST";
+    case "GUER":
+    case "INDEPENDENT": return "GUER";
+    case "CIV":
+    case "CIVILIAN": return "CIV";
+    default: return "CIV";
+  }
+}
+
 // ───────── Conversion helpers ─────────
 
 function convertEntityDef(pb: PbEntityDef): AppEntityDef {
@@ -96,6 +109,8 @@ function convertEntityState(pb: PbEntityState): AppEntityState {
   if (pb.vehicleId) state.vehicleId = pb.vehicleId;
   if (pb.isInVehicle) state.isInVehicle = pb.isInVehicle;
   if (pb.isPlayer) state.isPlayer = pb.isPlayer;
+  if (pb.groupName) state.groupName = pb.groupName;
+  if (pb.side) state.side = mapSideString(pb.side);
   return state;
 }
 
