@@ -208,6 +208,103 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(entity.positions![2].crewIds).toEqual([]);
   });
 
+  it("expands RLE vehicle positions into dense per-frame array", () => {
+    // Vehicle positions with [startFrame, endFrame] at index 4 are RLE-encoded:
+    // the same position applies for all frames in the range.
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 10,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 20,
+          type: "vehicle",
+          name: "LAAT",
+          side: "WEST",
+          startFrameNum: 0,
+          class: "heli",
+          positions: [
+            // RLE entry: frames 0-4 (5 frames), stationary
+            [[100, 200], 0, 1, [1, 2], [0, 4]],
+            // RLE entry: frames 5-7 (3 frames), moved
+            [[150, 250], 45, 1, [1], [5, 7]],
+            // RLE entry: frames 8-9 (2 frames), moved again
+            [[200, 300], 90, 0, [], [8, 9]],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const entity = manifest.entities[0];
+
+    // 3 RLE entries expand to 5 + 3 + 2 = 10 per-frame positions
+    expect(entity.positions).toHaveLength(10);
+    expect(entity.endFrame).toBe(9); // 0 + 10 - 1
+
+    // Frames 0-4: stationary at [100, 200]
+    for (let i = 0; i < 5; i++) {
+      expect(entity.positions![i].position).toEqual([100, 200]);
+      expect(entity.positions![i].direction).toBe(0);
+      expect(entity.positions![i].alive).toBe(1);
+      expect(entity.positions![i].crewIds).toEqual([1, 2]);
+    }
+
+    // Frames 5-7: moved to [150, 250]
+    for (let i = 5; i < 8; i++) {
+      expect(entity.positions![i].position).toEqual([150, 250]);
+      expect(entity.positions![i].direction).toBe(45);
+      expect(entity.positions![i].crewIds).toEqual([1]);
+    }
+
+    // Frames 8-9: moved to [200, 300], destroyed
+    for (let i = 8; i < 10; i++) {
+      expect(entity.positions![i].position).toEqual([200, 300]);
+      expect(entity.positions![i].alive).toBe(0);
+      expect(entity.positions![i].crewIds).toEqual([]);
+    }
+  });
+
+  it("handles mixed dense and RLE vehicle positions", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 5,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 30,
+          type: "vehicle",
+          name: "Offroad",
+          side: "CIV",
+          startFrameNum: 0,
+          class: "car",
+          positions: [
+            // Dense entry (no frame range)
+            [[100, 200], 0, 1, []],
+            // RLE entry: frames 1-3
+            [[110, 210], 10, 1, [], [1, 3]],
+            // Dense entry (no frame range)
+            [[120, 220], 20, 1, []],
+          ],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const entity = manifest.entities[0];
+
+    // 1 dense + 3 RLE + 1 dense = 5
+    expect(entity.positions).toHaveLength(5);
+    expect(entity.endFrame).toBe(4);
+    expect(entity.positions![0].position).toEqual([100, 200]);
+    expect(entity.positions![1].position).toEqual([110, 210]);
+    expect(entity.positions![2].position).toEqual([110, 210]);
+    expect(entity.positions![3].position).toEqual([110, 210]);
+    expect(entity.positions![4].position).toEqual([120, 220]);
+  });
+
   it("uses raw.class for vehicle entity type mapping", () => {
     // In legacy JSON, raw.type is always "vehicle" for non-units,
     // while raw.class carries the simplified vehicle class (e.g. "heli", "car")

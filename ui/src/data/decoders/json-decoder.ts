@@ -171,10 +171,33 @@ function convertEntity(raw: RawJsonEntity): EntityDef {
 
   // Parse positions into EntityState array
   if (raw.positions && raw.positions.length > 0) {
-    def.endFrame = def.startFrame + raw.positions.length - 1;
-    def.positions = raw.positions.map((frame) =>
-      isUnit ? convertUnitPosition(frame) : convertVehiclePosition(frame),
-    );
+    if (isUnit) {
+      // Units: dense format — one position per frame
+      def.endFrame = def.startFrame + raw.positions.length - 1;
+      def.positions = raw.positions.map((frame) => convertUnitPosition(frame));
+    } else {
+      // Vehicles: may use RLE format with [startFrame, endFrame] at index 4.
+      // Each RLE entry covers a contiguous frame range with identical state.
+      // Expand into one EntityState per frame to match the dense indexing
+      // the playback engine expects (positions[relativeFrame]).
+      const expanded: EntityState[] = [];
+      for (const frame of raw.positions) {
+        const state = convertVehiclePosition(frame);
+        const frameRange = frame[4];
+        if (Array.isArray(frameRange) && frameRange.length >= 2) {
+          const rangeStart = frameRange[0] as number;
+          const rangeEnd = frameRange[1] as number;
+          for (let f = rangeStart; f <= rangeEnd; f++) {
+            expanded.push(state);
+          }
+        } else {
+          // Dense: single frame (no frame range field)
+          expanded.push(state);
+        }
+      }
+      def.positions = expanded;
+      def.endFrame = def.startFrame + expanded.length - 1;
+    }
   }
 
   // Convert framesFired: legacy format is [frameNum, [x, y]] or [frameNum, [x, y, z]]
