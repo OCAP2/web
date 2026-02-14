@@ -53,6 +53,8 @@ export interface BriefingMarkerDef {
   side: string;
   size?: [number, number];
   brush?: string;
+  /** Which layer group to add this marker to. Defaults to "briefingMarkers". */
+  layer?: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
 }
 
 export interface BriefingMarkerState {

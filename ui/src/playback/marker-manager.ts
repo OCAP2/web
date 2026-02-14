@@ -148,6 +148,31 @@ export function findPositionIndex(
 
 const SYSTEM_MARKER_TYPES = ["ObjectMarker", "moduleCoverMap", "safeStart"];
 
+const PROJECTILE_TYPES = ["Minefield", "mil_triangle"];
+
+/**
+ * Determine which layer group an ICON marker belongs to,
+ * matching the old frontend's _createMarker layer assignment.
+ */
+function classifyMarkerLayer(
+  def: MarkerDef,
+): "briefingMarkers" | "systemMarkers" | "projectileMarkers" {
+  if (def.shape !== "ICON") return "briefingMarkers";
+
+  // No player — system marker
+  if (def.player === -1) return "systemMarkers";
+
+  // Projectiles on GLOBAL side
+  if (
+    (def.type.includes("magIcons") || PROJECTILE_TYPES.includes(def.type)) &&
+    def.side === "GLOBAL"
+  ) {
+    return "projectileMarkers";
+  }
+
+  return "briefingMarkers";
+}
+
 /**
  * Build popup text for an ICON marker, matching the old frontend's
  * _createMarker popup text logic.
@@ -188,6 +213,7 @@ function buildMarkerPopupText(
 interface TrackedMarker {
   def: MarkerDef;
   popupText: string;
+  layer: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
   handle: BriefingMarkerHandle | null;
   /** Last applied position index — skip update when unchanged. */
   lastPosIndex: number;
@@ -251,7 +277,8 @@ export class MarkerManager {
       }
 
       const popupText = buildMarkerPopupText(def, lookup);
-      this.markers.push({ def, popupText, handle: null, lastPosIndex: -1 });
+      const layer = classifyMarkerLayer(def);
+      this.markers.push({ def, popupText, layer, handle: null, lastPosIndex: -1 });
     }
 
     console.log(
@@ -299,6 +326,7 @@ export class MarkerManager {
             side: tracked.def.side,
             size: tracked.def.size,
             brush: tracked.def.brush,
+            layer: tracked.layer,
           };
           tracked.handle = this.renderer.createBriefingMarker(briefingDef);
         }

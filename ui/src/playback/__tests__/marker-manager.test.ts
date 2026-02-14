@@ -429,6 +429,78 @@ describe("MarkerManager.setSideFilter", () => {
   });
 });
 
+// ─── MarkerManager layer classification ───
+
+describe("MarkerManager layer classification", () => {
+  it("assigns system markers (player=-1) to systemMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([makeDef("mil_dot", { player: -1, side: "GLOBAL" })]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "systemMarkers" }),
+    );
+  });
+
+  it("assigns projectile markers (magIcons on GLOBAL) to projectileMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("magIcons/gear_M67.paa", { player: 1, side: "GLOBAL" }),
+    ]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "projectileMarkers" }),
+    );
+  });
+
+  it("assigns Minefield on GLOBAL to projectileMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("Minefield", { player: 1, side: "GLOBAL" }),
+    ]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "projectileMarkers" }),
+    );
+  });
+
+  it("assigns mil_triangle on GLOBAL to projectileMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_triangle", { player: 1, side: "GLOBAL" }),
+    ]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "projectileMarkers" }),
+    );
+  });
+
+  it("assigns player-owned non-GLOBAL ICON markers to briefingMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([makeDef("mil_dot", { player: 1, side: "WEST" })]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "briefingMarkers" }),
+    );
+  });
+
+  it("assigns non-ICON shapes to briefingMarkers layer regardless of player/side", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { shape: "RECTANGLE", player: -1, side: "GLOBAL" }),
+    ]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "briefingMarkers" }),
+    );
+  });
+});
+
 // ─── MarkerManager popup text (ICON markers) ───
 
 describe("MarkerManager ICON marker popup text", () => {

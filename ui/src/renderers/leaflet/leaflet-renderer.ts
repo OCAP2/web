@@ -827,7 +827,7 @@ export class LeafletRenderer implements MapRenderer {
       layer = L.polygon([], polygonOpts);
 
       if (patternId) {
-        layer.addTo(this.layers.briefingMarkers);
+        layer.addTo(this.layers[def.layer ?? "briefingMarkers"]);
         return wrapBriefing({ layer, shape: def.shape, size: def.size, patternId, shapeOpts });
       }
     } else {
@@ -863,7 +863,8 @@ export class LeafletRenderer implements MapRenderer {
       }
     }
 
-    layer.addTo(this.layers.briefingMarkers);
+    const targetLayer = this.layers[def.layer ?? "briefingMarkers"];
+    layer.addTo(targetLayer);
     return wrapBriefing({ layer, shape: def.shape, size: def.size, shapeOpts });
   }
 
