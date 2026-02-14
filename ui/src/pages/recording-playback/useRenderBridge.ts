@@ -5,6 +5,7 @@ import type { PlaybackEngine } from "../../playback/engine";
 import type { EntityManager } from "../../playback/entity-manager";
 import type { MarkerManager } from "../../playback/marker-manager";
 import { Vehicle } from "../../playback/entities/vehicle";
+import { Unit } from "../../playback/entities/unit";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { leftPanelVisible, activeSide } from "./shortcuts";
 
@@ -29,12 +30,16 @@ function vehicleDisplayName(
   const crewNames: string[] = [];
   for (const id of crew) {
     const member = entityManager.getEntity(id);
-    if (member) crewNames.push(escapeHtml(member.name || `Unit ${id}`));
+    // Only list player crew members, matching the old frontend's getCrewString()
+    if (member instanceof Unit && member.isPlayer) {
+      crewNames.push(escapeHtml(member.name || `Unit ${id}`));
+    }
   }
 
-  const header = `<u>${escapeHtml(vehicleName)}</u> <i>(${crew.length})</i>`;
-  if (crewNames.length === 0) return header;
-  return `${header}<br>${crewNames.join("<br>")}`;
+  if (crewNames.length === 0) {
+    return `${escapeHtml(vehicleName)} <i>(${crew.length})</i>`;
+  }
+  return `<u>${escapeHtml(vehicleName)}</u> <i>(${crew.length})</i><br>${crewNames.join("<br>")}`;
 }
 
 /**

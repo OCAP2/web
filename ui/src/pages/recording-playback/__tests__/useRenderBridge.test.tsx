@@ -452,6 +452,84 @@ describe("useRenderBridge", () => {
     dispose();
   });
 
+  it("vehicle crew listing excludes AI (non-player) crew members", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "PlayerDriver", isPlayer: true }),
+          unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
+          unitDef({ id: 3, name: "PlayerCargo", isPlayer: true }),
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1, 2, 3] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    const name = (vehicleCall![1] as any).name as string;
+    // Total crew count includes all (3), but only players are listed by name
+    expect(name).toContain("<i>(3)</i>");
+    expect(name).toContain("PlayerDriver");
+    expect(name).not.toContain("AIGunner");
+    expect(name).toContain("PlayerCargo");
+
+    dispose();
+  });
+
+  it("vehicle with only AI crew shows header without names", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest([
+          unitDef({ id: 1, name: "AIDriver", isPlayer: false }),
+          unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
+          vehicleDef({
+            id: 50,
+            name: "HMMWV",
+            positions: [
+              { position: [300, 400], direction: 90, alive: 1, crewIds: [1, 2] },
+            ],
+          }),
+        ]),
+      );
+    });
+
+    await flush();
+
+    const vehicleCall = updateSpy.mock.calls.find(
+      (call) => (call[1] as any).name?.includes("HMMWV"),
+    );
+    expect(vehicleCall).toBeDefined();
+    const name = (vehicleCall![1] as any).name as string;
+    // Crew count shown but no names listed (no <u> title, no <br>)
+    expect(name).toBe("HMMWV <i>(2)</i>");
+    expect(name).not.toContain("AIDriver");
+    expect(name).not.toContain("AIGunner");
+
+    dispose();
+  });
+
   it("vehicle display name escapes HTML in names", async () => {
     const { engine, renderer, markerManager } = createTestSetup();
     const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
