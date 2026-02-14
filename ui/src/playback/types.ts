@@ -7,6 +7,8 @@ export interface EntitySnapshot {
   position: ArmaCoord;
   direction: number;
   alive: AliveState;
+  /** Altitude in meters (from Arma Z coordinate). */
+  elevation?: number;
   side: Side | null;
   name: string;
   iconType: string;

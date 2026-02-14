@@ -91,6 +91,7 @@ function convertEntityState(pb: PbEntityState): AppEntityState {
     direction: pb.direction,
     alive: (pb.alive & 0x3) as AliveState,
   };
+  if (pb.posZ) state.elevation = pb.posZ;
   if (pb.name) state.name = pb.name;
   if (pb.crewIds.length > 0) state.crewIds = [...pb.crewIds];
   if (pb.vehicleId) state.vehicleId = pb.vehicleId;

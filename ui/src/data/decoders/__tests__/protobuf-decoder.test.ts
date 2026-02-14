@@ -456,6 +456,28 @@ describe("ProtobufDecoder.decodeChunk", () => {
     expect(state.isPlayer).toBe(true);
   });
 
+  it("decodes entity state with elevation (posZ)", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 1,
+      frames: [{
+        frameNum: 0,
+        entities: [
+          { entityId: 1, posX: 100.0, posY: 200.0, posZ: 50.5, direction: 90, alive: 1 },
+          { entityId: 2, posX: 300.0, posY: 400.0, posZ: 0.0, direction: 0, alive: 1 },
+        ],
+      }],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const state1 = chunk.entities.get(1)![0];
+    expect(state1.elevation).toBeCloseTo(50.5);
+
+    const state2 = chunk.entities.get(2)![0];
+    expect(state2.elevation).toBeUndefined(); // posZ=0 is omitted
+  });
+
   it("decodes dead and unconscious alive states", () => {
     const buffer = encodePb(PbChunk, {
       index: 0,

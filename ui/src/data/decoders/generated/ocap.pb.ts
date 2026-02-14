@@ -99,6 +99,7 @@ export interface EntityState {
   isInVehicle: boolean;
   name: string;
   isPlayer: boolean;
+  posZ: number;
 }
 
 export interface Event {
@@ -846,6 +847,7 @@ function createBaseEntityState(): EntityState {
     isInVehicle: false,
     name: "",
     isPlayer: false,
+    posZ: 0,
   };
 }
 
@@ -882,6 +884,9 @@ export const EntityState: MessageFns<EntityState> = {
     }
     if (message.isPlayer !== false) {
       writer.uint32(80).bool(message.isPlayer);
+    }
+    if (message.posZ !== 0) {
+      writer.uint32(93).float(message.posZ);
     }
     return writer;
   },
@@ -983,6 +988,14 @@ export const EntityState: MessageFns<EntityState> = {
           message.isPlayer = reader.bool();
           continue;
         }
+        case 11: {
+          if (tag !== 93) {
+            break;
+          }
+
+          message.posZ = reader.float();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1007,6 +1020,7 @@ export const EntityState: MessageFns<EntityState> = {
     message.isInVehicle = object.isInVehicle ?? false;
     message.name = object.name ?? "";
     message.isPlayer = object.isPlayer ?? false;
+    message.posZ = object.posZ ?? 0;
     return message;
   },
 };

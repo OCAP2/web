@@ -243,6 +243,7 @@ func (w *ProtobufWriterV1) getEntityStateAtFrame(ep EntityPositionData, frameNum
 				EntityId:    ep.EntityID,
 				PosX:        pos.PosX,
 				PosY:        pos.PosY,
+				PosZ:        pos.PosZ,
 				Direction:   pos.Direction,
 				Alive:       pos.Alive,
 				CrewIds:     pos.CrewIDs,

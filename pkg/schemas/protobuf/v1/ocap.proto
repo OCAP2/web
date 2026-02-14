@@ -89,6 +89,7 @@ message EntityState {
   bool is_in_vehicle = 8;
   string name = 9;
   bool is_player = 10;
+  float pos_z = 11;
 }
 
 message Event {

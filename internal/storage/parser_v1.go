@@ -423,6 +423,9 @@ func (p *ParserV1) collectEntityPositions(em map[string]interface{}, entityID ui
 		if coords, ok := posArr[0].([]interface{}); ok && len(coords) >= 2 {
 			pos.PosX = float32(toFloat64(coords[0]))
 			pos.PosY = float32(toFloat64(coords[1]))
+			if len(coords) > 2 {
+				pos.PosZ = float32(toFloat64(coords[2]))
+			}
 		}
 
 		// Direction (index 1)

@@ -75,6 +75,7 @@ type EntityPosition struct {
 	FrameNum    uint32
 	PosX        float32
 	PosY        float32
+	PosZ        float32
 	Direction   uint32
 	Alive       uint32
 	CrewIDs     []uint32

@@ -131,7 +131,7 @@ function convertUnitPosition(frame: unknown[]): EntityState {
   const isInVehicle = vehicleField !== 0;
   const name = typeof frame[4] === "string" ? frame[4] : undefined;
   const isPlayer = frame[5] === 1 || frame[5] === true;
-  return {
+  const state: EntityState = {
     position: [pos[0], pos[1]] as ArmaCoord,
     direction: dir,
     alive,
@@ -140,6 +140,8 @@ function convertUnitPosition(frame: unknown[]): EntityState {
     name: name || undefined,
     isPlayer,
   };
+  if (pos.length > 2 && pos[2] !== 0) state.elevation = pos[2];
+  return state;
 }
 
 function convertVehiclePosition(frame: unknown[]): EntityState {
@@ -147,12 +149,14 @@ function convertVehiclePosition(frame: unknown[]): EntityState {
   const dir = (frame[1] as number) ?? 0;
   const alive = (frame[2] as AliveState) ?? 1;
   const crewIds = Array.isArray(frame[3]) ? (frame[3] as number[]) : undefined;
-  return {
+  const state: EntityState = {
     position: [pos[0], pos[1]] as ArmaCoord,
     direction: dir,
     alive,
     crewIds,
   };
+  if (pos.length > 2 && pos[2] !== 0) state.elevation = pos[2];
+  return state;
 }
 
 function convertEntity(raw: RawJsonEntity): EntityDef {
