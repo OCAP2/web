@@ -56,6 +56,7 @@ interface InternalMarkerHandle {
 interface InternalBriefingHandle {
   layer: L.Layer;
   shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
+  layerKey: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
   size?: [number, number];
   patternId?: string;
   shapeOpts?: { stroke: boolean; fill: boolean; fillOpacity: number };
@@ -836,8 +837,9 @@ export class LeafletRenderer implements MapRenderer {
       layer = L.polygon([], polygonOpts);
 
       if (patternId) {
-        layer.addTo(this.layers[def.layer ?? "briefingMarkers"]);
-        return wrapBriefing({ layer, shape: def.shape, size: def.size, patternId, shapeOpts });
+        const layerKey = def.layer ?? "briefingMarkers";
+        layer.addTo(this.layers[layerKey]);
+        return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, patternId, shapeOpts });
       }
     } else {
       // ICON shape — load actual marker image from server
@@ -872,14 +874,14 @@ export class LeafletRenderer implements MapRenderer {
       }
     }
 
-    const targetLayer = this.layers[def.layer ?? "briefingMarkers"];
-    layer.addTo(targetLayer);
+    const layerKey = def.layer ?? "briefingMarkers";
+    layer.addTo(this.layers[layerKey]);
 
     // Open popup after adding to map so the DOM element exists
     if (def.text && layer instanceof L.Marker) {
       layer.openPopup();
     }
-    return wrapBriefing({ layer, shape: def.shape, size: def.size, shapeOpts });
+    return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts });
   }
 
   updateBriefingMarker(
@@ -954,7 +956,7 @@ export class LeafletRenderer implements MapRenderer {
 
   removeBriefingMarker(handle: BriefingMarkerHandle): void {
     const internal = unwrapBriefing(handle);
-    this.layers.briefingMarkers.removeLayer(internal.layer);
+    this.layers[internal.layerKey].removeLayer(internal.layer);
     if (internal.patternId) {
       removePattern(this.svgDefs, internal.patternId);
     }

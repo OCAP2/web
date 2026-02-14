@@ -440,6 +440,59 @@ describe("briefing marker SVG renderer", () => {
     expect((popup.options as any).className).toBe("leaflet-popup-vehicle");
   });
 
+  it("removeBriefingMarker removes ICON from briefingMarkers layer", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ICON",
+      type: "mil_dot",
+      color: "FF0000",
+      side: "WEST",
+      layer: "briefingMarkers",
+    });
+
+    const layer = getInternalLayer(handle);
+    const layers = (renderer as any).layers;
+    expect(layers.briefingMarkers.hasLayer(layer)).toBe(true);
+
+    renderer.removeBriefingMarker(handle);
+    expect(layers.briefingMarkers.hasLayer(layer)).toBe(false);
+  });
+
+  it("removeBriefingMarker removes ICON from projectileMarkers layer", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ICON",
+      type: "magIcons/gear_smokegrenade_white_ca.paa",
+      color: "FF0000",
+      side: "GLOBAL",
+      layer: "projectileMarkers",
+    });
+
+    const layer = getInternalLayer(handle);
+    const layers = (renderer as any).layers;
+    expect(layers.projectileMarkers.hasLayer(layer)).toBe(true);
+    expect(layers.briefingMarkers.hasLayer(layer)).toBe(false);
+
+    renderer.removeBriefingMarker(handle);
+    expect(layers.projectileMarkers.hasLayer(layer)).toBe(false);
+  });
+
+  it("removeBriefingMarker removes ICON from systemMarkers layer", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ICON",
+      type: "mil_dot",
+      color: "FF0000",
+      side: "GLOBAL",
+      layer: "systemMarkers",
+    });
+
+    const layer = getInternalLayer(handle);
+    const layers = (renderer as any).layers;
+    expect(layers.systemMarkers.hasLayer(layer)).toBe(true);
+    expect(layers.briefingMarkers.hasLayer(layer)).toBe(false);
+
+    renderer.removeBriefingMarker(handle);
+    expect(layers.systemMarkers.hasLayer(layer)).toBe(false);
+  });
+
   it("removeBriefingMarker cleans up pattern from SVG defs", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ELLIPSE",
