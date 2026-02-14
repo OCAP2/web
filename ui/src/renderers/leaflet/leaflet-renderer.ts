@@ -868,12 +868,17 @@ export class LeafletRenderer implements MapRenderer {
           className: "leaflet-popup-unit",
         });
         popup.setContent(def.text);
-        (layer as L.Marker).bindPopup(popup).openPopup();
+        (layer as L.Marker).bindPopup(popup);
       }
     }
 
     const targetLayer = this.layers[def.layer ?? "briefingMarkers"];
     layer.addTo(targetLayer);
+
+    // Open popup after adding to map so the DOM element exists
+    if (def.text && layer instanceof L.Marker) {
+      layer.openPopup();
+    }
     return wrapBriefing({ layer, shape: def.shape, size: def.size, shapeOpts });
   }
 
