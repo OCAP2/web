@@ -1,8 +1,5 @@
-/** 2D Arma coordinate [x, y] in meters. */
-export type ArmaCoord = [number, number];
-
-/** 3D Arma coordinate [x, y, z] with elevation in meters. */
-export type ArmaCoord3D = [number, number, number];
+/** Arma coordinate in meters: [x, y] or [x, y, z] with elevation. */
+export type ArmaCoord = [number, number] | [number, number, number];
 
 /**
  * Meters per degree at the equator.

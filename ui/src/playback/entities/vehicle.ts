@@ -51,7 +51,7 @@ export class Vehicle extends Entity {
     const state = this.positions![relativeFrame];
     if (!state) return null;
 
-    const snapshot: EntitySnapshot = {
+    return {
       id: this.id,
       position: state.position,
       direction: state.direction,
@@ -62,7 +62,5 @@ export class Vehicle extends Entity {
       isPlayer: false,
       isInVehicle: false,
     };
-    if (state.elevation != null) snapshot.elevation = state.elevation;
-    return snapshot;
   }
 }

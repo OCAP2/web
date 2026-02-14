@@ -434,7 +434,6 @@ export class PlaybackEngine {
             isPlayer,
             isInVehicle: state.isInVehicle ?? false,
           };
-          if (state.elevation != null) snapshot.elevation = state.elevation;
           if (entity instanceof Unit) {
             const target = entity.firedOnFrame(frame);
             if (target) snapshot.firedTarget = target;

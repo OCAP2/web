@@ -72,7 +72,7 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(entity.role).toBe("Rifleman");
   });
 
-  it("extracts elevation from Z coordinate in unit positions", () => {
+  it("preserves Z coordinate in unit positions", () => {
     const data = {
       worldName: "Altis",
       missionName: "Op",
@@ -87,7 +87,7 @@ describe("JsonDecoder.decodeManifest", () => {
           startFrameNum: 0,
           positions: [
             [[100, 200, 50.5], 0, 1, 0, "Pilot", 1],   // Z = 50.5
-            [[100, 200, 0], 0, 1, 0, "Pilot", 1],       // Z = 0 (omitted)
+            [[100, 200, 0], 0, 1, 0, "Pilot", 1],       // Z = 0
             [[100, 200], 0, 1, 0, "Pilot", 1],           // no Z
           ],
         },
@@ -97,12 +97,12 @@ describe("JsonDecoder.decodeManifest", () => {
     const manifest = decoder.decodeManifest(toBuffer(data));
     const positions = manifest.entities[0].positions!;
 
-    expect(positions[0].elevation).toBe(50.5);
-    expect(positions[1].elevation).toBeUndefined();
-    expect(positions[2].elevation).toBeUndefined();
+    expect(positions[0].position).toEqual([100, 200, 50.5]);
+    expect(positions[1].position).toEqual([100, 200, 0]);
+    expect(positions[2].position).toEqual([100, 200]);
   });
 
-  it("extracts elevation from Z coordinate in vehicle positions", () => {
+  it("preserves Z coordinate in vehicle positions", () => {
     const data = {
       worldName: "Altis",
       missionName: "Op",
@@ -127,8 +127,8 @@ describe("JsonDecoder.decodeManifest", () => {
     const manifest = decoder.decodeManifest(toBuffer(data));
     const positions = manifest.entities[0].positions!;
 
-    expect(positions[0].elevation).toBe(150);
-    expect(positions[1].elevation).toBeUndefined();
+    expect(positions[0].position).toEqual([1000, 2000, 150]);
+    expect(positions[1].position).toEqual([1010, 2010]);
   });
 
   it("detects isInVehicle from vehicle entity ID (not just boolean 1)", () => {

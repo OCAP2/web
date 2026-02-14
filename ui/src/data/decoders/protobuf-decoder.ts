@@ -87,11 +87,10 @@ function convertEntityDef(pb: PbEntityDef): AppEntityDef {
 
 function convertEntityState(pb: PbEntityState): AppEntityState {
   const state: AppEntityState = {
-    position: [pb.posX, pb.posY] as ArmaCoord,
+    position: [pb.posX, pb.posY, pb.posZ] as ArmaCoord,
     direction: pb.direction,
     alive: (pb.alive & 0x3) as AliveState,
   };
-  if (pb.posZ) state.elevation = pb.posZ;
   if (pb.name) state.name = pb.name;
   if (pb.crewIds.length > 0) state.crewIds = [...pb.crewIds];
   if (pb.vehicleId) state.vehicleId = pb.vehicleId;

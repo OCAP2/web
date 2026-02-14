@@ -42,8 +42,6 @@ export interface EntityState {
   position: ArmaCoord;
   direction: number;
   alive: AliveState;
-  /** Altitude in meters (from Arma Z coordinate). */
-  elevation?: number;
   name?: string;
   /** IDs of crew members (for vehicles). */
   crewIds?: number[];

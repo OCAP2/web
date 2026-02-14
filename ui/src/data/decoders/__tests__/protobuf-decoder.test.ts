@@ -379,7 +379,7 @@ describe("ProtobufDecoder.decodeChunk", () => {
     const states10 = chunk.entities.get(10);
     expect(states10).toBeDefined();
     expect(states10).toHaveLength(2);
-    expect(states10![0].position).toEqual([100.0, 200.0]);
+    expect(states10![0].position).toEqual([100.0, 200.0, 0]);
     expect(states10![0].direction).toBe(90);
     expect(states10![0].alive).toBe(1);
     expect(states10![1].position[0]).toBeCloseTo(105.0);
@@ -388,7 +388,7 @@ describe("ProtobufDecoder.decodeChunk", () => {
     const states20 = chunk.entities.get(20);
     expect(states20).toBeDefined();
     expect(states20).toHaveLength(2);
-    expect(states20![0].position).toEqual([300.0, 400.0]);
+    expect(states20![0].position).toEqual([300.0, 400.0, 0]);
     expect(states20![1]).toBeUndefined(); // entity 20 absent from frame 1
   });
 
@@ -412,11 +412,11 @@ describe("ProtobufDecoder.decodeChunk", () => {
 
     // Array length matches frameCount, not number of appearances
     expect(states).toHaveLength(5);
-    expect(states[0].position).toEqual([1, 2]); // frame 300 → index 0
-    expect(states[1]).toBeUndefined();           // frame 301 → absent
-    expect(states[2]).toBeUndefined();           // frame 302 → absent
-    expect(states[3]).toBeUndefined();           // frame 303 → absent
-    expect(states[4].position).toEqual([3, 4]); // frame 304 → index 4
+    expect(states[0].position).toEqual([1, 2, 0]); // frame 300 → index 0
+    expect(states[1]).toBeUndefined();              // frame 301 → absent
+    expect(states[2]).toBeUndefined();              // frame 302 → absent
+    expect(states[3]).toBeUndefined();              // frame 303 → absent
+    expect(states[4].position).toEqual([3, 4, 0]); // frame 304 → index 4
   });
 
   it("decodes entity state with crew, vehicle, name, and player fields", () => {
@@ -446,7 +446,7 @@ describe("ProtobufDecoder.decodeChunk", () => {
     expect(states).toHaveLength(1);
 
     const state = states[0];
-    expect(state.position).toEqual([50.0, 60.0]);
+    expect(state.position).toEqual([50.0, 60.0, 0]);
     expect(state.direction).toBe(45);
     expect(state.alive).toBe(1);
     expect(state.crewIds).toEqual([10, 20]);
@@ -456,7 +456,7 @@ describe("ProtobufDecoder.decodeChunk", () => {
     expect(state.isPlayer).toBe(true);
   });
 
-  it("decodes entity state with elevation (posZ)", () => {
+  it("decodes posZ into position[2]", () => {
     const buffer = encodePb(PbChunk, {
       index: 0,
       startFrame: 0,
@@ -472,10 +472,10 @@ describe("ProtobufDecoder.decodeChunk", () => {
 
     const chunk = decoder.decodeChunk(buffer);
     const state1 = chunk.entities.get(1)![0];
-    expect(state1.elevation).toBeCloseTo(50.5);
+    expect(state1.position).toEqual([100.0, 200.0, 50.5]);
 
     const state2 = chunk.entities.get(2)![0];
-    expect(state2.elevation).toBeUndefined(); // posZ=0 is omitted
+    expect(state2.position).toEqual([300.0, 400.0, 0.0]); // protobuf always has posZ
   });
 
   it("decodes dead and unconscious alive states", () => {
