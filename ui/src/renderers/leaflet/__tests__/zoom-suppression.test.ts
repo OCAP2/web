@@ -414,6 +414,32 @@ describe("briefing marker SVG renderer", () => {
     expect(hideMarkerPopups).toBe(true);
   });
 
+  it("uses leaflet-popup-unit class for infantry markers", () => {
+    const handle = renderer.createEntityMarker(1, {
+      position: [5000, 5000],
+      iconType: "man",
+      side: "WEST",
+      name: "Rifleman",
+      isPlayer: true,
+    });
+    const marker = (handle as any)._internal.marker as L.Marker;
+    const popup = marker.getPopup()!;
+    expect((popup.options as any).className).toBe("leaflet-popup-unit");
+  });
+
+  it("uses leaflet-popup-vehicle class for vehicle markers", () => {
+    const handle = renderer.createEntityMarker(2, {
+      position: [5000, 5000],
+      iconType: "car",
+      side: "WEST",
+      name: "Hunter",
+      isPlayer: false,
+    });
+    const marker = (handle as any)._internal.marker as L.Marker;
+    const popup = marker.getPopup()!;
+    expect((popup.options as any).className).toBe("leaflet-popup-vehicle");
+  });
+
   it("removeBriefingMarker cleans up pattern from SVG defs", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ELLIPSE",
