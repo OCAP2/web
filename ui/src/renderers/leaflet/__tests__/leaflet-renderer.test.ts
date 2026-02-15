@@ -43,6 +43,22 @@ describe("armaToLatLngMapLibre", () => {
   });
 });
 
+describe("armaToLatLngMapLibre with altitude", () => {
+  it("preserves Z coordinate as alt on LatLng", () => {
+    const ll = armaToLatLngMapLibre([5000, 10000, 150]);
+    expect(ll.lat).toBeCloseTo(10000 / METERS_PER_DEGREE, 8);
+    expect(ll.lng).toBeCloseTo(5000 / METERS_PER_DEGREE, 8);
+    expect(ll.alt).toBe(150);
+  });
+
+  it("works without Z coordinate (backward compatible)", () => {
+    const ll = armaToLatLngMapLibre([5000, 10000]);
+    expect(ll.lat).toBeCloseTo(10000 / METERS_PER_DEGREE, 8);
+    expect(ll.lng).toBeCloseTo(5000 / METERS_PER_DEGREE, 8);
+    expect(ll.alt).toBeUndefined();
+  });
+});
+
 describe("latLngToArmaMapLibre", () => {
   it("converts LatLng(0, 0) to [0, 0]", () => {
     const coord = latLngToArmaMapLibre(L.latLng(0, 0));

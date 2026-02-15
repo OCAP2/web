@@ -73,7 +73,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
     projectileMarkers: true,
     grid: false,
     mapIcons: true,
-    buildings3D: true,
+    "3d": true,
   });
 
   let layerRef: HTMLDivElement | undefined;
@@ -111,7 +111,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
     ];
     if (isMapLibre()) {
       items.push({ key: "mapIcons", label: t("layer_map_icons") });
-      items.push({ key: "buildings3D", label: t("layer_buildings_3d") });
+      items.push({ key: "3d", label: t("layer_3d") });
     }
     return items;
   });

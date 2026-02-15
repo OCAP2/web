@@ -88,7 +88,7 @@ export type RenderLayer =
   | "projectileMarkers"
   | "grid"
   | "mapIcons"
-  | "buildings3D";
+  | "3d";
 
 export interface MapStyleInfo {
   label: string;

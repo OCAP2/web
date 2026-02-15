@@ -125,7 +125,11 @@ type LayerGroupKey = "entities" | "briefingMarkers" | "systemMarkers" | "project
  * Arma Y = north (lat), X = east (lng). Meters to degrees at equator.
  */
 export function armaToLatLngMapLibre(coords: ArmaCoord): L.LatLng {
-  return L.latLng(coords[1] / METERS_PER_DEGREE, coords[0] / METERS_PER_DEGREE);
+  return L.latLng(
+    coords[1] / METERS_PER_DEGREE,
+    coords[0] / METERS_PER_DEGREE,
+    coords.length > 2 ? coords[2] : undefined,
+  );
 }
 
 /**
@@ -168,7 +172,12 @@ export class LeafletRenderer implements MapRenderer {
   // Grid and MapLibre toggle layers for overlay control
   private gridLayer: L.LayerGroup | null = null;
   private mapIconsLayer: L.LayerGroup | null = null;
-  private buildings3DLayer: L.LayerGroup | null = null;
+  private threeDLayer: L.LayerGroup | null = null;
+
+  // 3D mode state
+  private is3DMode = false;
+  private elevationScale = 0; // pixels per meter of elevation, cached
+  private static readonly PITCH_3D = 45; // fixed pitch angle in degrees
 
   // Map style state
   private _mapStyles: import("../renderer.types").MapStyleInfo[] = [];
@@ -261,6 +270,10 @@ export class LeafletRenderer implements MapRenderer {
       zoomDelta: 1,
       closePopupOnClick: false,
       preferCanvas: true,
+    });
+
+    this.map.on("zoomend", () => {
+      this.updateElevationScale();
     });
 
     // Add MapLibre GL basemap layer — style URL constructed from tileBaseUrl
@@ -356,7 +369,7 @@ export class LeafletRenderer implements MapRenderer {
 
         // Add MapLibre pseudo-layers to map by default (checked in overlay control)
         if (this.mapIconsLayer) this.mapIconsLayer.addTo(this.map);
-        if (this.buildings3DLayer) this.buildings3DLayer.addTo(this.map);
+        if (this.threeDLayer) this.threeDLayer.addTo(this.map);
 
         // Reapply toggle states after style switch (setStyle resets all GL layers)
         const glMap = mlLayer.getMaplibreMap?.();
@@ -366,10 +379,14 @@ export class LeafletRenderer implements MapRenderer {
               this.setMapLibreIconVisibility("none");
             }
             if (
-              this.buildings3DLayer &&
-              !this.map.hasLayer(this.buildings3DLayer)
+              this.threeDLayer &&
+              !this.map.hasLayer(this.threeDLayer)
             ) {
               this.setBuildings3DVisibility("none");
+            }
+            // Restore pitch after style switch
+            if (this.is3DMode) {
+              this.setMapPitch(LeafletRenderer.PITCH_3D);
             }
           });
         }
@@ -635,10 +652,10 @@ export class LeafletRenderer implements MapRenderer {
     }
     this.mapIconsLayer = null;
 
-    if (this.buildings3DLayer && this.map.hasLayer(this.buildings3DLayer)) {
-      this.map.removeLayer(this.buildings3DLayer);
+    if (this.threeDLayer && this.map.hasLayer(this.threeDLayer)) {
+      this.map.removeLayer(this.threeDLayer);
     }
-    this.buildings3DLayer = null;
+    this.threeDLayer = null;
 
     if (this.maplibreLayer) {
       this.map.removeLayer(this.maplibreLayer);
@@ -714,6 +731,24 @@ export class LeafletRenderer implements MapRenderer {
       rotationOrigin: opts.iconType === "man" ? "50% 60%" : "50% 50%",
     } as any);
 
+    // Patch _setPos to offset marker vertically by elevation in 3D mode
+    const origSetPos = (marker as any)._setPos.bind(marker);
+    (marker as any)._setPos = function (pos: L.Point) {
+      const ep: number = (this as any)._elevationPx || 0;
+      origSetPos(ep ? L.point(pos.x, pos.y - ep) : pos);
+    };
+
+    // Patch _applyRotation to insert perspective tilt BEFORE heading rotateZ.
+    // This makes the tilt screen-space (independent of entity heading).
+    const origApplyRotation = (marker as any)._applyRotation.bind(marker);
+    (marker as any)._applyRotation = function () {
+      const tilt: number = (this as any)._tiltDeg || 0;
+      if (tilt && this._icon) {
+        this._icon.style[L.DomUtil.TRANSFORM] += ` rotateX(${tilt}deg)`;
+      }
+      origApplyRotation();
+    };
+
     marker.setOpacity(opacity);
 
     // Add to map, then bind and open popup (matching old frontend order)
@@ -741,6 +776,15 @@ export class LeafletRenderer implements MapRenderer {
     // Keep per-entity state in sync for refreshPopupVisibility
     internal.isPlayer = state.isPlayer;
     internal.isInVehicle = state.isInVehicle;
+
+    // Compute elevation offset and perspective tilt for 3D mode
+    // (must be set before setLatLng triggers _setPos → _applyRotation)
+    if (this.elevationScale > 0 && state.position.length > 2) {
+      (marker as any)._elevationPx = state.position[2]! * this.elevationScale;
+    } else {
+      (marker as any)._elevationPx = 0;
+    }
+    (marker as any)._tiltDeg = this.is3DMode ? 35 : 0;
 
     // Update position
     const latlng = this.armaToLatLng(state.position);
@@ -1117,15 +1161,15 @@ export class LeafletRenderer implements MapRenderer {
       return;
     }
 
-    if (layer === "buildings3D") {
-      if (!this.buildings3DLayer) return;
+    if (layer === "3d") {
+      if (!this.threeDLayer) return;
       if (visible) {
-        if (!this.map.hasLayer(this.buildings3DLayer)) {
-          this.buildings3DLayer.addTo(this.map);
+        if (!this.map.hasLayer(this.threeDLayer)) {
+          this.threeDLayer.addTo(this.map);
         }
       } else {
-        if (this.map.hasLayer(this.buildings3DLayer)) {
-          this.map.removeLayer(this.buildings3DLayer);
+        if (this.map.hasLayer(this.threeDLayer)) {
+          this.map.removeLayer(this.threeDLayer);
         }
       }
       return;
@@ -1277,11 +1321,15 @@ export class LeafletRenderer implements MapRenderer {
       this.mapIconsLayer = this.createMapLibreToggleLayer((vis) =>
         this.setMapLibreIconVisibility(vis),
       );
-      this.buildings3DLayer = this.createMapLibreToggleLayer((vis) =>
-        this.setBuildings3DVisibility(vis),
-      );
+      this.threeDLayer = this.createMapLibreToggleLayer((vis) => {
+        const enable = vis === "visible";
+        this.is3DMode = enable;
+        this.setBuildings3DVisibility(vis);
+        this.setMapPitch(enable ? LeafletRenderer.PITCH_3D : 0);
+        this.updateElevationScale();
+      });
       this.mapIconsLayer.addTo(this.map);
-      this.buildings3DLayer.addTo(this.map);
+      this.threeDLayer.addTo(this.map);
     }
   }
 
@@ -1330,6 +1378,28 @@ export class LeafletRenderer implements MapRenderer {
         glMap.setLayoutProperty(layer.id, "visibility", vis);
       }
     }
+  }
+
+  private setMapPitch(pitch: number): void {
+    if (!this.maplibreLayer) return;
+    const glMap = this.maplibreLayer.getMaplibreMap?.();
+    if (!glMap) return;
+    glMap.setPitch(pitch);
+  }
+
+  private updateElevationScale(): void {
+    if (!this.is3DMode) {
+      this.elevationScale = 0;
+      return;
+    }
+    // Compute pixels-per-meter at current zoom using two points 1 meter apart
+    const p1 = this.map.latLngToContainerPoint(L.latLng(0, 0));
+    const p2 = this.map.latLngToContainerPoint(
+      L.latLng(1 / METERS_PER_DEGREE, 0),
+    );
+    const pixelsPerMeter = Math.abs(p2.y - p1.y);
+    const pitchRad = (LeafletRenderer.PITCH_3D * Math.PI) / 180;
+    this.elevationScale = pixelsPerMeter * Math.sin(pitchRad);
   }
 
   // ==================== Events ====================

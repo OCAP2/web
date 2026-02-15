@@ -847,13 +847,13 @@ export const translations: Record<string, Record<Locale, string>> = {
     it: "Icone mappa",
     fr: "Icônes de carte",
   },
-  layer_buildings_3d: {
-    ru: "3D Здания",
-    en: "3D Buildings",
-    de: "3D-Gebäude",
-    cs: "3D Budovy",
-    it: "Edifici 3D",
-    fr: "Bâtiments 3D",
+  layer_3d: {
+    ru: "3D",
+    en: "3D",
+    de: "3D",
+    cs: "3D",
+    it: "3D",
+    fr: "3D",
   },
   search_events: {
     ru: "Поиск событий...",
