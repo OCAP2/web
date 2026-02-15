@@ -298,6 +298,93 @@ func TestIntegration_PendingConversion(t *testing.T) {
 	assert.Equal(t, "completed", updated.ConversionStatus)
 }
 
+// TestIntegration_UploadWithoutConversion tests the full round-trip when
+// conversion is disabled: upload an operation, verify it is immediately
+// marked as completed and queryable via the operations API.
+func TestIntegration_UploadWithoutConversion(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(dbPath)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, repo.db.Close()) }()
+
+	// Handler without conversion trigger (conversion disabled)
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	// Build upload request
+	recording := map[string]interface{}{
+		"worldName":   "altis",
+		"missionName": "No Conversion Upload",
+		"endFrame":    5,
+		"entities":    []interface{}{},
+		"events":      []interface{}{},
+	}
+	var gzBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzBuf)
+	require.NoError(t, json.NewEncoder(gw).Encode(recording))
+	require.NoError(t, gw.Close())
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", "no_conv_upload")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "No Conversion Upload")
+	writer.WriteField("missionDuration", "300")
+	writer.WriteField("tag", "coop")
+	part, err := writer.CreateFormFile("file", "no_conv_upload.json.gz")
+	require.NoError(t, err)
+	_, err = io.Copy(part, &gzBuf)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	// Step 1: Upload
+	t.Run("Upload", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.StoreOperation(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	// Step 2: Query operations API and verify the operation is completed
+	t.Run("QueryShowsCompleted", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := hdlr.GetOperations(c)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var ops []Operation
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ops))
+		require.Len(t, ops, 1)
+		assert.Equal(t, "No Conversion Upload", ops[0].MissionName)
+		assert.Equal(t, ConversionStatusCompleted, ops[0].ConversionStatus)
+		assert.Equal(t, "json", ops[0].StorageFormat)
+	})
+
+	// Step 3: Verify no pending operations exist
+	t.Run("NoPendingOperations", func(t *testing.T) {
+		ctx := context.Background()
+		pending, err := repo.SelectPending(ctx, 10)
+		require.NoError(t, err)
+		assert.Empty(t, pending)
+	})
+}
+
 // TestIntegration_UploadAndServeGzippedJSON tests the full round-trip:
 // upload a gzipped JSON file via StoreOperation, then fetch it via GetData
 // and verify the response can be decompressed to valid JSON.

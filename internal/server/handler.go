@@ -304,9 +304,15 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		}
 	}
 
-	// Trigger conversion immediately if enabled (async, non-blocking)
+	// Trigger conversion immediately if enabled (async, non-blocking).
+	// When conversion is disabled, mark the operation as completed so
+	// it is immediately available for playback in the UI.
 	if h.conversionTrigger != nil {
 		h.conversionTrigger.TriggerConversion(op.ID, op.Filename)
+	} else {
+		if err = h.repoOperation.UpdateConversionStatus(ctx, op.ID, ConversionStatusCompleted); err != nil {
+			return err
+		}
 	}
 
 	return c.NoContent(http.StatusOK)

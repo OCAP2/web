@@ -11,6 +11,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Conversion status constants for operations.
+const (
+	ConversionStatusPending    = "pending"
+	ConversionStatusConverting = "converting"
+	ConversionStatusCompleted  = "completed"
+	ConversionStatusFailed     = "failed"
+)
+
 // SideCounts holds per-side breakdown of units, players, casualties, and kills.
 type SideCounts struct {
 	Players int `json:"players"`
@@ -215,7 +223,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 	}
 	conversionStatus := operation.ConversionStatus
 	if conversionStatus == "" {
-		conversionStatus = "pending"
+		conversionStatus = ConversionStatusPending
 	}
 	schemaVersion := operation.SchemaVersion
 	if schemaVersion == 0 {

@@ -863,6 +863,132 @@ func TestStoreOperationWithConversionTrigger(t *testing.T) {
 	assert.Equal(t, "trigger_test", trigger.filename)
 }
 
+func TestStoreOperation_NoConversion_MarksCompleted(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, repo.db.Close()) }()
+
+	// Handler with NO conversion trigger (conversion disabled)
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "No Conversion Mission")
+	writer.WriteField("missionDuration", "3600")
+	writer.WriteField("filename", "no_conversion_test")
+	writer.WriteField("tag", "coop")
+
+	fileWriter, err := writer.CreateFormFile("file", "no_conversion_test.json.gz")
+	require.NoError(t, err)
+	gw := gzip.NewWriter(fileWriter)
+	gw.Write([]byte(`{"test": "data"}`))
+	gw.Close()
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify the operation was marked as "completed" in the database
+	ctx := t.Context()
+	op, err := repo.GetByID(ctx, "1")
+	require.NoError(t, err)
+	assert.Equal(t, ConversionStatusCompleted, op.ConversionStatus)
+	assert.Equal(t, "json", op.StorageFormat)
+
+	// Verify no pending operations remain
+	pending, err := repo.SelectPending(ctx, 10)
+	require.NoError(t, err)
+	assert.Empty(t, pending)
+}
+
+func TestStoreOperation_WithConversion_StaysPending(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	err := os.MkdirAll(dataDir, 0755)
+	require.NoError(t, err)
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, repo.db.Close()) }()
+
+	trigger := &mockConversionTrigger{}
+
+	// Handler WITH conversion trigger (conversion enabled)
+	hdlr := Handler{
+		repoOperation:     repo,
+		conversionTrigger: trigger,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "With Conversion Mission")
+	writer.WriteField("missionDuration", "3600")
+	writer.WriteField("filename", "with_conversion_test")
+	writer.WriteField("tag", "coop")
+
+	fileWriter, err := writer.CreateFormFile("file", "with_conversion_test.json.gz")
+	require.NoError(t, err)
+	gw := gzip.NewWriter(fileWriter)
+	gw.Write([]byte(`{"test": "data"}`))
+	gw.Close()
+	writer.Close()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify conversion trigger was called
+	assert.True(t, trigger.triggered)
+	assert.Equal(t, "with_conversion_test", trigger.filename)
+
+	// Verify the operation stays "pending" in the database (conversion worker handles transition)
+	ctx := t.Context()
+	op, err := repo.GetByID(ctx, "1")
+	require.NoError(t, err)
+	assert.Equal(t, ConversionStatusPending, op.ConversionStatus)
+	assert.Equal(t, "json", op.StorageFormat)
+
+	// Verify it shows up in pending list
+	pending, err := repo.SelectPending(ctx, 10)
+	require.NoError(t, err)
+	assert.Len(t, pending, 1)
+	assert.Equal(t, "with_conversion_test", pending[0].Filename)
+}
+
 func TestNewHandler(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")

@@ -80,7 +80,7 @@ func NewWorker(repo OperationRepo, cfg Config) *Worker {
 // This should be called once at startup before the background loop.
 func (w *Worker) cleanupInterrupted(ctx context.Context) {
 	// Always reset 'converting' status (these were interrupted by shutdown)
-	ops, err := w.repo.SelectByStatus(ctx, "converting")
+	ops, err := w.repo.SelectByStatus(ctx, server.ConversionStatusConverting)
 	if err != nil {
 		slog.Error("failed to select converting operations", "error", err)
 	} else {
@@ -93,7 +93,7 @@ func (w *Worker) cleanupInterrupted(ctx context.Context) {
 				slog.Info("removed partial conversion", "path", outputPath)
 			}
 		}
-		if count, err := w.repo.ResetConversionStatus(ctx, "converting", "pending"); err != nil {
+		if count, err := w.repo.ResetConversionStatus(ctx, server.ConversionStatusConverting, server.ConversionStatusPending); err != nil {
 			slog.Error("failed to reset converting status", "error", err)
 		} else if count > 0 {
 			slog.Info("reset interrupted conversions", "count", count)
@@ -102,7 +102,7 @@ func (w *Worker) cleanupInterrupted(ctx context.Context) {
 
 	// Optionally reset 'failed' status
 	if w.retryFailed {
-		if count, err := w.repo.ResetConversionStatus(ctx, "failed", "pending"); err != nil {
+		if count, err := w.repo.ResetConversionStatus(ctx, server.ConversionStatusFailed, server.ConversionStatusPending); err != nil {
 			slog.Error("failed to reset failed status", "error", err)
 		} else if count > 0 {
 			slog.Info("reset failed conversions for retry", "count", count)
@@ -154,7 +154,7 @@ func (w *Worker) processOnce(ctx context.Context) {
 
 		if err := w.convertOperation(ctx, op); err != nil {
 			slog.Error("conversion failed", "operation_id", op.ID, "filename", op.Filename, "error", err)
-			if err := w.repo.UpdateConversionStatus(ctx, op.ID, "failed"); err != nil {
+			if err := w.repo.UpdateConversionStatus(ctx, op.ID, server.ConversionStatusFailed); err != nil {
 				slog.Error("failed to update status", "operation_id", op.ID, "error", err)
 			}
 		}
@@ -166,7 +166,7 @@ func (w *Worker) convertOperation(ctx context.Context, op server.Operation) erro
 	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename)
 
 	// Update status to converting
-	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "converting"); err != nil {
+	if err := w.repo.UpdateConversionStatus(ctx, op.ID, server.ConversionStatusConverting); err != nil {
 		return fmt.Errorf("update status to converting: %w", err)
 	}
 
@@ -209,7 +209,7 @@ func (w *Worker) convertOperation(ctx context.Context, op server.Operation) erro
 	if err := w.repo.UpdateStorageFormat(ctx, op.ID, "protobuf"); err != nil {
 		return fmt.Errorf("update storage format: %w", err)
 	}
-	if err := w.repo.UpdateConversionStatus(ctx, op.ID, "completed"); err != nil {
+	if err := w.repo.UpdateConversionStatus(ctx, op.ID, server.ConversionStatusCompleted); err != nil {
 		return fmt.Errorf("update status to completed: %w", err)
 	}
 
@@ -333,7 +333,7 @@ func (w *Worker) TriggerConversion(id int64, filename string) {
 		ctx := context.Background()
 		if err := w.convertOperation(ctx, server.Operation{ID: id, Filename: filename}); err != nil {
 			slog.Error("async conversion failed", "operation_id", id, "filename", filename, "error", err)
-			if err := w.repo.UpdateConversionStatus(ctx, id, "failed"); err != nil {
+			if err := w.repo.UpdateConversionStatus(ctx, id, server.ConversionStatusFailed); err != nil {
 				slog.Error("failed to update status", "operation_id", id, "error", err)
 			}
 		}
