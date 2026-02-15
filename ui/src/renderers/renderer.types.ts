@@ -41,6 +41,8 @@ export interface EntityMarkerState {
   iconType: string;
   isPlayer: boolean;
   isInVehicle: boolean;
+  /** When true, show the "hit" flash icon instead of the normal side icon. */
+  hit?: boolean;
 }
 
 // --------------- Briefing markers ---------------

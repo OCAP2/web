@@ -6,6 +6,7 @@ import type { EntityManager } from "../../playback/entity-manager";
 import type { MarkerManager } from "../../playback/marker-manager";
 import { Vehicle } from "../../playback/entities/vehicle";
 import { Unit } from "../../playback/entities/unit";
+import { HitKilledEvent } from "../../playback/events/hit-killed-event";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { leftPanelVisible, activeSide } from "./shortcuts";
 
@@ -68,9 +69,24 @@ export function useRenderBridge(
   const markerHandles = new Map<number, MarkerHandle>();
   let firelineHandles: LineHandle[] = [];
 
+  // Hit flash: scan the last N frames for hit events each render.
+  // Stateless — works identically for sequential playback and seeking.
+  const HIT_FLASH_FRAMES = 3;
+
   // Entity snapshot → marker sync
   createEffect(() => {
     const snapshots = engine.entitySnapshots();
+    const frame = engine.currentFrame();
+
+    // Build set of entities currently in hit-flash state
+    const hitEntityIds = new Set<number>();
+    for (let f = Math.max(0, frame - HIT_FLASH_FRAMES + 1); f <= frame; f++) {
+      for (const ev of engine.eventManager.getEventsAtFrame(f)) {
+        if (ev instanceof HitKilledEvent && ev.type === "hit") {
+          hitEntityIds.add(ev.victimId);
+        }
+      }
+    }
 
     for (const handle of firelineHandles) {
       renderer.removeLine(handle);
@@ -115,6 +131,7 @@ export function useRenderBridge(
         iconType: snap.iconType,
         isPlayer,
         isInVehicle: snap.isInVehicle,
+        hit: hitEntityIds.has(id),
       });
 
       if (snap.firedTarget) {

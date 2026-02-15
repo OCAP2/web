@@ -5,7 +5,7 @@ import { MarkerManager } from "../../../playback/marker-manager";
 import { PlaybackEngine } from "../../../playback/engine";
 import { useRenderBridge } from "../useRenderBridge";
 import { setLeftPanelVisible } from "../shortcuts";
-import { unitDef, vehicleDef, makeManifest } from "./test-helpers";
+import { unitDef, vehicleDef, makeManifest, hitEvent } from "./test-helpers";
 import type { RendererEvent } from "../../../renderers/renderer.types";
 
 /**
@@ -594,6 +594,144 @@ describe("useRenderBridge", () => {
     );
     expect(vehicleCall).toBeDefined();
     expect((vehicleCall![1] as any).isPlayer).toBe(false);
+
+    dispose();
+  });
+
+  it("sets hit flag on victim marker when hit event fires", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest(
+          [
+            unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50 }),
+            unitDef({ id: 2, name: "Shooter", startFrame: 0, endFrame: 50 }),
+          ],
+          [hitEvent(5, 1, 2)],
+          50,
+        ),
+      );
+    });
+
+    await flush();
+
+    // At frame 0, no hit — hit should be false
+    let victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect(victimCalls.length).toBeGreaterThan(0);
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(false);
+
+    // Seek to hit frame
+    engine.seekTo(5);
+    await flush();
+
+    victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(true);
+
+    dispose();
+  });
+
+  it("hit flash expires after HIT_FLASH_FRAMES", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    // Need enough positions so entities have snapshots at all tested frames (0-8)
+    const pos = Array.from({ length: 10 }, () => ({
+      position: [100, 200] as [number, number],
+      direction: 0,
+      alive: 1 as const,
+    }));
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest(
+          [
+            unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50, positions: pos }),
+            unitDef({ id: 2, name: "Shooter", startFrame: 0, endFrame: 50, positions: pos }),
+          ],
+          [hitEvent(5, 1, 2)],
+          50,
+        ),
+      );
+    });
+
+    await flush();
+
+    // Seek to hit frame
+    engine.seekTo(5);
+    await flush();
+
+    // Still flashing at frame 7 (5 + 3 - 1)
+    engine.seekTo(7);
+    await flush();
+
+    let victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(true);
+
+    // Expired at frame 8 (5 + 3)
+    engine.seekTo(8);
+    await flush();
+
+    victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(false);
+
+    dispose();
+  });
+
+  it("hit flash not shown when seeking far from hit frame", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
+
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      useRenderBridge(engine, renderer, markerManager);
+      engine.loadOperation(
+        makeManifest(
+          [
+            unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50 }),
+            unitDef({ id: 2, name: "Shooter", startFrame: 0, endFrame: 50 }),
+          ],
+          [hitEvent(5, 1, 2)],
+          50,
+        ),
+      );
+    });
+
+    await flush();
+
+    // Seek to frame 0 — well before the hit at frame 5
+    engine.seekTo(0);
+    await flush();
+
+    let victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(false);
+
+    // Seek past the flash window — frame 8 is outside [5, 7]
+    engine.seekTo(8);
+    await flush();
+
+    victimCalls = updateSpy.mock.calls.filter(
+      (call) => (call[1] as any).name === "Victim",
+    );
+    expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(false);
 
     dispose();
   });

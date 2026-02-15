@@ -20,7 +20,7 @@ import type {
   RendererEvent,
   RendererControls,
 } from "../renderer.types";
-import { entityIcon } from "./leaflet-icons";
+import { entityIcon, hitIcon } from "./leaflet-icons";
 import { createScaleControl } from "./leaflet-controls";
 import type { StyleCandidate } from "./leaflet-controls";
 import { createGridLayer } from "./leaflet-grid";
@@ -752,8 +752,13 @@ export class LeafletRenderer implements MapRenderer {
     internal.lastDirection = newAngle;
 
     // Only call setIcon when icon actually changes (avoids popup rebind)
-    const newIconKey = `${state.iconType}:${state.side}:${state.alive}`;
-    const { icon, opacity } = entityIcon(state.iconType, state.side, state.alive);
+    const isHit = state.hit && state.alive !== 0;
+    const newIconKey = isHit
+      ? `${state.iconType}:hit`
+      : `${state.iconType}:${state.side}:${state.alive}`;
+    const { icon, opacity } = isHit
+      ? { icon: hitIcon(state.iconType), opacity: 1 }
+      : entityIcon(state.iconType, state.side, state.alive);
     if (newIconKey !== internal.iconKey) {
       marker.setIcon(icon);
       internal.iconKey = newIconKey;
