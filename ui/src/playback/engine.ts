@@ -283,6 +283,22 @@ export class PlaybackEngine {
     this.manifest = manifest;
     this.chunkManager = chunkManager ?? null;
 
+    // When a chunk finishes loading, recompute snapshots only if the loaded
+    // chunk is the one needed for the current frame. This avoids redundant
+    // recomputation when a prefetched future chunk arrives.
+    if (this.chunkManager) {
+      this.chunkManager.setCallbacks({
+        onChunkLoaded: (chunkIndex: number) => {
+          const frame = this._currentFrame();
+          const chunkSize = this.manifest?.chunkSize || 300;
+          const currentChunkIndex = Math.floor(frame / chunkSize);
+          if (chunkIndex !== currentChunkIndex) return;
+          this.computeSnapshots(frame);
+          this._setActiveEvents(this.eventManager.getActiveEvents(frame));
+        },
+      });
+    }
+
     this._setCaptureDelayMs(manifest.captureDelayMs);
 
     // Populate entities
@@ -352,7 +368,13 @@ export class PlaybackEngine {
     const nextFrame = frame + 1;
     this._setCurrentFrame(nextFrame);
 
-    // Compute entity snapshots
+    // Ensure current chunk is loaded (async — the onChunkLoaded callback
+    // will recompute snapshots if this triggers a new load).
+    if (this.chunkManager) {
+      void this.chunkManager.ensureLoaded(nextFrame);
+    }
+
+    // Compute entity snapshots with whatever chunk data is in memory
     this.computeSnapshots(nextFrame);
 
     // Update events
@@ -375,11 +397,6 @@ export class PlaybackEngine {
       this._setIsPlaying(false);
       this.clearTimer();
       return;
-    }
-
-    // Trigger async prefetch for the next chunk (fire-and-forget)
-    if (this.chunkManager) {
-      void this.chunkManager.ensureLoaded(nextFrame);
     }
 
     // Schedule next tick

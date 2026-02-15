@@ -874,4 +874,102 @@ describe("PlaybackEngine", () => {
       expect(engine.currentFrame()).toBe(1);
     });
   });
+
+  // ─── Chunk-loaded callback recomputes snapshots ───
+
+  describe("onChunkLoaded callback", () => {
+    it("recomputes snapshots when a chunk finishes loading", () => {
+      // Start with a chunk manager that returns null (chunk not yet loaded)
+      let chunkData: ReturnType<typeof makeChunkData> | null = null;
+      const cm = {
+        loadManifest: vi.fn(),
+        loadChunk: vi.fn(),
+        ensureLoaded: vi.fn().mockResolvedValue(undefined),
+        getChunkForFrame: vi.fn().mockImplementation(() => chunkData),
+        clear: vi.fn(),
+        getManifest: vi.fn().mockReturnValue(null),
+        setCallbacks: vi.fn(),
+      } as unknown as ChunkManager;
+
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
+      });
+
+      engine.loadOperation(manifest, cm);
+
+      // Capture the onChunkLoaded callback that the engine registered
+      expect(cm.setCallbacks).toHaveBeenCalledTimes(1);
+      const callbacks = (cm.setCallbacks as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callbacks.onChunkLoaded).toBeDefined();
+
+      // At frame 0 with no chunk data, entity should NOT be in snapshots
+      expect(engine.entitySnapshots().has(1)).toBe(false);
+
+      // Simulate chunk loading: provide data and fire callback
+      const entityStates = new Map<number, any[]>();
+      const states = [];
+      for (let i = 0; i < 100; i++) {
+        states.push({
+          position: [100 + i, 200 + i] as [number, number],
+          direction: i * 3,
+          alive: 1 as const,
+        });
+      }
+      entityStates.set(1, states);
+      chunkData = makeChunkData(entityStates);
+
+      // Fire the callback for the current chunk (0) — engine should recompute
+      callbacks.onChunkLoaded(0);
+
+      // Now the entity should appear with frame 0 position
+      const snapshots = engine.entitySnapshots();
+      expect(snapshots.has(1)).toBe(true);
+      expect(snapshots.get(1)!.position).toEqual([100, 200]);
+    });
+
+    it("skips recomputation when a prefetched future chunk loads", () => {
+      const entityStates = new Map<number, any[]>();
+      const states = [];
+      for (let i = 0; i < 300; i++) {
+        states.push({
+          position: [100 + i, 200 + i] as [number, number],
+          direction: i * 3,
+          alive: 1 as const,
+        });
+      }
+      entityStates.set(1, states);
+      const chunk = makeChunkData(entityStates);
+
+      const cm = {
+        loadManifest: vi.fn(),
+        loadChunk: vi.fn(),
+        ensureLoaded: vi.fn().mockResolvedValue(undefined),
+        getChunkForFrame: vi.fn().mockReturnValue(chunk),
+        clear: vi.fn(),
+        getManifest: vi.fn().mockReturnValue(null),
+        setCallbacks: vi.fn(),
+      } as unknown as ChunkManager;
+
+      const manifest = makeManifest({
+        frameCount: 600,
+        chunkSize: 300,
+        entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 599 })],
+      });
+
+      engine.loadOperation(manifest, cm);
+
+      const callbacks = (cm.setCallbacks as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+      // Frame 0 is in chunk 0 — entity should be in snapshots
+      expect(engine.entitySnapshots().has(1)).toBe(true);
+      const snapshotBefore = engine.entitySnapshots();
+
+      // Fire callback for chunk 1 (future chunk) — should NOT recompute
+      callbacks.onChunkLoaded(1);
+
+      // Snapshots reference should be unchanged (no recomputation)
+      expect(engine.entitySnapshots()).toBe(snapshotBefore);
+    });
+  });
 });

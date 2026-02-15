@@ -24,6 +24,7 @@ coverage.out
 coverage.html
 
 # Frontend
+node_modules/
 ui/node_modules/
 ui/.vite/
 ui/dist/
