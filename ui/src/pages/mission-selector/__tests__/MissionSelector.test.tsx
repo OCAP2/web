@@ -34,6 +34,22 @@ const mockOperations: Operation[] = [
     tag: "TvT",
     storageFormat: "protobuf",
   },
+  {
+    id: "4",
+    worldName: "Altis",
+    missionName: "Op Delta",
+    missionDuration: 600,
+    date: "2024-04-01",
+    conversionStatus: "streaming",
+  },
+  {
+    id: "5",
+    worldName: "Stratis",
+    missionName: "Op Echo",
+    missionDuration: 1200,
+    date: "2024-05-01",
+    conversionStatus: "pending",
+  },
 ];
 
 function mockFetchWith(ops: Operation[]) {
@@ -122,12 +138,16 @@ describe("MissionSelector", () => {
     expect(op1.textContent).toContain("Ready");
     const op3 = await findByTestId("operation-3");
     expect(op3.textContent).toContain("Ready");
+    const op4 = await findByTestId("operation-4");
+    expect(op4.textContent).toContain("Live");
+    const op5 = await findByTestId("operation-5");
+    expect(op5.textContent).toContain("Pending");
   });
 
   it("shows footer with mission count", async () => {
     const { findByTestId, container } = renderPage();
     await findByTestId("operation-1");
-    expect(container.textContent).toContain("3 of 3 missions");
+    expect(container.textContent).toContain("5 of 5 missions");
   });
 
   // ── Search ──
@@ -442,9 +462,9 @@ describe("MissionSelector", () => {
       const list = getByTestId("operations-list");
       const rows = list.querySelectorAll("[data-testid^='operation-']");
       const names = Array.from(rows).map((r) => r.textContent!);
-      // Descending by name: Op Charlie, Op Bravo, Op Alpha
-      expect(names[0]).toContain("Op Charlie");
-      expect(names[2]).toContain("Op Alpha");
+      // Descending by name: Op Echo, Op Delta, Op Charlie, Op Bravo, Op Alpha
+      expect(names[0]).toContain("Op Echo");
+      expect(names[4]).toContain("Op Alpha");
     });
   });
 
@@ -465,9 +485,9 @@ describe("MissionSelector", () => {
       const list = getByTestId("operations-list");
       const rows = list.querySelectorAll("[data-testid^='operation-']");
       const names = Array.from(rows).map((r) => r.textContent!);
-      // Ascending by name: Op Alpha, Op Bravo, Op Charlie
+      // Ascending by name: Op Alpha, Op Bravo, Op Charlie, Op Delta, Op Echo
       expect(names[0]).toContain("Op Alpha");
-      expect(names[2]).toContain("Op Charlie");
+      expect(names[4]).toContain("Op Echo");
     });
   });
 
