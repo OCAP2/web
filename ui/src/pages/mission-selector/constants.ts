@@ -14,7 +14,7 @@ export const C = {
 // Labels are i18n keys — resolve via t() at render time
 export const STATUS_MAP: Record<string, { labelKey: string; color: string; icon: string }> = {
   ready:      { labelKey: "status_ready",      color: C.green,  icon: "\u25CF" },
-  streaming:  { labelKey: "status_streaming",  color: C.blue,   icon: "\u25C9" },
+  streaming:  { labelKey: "status_live",       color: C.blue,   icon: "\u25C9" },
   converting: { labelKey: "status_converting", color: C.orange,  icon: "\u25CC" },
   pending:    { labelKey: "status_pending",    color: C.muted,  icon: "\u25CB" },
   failed:     { labelKey: "status_failed",     color: C.red,    icon: "\u2715" },

@@ -76,16 +76,14 @@ export function getTagColor(tag: string): { bg: string; color: string; border: s
 }
 
 export function getStatusInfo(op: Operation): { labelKey: string; color: string; icon: string; key: string } {
-  const format = op.storageFormat || "json";
-  const conversionStatus = op.conversionStatus || "completed";
-  if (conversionStatus === "pending") return { ...STATUS_MAP.pending, key: "pending" };
-  if (conversionStatus === "converting") return { ...STATUS_MAP.converting, key: "converting" };
-  if (conversionStatus === "failed") return { ...STATUS_MAP.failed, key: "failed" };
-  if (format === "protobuf") return { ...STATUS_MAP.streaming, key: "streaming" };
+  const status = op.conversionStatus || "completed";
+  if (status === "streaming") return { ...STATUS_MAP.streaming, key: "streaming" };
+  if (status === "pending") return { ...STATUS_MAP.pending, key: "pending" };
+  if (status === "converting") return { ...STATUS_MAP.converting, key: "converting" };
+  if (status === "failed") return { ...STATUS_MAP.failed, key: "failed" };
   return { ...STATUS_MAP.ready, key: "ready" };
 }
 
 export function isOpReady(op: Operation): boolean {
-  const s = getStatusInfo(op);
-  return s.key === "ready" || s.key === "streaming";
+  return getStatusInfo(op).key === "ready";
 }
