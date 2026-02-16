@@ -104,6 +104,10 @@ func NewHandler(
 		hdlr.GetCustomize,
 	)
 	g.GET(
+		"/api/v1/stream",
+		hdlr.HandleStream,
+	)
+	g.GET(
 		"/api/version",
 		hdlr.GetVersion,
 	)
