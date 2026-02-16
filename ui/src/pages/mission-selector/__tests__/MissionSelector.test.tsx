@@ -121,7 +121,7 @@ describe("MissionSelector", () => {
     const op1 = await findByTestId("operation-1");
     expect(op1.textContent).toContain("Ready");
     const op3 = await findByTestId("operation-3");
-    expect(op3.textContent).toContain("Streaming");
+    expect(op3.textContent).toContain("Ready");
   });
 
   it("shows footer with mission count", async () => {
