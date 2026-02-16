@@ -25,5 +25,10 @@
 		"enabled": false,
 		"interval": "5m",
 		"retryFailed": false
+	},
+	"streaming": {
+		"enabled": false,
+		"pingInterval": "30s",
+		"pingTimeout": "10s"
 	}
 }

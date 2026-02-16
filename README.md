@@ -28,6 +28,16 @@ Large recordings can be automatically converted to chunked binary format for bet
 | `conversion.batchSize` | Max recordings to convert per interval | `10` |
 | `conversion.chunkSize` | Frames per chunk (~5 min at 1 fps) | `300` |
 
+### Streaming Settings
+
+Live mission data can be streamed to the server via WebSocket.
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `streaming.enabled` | Enable the WebSocket streaming endpoint | `false` |
+| `streaming.pingInterval` | Interval between WebSocket keepalive pings | `"30s"` |
+| `streaming.pingTimeout` | Timeout waiting for pong response | `"10s"` |
+
 Example `setting.json`:
 ```json
 {
@@ -37,6 +47,9 @@ Example `setting.json`:
   "conversion": {
     "enabled": true,
     "interval": "5m"
+  },
+  "streaming": {
+    "enabled": true
   }
 }
 ```
@@ -166,6 +179,14 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_CONVERSION_BATCHSIZE` | Max recordings to convert per interval | `1` |
 | `OCAP_CONVERSION_CHUNKSIZE` | Frames per chunk | `300` |
 | `OCAP_CONVERSION_RETRYFAILED` | Retry previously failed conversions | `false` |
+
+#### Streaming
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OCAP_STREAMING_ENABLED` | Enable WebSocket streaming endpoint | `false` |
+| `OCAP_STREAMING_PINGINTERVAL` | WebSocket keepalive ping interval | `30s` |
+| `OCAP_STREAMING_PINGTIMEOUT` | Pong response timeout | `10s` |
 
 ### Volumes
 
