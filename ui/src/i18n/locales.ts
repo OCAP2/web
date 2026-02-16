@@ -295,13 +295,13 @@ export const translations: Record<string, Record<Locale, string>> = {
     it: "Conversione",
     fr: "Conversion",
   },
-  status_streaming: {
-    ru: "Потоковый",
-    en: "Streaming",
-    de: "Streaming",
-    cs: "Streamování",
-    it: "Streaming",
-    fr: "En diffusion",
+  status_live: {
+    ru: "Запись",
+    en: "Live",
+    de: "Live",
+    cs: "Živě",
+    it: "In diretta",
+    fr: "En direct",
   },
   list_compilation: {
     ru: "Составления списка...",
