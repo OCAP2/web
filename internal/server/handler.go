@@ -81,11 +81,10 @@ func NewHandler(
 
 	e.Use(hdlr.errorHandler)
 
-	// Healthcheck at root level for Docker/external monitoring
-	e.GET("/healthcheck", hdlr.GetHealthcheck)
-
 	prefixURL := strings.TrimRight(hdlr.setting.PrefixURL, "/")
 	g := e.Group(prefixURL)
+
+	g.GET("/api/healthcheck", hdlr.GetHealthcheck)
 
 	g.GET(
 		"/api/v1/operations",
