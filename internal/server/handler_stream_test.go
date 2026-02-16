@@ -109,9 +109,11 @@ func TestHandleStream_EndMissionAckAndClose(t *testing.T) {
 	defer conn.Close()
 
 	// Send start_mission and consume ack
-	conn.WriteJSON(map[string]string{"type": "start_mission"})
+	err = conn.WriteJSON(map[string]string{"type": "start_mission"})
+	require.NoError(t, err)
 	var startAck map[string]string
-	conn.ReadJSON(&startAck)
+	err = conn.ReadJSON(&startAck)
+	require.NoError(t, err)
 
 	// Send some state messages
 	for i := 0; i < 5; i++ {

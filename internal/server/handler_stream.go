@@ -63,6 +63,7 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 				err := ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(pingTimeout))
 				mu.Unlock()
 				if err != nil {
+					slog.Warn("stream: failed to write ping", "error", err)
 					return
 				}
 			case <-done:
