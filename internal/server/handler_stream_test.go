@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -157,4 +158,23 @@ func TestHandleStream_UnknownTypesAccepted(t *testing.T) {
 	err = conn.ReadJSON(&ack)
 	require.NoError(t, err)
 	assert.Equal(t, "end_mission", ack["for"])
+}
+
+func TestNewHandler_StreamRouteRegistered(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
+	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
+
+	e := echo.New()
+	NewHandler(e, repo, repoMarker, repoAmmo, Setting{PrefixURL: "/sub/"})
+
+	routePaths := make([]string, 0)
+	for _, r := range e.Routes() {
+		routePaths = append(routePaths, r.Path)
+	}
+	assert.Contains(t, routePaths, "/sub/api/v1/stream")
 }
