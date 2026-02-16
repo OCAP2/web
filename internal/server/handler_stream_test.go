@@ -173,6 +173,75 @@ func TestHandleStream_UnknownTypesAccepted(t *testing.T) {
 	assert.Equal(t, "end_mission", ack["for"])
 }
 
+func TestHandleStream_InvalidJSON(t *testing.T) {
+	_, e := newTestStreamHandler(true)
+	srv := httptest.NewServer(e)
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/stream?secret=test-secret"
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Send invalid JSON — should be skipped, not crash
+	err = conn.WriteMessage(websocket.TextMessage, []byte("not json"))
+	require.NoError(t, err)
+
+	// Server should still be alive — send valid message and get ack
+	err = conn.WriteJSON(map[string]string{"type": "start_mission"})
+	require.NoError(t, err)
+	var ack map[string]string
+	err = conn.ReadJSON(&ack)
+	require.NoError(t, err)
+	assert.Equal(t, "start_mission", ack["for"])
+}
+
+func TestHandleStream_NormalClose(t *testing.T) {
+	_, e := newTestStreamHandler(true)
+	srv := httptest.NewServer(e)
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/stream?secret=test-secret"
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+
+	// Send a proper WebSocket close frame (triggers normal close path)
+	err = conn.WriteMessage(websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	require.NoError(t, err)
+	conn.Close()
+}
+
+func TestHandleStream_ZeroConfigFallbacks(t *testing.T) {
+	e := echo.New()
+	hdlr := &Handler{
+		setting: Setting{
+			Secret: "test-secret",
+			Streaming: Streaming{
+				Enabled: true,
+				// PingInterval and PingTimeout intentionally zero
+			},
+		},
+	}
+	e.GET("/api/v1/stream", hdlr.HandleStream)
+
+	srv := httptest.NewServer(e)
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/stream?secret=test-secret"
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Verify connection works with fallback values
+	err = conn.WriteJSON(map[string]string{"type": "end_mission"})
+	require.NoError(t, err)
+	var ack map[string]string
+	err = conn.ReadJSON(&ack)
+	require.NoError(t, err)
+	assert.Equal(t, "end_mission", ack["for"])
+}
+
 func TestNewHandler_StreamRouteRegistered(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
