@@ -12,7 +12,9 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	// Allow non-browser clients (no Origin header, e.g. Arma extension).
+	// Reject browser requests that include an Origin header.
+	CheckOrigin: func(r *http.Request) bool { return r.Header.Get("Origin") == "" },
 }
 
 // HandleStream upgrades to WebSocket and processes streaming mission data.

@@ -60,6 +60,17 @@ func TestHandleStream_WrongSecret(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
+func TestHandleStream_BrowserOriginRejected(t *testing.T) {
+	_, e := newTestStreamHandler(true)
+	srv := httptest.NewServer(e)
+	defer srv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/stream?secret=test-secret"
+	_, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Origin": {"https://evil.example.com"}})
+	require.Error(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestHandleStream_UpgradeSuccess(t *testing.T) {
 	_, e := newTestStreamHandler(true)
 	srv := httptest.NewServer(e)
