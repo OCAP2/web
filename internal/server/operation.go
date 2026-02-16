@@ -13,6 +13,7 @@ import (
 
 // Conversion status constants for operations.
 const (
+	ConversionStatusStreaming   = "streaming"
 	ConversionStatusPending    = "pending"
 	ConversionStatusConverting = "converting"
 	ConversionStatusCompleted  = "completed"

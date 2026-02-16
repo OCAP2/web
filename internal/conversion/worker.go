@@ -79,6 +79,13 @@ func NewWorker(repo OperationRepo, cfg Config) *Worker {
 // cleanupInterrupted resets interrupted conversions and removes partial output files.
 // This should be called once at startup before the background loop.
 func (w *Worker) cleanupInterrupted(ctx context.Context) {
+	// Reset 'streaming' status (ingestion was interrupted by server shutdown — no partial files to clean up)
+	if count, err := w.repo.ResetConversionStatus(ctx, server.ConversionStatusStreaming, server.ConversionStatusPending); err != nil {
+		slog.Error("failed to reset streaming status", "error", err)
+	} else if count > 0 {
+		slog.Info("reset interrupted streaming sessions", "count", count)
+	}
+
 	// Always reset 'converting' status (these were interrupted by shutdown)
 	ops, err := w.repo.SelectByStatus(ctx, server.ConversionStatusConverting)
 	if err != nil {

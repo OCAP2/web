@@ -880,6 +880,31 @@ func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
 	worker.cleanupInterrupted(ctx)
 }
 
+func TestWorker_CleanupInterrupted_ResetsStreaming(t *testing.T) {
+	dir := t.TempDir()
+
+	repo := newMockRepo()
+	repo.byStatus["streaming"] = []server.Operation{
+		{ID: 1, Filename: "live_mission1"},
+		{ID: 2, Filename: "live_mission2"},
+	}
+	repo.byStatus["converting"] = []server.Operation{
+		{ID: 3, Filename: "mission3"},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	worker.cleanupInterrupted(ctx)
+
+	// Streaming and converting both reset to pending
+	assert.Len(t, repo.byStatus["pending"], 3)
+	assert.Len(t, repo.byStatus["streaming"], 0)
+	assert.Len(t, repo.byStatus["converting"], 0)
+}
+
 func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	dir := t.TempDir()
 
