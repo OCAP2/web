@@ -184,9 +184,9 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OCAP_STREAMING_ENABLED` | Enable WebSocket streaming endpoint | `false` |
-| `OCAP_STREAMING_PINGINTERVAL` | WebSocket keepalive ping interval | `30s` |
-| `OCAP_STREAMING_PINGTIMEOUT` | Pong response timeout | `10s` |
+| `OCAP_STREAMING_ENABLED` | Enable the WebSocket streaming endpoint | `false` |
+| `OCAP_STREAMING_PINGINTERVAL` | Interval between WebSocket keepalive pings | `30s` |
+| `OCAP_STREAMING_PINGTIMEOUT` | Timeout waiting for pong response | `10s` |
 
 ### Volumes
 
