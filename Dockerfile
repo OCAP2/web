@@ -36,7 +36,7 @@ COPY assets/ammo /usr/local/ocap/ammo
 COPY assets/fonts /usr/local/ocap/fonts
 COPY assets/markers /usr/local/ocap/markers
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
-COPY --chmod=755 entrypoint.sh /entrypoint.sh
+COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget -q -O /dev/null http://localhost:${OCAP_LISTEN##*:}/api/healthcheck || exit 1

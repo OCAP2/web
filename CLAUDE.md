@@ -96,7 +96,7 @@ Settings loaded via Viper with priority: environment variables → config files 
 
 ## Pelican Panel
 
-A Pelican egg (`egg-ocap2-web.json`) is provided for deploying in [Pelican Panel](https://pelican.dev/). The Docker image includes a dual-mode entrypoint (`entrypoint.sh`) that detects Pelican/Wings via the `STARTUP` env var and processes variable substitution, falling back to direct execution for standalone Docker.
+A Pelican egg (`docker/egg-ocap2-web.json`) is provided for deploying in [Pelican Panel](https://pelican.dev/). The Docker image includes a dual-mode entrypoint (`docker/entrypoint.sh`) that detects Pelican/Wings via the `STARTUP` env var and processes variable substitution, falling back to direct execution for standalone Docker.
 
 ## Key Implementation Details
 
