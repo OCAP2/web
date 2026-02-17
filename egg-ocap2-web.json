@@ -1,18 +1,23 @@
 {
     "meta": {
-        "version": "PTDL_v2",
+        "version": "PLCN_v3",
         "update_url": null
     },
     "exported_at": "2026-02-17T00:00:00+00:00",
     "name": "OCAP2 Web",
     "author": "ocap2@github.com",
+    "uuid": "b3f5a8e2-7c41-4d6f-9e1a-2f8b0c3d4e5f",
     "description": "OCAP2 Web Server — archives and replays Arma 3 military simulation missions on interactive Leaflet maps. Provides a web interface for browsing operations, streaming playback, and mission upload via API.",
+    "image": null,
+    "tags": [],
     "features": null,
     "docker_images": {
         "ghcr.io/pelican-eggs/yolks:debian": "ghcr.io/pelican-eggs/yolks:debian"
     },
     "file_denylist": [],
-    "startup": "./ocap-webserver",
+    "startup_commands": {
+        "Default": "./ocap-webserver"
+    },
     "config": {
         "files": "{}",
         "startup": "{\"done\":\"http server started on\"}",
@@ -34,18 +39,18 @@
             "default_value": "change-me",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string|min:6",
-            "field_type": "text"
+            "rules": ["required", "string", "min:6"],
+            "sort": 1
         },
         {
             "name": "Listen Address",
             "description": "Address and port the server binds to. Uses the Pelican-allocated port by default.",
             "env_variable": "OCAP_LISTEN",
-            "default_value": "0.0.0.0:{{server.build.default.port}}",
+            "default_value": "0.0.0.0:{{server.allocations.default.port}}",
             "user_viewable": true,
             "user_editable": false,
-            "rules": "required|string",
-            "field_type": "text"
+            "rules": ["required", "string"],
+            "sort": 2
         },
         {
             "name": "Database Path",
@@ -54,8 +59,8 @@
             "default_value": "./db/data.db",
             "user_viewable": true,
             "user_editable": false,
-            "rules": "required|string",
-            "field_type": "text"
+            "rules": ["required", "string"],
+            "sort": 3
         },
         {
             "name": "Data Directory",
@@ -64,8 +69,8 @@
             "default_value": "./data",
             "user_viewable": true,
             "user_editable": false,
-            "rules": "required|string",
-            "field_type": "text"
+            "rules": ["required", "string"],
+            "sort": 4
         },
         {
             "name": "Maps Directory",
@@ -74,8 +79,8 @@
             "default_value": "./maps",
             "user_viewable": true,
             "user_editable": false,
-            "rules": "required|string",
-            "field_type": "text"
+            "rules": ["required", "string"],
+            "sort": 5
         },
         {
             "name": "Enable Conversion",
@@ -84,8 +89,8 @@
             "default_value": "true",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string|in:true,false",
-            "field_type": "text"
+            "rules": ["required", "string", "in:true,false"],
+            "sort": 6
         },
         {
             "name": "Enable Streaming",
@@ -94,8 +99,8 @@
             "default_value": "false",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string|in:true,false",
-            "field_type": "text"
+            "rules": ["required", "string", "in:true,false"],
+            "sort": 7
         },
         {
             "name": "Version",
@@ -104,8 +109,8 @@
             "default_value": "latest",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string|max:20",
-            "field_type": "text"
+            "rules": ["required", "string", "max:20"],
+            "sort": 8
         }
     ]
 }
