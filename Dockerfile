@@ -38,4 +38,7 @@ COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -q -O /dev/null http://localhost:${OCAP_LISTEN##*:}/api/healthcheck || exit 1
+
 ENTRYPOINT ["/entrypoint.sh"]
