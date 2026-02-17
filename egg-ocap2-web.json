@@ -22,7 +22,7 @@
         "files": "{}",
         "startup": "{\"done\":\"http server started on\"}",
         "logs": "{}",
-        "stop": "^^C"
+        "stop": "^C"
     },
     "scripts": {
         "installation": {
