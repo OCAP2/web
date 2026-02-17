@@ -45,6 +45,7 @@ Entry point: `cmd/ocap-webserver/main.go` initializes repositories and starts th
 Each schema package has a `generate.go` with `//go:generate` directives. Run `go generate ./pkg/schemas/...` after modifying `.proto` files.
 
 **API Endpoints (all under configurable `prefixURL`, default `/`):**
+- `GET /api/healthcheck` - Health check (used by Docker HEALTHCHECK)
 - `GET /api/v1/operations` - Query missions with filters
 - `POST /api/v1/operations/add` - Upload mission (requires `secret`)
 - `GET /api/v1/customize` - UI customization settings
@@ -92,6 +93,10 @@ Settings loaded via Viper with priority: environment variables → config files 
 - `OCAP_LISTEN`, `OCAP_SECRET`, `OCAP_PREFIXURL`
 - `OCAP_DB`, `OCAP_DATA`, `OCAP_MAPS`, `OCAP_MARKERS`, `OCAP_AMMO`, `OCAP_STATIC`
 - `OCAP_CUSTOMIZE_WEBSITEURL`, `OCAP_CUSTOMIZE_WEBSITELOGO`
+
+## Pelican Panel
+
+A Pelican egg (`egg-ocap2-web.json`) is provided for deploying in [Pelican Panel](https://pelican.dev/). The Docker image includes a dual-mode entrypoint (`entrypoint.sh`) that detects Pelican/Wings via the `STARTUP` env var and processes variable substitution, falling back to direct execution for standalone Docker.
 
 ## Key Implementation Details
 
