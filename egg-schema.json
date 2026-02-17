@@ -1,0 +1,171 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Pelican Egg",
+    "description": "Schema for Pelican Panel (PLCN_v3) egg configuration files.",
+    "type": "object",
+    "required": ["meta", "name", "author", "docker_images", "startup_commands", "config", "scripts"],
+    "additionalProperties": false,
+    "properties": {
+        "_comment": {
+            "type": "string"
+        },
+        "meta": {
+            "type": "object",
+            "required": ["version"],
+            "additionalProperties": false,
+            "properties": {
+                "version": {
+                    "type": "string",
+                    "enum": ["PLCN_v3"]
+                },
+                "update_url": {
+                    "type": ["string", "null"]
+                }
+            }
+        },
+        "exported_at": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "author": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "description": {
+            "type": ["string", "null"]
+        },
+        "image": {
+            "type": ["string", "null"],
+            "description": "Base64-encoded icon image (data:image/...;base64,...) or null."
+        },
+        "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "features": {
+            "type": ["array", "null"],
+            "items": { "type": "string" }
+        },
+        "docker_images": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "string" }
+        },
+        "file_denylist": {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "startup_commands": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "string" },
+            "description": "Named startup commands. Must include at least one entry (typically 'Default')."
+        },
+        "config": {
+            "type": "object",
+            "required": ["files", "startup", "stop"],
+            "additionalProperties": false,
+            "properties": {
+                "files": {
+                    "type": "string",
+                    "description": "JSON-encoded file parser configuration."
+                },
+                "startup": {
+                    "type": "string",
+                    "description": "JSON-encoded startup detection config, e.g. {\"done\": \"listening\"}."
+                },
+                "logs": {
+                    "type": "string",
+                    "description": "JSON-encoded log configuration."
+                },
+                "stop": {
+                    "type": "string",
+                    "description": "Stop command: ^^C (SIGINT), ^SIGTERM, ^SIGKILL, or a text command."
+                }
+            }
+        },
+        "scripts": {
+            "type": "object",
+            "required": ["installation"],
+            "additionalProperties": false,
+            "properties": {
+                "installation": {
+                    "type": "object",
+                    "required": ["script", "container", "entrypoint"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "script": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "container": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "entrypoint": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                }
+            }
+        },
+        "variables": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "env_variable", "default_value", "user_viewable", "user_editable", "rules"],
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": {
+                        "type": ["string", "null"]
+                    },
+                    "env_variable": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]*$"
+                    },
+                    "default_value": {
+                        "type": "string"
+                    },
+                    "user_viewable": {
+                        "type": "boolean"
+                    },
+                    "user_editable": {
+                        "type": "boolean"
+                    },
+                    "rules": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "description": "Pipe-delimited Laravel validation rules."
+                            },
+                            {
+                                "type": "array",
+                                "items": { "type": "string" },
+                                "description": "Array of Laravel validation rules."
+                            }
+                        ]
+                    },
+                    "sort": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "field_type": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
