@@ -258,7 +258,7 @@ docker run --rm \
 
 ## Pelican Panel
 
-A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web as a managed server instance. Import `docker/egg-ocap2-web.json` in the Pelican admin panel under **Eggs → Import Egg**.
+A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web as a managed server instance. Import `egg-ocap2-web.json` in the Pelican admin panel under **Eggs → Import Egg**.
 
 The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persistent data (database, recordings, maps) is stored under `/home/container/` via Pelican's volume mount.
 
