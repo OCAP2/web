@@ -18,7 +18,8 @@ RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$bui
 
 FROM alpine:3.23
 WORKDIR /usr/local/ocap
-RUN mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
+RUN adduser -D -h /home/container container && \
+    mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
     echo '{}' > /etc/ocap/setting.json
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \
@@ -35,8 +36,7 @@ COPY assets/ammo /usr/local/ocap/ammo
 COPY assets/fonts /usr/local/ocap/fonts
 COPY assets/markers /usr/local/ocap/markers
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget -q -O /dev/null http://localhost:${OCAP_LISTEN##*:}/api/healthcheck || exit 1
