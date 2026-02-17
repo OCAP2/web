@@ -1,0 +1,111 @@
+{
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-02-17T00:00:00+00:00",
+    "name": "OCAP2 Web",
+    "author": "ocap2@github.com",
+    "description": "OCAP2 Web Server — archives and replays Arma 3 military simulation missions on interactive Leaflet maps. Provides a web interface for browsing operations, streaming playback, and mission upload via API.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io/pelican-eggs/yolks:debian": "ghcr.io/pelican-eggs/yolks:debian"
+    },
+    "file_denylist": [],
+    "startup": "./ocap-webserver",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\":\"http server started on\"}",
+        "logs": "{}",
+        "stop": "^^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -euo pipefail\n\napt update\napt -y install --no-install-recommends curl ca-certificates jq\n\n## Determine architecture\nARCH=$([[ \"$(uname -m)\" == \"x86_64\" ]] && echo \"amd64\" || echo \"arm64\")\n\n## Resolve version\nif [ \"${VERSION}\" == \"latest\" ]; then\n    echo \"Fetching latest release version...\"\n    VERSION=$(curl -sSL https://api.github.com/repos/OCAP2/web/releases/latest | jq -r '.tag_name // empty')\n    if [ -z \"${VERSION}\" ]; then\n        echo \"No stable release found, fetching latest pre-release...\"\n        VERSION=$(curl -sSL https://api.github.com/repos/OCAP2/web/releases | jq -r '.[0].tag_name // empty')\n    fi\n    if [ -z \"${VERSION}\" ]; then\n        echo \"ERROR: Could not determine latest version\"\n        exit 1\n    fi\nfi\n\necho \"Installing OCAP2 Web ${VERSION} for ${ARCH}...\"\n\nDOWNLOAD_URL=\"https://github.com/OCAP2/web/releases/download/${VERSION}/ocap-webserver-linux-${ARCH}.tar.gz\"\n\n## Download and extract\ncd /mnt/server\ncurl -sSL -o ocap-webserver.tar.gz \"${DOWNLOAD_URL}\"\ntar -xzf ocap-webserver.tar.gz --strip-components=1\nrm -f ocap-webserver.tar.gz\nchmod +x ocap-webserver\n\n## Create data directories if they don't exist\nmkdir -p data db maps\n\necho \"Installation complete: OCAP2 Web ${VERSION}\"",
+            "container": "ghcr.io/pelican-eggs/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "OCAP Secret",
+            "description": "Shared secret for mission uploads and streaming authentication. Must be changed from the default.",
+            "env_variable": "OCAP_SECRET",
+            "default_value": "change-me",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|min:6",
+            "field_type": "text"
+        },
+        {
+            "name": "Listen Address",
+            "description": "Address and port the server binds to. Uses the Pelican-allocated port by default.",
+            "env_variable": "OCAP_LISTEN",
+            "default_value": "0.0.0.0:{{server.build.default.port}}",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Database Path",
+            "description": "Path to the SQLite database file.",
+            "env_variable": "OCAP_DB",
+            "default_value": "./db/data.db",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Data Directory",
+            "description": "Directory for mission data files (uploads and converted protobuf).",
+            "env_variable": "OCAP_DATA",
+            "default_value": "./data",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Maps Directory",
+            "description": "Directory for map tile files (PMTiles).",
+            "env_variable": "OCAP_MAPS",
+            "default_value": "./maps",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Enable Conversion",
+            "description": "Enable background conversion of JSON missions to chunked protobuf format for faster streaming playback.",
+            "env_variable": "OCAP_CONVERSION_ENABLED",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Enable Streaming",
+            "description": "Enable the WebSocket streaming endpoint for live mission data ingestion from Arma 3.",
+            "env_variable": "OCAP_STREAMING_ENABLED",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Version",
+            "description": "Release version to install (e.g. v2.1.0-rc7). Use 'latest' for the most recent release.",
+            "env_variable": "VERSION",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:20",
+            "field_type": "text"
+        }
+    ]
+}
