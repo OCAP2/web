@@ -262,13 +262,6 @@ A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web 
 
 The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persistent data (database, recordings, maps) is stored under `/home/container/` via Pelican's volume mount.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_SECRET` | Upload/streaming authentication secret | *must change* |
-| `OCAP_LISTEN` | Bind address (auto-set to Pelican-allocated port) | `0.0.0.0:<port>` |
-| `OCAP_CONVERSION_ENABLED` | Enable protobuf conversion | `true` |
-| `OCAP_STREAMING_ENABLED` | Enable WebSocket streaming | `false` |
-
 ## Installation
 
 ### Pre-built binaries
