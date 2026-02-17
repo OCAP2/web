@@ -35,5 +35,7 @@ COPY assets/ammo /usr/local/ocap/ammo
 COPY assets/fonts /usr/local/ocap/fonts
 COPY assets/markers /usr/local/ocap/markers
 COPY --from=builder /go/pkg/ocap/app /usr/local/ocap/app
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD ["/usr/local/ocap/app"]
+ENTRYPOINT ["/entrypoint.sh"]
