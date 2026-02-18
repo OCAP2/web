@@ -113,4 +113,60 @@ describe("TimelineScrubber", () => {
 
     expect(spy).toHaveBeenCalled();
   });
+
+  it("pauses playback during drag and resumes on pointer up", () => {
+    const { engine, container } = renderScrubber(
+      [unitDef({ endFrame: 99 })],
+      [],
+      100,
+    );
+
+    const track = container.querySelector('[class*="scrubberTrack"]') as HTMLElement;
+    expect(track).toBeTruthy();
+    track.setPointerCapture = vi.fn();
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // Start playing
+    engine.play();
+    expect(engine.isPlaying()).toBe(true);
+
+    // Pointer down should pause
+    fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
+    expect(engine.isPlaying()).toBe(false);
+
+    // Pointer up should resume
+    fireEvent.pointerUp(track, { pointerId: 1 });
+    expect(engine.isPlaying()).toBe(true);
+  });
+
+  it("does not resume playback on pointer up if was not playing", () => {
+    const { engine, container } = renderScrubber(
+      [unitDef({ endFrame: 99 })],
+      [],
+      100,
+    );
+
+    const track = container.querySelector('[class*="scrubberTrack"]') as HTMLElement;
+    expect(track).toBeTruthy();
+    track.setPointerCapture = vi.fn();
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // Not playing
+    expect(engine.isPlaying()).toBe(false);
+
+    // Pointer down + up
+    fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
+    fireEvent.pointerUp(track, { pointerId: 1 });
+
+    // Should still not be playing
+    expect(engine.isPlaying()).toBe(false);
+  });
 });

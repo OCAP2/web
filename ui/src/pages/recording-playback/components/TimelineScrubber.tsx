@@ -11,6 +11,7 @@ export function TimelineScrubber(): JSX.Element {
   const [dragging, setDragging] = createSignal(false);
   const [hoverFrame, setHoverFrame] = createSignal<number | null>(null);
   let trackRef: HTMLDivElement | undefined;
+  let wasPlaying = false;
 
   const killEvents = createMemo(() => {
     engine.endFrame(); // reactive dependency
@@ -35,6 +36,8 @@ export function TimelineScrubber(): JSX.Element {
   };
 
   const onPointerDown: JSX.EventHandler<HTMLDivElement, PointerEvent> = (e) => {
+    wasPlaying = engine.isPlaying();
+    if (wasPlaying) engine.pause();
     setDragging(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const frame = frameFromEvent(e);
@@ -51,6 +54,10 @@ export function TimelineScrubber(): JSX.Element {
 
   const onPointerUp: JSX.EventHandler<HTMLDivElement, PointerEvent> = () => {
     setDragging(false);
+    if (wasPlaying) {
+      wasPlaying = false;
+      engine.play();
+    }
   };
 
   const onPointerLeave: JSX.EventHandler<HTMLDivElement, PointerEvent> = () => {
