@@ -36,8 +36,10 @@ export function TimelineScrubber(): JSX.Element {
   };
 
   const onPointerDown: JSX.EventHandler<HTMLDivElement, PointerEvent> = (e) => {
-    wasPlaying = engine.isPlaying();
-    if (wasPlaying) engine.pause();
+    if (!dragging()) {
+      wasPlaying = engine.isPlaying();
+      if (wasPlaying) engine.pause();
+    }
     setDragging(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const frame = frameFromEvent(e);
@@ -72,6 +74,7 @@ export function TimelineScrubber(): JSX.Element {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         onPointerLeave={onPointerLeave}
       >
         <div
