@@ -169,6 +169,15 @@ func TestRepoMarker_scanColor(t *testing.T) {
 		{"Opfor mixed case", "Opfor", color.RGBA{127, 0, 0, 255}, false},
 		{"DEAD uppercase", "DEAD", color.RGBA{0, 0, 0, 255}, false},
 
+		// Arma 3 Color* prefix (e.g. ColorRed → red)
+		{"ColorRed", "ColorRed", color.RGBA{255, 0, 0, 255}, false},
+		{"ColorWhite", "ColorWhite", color.RGBA{255, 255, 255, 255}, false},
+		{"ColorBlue", "ColorBlue", color.RGBA{0, 0, 255, 255}, false},
+		{"ColorWEST", "ColorWEST", color.RGBA{0, 76, 153, 255}, false},
+		{"ColorEAST", "ColorEAST", color.RGBA{127, 0, 0, 255}, false},
+		{"ColorGUER", "ColorGUER", color.RGBA{0, 127, 0, 255}, false},
+		{"ColorBlack", "ColorBlack", color.RGBA{0, 0, 0, 255}, false},
+
 		// Invalid inputs
 		{"invalid name", "notacolor", color.RGBA{}, true},
 		{"4-char (invalid)", "abcd", color.RGBA{}, true},

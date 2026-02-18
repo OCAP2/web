@@ -165,7 +165,11 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 		}
 	}
 
-	switch strings.ToLower(scolor) {
+	// Strip Arma 3 "Color" prefix (e.g. "ColorRed" → "red")
+	lower := strings.ToLower(scolor)
+	lower = strings.TrimPrefix(lower, "color")
+
+	switch lower {
 	case "follow":
 		c = color.RGBA{255, 168, 26, 255}
 	case "hit":
