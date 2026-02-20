@@ -58,7 +58,7 @@ jobs:
       - name: Download base coverage
         id: download-base-coverage
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v14
+        uses: dawidd6/action-download-artifact@v15
         with:
           branch: main
           workflow_conclusion: success
