@@ -383,6 +383,7 @@ func TestParserV1_Parse_Markers_OldExtensionFormat(t *testing.T) {
 	assert.Equal(t, "o_inf", m.Type)
 	assert.Equal(t, "EAST", m.Side, "sideIndex 0 = EAST")
 	assert.Equal(t, "0000FF", m.Color)
+	assert.Equal(t, uint32(0), m.EndFrame, "-1 in v1 JSON should convert to 0 (FrameForever)")
 
 	require.Len(t, m.Positions, 2)
 

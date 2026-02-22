@@ -262,11 +262,20 @@ func (p *ParserV1) parseMarker(markerArr []interface{}) *MarkerDef {
 		return nil
 	}
 
+	// v1 JSON uses -1 for "forever" markers. Convert to 0 (FrameForever).
+	rawEndFrame := toFloat64(markerArr[3])
+	var endFrame uint32
+	if rawEndFrame < 0 {
+		endFrame = 0 // FrameForever
+	} else {
+		endFrame = uint32(rawEndFrame)
+	}
+
 	marker := &MarkerDef{
 		Type:       toString(markerArr[0]),
 		Text:       toString(markerArr[1]),
 		StartFrame: uint32(toFloat64(markerArr[2])),
-		EndFrame:   uint32(toFloat64(markerArr[3])),
+		EndFrame:   endFrame,
 		PlayerID:   int32(toFloat64(markerArr[4])),
 		Color:      toString(markerArr[5]),
 		Side:       sideIndexToString(int(toFloat64(markerArr[6]))),
