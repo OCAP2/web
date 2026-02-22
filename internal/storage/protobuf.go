@@ -82,7 +82,7 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 }
 
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
-	converter := NewConverter(DefaultChunkSize)
-	return converter.Convert(ctx, jsonPath, outputPath, "protobuf")
+	converter := NewStreamingConverter(DefaultChunkSize)
+	return converter.Convert(ctx, jsonPath, outputPath)
 }
 

@@ -91,7 +91,7 @@ func TestProtobufEngineConvert(t *testing.T) {
 	// Test with missing input file - should fail
 	err := engine.Convert(context.Background(), "nonexistent.json", "output")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "load JSON")
+	assert.Contains(t, err.Error(), "open JSON")
 }
 
 func TestEntityTypeToString(t *testing.T) {
