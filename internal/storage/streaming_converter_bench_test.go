@@ -9,40 +9,20 @@ import (
 	"testing"
 )
 
-// BenchmarkConverter_Old benchmarks the old converter.
-func BenchmarkConverter_Old(b *testing.B) {
-	// Ensure real parser is registered (parser tests may have replaced it with mocks)
-	RegisterParser(&ParserV1{})
-
+func BenchmarkConverter(b *testing.B) {
 	inputPath, cleanup := makeBenchInput(b)
 	defer cleanup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		outputPath := filepath.Join(b.TempDir(), fmt.Sprintf("old_%d", i))
+		outputPath := filepath.Join(b.TempDir(), fmt.Sprintf("out_%d", i))
 		converter := NewConverter(DefaultChunkSize)
-		if err := converter.Convert(context.Background(), inputPath, outputPath, "protobuf"); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-// BenchmarkConverter_Streaming benchmarks the streaming converter.
-func BenchmarkConverter_Streaming(b *testing.B) {
-	inputPath, cleanup := makeBenchInput(b)
-	defer cleanup()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		outputPath := filepath.Join(b.TempDir(), fmt.Sprintf("new_%d", i))
-		converter := NewStreamingConverter(DefaultChunkSize)
 		if err := converter.Convert(context.Background(), inputPath, outputPath); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-// makeBenchInput creates a test JSON file with ~100 entities and ~1000 frames.
 func makeBenchInput(b *testing.B) (string, func()) {
 	b.Helper()
 	tmpDir, err := os.MkdirTemp("", "bench_converter_*")
@@ -51,7 +31,6 @@ func makeBenchInput(b *testing.B) (string, func()) {
 	}
 	inputPath := filepath.Join(tmpDir, "bench.json")
 
-	// Build entities with many positions
 	entities := make([]interface{}, 100)
 	for i := 0; i < 100; i++ {
 		positions := make([]interface{}, 1000)

@@ -11,24 +11,27 @@ import (
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
-// StreamingConverter transforms JSON recordings to chunked protobuf format
+// DefaultChunkSize is the default number of frames per chunk (~5 minutes at 1 frame/second)
+const DefaultChunkSize = 300
+
+// Converter transforms JSON recordings to chunked protobuf format
 // using streaming I/O to minimize memory usage.
-type StreamingConverter struct {
+type Converter struct {
 	ChunkSize uint32
 }
 
-// NewStreamingConverter creates a streaming converter with the given chunk size.
-func NewStreamingConverter(chunkSize uint32) *StreamingConverter {
+// NewConverter creates a converter with the given chunk size.
+func NewConverter(chunkSize uint32) *Converter {
 	if chunkSize == 0 {
 		chunkSize = DefaultChunkSize
 	}
-	return &StreamingConverter{ChunkSize: chunkSize}
+	return &Converter{ChunkSize: chunkSize}
 }
 
 // Convert reads a JSON recording and writes chunked protobuf output files.
 // It processes the JSON in a single pass, streaming entities directly from
 // the decoder and bucketing positions to per-chunk temp files on disk.
-func (sc *StreamingConverter) Convert(ctx context.Context, jsonPath, outputPath string) error {
+func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) error {
 	// Open streaming reader
 	reader, err := OpenStreamingJSONReader(jsonPath)
 	if err != nil {
@@ -253,7 +256,7 @@ func (sc *StreamingConverter) Convert(ctx context.Context, jsonPath, outputPath 
 }
 
 // assembleChunk reads entity states from the bucket, groups by frame, and writes the chunk.
-func (sc *StreamingConverter) assembleChunk(bucket *ChunkBucket, chunksDir string, chunkIdx uint32, frameCount uint32) error {
+func (sc *Converter) assembleChunk(bucket *ChunkBucket, chunksDir string, chunkIdx uint32, frameCount uint32) error {
 	states, err := bucket.Read(chunkIdx)
 	if err != nil {
 		return fmt.Errorf("read bucket: %w", err)
@@ -303,4 +306,18 @@ func (sc *StreamingConverter) assembleChunk(bucket *ChunkBucket, chunksDir strin
 	}
 
 	return nil
+}
+
+func toFloat64(v interface{}) float64 {
+	if f, ok := v.(float64); ok {
+		return f
+	}
+	return 0
+}
+
+func toString(v interface{}) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }

@@ -31,7 +31,6 @@ type OperationRepo interface {
 type Worker struct {
 	repo        OperationRepo
 	dataDir     string
-	converter   *storage.Converter
 	engine      storage.Engine
 	interval    time.Duration
 	batchSize   int
@@ -68,7 +67,6 @@ func NewWorker(repo OperationRepo, cfg Config) *Worker {
 	return &Worker{
 		repo:        repo,
 		dataDir:     cfg.DataDir,
-		converter:   storage.NewConverter(cfg.ChunkSize),
 		engine:      storage.NewProtobufEngine(cfg.DataDir),
 		interval:    cfg.Interval,
 		batchSize:   cfg.BatchSize,

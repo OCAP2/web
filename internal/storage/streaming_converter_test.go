@@ -15,16 +15,10 @@ import (
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
-// TestStreamingConverter_MatchesOldConverter verifies the streaming converter
-// produces identical output to the old converter for the same input.
-func TestStreamingConverter_MatchesOldConverter(t *testing.T) {
-	// Re-register real parser (parser_test.go tests may have replaced it with mocks)
-	RegisterParser(&ParserV1{})
-
+func TestConverter_Convert(t *testing.T) {
 	tmpDir := t.TempDir()
 	inputPath := filepath.Join(tmpDir, "test.json")
-	oldOutputPath := filepath.Join(tmpDir, "old_output")
-	newOutputPath := filepath.Join(tmpDir, "new_output")
+	outputPath := filepath.Join(tmpDir, "output")
 
 	testData := map[string]interface{}{
 		"worldName":    "Altis",
@@ -85,80 +79,307 @@ func TestStreamingConverter_MatchesOldConverter(t *testing.T) {
 	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
 
 	ctx := context.Background()
-	chunkSize := uint32(5)
+	converter := NewConverter(5) // 5 frames per chunk
+	require.NoError(t, converter.Convert(ctx, inputPath, outputPath))
 
-	// Run old converter
-	oldConverter := NewConverter(chunkSize)
-	require.NoError(t, oldConverter.Convert(ctx, inputPath, oldOutputPath, "protobuf"))
+	// Verify manifest
+	manifest := readManifest(t, outputPath)
+	assert.Equal(t, "Altis", manifest.WorldName)
+	assert.Equal(t, "Test Mission", manifest.MissionName)
+	assert.Equal(t, uint32(10), manifest.FrameCount)
+	assert.Equal(t, uint32(5), manifest.ChunkSize)
+	assert.Equal(t, uint32(2), manifest.ChunkCount)
+	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)
+	require.Len(t, manifest.Entities, 2)
+	require.Len(t, manifest.Events, 1)
+	assert.Len(t, manifest.Markers, 1)
+	assert.Len(t, manifest.Times, 1)
 
-	// Run new streaming converter
-	newConverter := NewStreamingConverter(chunkSize)
-	require.NoError(t, newConverter.Convert(ctx, inputPath, newOutputPath))
+	// Verify entity definitions
+	assert.Equal(t, uint32(0), manifest.Entities[0].Id)
+	assert.Equal(t, pbv1.EntityType_ENTITY_TYPE_UNIT, manifest.Entities[0].Type)
+	assert.Equal(t, "Player1", manifest.Entities[0].Name)
+	assert.Equal(t, pbv1.Side_SIDE_WEST, manifest.Entities[0].Side)
+	assert.True(t, manifest.Entities[0].IsPlayer)
 
-	// Compare manifests
-	oldManifest := readManifest(t, oldOutputPath)
-	newManifest := readManifest(t, newOutputPath)
+	assert.Equal(t, pbv1.EntityType_ENTITY_TYPE_VEHICLE, manifest.Entities[1].Type)
+	assert.Equal(t, "B_Truck_01", manifest.Entities[1].VehicleClass)
 
-	assert.Equal(t, oldManifest.WorldName, newManifest.WorldName)
-	assert.Equal(t, oldManifest.MissionName, newManifest.MissionName)
-	assert.Equal(t, oldManifest.FrameCount, newManifest.FrameCount)
-	assert.Equal(t, oldManifest.ChunkSize, newManifest.ChunkSize)
-	assert.Equal(t, oldManifest.ChunkCount, newManifest.ChunkCount)
-	assert.Equal(t, oldManifest.CaptureDelayMs, newManifest.CaptureDelayMs)
-	require.Len(t, newManifest.Entities, len(oldManifest.Entities))
-	require.Len(t, newManifest.Events, len(oldManifest.Events))
-	require.Len(t, newManifest.Markers, len(oldManifest.Markers))
-	require.Len(t, newManifest.Times, len(oldManifest.Times))
+	// Verify events
+	assert.Equal(t, uint32(8), manifest.Events[0].FrameNum)
+	assert.Equal(t, "killed", manifest.Events[0].Type)
 
-	// Compare each entity definition
-	for i := range oldManifest.Entities {
-		assert.Equal(t, oldManifest.Entities[i].Id, newManifest.Entities[i].Id)
-		assert.Equal(t, oldManifest.Entities[i].Type, newManifest.Entities[i].Type)
-		assert.Equal(t, oldManifest.Entities[i].Name, newManifest.Entities[i].Name)
-		assert.Equal(t, oldManifest.Entities[i].Side, newManifest.Entities[i].Side)
-		assert.Equal(t, oldManifest.Entities[i].StartFrame, newManifest.Entities[i].StartFrame)
-		assert.Equal(t, oldManifest.Entities[i].EndFrame, newManifest.Entities[i].EndFrame)
+	// Verify chunks
+	chunk0 := readChunk(t, outputPath, 0)
+	assert.Equal(t, uint32(0), chunk0.Index)
+	assert.Equal(t, uint32(0), chunk0.StartFrame)
+	assert.Equal(t, uint32(5), chunk0.FrameCount)
+	require.Len(t, chunk0.Frames, 5)
+
+	// First frame should have 2 entities
+	require.Len(t, chunk0.Frames[0].Entities, 2)
+
+	// Verify position data
+	state := findEntityState(chunk0.Frames[0].Entities, 0)
+	require.NotNil(t, state)
+	assert.Equal(t, float32(100.0), state.PosX)
+	assert.Equal(t, float32(200.0), state.PosY)
+	assert.Equal(t, uint32(90), state.Direction)
+	assert.Equal(t, uint32(1), state.Alive)
+
+	chunk1 := readChunk(t, outputPath, 1)
+	assert.Equal(t, uint32(1), chunk1.Index)
+	assert.Equal(t, uint32(5), chunk1.StartFrame)
+	assert.Equal(t, uint32(5), chunk1.FrameCount)
+}
+
+func TestConverter_VehicleCrew(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Crew Test",
+		"endFrame":     3,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0, "type": "unit", "name": "Driver", "side": "WEST",
+				"startFrameNum": 0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 0.0, 1.0, 1.0, "Driver", 1.0},
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 0.0, 1.0, 1.0, "Driver", 1.0},
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 0.0, 1.0, 1.0, "Driver", 1.0},
+				},
+			},
+			map[string]interface{}{
+				"id": 1, "type": "vehicle", "name": "Tank", "class": "B_MBT_01",
+				"startFrameNum": 0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{500.0, 600.0, 0.0}, 180.0, 1.0, []interface{}{0.0}},
+					[]interface{}{[]interface{}{505.0, 605.0, 0.0}, 180.0, 1.0, []interface{}{0.0}},
+					[]interface{}{[]interface{}{510.0, 610.0, 0.0}, 180.0, 1.0, []interface{}{0.0}},
+				},
+			},
+		},
+		"events":  []interface{}{},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
 	}
 
-	// Compare chunks frame-by-frame
-	for chunkIdx := uint32(0); chunkIdx < oldManifest.ChunkCount; chunkIdx++ {
-		oldChunk := readChunk(t, oldOutputPath, chunkIdx)
-		newChunk := readChunk(t, newOutputPath, chunkIdx)
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
 
-		assert.Equal(t, oldChunk.Index, newChunk.Index)
-		assert.Equal(t, oldChunk.StartFrame, newChunk.StartFrame)
-		assert.Equal(t, oldChunk.FrameCount, newChunk.FrameCount)
-		require.Len(t, newChunk.Frames, len(oldChunk.Frames), "chunk %d frame count", chunkIdx)
+	converter := NewConverter(10)
+	require.NoError(t, converter.Convert(context.Background(), inputPath, outputPath))
 
-		for fi, oldFrame := range oldChunk.Frames {
-			newFrame := newChunk.Frames[fi]
-			assert.Equal(t, oldFrame.FrameNum, newFrame.FrameNum)
-			require.Len(t, newFrame.Entities, len(oldFrame.Entities),
-				"chunk %d frame %d entity count", chunkIdx, oldFrame.FrameNum)
-
-			// Build map for comparison (order may differ)
-			oldStates := make(map[uint32]*pbv1.EntityState)
-			for _, s := range oldFrame.Entities {
-				oldStates[s.EntityId] = s
-			}
-			for _, ns := range newFrame.Entities {
-				os, ok := oldStates[ns.EntityId]
-				require.True(t, ok, "entity %d in chunk %d frame %d", ns.EntityId, chunkIdx, oldFrame.FrameNum)
-				assert.Equal(t, os.PosX, ns.PosX)
-				assert.Equal(t, os.PosY, ns.PosY)
-				assert.Equal(t, os.PosZ, ns.PosZ)
-				assert.Equal(t, os.Direction, ns.Direction)
-				assert.Equal(t, os.Alive, ns.Alive)
-				assert.Equal(t, os.CrewIds, ns.CrewIds)
-				assert.Equal(t, os.VehicleId, ns.VehicleId)
-				assert.Equal(t, os.IsInVehicle, ns.IsInVehicle)
-				assert.Equal(t, os.Name, ns.Name)
-				assert.Equal(t, os.IsPlayer, ns.IsPlayer)
-				assert.Equal(t, os.GroupName, ns.GroupName)
-				assert.Equal(t, os.Side, ns.Side)
-			}
+	chunk := readChunk(t, outputPath, 0)
+	require.NotEmpty(t, chunk.Frames)
+	for _, state := range chunk.Frames[0].Entities {
+		if state.EntityId == 1 { // Vehicle
+			require.Len(t, state.CrewIds, 1)
+			assert.Equal(t, uint32(0), state.CrewIds[0])
 		}
 	}
+}
+
+func TestConverter_ContextCancellation(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Cancel Test",
+		"endFrame":     1000,
+		"captureDelay": 1.0,
+		"entities":     []interface{}{},
+		"events":       []interface{}{},
+		"Markers":      []interface{}{},
+		"times":        []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	converter := NewConverter(10)
+	err = converter.Convert(ctx, inputPath, outputPath)
+	assert.Error(t, err)
+}
+
+func TestNewConverter_DefaultChunkSize(t *testing.T) {
+	converter := NewConverter(0)
+	assert.Equal(t, uint32(DefaultChunkSize), converter.ChunkSize)
+
+	converter2 := NewConverter(100)
+	assert.Equal(t, uint32(100), converter2.ChunkSize)
+}
+
+func TestToFloat64(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  float64
+	}{
+		{"float64", 42.5, 42.5},
+		{"zero", 0.0, 0.0},
+		{"negative", -10.5, -10.5},
+		{"string", "not a number", 0.0},
+		{"int", 42, 0.0},
+		{"nil", nil, 0.0},
+		{"bool", true, 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, toFloat64(tt.input))
+		})
+	}
+}
+
+func TestToString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  string
+	}{
+		{"string", "hello", "hello"},
+		{"empty string", "", ""},
+		{"float64", 42.5, ""},
+		{"int", 42, ""},
+		{"nil", nil, ""},
+		{"bool", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, toString(tt.input))
+		})
+	}
+}
+
+// TestConverter_AllEventTypes verifies that ALL event types survive the full
+// JSON → Protobuf roundtrip with correct data.
+func TestConverter_AllEventTypes(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Event Roundtrip Test",
+		"endFrame":     400.0,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0.0, "type": "unit", "name": "Player1", "side": "WEST",
+				"startFrameNum": 0.0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "Player1", 1.0},
+				},
+			},
+		},
+		"events": []interface{}{
+			[]interface{}{0.0, "generalEvent", "Recording started."},
+			[]interface{}{0.0, "generalEvent", "Mission has started!"},
+			[]interface{}{0.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}},
+			[]interface{}{30.0, "respawnTickets", []interface{}{-1.0, -1.0, -1.0, -1.0}},
+			[]interface{}{376.0, "generalEvent", "Recording paused."},
+			[]interface{}{376.0, "endMission", []interface{}{"WEST", "Mission complete"}},
+			[]interface{}{376.0, "endMission", ""},
+			[]interface{}{1.0, "killed", 0.0, []interface{}{0.0, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]"}, 0.0},
+			[]interface{}{125.0, "killed", 9.0, []interface{}{0.0, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]"}, 74.0},
+			[]interface{}{50.0, "hit", 0.0, []interface{}{0.0, "pistol"}, 25.0},
+			[]interface{}{0.0, "connected", "[RMC] DoS"},
+			[]interface{}{300.0, "disconnected", "[VRG] mEss1a"},
+			[]interface{}{200.0, "captured", []interface{}{"Player1", "blue", "flag_carrier"}},
+			[]interface{}{210.0, "capturedFlag", []interface{}{"Player1", "blue", "somePos", "anotherPos"}},
+			[]interface{}{220.0, "terminalHackStarted", []interface{}{"Player1", "blue", "red", "terminal_1"}},
+			[]interface{}{230.0, "terminalHackCanceled", []interface{}{"Player1", "blue", "red", "terminal_1"}},
+		},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	converter := NewConverter(DefaultChunkSize)
+	require.NoError(t, converter.Convert(context.Background(), inputPath, outputPath))
+
+	manifest := readManifest(t, outputPath)
+	events := manifest.Events
+	require.Len(t, events, 16, "all 16 events must survive roundtrip")
+
+	findEvents := func(typ string) []*pbv1.Event {
+		var result []*pbv1.Event
+		for _, e := range events {
+			if e.Type == typ {
+				result = append(result, e)
+			}
+		}
+		return result
+	}
+
+	// generalEvent
+	generals := findEvents("generalEvent")
+	require.Len(t, generals, 3)
+	generalMessages := make([]string, len(generals))
+	for i, g := range generals {
+		generalMessages[i] = g.Message
+	}
+	assert.Contains(t, generalMessages, "Recording started.")
+	assert.Contains(t, generalMessages, "Mission has started!")
+	assert.Contains(t, generalMessages, "Recording paused.")
+
+	// respawnTickets
+	tickets := findEvents("respawnTickets")
+	require.Len(t, tickets, 2)
+
+	// endMission
+	endMissions := findEvents("endMission")
+	require.Len(t, endMissions, 2)
+
+	// killed
+	killed := findEvents("killed")
+	require.Len(t, killed, 2)
+	assert.Equal(t, uint32(1), killed[0].FrameNum)
+	assert.Equal(t, "Katiba 6.5 mm [6.5 mm 30Rnd Caseless Mag]", killed[0].Weapon)
+	assert.Equal(t, uint32(125), killed[1].FrameNum)
+	assert.Equal(t, float32(74.0), killed[1].Distance)
+
+	// hit
+	hits := findEvents("hit")
+	require.Len(t, hits, 1)
+	assert.Equal(t, "pistol", hits[0].Weapon)
+
+	// connected / disconnected
+	assert.Len(t, findEvents("connected"), 1)
+	assert.Len(t, findEvents("disconnected"), 1)
+
+	// captured / capturedFlag
+	assert.Len(t, findEvents("captured"), 1)
+	assert.Len(t, findEvents("capturedFlag"), 1)
+
+	// terminal events
+	assert.Len(t, findEvents("terminalHackStarted"), 1)
+	assert.Len(t, findEvents("terminalHackCanceled"), 1)
+}
+
+func findEntityState(states []*pbv1.EntityState, entityID uint32) *pbv1.EntityState {
+	for _, s := range states {
+		if s.EntityId == entityID {
+			return s
+		}
+	}
+	return nil
 }
 
 func readManifest(t *testing.T, outputPath string) *pbv1.Manifest {

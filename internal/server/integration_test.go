@@ -143,7 +143,7 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 	t.Run("ConvertToProtobuf", func(t *testing.T) {
 		converter := storage.NewConverter(5) // 5 frames per chunk for testing
 		outputPath := filepath.Join(dataDir, "test_integration")
-		err := converter.Convert(ctx, jsonPath, outputPath, "protobuf")
+		err := converter.Convert(ctx, jsonPath, outputPath)
 		require.NoError(t, err)
 
 		// Update database

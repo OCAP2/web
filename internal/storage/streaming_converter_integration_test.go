@@ -24,7 +24,7 @@ func TestStreamingConverter_RealFile(t *testing.T) {
 
 	outputPath := filepath.Join(t.TempDir(), "output")
 
-	converter := NewStreamingConverter(DefaultChunkSize)
+	converter := NewConverter(DefaultChunkSize)
 	ctx := context.Background()
 	require.NoError(t, converter.Convert(ctx, realFile, outputPath))
 
