@@ -127,11 +127,17 @@ func (sr *StreamingJSONReader) Process(callbacks StreamingCallbacks) (StreamingM
 			}
 			switch key {
 			case "worldName":
-				meta.WorldName, _ = val.(string)
+				if s, ok := val.(string); ok {
+					meta.WorldName = s
+				}
 			case "missionName":
-				meta.MissionName, _ = val.(string)
+				if s, ok := val.(string); ok {
+					meta.MissionName = s
+				}
 			case "missionAuthor":
-				meta.MissionAuthor, _ = val.(string)
+				if s, ok := val.(string); ok {
+					meta.MissionAuthor = s
+				}
 			case "endFrame":
 				if f, ok := val.(float64); ok {
 					meta.FrameCount = uint32(f)
@@ -141,9 +147,13 @@ func (sr *StreamingJSONReader) Process(callbacks StreamingCallbacks) (StreamingM
 					meta.CaptureDelayMs = uint32(f * 1000)
 				}
 			case "extensionVersion":
-				meta.ExtensionVersion, _ = val.(string)
+				if s, ok := val.(string); ok {
+					meta.ExtensionVersion = s
+				}
 			case "addonVersion":
-				meta.AddonVersion, _ = val.(string)
+				if s, ok := val.(string); ok {
+					meta.AddonVersion = s
+				}
 			}
 		}
 	}

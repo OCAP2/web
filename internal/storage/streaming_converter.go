@@ -52,7 +52,7 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 	}
 	defer func() {
 		bucket.Cleanup()
-		os.Remove(bucketDir)
+		os.RemoveAll(bucketDir)
 	}()
 
 	// Accumulators for manifest data (small — entities defs, events, markers, times)

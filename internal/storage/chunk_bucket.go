@@ -129,49 +129,24 @@ func (b *ChunkBucket) Read(chunkIdx uint32) ([]*pbv1.EntityState, error) {
 	return states, nil
 }
 
-// Cleanup removes all temp files.
+// Cleanup closes open files and removes the temp directory.
 func (b *ChunkBucket) Cleanup() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	// Close any open files
+	var firstErr error
 	for _, f := range b.files {
-		f.Close()
+		if err := f.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
 	b.files = make(map[uint32]*os.File)
 	b.writers = make(map[uint32]*bufio.Writer)
 
-	// Remove all temp files
-	entries, err := os.ReadDir(b.dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
+	if err := os.RemoveAll(b.dir); err != nil && !os.IsNotExist(err) && firstErr == nil {
+		firstErr = err
 	}
-	for _, e := range entries {
-		os.Remove(filepath.Join(b.dir, e.Name()))
-	}
-	return nil
-}
-
-// ChunkIndices returns sorted list of chunk indices that have temp files.
-func (b *ChunkBucket) ChunkIndices() ([]uint32, error) {
-	entries, err := os.ReadDir(b.dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var indices []uint32
-	for _, e := range entries {
-		var idx uint32
-		if _, err := fmt.Sscanf(e.Name(), "chunk_%d.tmp", &idx); err == nil {
-			indices = append(indices, idx)
-		}
-	}
-	return indices, nil
+	return firstErr
 }
 
 func (b *ChunkBucket) getWriter(chunkIdx uint32) (*bufio.Writer, error) {
