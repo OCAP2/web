@@ -15,9 +15,12 @@ import (
 )
 
 // TestStreamingConverter_RealFile tests against a real mission file.
-// Skipped if the file doesn't exist (CI won't have it).
+// Set OCAP_LARGE_TEST_FILE to enable (skipped otherwise).
 func TestStreamingConverter_RealFile(t *testing.T) {
-	realFile := "/mnt/c/Users/info/Downloads/2026_02_15__21_45_OperationOkenraven.json.gz"
+	realFile := os.Getenv("OCAP_LARGE_TEST_FILE")
+	if realFile == "" {
+		t.Skip("skipping: OCAP_LARGE_TEST_FILE not set")
+	}
 	if _, err := os.Stat(realFile); os.IsNotExist(err) {
 		t.Skipf("real file not found at %s", realFile)
 	}
