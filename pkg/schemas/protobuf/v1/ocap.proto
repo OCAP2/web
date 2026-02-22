@@ -92,6 +92,7 @@ message EntityState {
   float pos_z = 11;
   string group_name = 12;
   string side = 13;
+  uint32 frame_num = 14;  // Used in temp files during streaming conversion; zero in final chunks
 }
 
 message Event {

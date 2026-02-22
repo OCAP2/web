@@ -676,6 +676,7 @@ type EntityState struct {
 	PosZ          float32                `protobuf:"fixed32,11,opt,name=pos_z,json=posZ,proto3" json:"pos_z,omitempty"`
 	GroupName     string                 `protobuf:"bytes,12,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
 	Side          string                 `protobuf:"bytes,13,opt,name=side,proto3" json:"side,omitempty"`
+	FrameNum      uint32                 `protobuf:"varint,14,opt,name=frame_num,json=frameNum,proto3" json:"frame_num,omitempty"` // Used in temp files during streaming conversion; zero in final chunks
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -799,6 +800,13 @@ func (x *EntityState) GetSide() string {
 		return x.Side
 	}
 	return ""
+}
+
+func (x *EntityState) GetFrameNum() uint32 {
+	if x != nil {
+		return x.FrameNum
+	}
+	return 0
 }
 
 type Event struct {
@@ -1171,7 +1179,7 @@ const file_ocap_proto_rawDesc = "" +
 	"\x06frames\x18\x04 \x03(\v2\x0e.ocap.v1.FrameR\x06frames\"V\n" +
 	"\x05Frame\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x120\n" +
-	"\bentities\x18\x02 \x03(\v2\x14.ocap.v1.EntityStateR\bentities\"\xdf\x02\n" +
+	"\bentities\x18\x02 \x03(\v2\x14.ocap.v1.EntityStateR\bentities\"\xfc\x02\n" +
 	"\vEntityState\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\rR\bentityId\x12\x13\n" +
 	"\x05pos_x\x18\x02 \x01(\x02R\x04posX\x12\x13\n" +
@@ -1188,7 +1196,8 @@ const file_ocap_proto_rawDesc = "" +
 	"\x05pos_z\x18\v \x01(\x02R\x04posZ\x12\x1d\n" +
 	"\n" +
 	"group_name\x18\f \x01(\tR\tgroupName\x12\x12\n" +
-	"\x04side\x18\r \x01(\tR\x04side\"\xc0\x01\n" +
+	"\x04side\x18\r \x01(\tR\x04side\x12\x1b\n" +
+	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xc0\x01\n" +
 	"\x05Event\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1b\n" +
