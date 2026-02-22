@@ -14,6 +14,7 @@ require (
 )
 
 require (
+	github.com/OCAP2/extension/v5 v5.0.0-alpha.4.0.20260222161750-d037f9f061e5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
