@@ -144,22 +144,3 @@ func getUint32(m map[string]interface{}, key string) uint32 {
 	return uint32(getFloat64(m, key))
 }
 
-func getArrFloat64(arr []interface{}, idx int) float64 {
-	if idx >= len(arr) {
-		return 0
-	}
-	if v, ok := arr[idx].(float64); ok {
-		return v
-	}
-	return 0
-}
-
-func getArrString(arr []interface{}, idx int) string {
-	if idx >= len(arr) {
-		return ""
-	}
-	if v, ok := arr[idx].(string); ok {
-		return v
-	}
-	return ""
-}

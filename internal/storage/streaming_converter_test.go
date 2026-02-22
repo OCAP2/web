@@ -373,6 +373,186 @@ func TestConverter_AllEventTypes(t *testing.T) {
 	assert.Len(t, findEvents("terminalHackCanceled"), 1)
 }
 
+func TestConverter_FramesFired(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "FramesFired Test",
+		"endFrame":     3,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0.0, "type": "unit", "name": "Shooter", "side": "WEST",
+				"startFrameNum": 0.0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 5.0}, 90.0, 1.0, 0.0, "Shooter", 1.0},
+					[]interface{}{[]interface{}{101.0, 201.0, 5.0}, 91.0, 1.0, 0.0, "Shooter", 1.0},
+					[]interface{}{[]interface{}{102.0, 202.0, 5.0}, 92.0, 1.0, 0.0, "Shooter", 1.0},
+				},
+				"framesFired": []interface{}{
+					[]interface{}{1.0, []interface{}{101.0, 201.0, 5.0}},
+					[]interface{}{2.0, []interface{}{102.0, 202.0, 5.0}},
+				},
+			},
+		},
+		"events":  []interface{}{},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	converter := NewConverter(10)
+	require.NoError(t, converter.Convert(context.Background(), inputPath, outputPath))
+
+	manifest := readManifest(t, outputPath)
+	require.Len(t, manifest.Entities, 1)
+	require.Len(t, manifest.Entities[0].FramesFired, 2)
+	assert.Equal(t, uint32(1), manifest.Entities[0].FramesFired[0].FrameNum)
+	assert.Equal(t, float32(101.0), manifest.Entities[0].FramesFired[0].PosX)
+	assert.Equal(t, float32(201.0), manifest.Entities[0].FramesFired[0].PosY)
+	assert.Equal(t, float32(5.0), manifest.Entities[0].FramesFired[0].PosZ)
+}
+
+func TestConverter_MissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name string
+		data map[string]interface{}
+	}{
+		{
+			name: "missing worldName",
+			data: map[string]interface{}{
+				"missionName": "Test", "endFrame": 5.0,
+				"entities": []interface{}{}, "events": []interface{}{},
+				"Markers": []interface{}{}, "times": []interface{}{},
+			},
+		},
+		{
+			name: "missing missionName",
+			data: map[string]interface{}{
+				"worldName": "Altis", "endFrame": 5.0,
+				"entities": []interface{}{}, "events": []interface{}{},
+				"Markers": []interface{}{}, "times": []interface{}{},
+			},
+		},
+		{
+			name: "missing endFrame",
+			data: map[string]interface{}{
+				"worldName": "Altis", "missionName": "Test",
+				"entities": []interface{}{}, "events": []interface{}{},
+				"Markers": []interface{}{}, "times": []interface{}{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			inputPath := filepath.Join(tmpDir, "test.json")
+			outputPath := filepath.Join(tmpDir, "output")
+
+			jsonData, err := json.Marshal(tt.data)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+			converter := NewConverter(10)
+			err = converter.Convert(context.Background(), inputPath, outputPath)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "missing required fields")
+		})
+	}
+}
+
+func TestConverter_InvalidInputPath(t *testing.T) {
+	converter := NewConverter(10)
+	err := converter.Convert(context.Background(), "/nonexistent/input.json", t.TempDir())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open JSON")
+}
+
+func TestConverter_MetadataPassthrough(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":        "Stratis",
+		"missionName":      "Meta Test",
+		"endFrame":         2.0,
+		"captureDelay":     0.5,
+		"extensionVersion": "1.2.3",
+		"addonVersion":     "4.5.6",
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0.0, "type": "unit", "name": "P1", "side": "WEST",
+				"startFrameNum": 0.0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, "P1", 1.0},
+					[]interface{}{[]interface{}{101.0, 201.0, 0.0}, 91.0, 1.0, 0.0, "P1", 1.0},
+				},
+			},
+		},
+		"events":  []interface{}{},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	converter := NewConverter(10)
+	require.NoError(t, converter.Convert(context.Background(), inputPath, outputPath))
+
+	manifest := readManifest(t, outputPath)
+	assert.Equal(t, "Stratis", manifest.WorldName)
+	assert.Equal(t, "Meta Test", manifest.MissionName)
+	assert.Equal(t, uint32(500), manifest.CaptureDelayMs)
+	assert.Equal(t, "1.2.3", manifest.ExtensionVersion)
+	assert.Equal(t, "4.5.6", manifest.AddonVersion)
+}
+
+func TestConverter_EntityContextCancellation(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	// Create many entities so cancellation has a chance to trigger in OnEntity
+	entities := make([]interface{}, 100)
+	for i := range entities {
+		entities[i] = map[string]interface{}{
+			"id": float64(i), "type": "unit", "name": fmt.Sprintf("P%d", i), "side": "WEST",
+			"startFrameNum": 0.0, "isPlayer": 0.0,
+			"positions": []interface{}{
+				[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 90.0, 1.0, 0.0, fmt.Sprintf("P%d", i), 0.0},
+			},
+		}
+	}
+
+	testData := map[string]interface{}{
+		"worldName": "Altis", "missionName": "Cancel Entity Test", "endFrame": 1.0,
+		"captureDelay": 1.0, "entities": entities,
+		"events": []interface{}{}, "Markers": []interface{}{}, "times": []interface{}{},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	// Cancel immediately — should trigger ctx.Err() in OnEntity
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	converter := NewConverter(10)
+	err = converter.Convert(ctx, inputPath, outputPath)
+	assert.Error(t, err)
+}
+
 func findEntityState(states []*pbv1.EntityState, entityID uint32) *pbv1.EntityState {
 	for _, s := range states {
 		if s.EntityId == entityID {

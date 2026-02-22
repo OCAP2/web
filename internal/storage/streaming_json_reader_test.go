@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -231,6 +232,181 @@ func TestStreamingJSONReader_MalformedEvents(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "stream events")
+}
+
+func TestStreamingJSONReader_MalformedMarkers(t *testing.T) {
+	data := []byte(`{"Markers": [{"not": "array"}]}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnMarker: func(marker []interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream markers")
+}
+
+func TestStreamingJSONReader_MalformedTimes(t *testing.T) {
+	data := []byte(`{"times": ["not_an_object"]}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnTime: func(ts map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream times")
+}
+
+func TestStreamingJSONReader_AllMetadataFields(t *testing.T) {
+	data := []byte(`{
+		"worldName": "Stratis",
+		"missionName": "Full Meta",
+		"missionAuthor": "TestAuthor",
+		"endFrame": 42,
+		"captureDelay": 0.5,
+		"extensionVersion": "1.2.3",
+		"addonVersion": "4.5.6",
+		"unknownField": "ignored"
+	}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Equal(t, "Stratis", meta.WorldName)
+	assert.Equal(t, "Full Meta", meta.MissionName)
+	assert.Equal(t, "TestAuthor", meta.MissionAuthor)
+	assert.Equal(t, uint32(42), meta.FrameCount)
+	assert.Equal(t, uint32(500), meta.CaptureDelayMs)
+	assert.Equal(t, "1.2.3", meta.ExtensionVersion)
+	assert.Equal(t, "4.5.6", meta.AddonVersion)
+}
+
+func TestStreamingJSONReader_MetadataWrongTypes(t *testing.T) {
+	// All metadata fields have wrong types — should be silently ignored
+	data := []byte(`{
+		"worldName": 123,
+		"missionName": true,
+		"missionAuthor": 456,
+		"endFrame": "not a number",
+		"captureDelay": "nope",
+		"extensionVersion": 789,
+		"addonVersion": false
+	}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Empty(t, meta.WorldName)
+	assert.Empty(t, meta.MissionName)
+	assert.Empty(t, meta.MissionAuthor)
+	assert.Equal(t, uint32(0), meta.FrameCount)
+	assert.Equal(t, uint32(0), meta.CaptureDelayMs)
+	assert.Empty(t, meta.ExtensionVersion)
+	assert.Empty(t, meta.AddonVersion)
+}
+
+func TestStreamingJSONReader_TruncatedJSON(t *testing.T) {
+	// JSON that ends mid-value
+	data := []byte(`{"worldName": "Altis", "entities": [{"id`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+}
+
+func TestStreamingJSONReader_SkipArraysWithoutCallbacks(t *testing.T) {
+	data := makeTestJSON(t)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	// Process with no callbacks — all arrays should be skipped
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Equal(t, "Altis", meta.WorldName)
+	assert.Equal(t, uint32(5), meta.FrameCount)
+}
+
+func TestStreamingJSONReader_EntitiesNotArray(t *testing.T) {
+	// "entities" is a string instead of an array — triggers expectToken error
+	data := []byte(`{"entities": "not_an_array"}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream entities")
+}
+
+func TestStreamingJSONReader_EventsNotArray(t *testing.T) {
+	data := []byte(`{"events": "not_an_array"}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEvent: func(event []interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream events")
+}
+
+func TestStreamingJSONReader_MarkersNotArray(t *testing.T) {
+	data := []byte(`{"Markers": 42}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnMarker: func(marker []interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream markers")
+}
+
+func TestStreamingJSONReader_TimesNotArray(t *testing.T) {
+	data := []byte(`{"times": true}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnTime: func(ts map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream times")
+}
+
+func TestStreamingJSONReader_TruncatedArrayValue(t *testing.T) {
+	// Array starts but data is truncated mid-element
+	data := []byte(`{"entities": [{"id": 1, "name`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+}
+
+func TestStreamingJSONReader_SkipNestedArrays(t *testing.T) {
+	// Test skipToEndOfArray with deeply nested structures
+	data := []byte(`{"entities": [[1, [2, [3]]], [4, {"a": [5]}]], "worldName": "Altis"}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	// No entity callback = skip the entire entities array
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Equal(t, "Altis", meta.WorldName)
+}
+
+func TestStreamingJSONReader_InvalidGzipFile(t *testing.T) {
+	// File starts with gzip magic bytes but contains invalid gzip data
+	path := filepath.Join(t.TempDir(), "test.json.gz")
+	data := []byte{0x1f, 0x8b, 0x00, 0x00, 0xFF, 0xFF} // gzip magic + garbage
+	require.NoError(t, os.WriteFile(path, data, 0644))
+
+	_, err := OpenStreamingJSONReader(path)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "gzip reader")
+}
+
+func TestStreamingJSONReader_TruncatedScalarValue(t *testing.T) {
+	// JSON key present but value is truncated
+	data := []byte(`{"worldName":`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{})
+	assert.Error(t, err)
+}
+
+func TestStreamingJSONReader_MultiCloserError(t *testing.T) {
+	// Test multiCloser collects first error
+	mc := &multiCloser{closers: []io.Closer{
+		io.NopCloser(nil),
+		io.NopCloser(nil),
+	}}
+	assert.NoError(t, mc.Close())
 }
 
 func TestStreamingJSONReader_CloseNilCloser(t *testing.T) {
