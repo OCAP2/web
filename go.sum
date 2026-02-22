@@ -1,5 +1,7 @@
 github.com/OCAP2/extension/v5 v5.0.0-alpha.4.0.20260222161750-d037f9f061e5 h1:62pbDYwzp1AkmZwCuJw35lZFAsv2cELWdI9GfnJ8jP4=
 github.com/OCAP2/extension/v5 v5.0.0-alpha.4.0.20260222161750-d037f9f061e5/go.mod h1:xEv1PeupGPYfszZiM32NwruUNQJ8T4uSzdzuwfoRjK0=
+github.com/OCAP2/extension/v5 v5.0.0-alpha.4.0.20260222170451-22b660d9c421 h1:5EZCWJM3It2boHOzq1KV4S1US4MsVBL6vclX0qENPIc=
+github.com/OCAP2/extension/v5 v5.0.0-alpha.4.0.20260222170451-22b660d9c421/go.mod h1:xEv1PeupGPYfszZiM32NwruUNQJ8T4uSzdzuwfoRjK0=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
