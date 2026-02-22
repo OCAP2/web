@@ -14,10 +14,10 @@ import (
 
 func TestStreamingJSONReader_Metadata(t *testing.T) {
 	data := makeTestJSON(t)
-	reader, err := NewStreamingJSONReader(bytes.NewReader(data))
-	require.NoError(t, err)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
 
-	meta := reader.Metadata()
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
 	assert.Equal(t, "Altis", meta.WorldName)
 	assert.Equal(t, "Test Mission", meta.MissionName)
 	assert.Equal(t, uint32(5), meta.FrameCount)
@@ -26,13 +26,14 @@ func TestStreamingJSONReader_Metadata(t *testing.T) {
 
 func TestStreamingJSONReader_Entities(t *testing.T) {
 	data := makeTestJSON(t)
-	reader, err := NewStreamingJSONReader(bytes.NewReader(data))
-	require.NoError(t, err)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
 
 	var entities []map[string]interface{}
-	err = reader.StreamEntities(func(entity map[string]interface{}) error {
-		entities = append(entities, entity)
-		return nil
+	_, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error {
+			entities = append(entities, entity)
+			return nil
+		},
 	})
 	require.NoError(t, err)
 	require.Len(t, entities, 2)
@@ -42,17 +43,14 @@ func TestStreamingJSONReader_Entities(t *testing.T) {
 
 func TestStreamingJSONReader_Events(t *testing.T) {
 	data := makeTestJSON(t)
-	reader, err := NewStreamingJSONReader(bytes.NewReader(data))
-	require.NoError(t, err)
-
-	// Must consume entities first (streaming is sequential)
-	err = reader.StreamEntities(func(entity map[string]interface{}) error { return nil })
-	require.NoError(t, err)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
 
 	var events [][]interface{}
-	err = reader.StreamEvents(func(event []interface{}) error {
-		events = append(events, event)
-		return nil
+	_, err := reader.Process(StreamingCallbacks{
+		OnEvent: func(event []interface{}) error {
+			events = append(events, event)
+			return nil
+		},
 	})
 	require.NoError(t, err)
 	require.Len(t, events, 1)
@@ -60,18 +58,14 @@ func TestStreamingJSONReader_Events(t *testing.T) {
 
 func TestStreamingJSONReader_Markers(t *testing.T) {
 	data := makeTestJSON(t)
-	reader, err := NewStreamingJSONReader(bytes.NewReader(data))
-	require.NoError(t, err)
-
-	err = reader.StreamEntities(func(entity map[string]interface{}) error { return nil })
-	require.NoError(t, err)
-	err = reader.StreamEvents(func(event []interface{}) error { return nil })
-	require.NoError(t, err)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
 
 	var markers [][]interface{}
-	err = reader.StreamMarkers(func(marker []interface{}) error {
-		markers = append(markers, marker)
-		return nil
+	_, err := reader.Process(StreamingCallbacks{
+		OnMarker: func(marker []interface{}) error {
+			markers = append(markers, marker)
+			return nil
+		},
 	})
 	require.NoError(t, err)
 	require.Len(t, markers, 1)
@@ -79,20 +73,14 @@ func TestStreamingJSONReader_Markers(t *testing.T) {
 
 func TestStreamingJSONReader_Times(t *testing.T) {
 	data := makeTestJSON(t)
-	reader, err := NewStreamingJSONReader(bytes.NewReader(data))
-	require.NoError(t, err)
-
-	err = reader.StreamEntities(func(entity map[string]interface{}) error { return nil })
-	require.NoError(t, err)
-	err = reader.StreamEvents(func(event []interface{}) error { return nil })
-	require.NoError(t, err)
-	err = reader.StreamMarkers(func(marker []interface{}) error { return nil })
-	require.NoError(t, err)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
 
 	var times []map[string]interface{}
-	err = reader.StreamTimes(func(ts map[string]interface{}) error {
-		times = append(times, ts)
-		return nil
+	_, err := reader.Process(StreamingCallbacks{
+		OnTime: func(ts map[string]interface{}) error {
+			times = append(times, ts)
+			return nil
+		},
 	})
 	require.NoError(t, err)
 	require.Len(t, times, 1)
@@ -117,7 +105,27 @@ func TestStreamingJSONReader_GzippedFile(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	meta := reader.Metadata()
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Equal(t, "Altis", meta.WorldName)
+}
+
+func TestStreamingJSONReader_AllCallbacks(t *testing.T) {
+	data := makeTestJSON(t)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+
+	var entityCount, eventCount, markerCount, timeCount int
+	meta, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error { entityCount++; return nil },
+		OnEvent:  func(event []interface{}) error { eventCount++; return nil },
+		OnMarker: func(marker []interface{}) error { markerCount++; return nil },
+		OnTime:   func(ts map[string]interface{}) error { timeCount++; return nil },
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 2, entityCount)
+	assert.Equal(t, 1, eventCount)
+	assert.Equal(t, 1, markerCount)
+	assert.Equal(t, 1, timeCount)
 	assert.Equal(t, "Altis", meta.WorldName)
 }
 

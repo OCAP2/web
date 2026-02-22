@@ -26,6 +26,8 @@ func NewStreamingConverter(chunkSize uint32) *StreamingConverter {
 }
 
 // Convert reads a JSON recording and writes chunked protobuf output files.
+// It processes the JSON in a single pass, streaming entities directly from
+// the decoder and bucketing positions to per-chunk temp files on disk.
 func (sc *StreamingConverter) Convert(ctx context.Context, jsonPath, outputPath string) error {
 	// Open streaming reader
 	reader, err := OpenStreamingJSONReader(jsonPath)
@@ -33,13 +35,6 @@ func (sc *StreamingConverter) Convert(ctx context.Context, jsonPath, outputPath 
 		return fmt.Errorf("open JSON: %w", err)
 	}
 	defer reader.Close()
-
-	meta := reader.Metadata()
-
-	// Validate required fields
-	if meta.WorldName == "" || meta.MissionName == "" || meta.FrameCount == 0 {
-		return fmt.Errorf("unknown JSON input version: missing required fields")
-	}
 
 	// Create output directory
 	if err := os.MkdirAll(outputPath, 0755); err != nil {
@@ -57,151 +52,148 @@ func (sc *StreamingConverter) Convert(ctx context.Context, jsonPath, outputPath 
 		os.Remove(bucketDir)
 	}()
 
-	// Phase 1: Stream entities, bucket positions
+	// Accumulators for manifest data (small — entities defs, events, markers, times)
 	var entities []*pbv1.EntityDef
+	var events []*pbv1.Event
+	var markers []*pbv1.MarkerDef
+	var times []*pbv1.TimeSample
 	parser := &ParserV1{}
 
-	err = reader.StreamEntities(func(em map[string]interface{}) error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		entityType := getString(em, "type")
-		startFrame := getUint32(em, "startFrameNum")
-		endFrame := parser.calculateEndFrame(em, startFrame)
-
-		// Build entity definition for manifest
-		def := &pbv1.EntityDef{
-			Id:           getUint32(em, "id"),
-			Type:         stringToEntityType(entityType),
-			Name:         getString(em, "name"),
-			Side:         stringToSide(getString(em, "side")),
-			GroupName:    getString(em, "group"),
-			Role:         getString(em, "role"),
-			StartFrame:   startFrame,
-			EndFrame:     endFrame,
-			IsPlayer:     getFloat64(em, "isPlayer") == 1,
-			VehicleClass: getString(em, "class"),
-		}
-
-		// Parse frames fired
-		for _, ff := range parser.parseFramesFired(em) {
-			def.FramesFired = append(def.FramesFired, &pbv1.FiredFrame{
-				FrameNum: ff.FrameNum,
-				PosX:     ff.PosX,
-				PosY:     ff.PosY,
-				PosZ:     ff.PosZ,
-			})
-		}
-
-		entities = append(entities, def)
-
-		// Collect positions and bucket them
-		posData := parser.collectEntityPositions(em, def.Id, startFrame, entityType)
-		if posData != nil {
-			for _, pos := range posData.Positions {
-				chunkIdx := pos.FrameNum / sc.ChunkSize
-				state := &pbv1.EntityState{
-					EntityId:    posData.EntityID,
-					FrameNum:    pos.FrameNum,
-					PosX:        pos.PosX,
-					PosY:        pos.PosY,
-					PosZ:        pos.PosZ,
-					Direction:   pos.Direction,
-					Alive:       pos.Alive,
-					CrewIds:     pos.CrewIDs,
-					VehicleId:   pos.VehicleID,
-					IsInVehicle: pos.IsInVehicle,
-					Name:        pos.Name,
-					IsPlayer:    pos.IsPlayer,
-					GroupName:   pos.GroupName,
-					Side:        pos.Side,
-				}
-				if err := bucket.Write(chunkIdx, state); err != nil {
-					return fmt.Errorf("bucket write: %w", err)
-				}
+	// Single-pass processing: read the entire JSON sequentially,
+	// streaming entities one-by-one and bucketing their positions to disk
+	meta, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(em map[string]interface{}) error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
 			}
-		}
 
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("stream entities: %w", err)
-	}
+			entityType := getString(em, "type")
+			startFrame := getUint32(em, "startFrameNum")
+			endFrame := parser.calculateEndFrame(em, startFrame)
 
-	// Stream events
-	var events []*pbv1.Event
-	err = reader.StreamEvents(func(evtArr []interface{}) error {
-		evt := parseEventArray(evtArr)
-		if evt != nil {
-			events = append(events, &pbv1.Event{
-				FrameNum: evt.FrameNum,
-				Type:     evt.Type,
-				SourceId: evt.SourceID,
-				TargetId: evt.TargetID,
-				Message:  evt.Message,
-				Distance: evt.Distance,
-				Weapon:   evt.Weapon,
-			})
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("stream events: %w", err)
-	}
-
-	// Stream markers
-	var markers []*pbv1.MarkerDef
-	err = reader.StreamMarkers(func(markerArr []interface{}) error {
-		m := parser.parseMarker(markerArr)
-		if m != nil {
-			pbMarker := &pbv1.MarkerDef{
-				Type:       m.Type,
-				Text:       m.Text,
-				StartFrame: m.StartFrame,
-				EndFrame:   m.EndFrame,
-				PlayerId:   m.PlayerID,
-				Color:      m.Color,
-				Side:       stringToSide(m.Side),
-				Size:       m.Size,
-				Shape:      m.Shape,
-				Brush:      m.Brush,
+			// Build entity definition for manifest
+			def := &pbv1.EntityDef{
+				Id:           getUint32(em, "id"),
+				Type:         stringToEntityType(entityType),
+				Name:         getString(em, "name"),
+				Side:         stringToSide(getString(em, "side")),
+				GroupName:    getString(em, "group"),
+				Role:         getString(em, "role"),
+				StartFrame:   startFrame,
+				EndFrame:     endFrame,
+				IsPlayer:     getFloat64(em, "isPlayer") == 1,
+				VehicleClass: getString(em, "class"),
 			}
-			for _, p := range m.Positions {
-				pbMarker.Positions = append(pbMarker.Positions, &pbv1.MarkerPosition{
-					FrameNum:   p.FrameNum,
-					PosX:       p.PosX,
-					PosY:       p.PosY,
-					PosZ:       p.PosZ,
-					Direction:  p.Direction,
-					Alpha:      p.Alpha,
-					LineCoords: p.LineCoords,
+
+			// Parse frames fired
+			for _, ff := range parser.parseFramesFired(em) {
+				def.FramesFired = append(def.FramesFired, &pbv1.FiredFrame{
+					FrameNum: ff.FrameNum,
+					PosX:     ff.PosX,
+					PosY:     ff.PosY,
+					PosZ:     ff.PosZ,
 				})
 			}
-			markers = append(markers, pbMarker)
-		}
-		return nil
+
+			entities = append(entities, def)
+
+			// Collect positions and bucket them to disk
+			posData := parser.collectEntityPositions(em, def.Id, startFrame, entityType)
+			if posData != nil {
+				for _, pos := range posData.Positions {
+					chunkIdx := pos.FrameNum / sc.ChunkSize
+					state := &pbv1.EntityState{
+						EntityId:    posData.EntityID,
+						FrameNum:    pos.FrameNum,
+						PosX:        pos.PosX,
+						PosY:        pos.PosY,
+						PosZ:        pos.PosZ,
+						Direction:   pos.Direction,
+						Alive:       pos.Alive,
+						CrewIds:     pos.CrewIDs,
+						VehicleId:   pos.VehicleID,
+						IsInVehicle: pos.IsInVehicle,
+						Name:        pos.Name,
+						IsPlayer:    pos.IsPlayer,
+						GroupName:   pos.GroupName,
+						Side:        pos.Side,
+					}
+					if err := bucket.Write(chunkIdx, state); err != nil {
+						return fmt.Errorf("bucket write: %w", err)
+					}
+				}
+			}
+
+			return nil
+		},
+
+		OnEvent: func(evtArr []interface{}) error {
+			evt := parseEventArray(evtArr)
+			if evt != nil {
+				events = append(events, &pbv1.Event{
+					FrameNum: evt.FrameNum,
+					Type:     evt.Type,
+					SourceId: evt.SourceID,
+					TargetId: evt.TargetID,
+					Message:  evt.Message,
+					Distance: evt.Distance,
+					Weapon:   evt.Weapon,
+				})
+			}
+			return nil
+		},
+
+		OnMarker: func(markerArr []interface{}) error {
+			m := parser.parseMarker(markerArr)
+			if m != nil {
+				pbMarker := &pbv1.MarkerDef{
+					Type:       m.Type,
+					Text:       m.Text,
+					StartFrame: m.StartFrame,
+					EndFrame:   m.EndFrame,
+					PlayerId:   m.PlayerID,
+					Color:      m.Color,
+					Side:       stringToSide(m.Side),
+					Size:       m.Size,
+					Shape:      m.Shape,
+					Brush:      m.Brush,
+				}
+				for _, p := range m.Positions {
+					pbMarker.Positions = append(pbMarker.Positions, &pbv1.MarkerPosition{
+						FrameNum:   p.FrameNum,
+						PosX:       p.PosX,
+						PosY:       p.PosY,
+						PosZ:       p.PosZ,
+						Direction:  p.Direction,
+						Alpha:      p.Alpha,
+						LineCoords: p.LineCoords,
+					})
+				}
+				markers = append(markers, pbMarker)
+			}
+			return nil
+		},
+
+		OnTime: func(tm map[string]interface{}) error {
+			times = append(times, &pbv1.TimeSample{
+				FrameNum:       getUint32(tm, "frameNum"),
+				SystemTimeUtc:  getString(tm, "systemTimeUTC"),
+				Date:           getString(tm, "date"),
+				TimeMultiplier: float32(getFloat64(tm, "timeMultiplier")),
+				Time:           float32(getFloat64(tm, "time")),
+			})
+			return nil
+		},
 	})
 	if err != nil {
-		return fmt.Errorf("stream markers: %w", err)
+		return fmt.Errorf("process JSON: %w", err)
 	}
 
-	// Stream times
-	var times []*pbv1.TimeSample
-	err = reader.StreamTimes(func(tm map[string]interface{}) error {
-		times = append(times, &pbv1.TimeSample{
-			FrameNum:       getUint32(tm, "frameNum"),
-			SystemTimeUtc:  getString(tm, "systemTimeUTC"),
-			Date:           getString(tm, "date"),
-			TimeMultiplier: float32(getFloat64(tm, "timeMultiplier")),
-			Time:           float32(getFloat64(tm, "time")),
-		})
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("stream times: %w", err)
+	// Validate required fields
+	if meta.WorldName == "" || meta.MissionName == "" || meta.FrameCount == 0 {
+		return fmt.Errorf("unknown JSON input version: missing required fields")
 	}
 
 	// Flush bucket before reading
