@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -127,6 +128,114 @@ func TestStreamingJSONReader_AllCallbacks(t *testing.T) {
 	assert.Equal(t, 1, markerCount)
 	assert.Equal(t, 1, timeCount)
 	assert.Equal(t, "Altis", meta.WorldName)
+}
+
+func TestStreamingJSONReader_PlainFile(t *testing.T) {
+	jsonData := makeTestJSON(t)
+	path := filepath.Join(t.TempDir(), "test.json")
+	require.NoError(t, os.WriteFile(path, jsonData, 0644))
+
+	reader, err := OpenStreamingJSONReader(path)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	meta, err := reader.Process(StreamingCallbacks{})
+	require.NoError(t, err)
+	assert.Equal(t, "Altis", meta.WorldName)
+}
+
+func TestStreamingJSONReader_FileNotFound(t *testing.T) {
+	_, err := OpenStreamingJSONReader("/nonexistent/file.json")
+	require.Error(t, err)
+}
+
+func TestStreamingJSONReader_EmptyInput(t *testing.T) {
+	reader := NewStreamingJSONReader(bytes.NewReader([]byte{}))
+	_, err := reader.Process(StreamingCallbacks{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expected opening brace")
+}
+
+func TestStreamingJSONReader_NotObject(t *testing.T) {
+	reader := NewStreamingJSONReader(bytes.NewReader([]byte(`[1,2,3]`)))
+	_, err := reader.Process(StreamingCallbacks{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expected '{'")
+}
+
+func TestStreamingJSONReader_CallbackError(t *testing.T) {
+	data := makeTestJSON(t)
+
+	t.Run("entity callback error", func(t *testing.T) {
+		reader := NewStreamingJSONReader(bytes.NewReader(data))
+		_, err := reader.Process(StreamingCallbacks{
+			OnEntity: func(entity map[string]interface{}) error {
+				return fmt.Errorf("entity error")
+			},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "entity error")
+	})
+
+	t.Run("event callback error", func(t *testing.T) {
+		reader := NewStreamingJSONReader(bytes.NewReader(data))
+		_, err := reader.Process(StreamingCallbacks{
+			OnEvent: func(event []interface{}) error {
+				return fmt.Errorf("event error")
+			},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "event error")
+	})
+
+	t.Run("marker callback error", func(t *testing.T) {
+		reader := NewStreamingJSONReader(bytes.NewReader(data))
+		_, err := reader.Process(StreamingCallbacks{
+			OnMarker: func(marker []interface{}) error {
+				return fmt.Errorf("marker error")
+			},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "marker error")
+	})
+
+	t.Run("time callback error", func(t *testing.T) {
+		reader := NewStreamingJSONReader(bytes.NewReader(data))
+		_, err := reader.Process(StreamingCallbacks{
+			OnTime: func(ts map[string]interface{}) error {
+				return fmt.Errorf("time error")
+			},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "time error")
+	})
+}
+
+func TestStreamingJSONReader_MalformedEntities(t *testing.T) {
+	// entities array contains a non-object
+	data := []byte(`{"entities": ["not_an_object"]}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEntity: func(entity map[string]interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream entities")
+}
+
+func TestStreamingJSONReader_MalformedEvents(t *testing.T) {
+	// events array contains a non-array
+	data := []byte(`{"events": [{"not": "array"}]}`)
+	reader := NewStreamingJSONReader(bytes.NewReader(data))
+	_, err := reader.Process(StreamingCallbacks{
+		OnEvent: func(event []interface{}) error { return nil },
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream events")
+}
+
+func TestStreamingJSONReader_CloseNilCloser(t *testing.T) {
+	reader := NewStreamingJSONReader(bytes.NewReader([]byte(`{}`)))
+	assert.NoError(t, reader.Close())
 }
 
 func makeTestJSON(t *testing.T) []byte {
