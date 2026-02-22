@@ -25,6 +25,7 @@ export default defineConfig({
         "src/**/__tests__/**",
         "src/**/*.test.{ts,tsx}",
         "src/test-setup.ts",
+        "src/**/generated/**",
       ],
     },
   },
