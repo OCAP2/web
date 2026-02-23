@@ -87,10 +87,17 @@ export interface OperationFilters {
 
 // ─── JWT token store ───
 
-let authToken: string | null = null;
+const TOKEN_KEY = "ocap_token";
+
+let authToken: string | null = sessionStorage.getItem(TOKEN_KEY);
 
 export function setAuthToken(token: string | null): void {
   authToken = token;
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 export function getAuthToken(): string | null {
