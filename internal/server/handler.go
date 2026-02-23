@@ -38,6 +38,7 @@ type Handler struct {
 	repoMarker        *RepoMarker
 	repoAmmo          *RepoAmmo
 	setting           Setting
+	sessions          *SessionStore
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
 	staticFS          fs.FS             // optional, nil disables static file serving
 }
@@ -78,6 +79,8 @@ func NewHandler(
 	for _, opt := range opts {
 		opt(&hdlr)
 	}
+
+	hdlr.sessions = NewSessionStore(setting.Admin.SessionTTL)
 
 	e.Use(hdlr.errorHandler)
 
@@ -140,6 +143,12 @@ func NewHandler(
 		hdlr.GetMapTitle,
 		hdlr.cacheControl(CacheDuration),
 	)
+
+	// Auth endpoints
+	g.POST("/api/v1/auth/login", hdlr.Login)
+	g.GET("/api/v1/auth/me", hdlr.GetMe)
+	g.POST("/api/v1/auth/logout", hdlr.Logout)
+
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing
 		staticHandler := spaFileServer(hdlr.staticFS, prefixURL)
