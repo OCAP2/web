@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -36,26 +35,27 @@ func setupAdminTest(t *testing.T) (Handler, *Operation) {
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       Setting{Secret: "test-secret", Data: dir},
-		sessions:      NewSessionStore(time.Hour),
+		jwt:           NewJWTManager("test-secret", time.Hour),
 	}
 	return hdlr, op
 }
 
 func TestEditOperation(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token := hdlr.sessions.Create()
+	token, err := hdlr.jwt.Create()
+	require.NoError(t, err)
 
 	e := echo.New()
 	body := `{"missionName":"Renamed","tag":"COOP","date":"2026-02-01"}`
 	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
 	c.SetParamValues(fmt.Sprintf("%d", op.ID))
 
-	err := hdlr.EditOperation(c)
+	err = hdlr.EditOperation(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -86,7 +86,8 @@ func TestEditOperation_Unauthorized(t *testing.T) {
 
 func TestDeleteOperation_Handler(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token := hdlr.sessions.Create()
+	token, err := hdlr.jwt.Create()
+	require.NoError(t, err)
 
 	// Create fake data files on disk
 	dataDir := hdlr.setting.Data
@@ -98,13 +99,13 @@ func TestDeleteOperation_Handler(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/", nil)
-	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
 	c.SetParamValues(fmt.Sprintf("%d", op.ID))
 
-	err := hdlr.DeleteOperation(c)
+	err = hdlr.DeleteOperation(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
 
@@ -119,7 +120,8 @@ func TestDeleteOperation_Handler(t *testing.T) {
 
 func TestRetryConversion(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token := hdlr.sessions.Create()
+	token, err := hdlr.jwt.Create()
+	require.NoError(t, err)
 
 	// Set op to failed status
 	ctx := t.Context()
@@ -127,13 +129,13 @@ func TestRetryConversion(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
 	c.SetParamValues(fmt.Sprintf("%d", op.ID))
 
-	err := hdlr.RetryConversion(c)
+	err = hdlr.RetryConversion(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -247,8 +249,8 @@ func TestRetryConversion_NotFailed(t *testing.T) {
 }
 
 // TestAdminFlow_LoginEditDelete is an end-to-end integration test that exercises
-// the full admin flow through real HTTP calls on a live test server with a cookie
-// jar, verifying login, auth check, edit, delete, logout, and post-logout 401.
+// the full admin flow through real HTTP calls on a live test server, verifying
+// login, auth check, edit, delete, logout, and post-logout 401.
 func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	dir := t.TempDir()
 
@@ -278,13 +280,13 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 		Data:   dir,
 		Admin:  Admin{SessionTTL: time.Hour},
 	}
-	sessions := NewSessionStore(time.Hour)
+	jwtMgr := NewJWTManager("test-secret", time.Hour)
 
 	e := echo.New()
 	hdlr := Handler{
 		repoOperation: repo,
 		setting:       setting,
-		sessions:      sessions,
+		jwt:           jwtMgr,
 	}
 
 	e.Use(hdlr.errorHandler)
@@ -300,14 +302,11 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	// HTTP client with cookie jar to maintain session across requests
-	jar, err := cookiejar.New(nil)
-	require.NoError(t, err)
-	client := &http.Client{Jar: jar}
-
+	client := &http.Client{}
 	opID := fmt.Sprintf("%d", op.ID)
+	var authToken string
 
-	// Step 1: Login with correct secret — verify 200 and cookie
+	// Step 1: Login with correct secret — verify 200 and token in response
 	t.Run("Login", func(t *testing.T) {
 		resp, err := client.Post(
 			ts.URL+"/api/v1/auth/login",
@@ -319,25 +318,20 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var body map[string]bool
+		var body map[string]any
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-		assert.True(t, body["authenticated"])
-
-		// Cookie jar should have the session cookie
-		cookies := jar.Cookies(resp.Request.URL)
-		found := false
-		for _, c := range cookies {
-			if c.Name == "ocap_session" {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "session cookie should be set in the jar")
+		assert.Equal(t, true, body["authenticated"])
+		assert.NotEmpty(t, body["token"])
+		authToken = body["token"].(string)
 	})
 
 	// Step 2: Check auth status — verify authenticated:true
 	t.Run("CheckAuth", func(t *testing.T) {
-		resp, err := client.Get(ts.URL + "/api/v1/auth/me")
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/v1/auth/me", nil)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+authToken)
+
+		resp, err := client.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -357,6 +351,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 		)
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+authToken)
 
 		resp, err := client.Do(req)
 		require.NoError(t, err)
@@ -386,6 +381,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 			nil,
 		)
 		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+authToken)
 
 		resp, err := client.Do(req)
 		require.NoError(t, err)
@@ -407,14 +403,17 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 
 	// Step 7: Logout — verify 204
 	t.Run("Logout", func(t *testing.T) {
-		resp, err := client.Post(ts.URL+"/api/v1/auth/logout", "", nil)
+		req, err := http.NewRequest(http.MethodPost, ts.URL+"/api/v1/auth/logout", nil)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
-	// Step 8: After logout, admin endpoints should return 401
+	// Step 8: After logout (token discarded), admin endpoints should return 401
 	t.Run("UnauthorizedAfterLogout", func(t *testing.T) {
 		req, err := http.NewRequest(
 			http.MethodPatch,
@@ -423,6 +422,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 		)
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
+		// No Authorization header — simulates discarded token
 
 		resp, err := client.Do(req)
 		require.NoError(t, err)

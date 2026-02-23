@@ -2,18 +2,25 @@ package server
 
 import (
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
-
-const sessionCookieName = "ocap_session"
 
 type loginRequest struct {
 	Secret string `json:"secret"`
 }
 
-// Login validates the server secret and creates a session cookie.
+// bearerToken extracts the token from the Authorization: Bearer <token> header.
+func bearerToken(c echo.Context) string {
+	auth := c.Request().Header.Get("Authorization")
+	if after, ok := strings.CutPrefix(auth, "Bearer "); ok {
+		return after
+	}
+	return ""
+}
+
+// Login validates the server secret and returns a JWT token.
 func (h *Handler) Login(c echo.Context) error {
 	var req loginRequest
 	if err := c.Bind(&req); err != nil {
@@ -24,51 +31,36 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrForbidden
 	}
 
-	token := h.sessions.Create()
-	c.SetCookie(&http.Cookie{
-		Name:     sessionCookieName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   c.IsTLS(),
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(h.setting.Admin.SessionTTL.Seconds()),
-	})
+	token, err := h.jwt.Create()
+	if err != nil {
+		return err
+	}
 
-	return c.JSON(http.StatusOK, map[string]bool{"authenticated": true})
+	return c.JSON(http.StatusOK, map[string]any{
+		"authenticated": true,
+		"token":         token,
+	})
 }
 
 // GetMe returns the current authentication status.
 func (h *Handler) GetMe(c echo.Context) error {
-	cookie, err := c.Cookie(sessionCookieName)
-	if err != nil || !h.sessions.Valid(cookie.Value) {
+	token := bearerToken(c)
+	if token == "" || h.jwt.Validate(token) != nil {
 		return c.JSON(http.StatusOK, map[string]bool{"authenticated": false})
 	}
 	return c.JSON(http.StatusOK, map[string]bool{"authenticated": true})
 }
 
-// Logout destroys the session and clears the cookie.
+// Logout is a no-op for stateless JWT — the frontend discards the token.
 func (h *Handler) Logout(c echo.Context) error {
-	cookie, err := c.Cookie(sessionCookieName)
-	if err == nil {
-		h.sessions.Destroy(cookie.Value)
-	}
-	c.SetCookie(&http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1,
-		Expires:  time.Unix(0, 0),
-	})
 	return c.NoContent(http.StatusNoContent)
 }
 
-// requireAdmin is middleware that checks for a valid session cookie.
+// requireAdmin is middleware that checks for a valid JWT Bearer token.
 func (h *Handler) requireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		cookie, err := c.Cookie(sessionCookieName)
-		if err != nil || !h.sessions.Valid(cookie.Value) {
+		token := bearerToken(c)
+		if token == "" || h.jwt.Validate(token) != nil {
 			return echo.ErrUnauthorized
 		}
 		return next(c)

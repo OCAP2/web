@@ -38,7 +38,7 @@ type Handler struct {
 	repoMarker        *RepoMarker
 	repoAmmo          *RepoAmmo
 	setting           Setting
-	sessions          *SessionStore
+	jwt               *JWTManager
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
 	staticFS          fs.FS             // optional, nil disables static file serving
 }
@@ -80,7 +80,7 @@ func NewHandler(
 		opt(&hdlr)
 	}
 
-	hdlr.sessions = NewSessionStore(setting.Admin.SessionTTL)
+	hdlr.jwt = NewJWTManager(setting.Secret, setting.Admin.SessionTTL)
 
 	e.Use(hdlr.errorHandler)
 
@@ -149,7 +149,7 @@ func NewHandler(
 	g.GET("/api/v1/auth/me", hdlr.GetMe)
 	g.POST("/api/v1/auth/logout", hdlr.Logout)
 
-	// Admin routes (require session cookie)
+	// Admin routes (require JWT)
 	admin := g.Group("", hdlr.requireAdmin)
 	admin.PATCH("/api/v1/operations/:id", hdlr.EditOperation)
 	admin.DELETE("/api/v1/operations/:id", hdlr.DeleteOperation)
@@ -260,9 +260,8 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	)
 
 	if secret != h.setting.Secret {
-		// Fall back to session cookie auth (admin UI uploads)
-		cookie, cookieErr := c.Cookie(sessionCookieName)
-		if cookieErr != nil || !h.sessions.Valid(cookie.Value) {
+		// Fall back to JWT Bearer token auth (admin UI uploads)
+		if token := bearerToken(c); token == "" || h.jwt.Validate(token) != nil {
 			return echo.ErrForbidden
 		}
 	}

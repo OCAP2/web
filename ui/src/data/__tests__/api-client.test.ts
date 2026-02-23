@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { ApiClient, ApiError } from "../api-client";
+import { ApiClient, ApiError, setAuthToken, getAuthToken } from "../api-client";
 import type { CustomizeConfig, BuildInfo } from "../api-client";
 
 // ─── Helpers ───
@@ -48,6 +48,7 @@ function mockFetchError(status: number, statusText: string): void {
 describe("ApiClient", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    setAuthToken(null);
   });
 
   // ─── Constructor & URL construction ───
@@ -288,8 +289,8 @@ describe("ApiClient", () => {
   // ─── login ───
 
   describe("login", () => {
-    it("posts secret and returns auth state", async () => {
-      mockFetchJson({ authenticated: true });
+    it("posts secret, stores token, and returns auth state", async () => {
+      mockFetchJson({ authenticated: true, token: "jwt-test-token" });
 
       const client = new ApiClient("/aar/");
       const result = await client.login("my-secret");
@@ -298,9 +299,9 @@ describe("ApiClient", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ secret: "my-secret" }),
-        credentials: "same-origin",
       });
       expect(result).toEqual({ authenticated: true });
+      expect(getAuthToken()).toBe("jwt-test-token");
     });
 
     it("throws ApiError on invalid credentials", async () => {
@@ -315,16 +316,30 @@ describe("ApiClient", () => {
 
   describe("getMe", () => {
     it("returns auth state when authenticated", async () => {
+      setAuthToken("my-jwt");
       mockFetchJson({ authenticated: true });
 
       const client = new ApiClient("/aar/");
       const result = await client.getMe();
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/me", {
-        credentials: "same-origin",
+        headers: { Authorization: "Bearer my-jwt" },
         cache: "no-cache",
       });
       expect(result).toEqual({ authenticated: true });
+    });
+
+    it("sends no auth header when no token stored", async () => {
+      mockFetchJson({ authenticated: false });
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getMe();
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/me", {
+        headers: {},
+        cache: "no-cache",
+      });
+      expect(result).toEqual({ authenticated: false });
     });
 
     it("returns {authenticated: false} on non-OK response", async () => {
@@ -340,7 +355,8 @@ describe("ApiClient", () => {
   // ─── logout ───
 
   describe("logout", () => {
-    it("posts to logout endpoint", async () => {
+    it("posts to logout endpoint and clears token", async () => {
+      setAuthToken("my-jwt");
       mockFetchJson(null);
 
       const client = new ApiClient("/aar/");
@@ -348,8 +364,9 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/logout", {
         method: "POST",
-        credentials: "same-origin",
+        headers: { Authorization: "Bearer my-jwt" },
       });
+      expect(getAuthToken()).toBeNull();
     });
   });
 
@@ -357,6 +374,7 @@ describe("ApiClient", () => {
 
   describe("editOperation", () => {
     it("patches operation and returns mapped result", async () => {
+      setAuthToken("admin-jwt");
       mockFetchJson({
         id: 42,
         world_name: "Altis",
@@ -374,9 +392,8 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer admin-jwt" },
         body: JSON.stringify({ missionName: "Updated" }),
-        credentials: "same-origin",
       });
       expect(result).toEqual({
         id: "42",
@@ -402,7 +419,8 @@ describe("ApiClient", () => {
   // ─── deleteOperation ───
 
   describe("deleteOperation", () => {
-    it("sends DELETE request for operation", async () => {
+    it("sends DELETE request with auth header", async () => {
+      setAuthToken("admin-jwt");
       mockFetchJson(null);
 
       const client = new ApiClient("/aar/");
@@ -410,7 +428,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42", {
         method: "DELETE",
-        credentials: "same-origin",
+        headers: { Authorization: "Bearer admin-jwt" },
       });
     });
 
@@ -425,7 +443,8 @@ describe("ApiClient", () => {
   // ─── retryConversion ───
 
   describe("retryConversion", () => {
-    it("posts retry request for operation", async () => {
+    it("posts retry request with auth header", async () => {
+      setAuthToken("admin-jwt");
       mockFetchJson(null);
 
       const client = new ApiClient("/aar/");
@@ -433,7 +452,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42/retry", {
         method: "POST",
-        credentials: "same-origin",
+        headers: { Authorization: "Bearer admin-jwt" },
       });
     });
 
@@ -448,7 +467,8 @@ describe("ApiClient", () => {
   // ─── uploadOperation ───
 
   describe("uploadOperation", () => {
-    it("posts FormData to upload endpoint", async () => {
+    it("posts FormData with auth header", async () => {
+      setAuthToken("admin-jwt");
       mockFetchJson(null);
 
       const client = new ApiClient("/aar/");
@@ -458,8 +478,8 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/add", {
         method: "POST",
+        headers: { Authorization: "Bearer admin-jwt" },
         body: formData,
-        credentials: "same-origin",
       });
     });
 

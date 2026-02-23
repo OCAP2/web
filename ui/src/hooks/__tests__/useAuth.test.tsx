@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
 import { AuthProvider, useAuth } from "../useAuth";
 import type { Auth } from "../useAuth";
+import { setAuthToken } from "../../data/api-client";
 
 // ─── Mock ApiClient ───
 
@@ -9,13 +10,17 @@ const mockGetMe = vi.fn();
 const mockLogin = vi.fn();
 const mockLogout = vi.fn();
 
-vi.mock("../../data/api-client", () => ({
-  ApiClient: class {
-    getMe = mockGetMe;
-    login = mockLogin;
-    logout = mockLogout;
-  },
-}));
+vi.mock("../../data/api-client", async () => {
+  const actual = await vi.importActual<typeof import("../../data/api-client")>("../../data/api-client");
+  return {
+    ...actual,
+    ApiClient: class {
+      getMe = mockGetMe;
+      login = mockLogin;
+      logout = mockLogout;
+    },
+  };
+});
 
 // ─── Test consumer component ───
 
@@ -37,6 +42,7 @@ describe("useAuth", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    setAuthToken(null);
   });
 
   it("throws when used outside AuthProvider", () => {
@@ -48,9 +54,7 @@ describe("useAuth", () => {
     }).toThrow("useAuth must be used within an AuthProvider");
   });
 
-  it("checks session on mount via getMe", async () => {
-    mockGetMe.mockResolvedValue({ authenticated: false });
-
+  it("skips getMe when no token is stored", async () => {
     const { findByTestId } = render(() => (
       <AuthProvider>
         <TestConsumer onAuth={() => {}} />
@@ -58,10 +62,25 @@ describe("useAuth", () => {
     ));
 
     await findByTestId("authenticated");
+    expect(mockGetMe).not.toHaveBeenCalled();
+  });
+
+  it("checks session on mount via getMe when token exists", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockResolvedValue({ authenticated: true });
+
+    const { findByText } = render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={() => {}} />
+      </AuthProvider>
+    ));
+
+    expect(await findByText("true")).toBeDefined();
     expect(mockGetMe).toHaveBeenCalledOnce();
   });
 
   it("sets authenticated to true when getMe returns authenticated", async () => {
+    setAuthToken("stored-jwt");
     mockGetMe.mockResolvedValue({ authenticated: true });
 
     const { findByText } = render(() => (
@@ -86,7 +105,7 @@ describe("useAuth", () => {
 
     // Wait for mount to settle
     await vi.waitFor(() => {
-      expect(mockGetMe).toHaveBeenCalled();
+      expect(authRef).toBeDefined();
     });
 
     const result = await authRef.login("correct-secret");
@@ -107,7 +126,7 @@ describe("useAuth", () => {
     ));
 
     await vi.waitFor(() => {
-      expect(mockGetMe).toHaveBeenCalled();
+      expect(authRef).toBeDefined();
     });
 
     const result = await authRef.login("wrong-secret");
@@ -116,6 +135,7 @@ describe("useAuth", () => {
   });
 
   it("logout sets authenticated to false", async () => {
+    setAuthToken("stored-jwt");
     mockGetMe.mockResolvedValue({ authenticated: true });
     mockLogout.mockResolvedValue(undefined);
 

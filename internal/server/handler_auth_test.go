@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,8 +15,8 @@ import (
 
 func newAuthHandler() Handler {
 	return Handler{
-		setting:  Setting{Secret: "test-secret"},
-		sessions: NewSessionStore(time.Hour),
+		setting: Setting{Secret: "test-secret"},
+		jwt:     NewJWTManager("test-secret", time.Hour),
 	}
 }
 
@@ -33,11 +34,11 @@ func TestLogin_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Should set a session cookie
-	cookies := rec.Result().Cookies()
-	require.Len(t, cookies, 1)
-	assert.Equal(t, "ocap_session", cookies[0].Name)
-	assert.True(t, cookies[0].HttpOnly)
+	// Response should contain a token
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, true, resp["authenticated"])
+	assert.NotEmpty(t, resp["token"])
 }
 
 func TestLogin_WrongSecret(t *testing.T) {
@@ -69,15 +70,16 @@ func TestLogin_BadBody(t *testing.T) {
 
 func TestGetMe_Authenticated(t *testing.T) {
 	hdlr := newAuthHandler()
-	token := hdlr.sessions.Create()
+	token, err := hdlr.jwt.Create()
+	require.NoError(t, err)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
-	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	err := hdlr.GetMe(c)
+	err = hdlr.GetMe(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"authenticated":true`)
@@ -99,18 +101,13 @@ func TestGetMe_NotAuthenticated(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	hdlr := newAuthHandler()
-	token := hdlr.sessions.Create()
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
-	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
 	err := hdlr.Logout(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
-
-	// Session should be invalidated
-	assert.False(t, hdlr.sessions.Valid(token))
 }

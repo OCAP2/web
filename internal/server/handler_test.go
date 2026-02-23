@@ -1232,19 +1232,20 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 	require.NoError(t, err)
 	defer repo.db.Close()
 
-	sessions := NewSessionStore(time.Hour)
+	jwtMgr := NewJWTManager("test-secret", time.Hour)
 
 	hdlr := Handler{
 		repoOperation: repo,
-		sessions:      sessions,
+		jwt:           jwtMgr,
 		setting: Setting{
 			Secret: "test-secret",
 			Data:   dataDir,
 		},
 	}
 
-	t.Run("valid session cookie without secret succeeds", func(t *testing.T) {
-		token := sessions.Create()
+	t.Run("valid JWT token without secret succeeds", func(t *testing.T) {
+		token, err := jwtMgr.Create()
+		require.NoError(t, err)
 
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -1264,7 +1265,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
@@ -1277,7 +1278,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("invalid session cookie without secret fails", func(t *testing.T) {
+	t.Run("invalid JWT token without secret fails", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		writer.WriteField("worldName", "altis")
@@ -1289,7 +1290,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.AddCookie(&http.Cookie{Name: "ocap_session", Value: "invalid-token"})
+		req.Header.Set("Authorization", "Bearer invalid-token")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
@@ -1297,7 +1298,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		assert.Equal(t, echo.ErrForbidden, err)
 	})
 
-	t.Run("no secret and no cookie fails", func(t *testing.T) {
+	t.Run("no secret and no token fails", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		writer.WriteField("worldName", "altis")

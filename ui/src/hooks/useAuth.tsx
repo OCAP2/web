@@ -1,6 +1,6 @@
 import { createContext, useContext, createSignal, onMount } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
-import { ApiClient } from "../data/api-client";
+import { ApiClient, getAuthToken } from "../data/api-client";
 
 export interface Auth {
   authenticated: Accessor<boolean>;
@@ -18,6 +18,10 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const api = new ApiClient();
 
   onMount(async () => {
+    if (!getAuthToken()) {
+      setAuthenticated(false);
+      return;
+    }
     try {
       const state = await api.getMe();
       setAuthenticated(state.authenticated);

@@ -85,6 +85,24 @@ export interface OperationFilters {
 
 // ─── API Client ───
 
+// ─── JWT token store ───
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
+function authHeaders(): Record<string, string> {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
+// ─── API Client ───
+
 export class ApiClient {
   private readonly baseUrl: string;
 
@@ -266,7 +284,6 @@ export class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ secret }),
-      credentials: "same-origin",
     });
     if (!response.ok) {
       throw new ApiError(
@@ -275,12 +292,16 @@ export class ApiClient {
         response.statusText,
       );
     }
-    return response.json() as Promise<AuthState>;
+    const data = (await response.json()) as AuthState & { token?: string };
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return { authenticated: data.authenticated };
   }
 
   async getMe(): Promise<AuthState> {
     const response = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
-      credentials: "same-origin",
+      headers: authHeaders(),
       cache: "no-cache",
     });
     if (!response.ok) {
@@ -292,8 +313,9 @@ export class ApiClient {
   async logout(): Promise<void> {
     await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
       method: "POST",
-      credentials: "same-origin",
+      headers: authHeaders(),
     });
+    setAuthToken(null);
   }
 
   // ─── Admin operation methods ───
@@ -306,9 +328,8 @@ export class ApiClient {
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(data),
-        credentials: "same-origin",
       },
     );
     if (!response.ok) {
@@ -327,7 +348,7 @@ export class ApiClient {
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
-        credentials: "same-origin",
+        headers: authHeaders(),
       },
     );
     if (!response.ok) {
@@ -344,7 +365,7 @@ export class ApiClient {
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}/retry`,
       {
         method: "POST",
-        credentials: "same-origin",
+        headers: authHeaders(),
       },
     );
     if (!response.ok) {
@@ -359,8 +380,8 @@ export class ApiClient {
   async uploadOperation(formData: FormData): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v1/operations/add`, {
       method: "POST",
+      headers: authHeaders(),
       body: formData,
-      credentials: "same-origin",
     });
     if (!response.ok) {
       throw new ApiError(
