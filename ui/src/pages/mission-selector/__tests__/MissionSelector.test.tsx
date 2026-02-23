@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
 import { Router, Route, useLocation } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { AuthProvider } from "../../../hooks/useAuth";
+import { setAuthToken } from "../../../data/api-client";
 import { MissionSelector } from "..";
 import type { Operation } from "../../../data/types";
 
@@ -569,5 +570,509 @@ describe("MissionSelector", () => {
     // 2 unique maps: Altis and Stratis
     expect(container.textContent).toContain("2");
     expect(container.textContent).toContain("MAPS");
+  });
+});
+
+// ─── Admin tests ───
+
+/** Mock fetch that routes by URL pattern and responds appropriately */
+function mockAdminFetch(ops: Operation[]) {
+  const rawOps = ops.map((op) => ({
+    id: Number(op.id),
+    world_name: op.worldName,
+    mission_name: op.missionName,
+    mission_duration: op.missionDuration,
+    filename: `${op.id}.json`,
+    date: op.date,
+    tag: op.tag,
+    storageFormat: op.storageFormat,
+    conversionStatus: op.conversionStatus,
+  }));
+
+  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+    const u = typeof url === "string" ? url : "";
+
+    // Auth: getMe
+    if (u.includes("/api/v1/auth/me")) {
+      return Promise.resolve({
+        ok: true, status: 200, statusText: "OK",
+        json: () => Promise.resolve({ authenticated: true }),
+      } as Response);
+    }
+
+    // Auth: login
+    if (u.includes("/api/v1/auth/login")) {
+      const body = JSON.parse((init?.body as string) || "{}");
+      if (body.secret === "correct-secret") {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: true, token: "new-jwt" }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 403, statusText: "Forbidden" } as Response);
+    }
+
+    // Auth: logout
+    if (u.includes("/api/v1/auth/logout")) {
+      return Promise.resolve({ ok: true, status: 204, statusText: "No Content" } as Response);
+    }
+
+    // Admin: edit operation (PATCH)
+    if (u.match(/\/api\/v1\/operations\/\d+$/) && init?.method === "PATCH") {
+      const id = u.match(/\/(\d+)$/)![1];
+      const data = JSON.parse((init?.body as string) || "{}");
+      const raw = rawOps.find((o) => String(o.id) === id);
+      return Promise.resolve({
+        ok: true, status: 200, statusText: "OK",
+        json: () => Promise.resolve({ ...raw, ...data }),
+      } as Response);
+    }
+
+    // Admin: delete operation (DELETE)
+    if (u.match(/\/api\/v1\/operations\/\d+$/) && init?.method === "DELETE") {
+      return Promise.resolve({ ok: true, status: 204, statusText: "No Content" } as Response);
+    }
+
+    // Admin: retry conversion (POST)
+    if (u.match(/\/api\/v1\/operations\/\d+\/retry$/)) {
+      return Promise.resolve({
+        ok: true, status: 200, statusText: "OK",
+        json: () => Promise.resolve({}),
+      } as Response);
+    }
+
+    // Admin: upload
+    if (u.includes("/api/v1/operations/add")) {
+      return Promise.resolve({ ok: true, status: 200, statusText: "OK" } as Response);
+    }
+
+    // Default: operations list (+ version)
+    if (u.includes("/api/version")) {
+      return Promise.resolve({
+        ok: true, status: 200, statusText: "OK",
+        json: () => Promise.resolve({ BuildVersion: "test", BuildCommit: "abc", BuildDate: "2026-01-01" }),
+      } as Response);
+    }
+
+    // Default: operations list
+    return Promise.resolve({
+      ok: true, status: 200, statusText: "OK",
+      json: () => Promise.resolve(rawOps),
+    } as Response);
+  });
+}
+
+describe("MissionSelector (Admin)", () => {
+  const failedOp: Operation = {
+    id: "6",
+    worldName: "Altis",
+    missionName: "Op Failed",
+    missionDuration: 600,
+    date: "2024-06-01",
+    tag: "TvT",
+    conversionStatus: "failed",
+  };
+
+  const adminOps: Operation[] = [
+    {
+      id: "1",
+      worldName: "Altis",
+      missionName: "Op Alpha",
+      missionDuration: 3600,
+      date: "2024-01-01",
+      tag: "TvT",
+    },
+    failedOp,
+  ];
+
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/");
+    globalThis.fetch = mockAdminFetch(adminOps);
+    setAuthToken("fake-jwt");
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    setAuthToken(null);
+  });
+
+  // ── Auth UI ──
+
+  it("shows admin badge when authenticated", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    expect(container.textContent).toContain("Admin");
+    expect(container.textContent).toContain("ADMIN");
+  });
+
+  it("shows sign-in button when not authenticated", async () => {
+    setAuthToken(null);
+    // Override getMe to return not authenticated
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: false }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true, status: 200, statusText: "OK",
+        json: () => Promise.resolve([]),
+      } as Response);
+    });
+
+    const { findByTestId, container } = renderPage();
+    await findByTestId("mission-selector");
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+  });
+
+  it("logout button clears admin UI", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const logoutBtn = container.querySelector("button[title='Sign out']") as HTMLButtonElement;
+    expect(logoutBtn).not.toBeNull();
+
+    fireEvent.click(logoutBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+  });
+
+  // ── Login Modal ──
+
+  it("opens login modal and submits successfully", async () => {
+    setAuthToken(null);
+    globalThis.fetch = mockAdminFetch(adminOps);
+    // Override getMe to initially return not authenticated
+    const originalFetch = globalThis.fetch;
+    let loginDone = false;
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: loginDone }),
+        } as Response);
+      }
+      if (typeof url === "string" && url.includes("/api/v1/auth/login")) {
+        loginDone = true;
+        return originalFetch(url, init);
+      }
+      return originalFetch(url, init);
+    });
+
+    const { findByTestId, container } = renderPage();
+    await findByTestId("mission-selector");
+
+    // Wait for Sign in button
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+
+    // Click Sign in
+    const signInBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Sign in"),
+    )!;
+    fireEvent.click(signInBtn);
+
+    // Modal should appear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Admin Login");
+    });
+
+    // Type secret and submit
+    const input = container.querySelector("input[type='password']") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "correct-secret" } });
+
+    const submitBtn = Array.from(container.querySelectorAll("button[type='submit']")).find(
+      (b) => b.textContent?.includes("Sign in"),
+    )!;
+    fireEvent.click(submitBtn);
+
+    // Modal should close and admin badge should appear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("ADMIN");
+    });
+  });
+
+  it("shows error on wrong secret", async () => {
+    setAuthToken(null);
+    globalThis.fetch = mockAdminFetch(adminOps);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: false }),
+        } as Response);
+      }
+      return originalFetch(url, init);
+    });
+
+    const { findByTestId, container } = renderPage();
+    await findByTestId("mission-selector");
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+
+    // Open modal
+    const signInBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Sign in"),
+    )!;
+    fireEvent.click(signInBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Admin Login");
+    });
+
+    // Type wrong secret and submit
+    const input = container.querySelector("input[type='password']") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "wrong-secret" } });
+
+    const submitBtn = container.querySelector("button[type='submit']")!;
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Invalid secret");
+    });
+  });
+
+  it("closes login modal on Cancel", async () => {
+    setAuthToken(null);
+    globalThis.fetch = mockAdminFetch(adminOps);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: false }),
+        } as Response);
+      }
+      return originalFetch(url, init);
+    });
+
+    const { findByTestId, container } = renderPage();
+    await findByTestId("mission-selector");
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+
+    // Open modal
+    const signInBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Sign in"),
+    )!;
+    fireEvent.click(signInBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Admin Login");
+    });
+
+    // Click Cancel
+    const cancelBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent === "Cancel",
+    )!;
+    fireEvent.click(cancelBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Admin Login");
+    });
+  });
+
+  // ── Edit operation ──
+
+  it("edit flow: sidebar Edit → modal → save", async () => {
+    const { findByTestId, container } = renderPage();
+    const row = await findByTestId("operation-1");
+
+    // Select operation to open sidebar
+    fireEvent.click(row);
+    await findByTestId("launch-button");
+
+    // Click Edit in sidebar
+    const editBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Edit"),
+    )!;
+    fireEvent.click(editBtn);
+
+    // Edit modal should appear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Edit Recording");
+    });
+
+    // Save (click the save button)
+    const saveBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Save"),
+    )!;
+    fireEvent.click(saveBtn);
+
+    // Modal should close
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Edit Recording");
+    });
+  });
+
+  // ── Delete operation ──
+
+  it("delete flow: sidebar Delete → confirm dialog → confirm", async () => {
+    const { findByTestId, container } = renderPage();
+    const row = await findByTestId("operation-1");
+
+    fireEvent.click(row);
+    await findByTestId("launch-button");
+
+    // Click Delete in sidebar
+    const deleteBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete"),
+    )!;
+    fireEvent.click(deleteBtn);
+
+    // Confirm dialog should appear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Delete Recording");
+    });
+
+    // Click confirm delete
+    const confirmBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete") && b !== deleteBtn,
+    )!;
+    fireEvent.click(confirmBtn);
+
+    // Dialog should close
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Delete Recording");
+    });
+  });
+
+  // ── Retry conversion ──
+
+  it("retry button appears for failed operations and calls API", async () => {
+    const { findByTestId, container } = renderPage();
+    const row = await findByTestId("operation-6");
+
+    fireEvent.click(row);
+    await findByTestId("launch-button");
+
+    // Retry button should be visible for failed operation
+    const retryBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Retry"),
+    )!;
+    expect(retryBtn).toBeDefined();
+
+    fireEvent.click(retryBtn);
+
+    // Verify retry API was called
+    await vi.waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const retryCall = calls.find(
+        ([url, init]: [string, RequestInit?]) =>
+          url.includes("/api/v1/operations/6/retry") && init?.method === "POST",
+      );
+      expect(retryCall).toBeDefined();
+    });
+  });
+
+  // ── Upload zone ──
+
+  it("toggle upload zone and upload a file via input", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    // Click upload button
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    expect(uploadBtn).not.toBeNull();
+    fireEvent.click(uploadBtn);
+
+    // Upload zone should appear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Drop .json.gz");
+    });
+
+    // Use the hidden file input (jsdom doesn't support DragEvent.dataTransfer)
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(["data"], "mission.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    // Verify upload API was called
+    await vi.waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const uploadCall = calls.find(
+        ([url, init]: [string, RequestInit?]) =>
+          url.includes("/api/v1/operations/add") && init?.method === "POST",
+      );
+      expect(uploadCall).toBeDefined();
+    });
+  });
+
+  it("drag over adds visual state", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    // Open upload zone
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Drop .json.gz");
+    });
+
+    const uploadZone = Array.from(container.querySelectorAll("div")).find(
+      (d) => d.textContent?.includes("Drop .json.gz"),
+    )!;
+
+    fireEvent.dragOver(uploadZone, { preventDefault: () => {} });
+
+    // dragLeave should clear the state
+    fireEvent.dragLeave(uploadZone);
+  });
+
+  // ── Escape closes login modal ──
+
+  it("Escape closes login modal", async () => {
+    setAuthToken(null);
+    globalThis.fetch = mockAdminFetch(adminOps);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200, statusText: "OK",
+          json: () => Promise.resolve({ authenticated: false }),
+        } as Response);
+      }
+      return originalFetch(url, init);
+    });
+
+    const { findByTestId, container } = renderPage();
+    await findByTestId("mission-selector");
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Sign in");
+    });
+
+    // Open modal
+    const signInBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Sign in"),
+    )!;
+    fireEvent.click(signInBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Admin Login");
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Admin Login");
+    });
   });
 });
