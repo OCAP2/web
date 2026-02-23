@@ -187,7 +187,7 @@ export function DetailSidebar(props: {
       {/* Admin Actions */}
       <Show when={props.isAdmin}>
         <div class={styles.adminActions}>
-          <div class={styles.sidebarSectionLabel}>ADMIN</div>
+          <div class={styles.sidebarSectionLabel} style={{ "margin-bottom": "2px" }}>ADMIN ACTIONS</div>
           <div class={styles.adminActionButtons}>
             <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.op)}>
               <Icons.Edit /> Edit

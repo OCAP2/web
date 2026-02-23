@@ -1332,8 +1332,12 @@
 
 /* ── Admin actions in sidebar ── */
 .adminActions {
-  padding-top: 16px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 }
 
 .adminActionButtons {
@@ -1349,9 +1353,9 @@
   gap: 5px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
+  background: rgba(74, 158, 255, 0.06);
+  border: 1px solid rgba(74, 158, 255, 0.15);
+  color: rgb(74, 158, 255);
   font-size: 11px;
   font-family: var(--font-mono);
   font-weight: 600;
