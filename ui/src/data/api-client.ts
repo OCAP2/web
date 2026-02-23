@@ -17,6 +17,10 @@ export interface BuildInfo {
   BuildDate: string;
 }
 
+export interface AuthState {
+  authenticated: boolean;
+}
+
 // ─── Error types ───
 
 export class ApiError extends Error {
@@ -253,6 +257,118 @@ export class ApiClient {
     const idx = String(chunkIndex).padStart(4, "0");
     const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}/chunks/${idx}.pb`;
     return this.fetchBuffer(url);
+  }
+
+  // ─── Auth methods ───
+
+  async login(secret: string): Promise<AuthState> {
+    const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret }),
+      credentials: "same-origin",
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        `Login failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+    return response.json() as Promise<AuthState>;
+  }
+
+  async getMe(): Promise<AuthState> {
+    const response = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
+      credentials: "same-origin",
+      cache: "no-cache",
+    });
+    if (!response.ok) {
+      return { authenticated: false };
+    }
+    return response.json() as Promise<AuthState>;
+  }
+
+  async logout(): Promise<void> {
+    await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  }
+
+  // ─── Admin operation methods ───
+
+  async editOperation(
+    id: string,
+    data: { missionName?: string; tag?: string; date?: string },
+  ): Promise<Operation> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "same-origin",
+      },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Edit failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+    const raw = (await response.json()) as RawOperation;
+    return mapOperation(raw);
+  }
+
+  async deleteOperation(id: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        credentials: "same-origin",
+      },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Delete failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
+  async retryConversion(id: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}/retry`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+      },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Retry failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
+  async uploadOperation(formData: FormData): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/v1/operations/add`, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        `Upload failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
   }
 
   // ─── Internal fetch helpers ───
