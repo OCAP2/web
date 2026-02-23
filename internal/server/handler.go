@@ -149,6 +149,10 @@ func NewHandler(
 	g.GET("/api/v1/auth/me", hdlr.GetMe)
 	g.POST("/api/v1/auth/logout", hdlr.Logout)
 
+	// Admin routes (require session cookie)
+	admin := g.Group("", hdlr.requireAdmin)
+	admin.PATCH("/api/v1/operations/:id", hdlr.EditOperation)
+
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing
 		staticHandler := spaFileServer(hdlr.staticFS, prefixURL)

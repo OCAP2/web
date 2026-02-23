@@ -433,6 +433,14 @@ func (r *RepoOperation) ResetConversionStatus(ctx context.Context, fromStatus, t
 	return result.RowsAffected()
 }
 
+// UpdateOperation updates the editable metadata fields of an operation.
+func (r *RepoOperation) UpdateOperation(ctx context.Context, id int64, missionName, tag, date string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET mission_name = ?, tag = ?, date = ? WHERE id = ?`,
+		missionName, tag, date, id)
+	return err
+}
+
 // UpdateConversionStatus updates the conversion status for an operation
 func (r *RepoOperation) UpdateConversionStatus(ctx context.Context, id int64, status string) error {
 	_, err := r.db.ExecContext(ctx,
