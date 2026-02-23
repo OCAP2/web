@@ -55,6 +55,40 @@ func (h *Handler) EditOperation(c echo.Context) error {
 	return c.JSON(http.StatusOK, updated)
 }
 
+// RetryConversion resets a failed operation to pending and removes partial output.
+func (h *Handler) RetryConversion(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	ctx := c.Request().Context()
+	op, err := h.repoOperation.GetByID(ctx, c.Param("id"))
+	if err != nil {
+		return echo.ErrNotFound
+	}
+
+	if op.ConversionStatus != ConversionStatusFailed {
+		return echo.NewHTTPError(http.StatusConflict, "operation is not in failed state")
+	}
+
+	// Remove partial protobuf output
+	pbDir := filepath.Join(h.setting.Data, op.Filename)
+	os.RemoveAll(pbDir)
+
+	// Reset to pending so the conversion worker picks it up
+	if err := h.repoOperation.UpdateConversionStatus(ctx, id, ConversionStatusPending); err != nil {
+		return err
+	}
+
+	// Trigger immediate conversion if available
+	if h.conversionTrigger != nil {
+		h.conversionTrigger.TriggerConversion(id, op.Filename)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"status": ConversionStatusPending})
+}
+
 // DeleteOperation removes an operation from DB and cleans up data files.
 func (h *Handler) DeleteOperation(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)

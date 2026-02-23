@@ -113,3 +113,29 @@ func TestDeleteOperation_Handler(t *testing.T) {
 	assert.NoFileExists(t, jsonGzPath)
 	assert.NoDirExists(t, pbDir)
 }
+
+func TestRetryConversion(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+	token := hdlr.sessions.Create()
+
+	// Set op to failed status
+	ctx := t.Context()
+	require.NoError(t, hdlr.repoOperation.UpdateConversionStatus(ctx, op.ID, ConversionStatusFailed))
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+	err := hdlr.RetryConversion(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Status should be pending
+	updated, err := hdlr.repoOperation.GetByID(ctx, fmt.Sprintf("%d", op.ID))
+	require.NoError(t, err)
+	assert.Equal(t, ConversionStatusPending, updated.ConversionStatus)
+}
