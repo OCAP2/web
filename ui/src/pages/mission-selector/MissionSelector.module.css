@@ -1485,22 +1485,62 @@
 }
 
 /* ── Delete confirm ── */
-.deleteWarning {
-  font-size: 12px;
-  color: var(--accent-red);
-  font-family: var(--font-mono);
-  padding: 12px;
-  background: rgba(255, 74, 74, 0.06);
-  border: 1px solid rgba(255, 74, 74, 0.12);
-  border-radius: 8px;
-  margin-bottom: 12px;
+.deleteBody {
+  padding: 24px;
+  text-align: center;
 }
 
-.deleteInfo {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-family: var(--font-mono);
+.deleteIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  margin: 0 auto 16px;
+  background: rgba(255, 74, 74, 0.1);
+  border: 1px solid rgba(255, 74, 74, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FF6B6B;
+}
+
+.deleteTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgb(224, 230, 237);
+  font-family: var(--font-heading);
+  margin-bottom: 8px;
+}
+
+.deleteSubtext {
+  font-size: 12px;
+  color: rgb(136, 153, 170);
+  line-height: 1.5;
   margin-bottom: 4px;
+}
+
+.deleteName {
+  font-size: 13px;
+  color: rgb(224, 230, 237);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.deleteMeta {
+  font-size: 11px;
+  color: rgb(85, 102, 119);
+  font-family: var(--font-mono);
+}
+
+.deleteWarning {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 74, 74, 0.06);
+  border: 1px solid rgba(255, 74, 74, 0.1);
+  font-size: 11px;
+  color: rgba(255, 107, 107, 0.53);
+  line-height: 1.4;
 }
 
 .modalSubmitDanger {
@@ -1513,6 +1553,7 @@
   font-family: var(--font-mono);
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 74, 74, 0.25);
 }
 
 .modalSubmitDanger:hover {

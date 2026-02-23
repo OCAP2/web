@@ -812,19 +812,29 @@ function DeleteConfirm(props: {
 }): JSX.Element {
   return (
     <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={styles.modalCard}>
-        <div class={styles.modalTitle}>Delete Operation</div>
-
-        <div class={styles.deleteInfo}>{props.op.missionName}</div>
-        <div class={styles.deleteInfo}>{props.op.date?.slice(0, 10)} &middot; {formatDuration(props.op.missionDuration)}</div>
-
-        <div class={styles.deleteWarning}>
-          This will permanently delete the recording and all associated files.
+      <div class={styles.modalCard} style={{ width: "420px", padding: "0" }}>
+        {/* Body */}
+        <div class={styles.deleteBody}>
+          <div class={styles.deleteIcon}>
+            <Icons.AlertTriangle />
+          </div>
+          <div class={styles.deleteTitle}>Delete Recording</div>
+          <div class={styles.deleteSubtext}>Are you sure you want to delete</div>
+          <div class={styles.deleteName}>{props.op.missionName}</div>
+          <div class={styles.deleteMeta}>{formatDate(props.op.date, "en")} &middot; {formatDuration(props.op.missionDuration)}</div>
+          <div class={styles.deleteWarning}>
+            This will remove the database record and all associated files (.json.gz + protobuf chunks). This action cannot be undone.
+          </div>
         </div>
 
-        <div class={styles.modalActions}>
+        {/* Footer */}
+        <div class={styles.editModalFooter}>
           <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
-          <button type="button" class={styles.modalSubmitDanger} onClick={() => props.onConfirm(props.op.id)}>Delete</button>
+          <button type="button" class={styles.modalSubmitDanger} onClick={() => props.onConfirm(props.op.id)}>
+            <span style={{ display: "flex", "align-items": "center", gap: "5px" }}>
+              <Icons.Trash /> Delete Recording
+            </span>
+          </button>
         </div>
       </div>
     </div>
