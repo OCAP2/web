@@ -1,8 +1,11 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -138,4 +141,191 @@ func TestRetryConversion(t *testing.T) {
 	updated, err := hdlr.repoOperation.GetByID(ctx, fmt.Sprintf("%d", op.ID))
 	require.NoError(t, err)
 	assert.Equal(t, ConversionStatusPending, updated.ConversionStatus)
+}
+
+// TestAdminFlow_LoginEditDelete is an end-to-end integration test that exercises
+// the full admin flow through real HTTP calls on a live test server with a cookie
+// jar, verifying login, auth check, edit, delete, logout, and post-logout 401.
+func TestAdminFlow_LoginEditDelete(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create test DB and insert an operation
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { repo.db.Close() })
+
+	op := &Operation{
+		WorldName: "altis", MissionName: "Original",
+		MissionDuration: 300, Filename: "test_op",
+		Date: "2026-01-01", Tag: "TvT",
+		StorageFormat: "protobuf", ConversionStatus: ConversionStatusCompleted,
+	}
+	require.NoError(t, repo.Store(t.Context(), op))
+
+	// Create fake data files so delete has something to clean up
+	jsonGzPath := filepath.Join(dir, "test_op.json.gz")
+	require.NoError(t, os.WriteFile(jsonGzPath, []byte("fake"), 0644))
+	pbDir := filepath.Join(dir, "test_op")
+	require.NoError(t, os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644))
+
+	// Build Echo app with all admin routes
+	setting := Setting{
+		Secret: "test-secret",
+		Data:   dir,
+		Admin:  Admin{SessionTTL: time.Hour},
+	}
+	sessions := NewSessionStore(time.Hour)
+
+	e := echo.New()
+	hdlr := Handler{
+		repoOperation: repo,
+		setting:       setting,
+		sessions:      sessions,
+	}
+
+	e.Use(hdlr.errorHandler)
+	e.POST("/api/v1/auth/login", hdlr.Login)
+	e.GET("/api/v1/auth/me", hdlr.GetMe)
+	e.POST("/api/v1/auth/logout", hdlr.Logout)
+	admin := e.Group("", hdlr.requireAdmin)
+	admin.PATCH("/api/v1/operations/:id", hdlr.EditOperation)
+	admin.DELETE("/api/v1/operations/:id", hdlr.DeleteOperation)
+	admin.POST("/api/v1/operations/:id/retry", hdlr.RetryConversion)
+
+	// Start real test server
+	ts := httptest.NewServer(e)
+	defer ts.Close()
+
+	// HTTP client with cookie jar to maintain session across requests
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err)
+	client := &http.Client{Jar: jar}
+
+	opID := fmt.Sprintf("%d", op.ID)
+
+	// Step 1: Login with correct secret — verify 200 and cookie
+	t.Run("Login", func(t *testing.T) {
+		resp, err := client.Post(
+			ts.URL+"/api/v1/auth/login",
+			"application/json",
+			strings.NewReader(`{"secret":"test-secret"}`),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var body map[string]bool
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.True(t, body["authenticated"])
+
+		// Cookie jar should have the session cookie
+		cookies := jar.Cookies(resp.Request.URL)
+		found := false
+		for _, c := range cookies {
+			if c.Name == "ocap_session" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "session cookie should be set in the jar")
+	})
+
+	// Step 2: Check auth status — verify authenticated:true
+	t.Run("CheckAuth", func(t *testing.T) {
+		resp, err := client.Get(ts.URL + "/api/v1/auth/me")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var body map[string]bool
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.True(t, body["authenticated"])
+	})
+
+	// Step 3: Edit operation — PATCH with new name and tag
+	t.Run("EditOperation", func(t *testing.T) {
+		req, err := http.NewRequest(
+			http.MethodPatch,
+			ts.URL+"/api/v1/operations/"+opID,
+			strings.NewReader(`{"missionName":"Renamed","tag":"COOP"}`),
+		)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var result Operation
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.Equal(t, "Renamed", result.MissionName)
+		assert.Equal(t, "COOP", result.Tag)
+	})
+
+	// Step 4: Verify edit persisted in DB
+	t.Run("VerifyEditInDB", func(t *testing.T) {
+		updated, err := repo.GetByID(t.Context(), opID)
+		require.NoError(t, err)
+		assert.Equal(t, "Renamed", updated.MissionName)
+		assert.Equal(t, "COOP", updated.Tag)
+	})
+
+	// Step 5: Delete operation — verify 204
+	t.Run("DeleteOperation", func(t *testing.T) {
+		req, err := http.NewRequest(
+			http.MethodDelete,
+			ts.URL+"/api/v1/operations/"+opID,
+			nil,
+		)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	// Step 6: Verify delete — DB record gone, files removed
+	t.Run("VerifyDeletedFromDB", func(t *testing.T) {
+		_, err := repo.GetByID(t.Context(), opID)
+		assert.Error(t, err)
+	})
+
+	t.Run("VerifyFilesRemoved", func(t *testing.T) {
+		assert.NoFileExists(t, jsonGzPath)
+		assert.NoDirExists(t, pbDir)
+	})
+
+	// Step 7: Logout — verify 204
+	t.Run("Logout", func(t *testing.T) {
+		resp, err := client.Post(ts.URL+"/api/v1/auth/logout", "", nil)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	// Step 8: After logout, admin endpoints should return 401
+	t.Run("UnauthorizedAfterLogout", func(t *testing.T) {
+		req, err := http.NewRequest(
+			http.MethodPatch,
+			ts.URL+"/api/v1/operations/999",
+			strings.NewReader(`{"missionName":"Should Fail"}`),
+		)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		io.Copy(io.Discard, resp.Body)
+
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
 }
