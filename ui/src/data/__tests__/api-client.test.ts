@@ -285,6 +285,193 @@ describe("ApiClient", () => {
     });
   });
 
+  // ─── login ───
+
+  describe("login", () => {
+    it("posts secret and returns auth state", async () => {
+      mockFetchJson({ authenticated: true });
+
+      const client = new ApiClient("/aar/");
+      const result = await client.login("my-secret");
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: "my-secret" }),
+        credentials: "same-origin",
+      });
+      expect(result).toEqual({ authenticated: true });
+    });
+
+    it("throws ApiError on invalid credentials", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.login("wrong")).rejects.toThrow(ApiError);
+    });
+  });
+
+  // ─── getMe ───
+
+  describe("getMe", () => {
+    it("returns auth state when authenticated", async () => {
+      mockFetchJson({ authenticated: true });
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getMe();
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/me", {
+        credentials: "same-origin",
+        cache: "no-cache",
+      });
+      expect(result).toEqual({ authenticated: true });
+    });
+
+    it("returns {authenticated: false} on non-OK response", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getMe();
+
+      expect(result).toEqual({ authenticated: false });
+    });
+  });
+
+  // ─── logout ───
+
+  describe("logout", () => {
+    it("posts to logout endpoint", async () => {
+      mockFetchJson(null);
+
+      const client = new ApiClient("/aar/");
+      await client.logout();
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    });
+  });
+
+  // ─── editOperation ───
+
+  describe("editOperation", () => {
+    it("patches operation and returns mapped result", async () => {
+      mockFetchJson({
+        id: 42,
+        world_name: "Altis",
+        mission_name: "Updated",
+        mission_duration: 3600.5,
+        filename: "2024_01_01__updated.json",
+        date: "2024-01-01",
+        tag: "coop",
+      });
+
+      const client = new ApiClient("/aar/");
+      const result = await client.editOperation("42", {
+        missionName: "Updated",
+      });
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ missionName: "Updated" }),
+        credentials: "same-origin",
+      });
+      expect(result).toEqual({
+        id: "42",
+        worldName: "Altis",
+        missionName: "Updated",
+        missionDuration: 3600.5,
+        filename: "2024_01_01__updated.json",
+        date: "2024-01-01",
+        tag: "coop",
+      });
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(403, "Forbidden");
+
+      const client = new ApiClient("/aar/");
+      await expect(
+        client.editOperation("42", { missionName: "X" }),
+      ).rejects.toThrow(ApiError);
+    });
+  });
+
+  // ─── deleteOperation ───
+
+  describe("deleteOperation", () => {
+    it("sends DELETE request for operation", async () => {
+      mockFetchJson(null);
+
+      const client = new ApiClient("/aar/");
+      await client.deleteOperation("42");
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42", {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(404, "Not Found");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.deleteOperation("42")).rejects.toThrow(ApiError);
+    });
+  });
+
+  // ─── retryConversion ───
+
+  describe("retryConversion", () => {
+    it("posts retry request for operation", async () => {
+      mockFetchJson(null);
+
+      const client = new ApiClient("/aar/");
+      await client.retryConversion("42");
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42/retry", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(500, "Internal Server Error");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.retryConversion("42")).rejects.toThrow(ApiError);
+    });
+  });
+
+  // ─── uploadOperation ───
+
+  describe("uploadOperation", () => {
+    it("posts FormData to upload endpoint", async () => {
+      mockFetchJson(null);
+
+      const client = new ApiClient("/aar/");
+      const formData = new FormData();
+      formData.append("file", new Blob(["data"]), "mission.json");
+      await client.uploadOperation(formData);
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/add", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(413, "Payload Too Large");
+
+      const client = new ApiClient("/aar/");
+      const formData = new FormData();
+      await expect(client.uploadOperation(formData)).rejects.toThrow(ApiError);
+    });
+  });
+
   // ─── Error handling ───
 
   describe("error handling", () => {

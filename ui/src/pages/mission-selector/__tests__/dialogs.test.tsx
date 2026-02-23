@@ -1,0 +1,154 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
+import { EditModal, DeleteConfirm } from "../dialogs";
+import type { Operation } from "../../../data/types";
+
+const mockOp: Operation = {
+  id: "42",
+  worldName: "Altis",
+  missionName: "Op Thunder",
+  missionDuration: 3600,
+  date: "2024-01-15",
+  tag: "TvT",
+  storageFormat: "protobuf",
+  conversionStatus: "completed",
+};
+
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+// ─── EditModal ───
+
+describe("EditModal", () => {
+  it("renders with operation data", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+
+    render(() => (
+      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+    ));
+
+    expect(screen.getByText("Edit Recording")).not.toBeNull();
+    expect(screen.getByText("#42")).not.toBeNull();
+    expect(screen.getByText("Altis")).not.toBeNull();
+    expect(screen.getByDisplayValue("Op Thunder")).not.toBeNull();
+  });
+
+  it("calls onClose when Cancel is clicked", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+
+    render(() => (
+      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+    ));
+
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onSave with updated data on form submit", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+
+    render(() => (
+      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+    ));
+
+    const nameInput = screen.getByDisplayValue("Op Thunder");
+    fireEvent.input(nameInput, { target: { value: "Op Lightning" } });
+
+    fireEvent.click(screen.getByText("Save Changes"));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("42", {
+      missionName: "Op Lightning",
+      tag: "TvT",
+      date: "2024-01-15",
+    });
+  });
+
+  it("shows tag buttons and allows selection", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+
+    render(() => (
+      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+    ));
+
+    // All tag option buttons should be rendered
+    expect(screen.getByText("TvT")).not.toBeNull();
+    expect(screen.getByText("COOP")).not.toBeNull();
+    expect(screen.getByText("Zeus")).not.toBeNull();
+    expect(screen.getByText("Training")).not.toBeNull();
+    expect(screen.getByText("None")).not.toBeNull();
+
+    // Select a different tag
+    fireEvent.click(screen.getByText("COOP"));
+
+    // Submit and verify the new tag is sent
+    fireEvent.click(screen.getByText("Save Changes"));
+    expect(onSave).toHaveBeenCalledWith("42", {
+      missionName: "Op Thunder",
+      tag: "COOP",
+      date: "2024-01-15",
+    });
+  });
+});
+
+// ─── DeleteConfirm ───
+
+describe("DeleteConfirm", () => {
+  it("renders delete confirmation with operation name", () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(() => (
+      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+    ));
+
+    expect(screen.getAllByText("Delete Recording").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Op Thunder")).not.toBeNull();
+  });
+
+  it("shows warning text about permanent deletion", () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(() => (
+      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+    ));
+
+    expect(
+      screen.getByText((content) => content.includes("cannot be undone")),
+    ).not.toBeNull();
+  });
+
+  it("calls onConfirm with operation id when delete button clicked", () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(() => (
+      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+    ));
+
+    // The delete button contains both an icon and text "Delete Recording";
+    // use getAllByText since the heading also says "Delete Recording".
+    const deleteButtons = screen.getAllByText("Delete Recording");
+    // The second match is the button (first is the heading title)
+    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith("42");
+  });
+
+  it("calls onClose when Cancel clicked", () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(() => (
+      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+    ));
+
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
