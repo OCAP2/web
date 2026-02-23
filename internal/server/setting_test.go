@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -293,6 +294,43 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		assert.True(t, setting.Conversion.Enabled)
 		assert.Equal(t, uint32(600), setting.Conversion.ChunkSize)
 	})
+}
+
+func TestSetting_AdminSessionTTL(t *testing.T) {
+	defer viper.Reset()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	err := os.WriteFile(configPath, []byte(`{
+		"secret": "test-secret-value",
+		"admin": {
+			"sessionTTL": "2h"
+		}
+	}`), 0644)
+	require.NoError(t, err)
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, 2*time.Hour, setting.Admin.SessionTTL)
+}
+
+func TestSetting_AdminSessionTTL_Default(t *testing.T) {
+	defer viper.Reset()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	err := os.WriteFile(configPath, []byte(`{"secret": "test-secret-value"}`), 0644)
+	require.NoError(t, err)
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, 24*time.Hour, setting.Admin.SessionTTL)
 }
 
 func TestNewSetting_NoConfigFile(t *testing.T) {

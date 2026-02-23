@@ -24,6 +24,7 @@ type Setting struct {
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
 	Streaming  Streaming  `json:"streaming" yaml:"streaming"`
+	Admin      Admin      `json:"admin" yaml:"admin"`
 }
 
 type Conversion struct {
@@ -42,6 +43,10 @@ type Customize struct {
 	DisableKillCount bool   `json:"disableKillCount" yaml:"disableKillCount"`
 	HeaderTitle      string `json:"headerTitle" yaml:"headerTitle"`
 	HeaderSubtitle   string `json:"headerSubtitle" yaml:"headerSubtitle"`
+}
+
+type Admin struct {
+	SessionTTL time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
 }
 
 type Streaming struct {
@@ -85,9 +90,10 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("streaming.enabled", false)
 	viper.SetDefault("streaming.pingInterval", "30s")
 	viper.SetDefault("streaming.pingTimeout", "10s")
+	viper.SetDefault("admin.sessionTTL", "24h")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

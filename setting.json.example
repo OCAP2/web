@@ -30,5 +30,8 @@
 		"enabled": false,
 		"pingInterval": "30s",
 		"pingTimeout": "10s"
+	},
+	"admin": {
+		"sessionTTL": "24h"
 	}
 }
