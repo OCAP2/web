@@ -1446,6 +1446,38 @@
   filter: brightness(1.1);
 }
 
+/* ── Upload zone ── */
+.uploadZone {
+  margin: 0 32px 12px;
+  padding: 24px;
+  border: 2px dashed rgba(74, 158, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(74, 158, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.uploadZone:hover,
+.uploadZoneDragOver {
+  border-color: rgba(74, 158, 255, 0.4);
+  background: rgba(74, 158, 255, 0.06);
+  color: var(--accent-blue);
+}
+
+.uploadProgress {
+  font-size: 11px;
+  color: var(--accent-blue);
+  font-family: var(--font-mono);
+}
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .filterBar {

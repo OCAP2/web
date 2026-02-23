@@ -41,9 +41,12 @@ export function MissionSelector(): JSX.Element {
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
   const [editingOp, setEditingOp] = createSignal<Operation | null>(null);
   const [deletingOp, setDeletingOp] = createSignal<Operation | null>(null);
+  const [uploading, setUploading] = createSignal(false);
+  const [dragOver, setDragOver] = createSignal(false);
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
+  let fileInputRef: HTMLInputElement | undefined;
 
   // Fetch operations
   onMount(async () => {
@@ -212,6 +215,49 @@ export function MissionSelector(): JSX.Element {
   const handleRetry = async (id: string) => {
     await api.retryConversion(id);
     await refreshOperations();
+  };
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const baseName = file.name.replace(/\.json(\.gz)?$/, "").replace(/\.gz$/, "");
+      formData.append("filename", baseName);
+      formData.append("worldName", "unknown");
+      formData.append("missionName", baseName);
+      formData.append("missionDuration", "0");
+
+      await api.uploadOperation(formData);
+      setShowUpload(false);
+      await refreshOperations();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) handleUpload(file);
+    input.value = "";
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragOver(false);
   };
 
   return (
@@ -386,6 +432,33 @@ export function MissionSelector(): JSX.Element {
             </Show>
           </div>
         </header>
+
+        {/* ── Upload Zone ── */}
+        <Show when={showUpload() && authenticated()}>
+          <div
+            class={`${styles.uploadZone} ${dragOver() ? styles.uploadZoneDragOver : ""}`}
+            onClick={() => fileInputRef?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            <Show when={uploading()} fallback={
+              <>
+                <Icons.Upload />
+                <div>Drop .json.gz recording files here or click to browse</div>
+              </>
+            }>
+              <div class={styles.uploadProgress}>Uploading...</div>
+            </Show>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".gz"
+              onChange={handleFileSelect}
+              hidden
+            />
+          </div>
+        </Show>
 
         {/* ── Main Content ── */}
         <div class={styles.mainContent}>

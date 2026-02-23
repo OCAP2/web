@@ -260,7 +260,11 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 	)
 
 	if secret != h.setting.Secret {
-		return echo.ErrForbidden
+		// Fall back to session cookie auth (admin UI uploads)
+		cookie, cookieErr := c.Cookie(sessionCookieName)
+		if cookieErr != nil || !h.sessions.Valid(cookie.Value) {
+			return echo.ErrForbidden
+		}
 	}
 
 	filename := filepath.Base(c.FormValue("filename"))
