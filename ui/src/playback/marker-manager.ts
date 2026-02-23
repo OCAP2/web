@@ -1,5 +1,5 @@
 import type { ArmaCoord } from "../utils/coordinates";
-import type { MarkerDef } from "../data/types";
+import { FRAME_FOREVER, type MarkerDef } from "../data/types";
 import type { MapRenderer } from "../renderers/renderer.interface";
 import type {
   BriefingMarkerHandle,
@@ -90,11 +90,8 @@ export function parseMarkerPosition(
 
 // ─── Binary search ───
 
-// uint32 max — protobuf stores -1 as 4294967295
-const INFINITE_FRAME = 4294967295;
-
 function isInfiniteEnd(endFrame: number): boolean {
-  return endFrame === -1 || endFrame >= INFINITE_FRAME;
+  return endFrame === FRAME_FOREVER;
 }
 
 /**

@@ -111,6 +111,9 @@ export type EventDef = { frameNum: number } & (
 
 // --------------- Markers ---------------
 
+/** Sentinel: marker persists until mission end. Decoders must normalize to this value. */
+export const FRAME_FOREVER = -1;
+
 export interface MarkerDef {
   shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
   type: string;

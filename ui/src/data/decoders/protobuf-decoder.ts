@@ -1,14 +1,15 @@
 import type { ArmaCoord } from "../../utils/coordinates";
-import type {
-  AliveState,
-  ChunkData,
-  EntityDef as AppEntityDef,
-  EntityState as AppEntityState,
-  EntityType,
-  EventDef,
-  Manifest as AppManifest,
-  MarkerDef as AppMarkerDef,
-  Side,
+import {
+  FRAME_FOREVER,
+  type AliveState,
+  type ChunkData,
+  type EntityDef as AppEntityDef,
+  type EntityState as AppEntityState,
+  type EntityType,
+  type EventDef,
+  type Manifest as AppManifest,
+  type MarkerDef as AppMarkerDef,
+  type Side,
 } from "../types";
 import type { DecoderStrategy } from "./decoder.interface";
 import {
@@ -190,7 +191,7 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
     player: pb.playerId,
     alpha,
     startFrame: pb.startFrame,
-    endFrame: pb.endFrame,
+    endFrame: pb.endFrame === 0 ? FRAME_FOREVER : pb.endFrame,
   };
   if (pb.text) marker.text = pb.text;
   if (pb.size.length >= 2) marker.size = [pb.size[0], pb.size[1]];

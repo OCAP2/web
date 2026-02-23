@@ -130,14 +130,9 @@ describe("findPositionIndex", () => {
     expect(findPositionIndex([[5]], 50, 5, 100)).toBe(0);
   });
 
-  it("treats endFrame -1 as infinite", () => {
+  it("treats FRAME_FOREVER (-1) as infinite", () => {
     const positions: [number][] = [[0], [10]];
     expect(findPositionIndex(positions, 9999, 0, -1)).toBe(1);
-  });
-
-  it("treats endFrame 4294967295 (uint32 max) as infinite", () => {
-    const positions: [number][] = [[0], [10]];
-    expect(findPositionIndex(positions, 9999, 0, 4294967295)).toBe(1);
   });
 
   it("returns first index when frame equals startFrame", () => {

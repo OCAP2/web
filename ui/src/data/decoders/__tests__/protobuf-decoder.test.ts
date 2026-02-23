@@ -263,6 +263,39 @@ describe("ProtobufDecoder.decodeManifest", () => {
     expect(marker.positions[0][2]).toBeCloseTo(600.0);
   });
 
+  it("normalizes marker endFrame 0 (protobuf FrameForever) to FRAME_FOREVER", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Op",
+      frameCount: 500,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 2,
+      markers: [{
+        type: "magIcons/gear_M67.paa",
+        text: "Mine",
+        startFrame: 100,
+        endFrame: 0,
+        playerId: 1,
+        color: "#FF0000",
+        side: PbSide.SIDE_GLOBAL,
+        positions: [{
+          frameNum: 100,
+          posX: 500.0,
+          posY: 600.0,
+          posZ: 0.0,
+          direction: 0.0,
+          alpha: 1.0,
+        }],
+        shape: "ICON",
+      }],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.markers[0].endFrame).toBe(-1);
+  });
+
   it("decodes vehicle entity type as unknown when no vehicleClass", () => {
     const buffer = encodePb(PbManifest, {
       version: 1,
