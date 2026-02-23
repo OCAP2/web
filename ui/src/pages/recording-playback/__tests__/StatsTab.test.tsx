@@ -64,19 +64,18 @@ describe("StatsTab", () => {
     );
     engine.seekTo(1);
 
-    const { container } = render(() => (
+    render(() => (
       <TestProviders engine={engine} renderer={renderer}>
         <StatsTab />
       </TestProviders>
     ));
 
-    // alive count is in a green-colored span, total is in an opacity span
-    // alive=1 shown in green span
-    const greenSpan = container.querySelector('span[style*="accent-green"]');
-    expect(greenSpan?.textContent).toBe("1");
-    // total shown as /2
-    const opacitySpan = container.querySelector('span[style*="opacity"]');
-    expect(opacitySpan?.textContent).toBe("/2");
+    // TOTAL and ALIVE labels should be present in the stat grid
+    expect(screen.getByText("TOTAL")).toBeTruthy();
+    expect(screen.getByText("ALIVE")).toBeTruthy();
+    // alive=1 and total=2 appear as stat numbers
+    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
   });
 
   it("shows kills and deaths in force cards", () => {

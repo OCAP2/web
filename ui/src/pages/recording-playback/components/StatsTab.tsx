@@ -81,7 +81,6 @@ export function StatsTab(): JSX.Element {
           <div class={styles.forceSummary} style={{ "margin-top": "8px" }}>
             <For each={sideStats()}>
               {(stat) => {
-                const pct = () => stat.total > 0 ? (stat.alive / stat.total) * 100 : 0;
                 return (
                   <div
                     class={styles.forceCard}
@@ -90,37 +89,45 @@ export function StatsTab(): JSX.Element {
                       border: `1px solid ${SIDE_COLORS_UI[stat.side]}20`,
                     }}
                   >
-                    <div
-                      class={styles.forceCardLabel}
-                      style={{ color: SIDE_COLORS_UI[stat.side] }}
-                    >
-                      {SIDE_LABELS[stat.side]}
-                    </div>
-                    <div class={styles.forceCardRow}>
-                      <span style={{ "font-size": "10px", color: "var(--text-dimmer)" }}>{t("strength")}</span>
-                      <span style={{ "font-size": "11px", "font-family": "var(--font-mono)" }}>
-                        <span style={{ color: "var(--accent-green)" }}>{stat.alive}</span>
-                        <span style={{ opacity: 0.4 }}>/{stat.total}</span>
+                    <div class={styles.forceCardHeader}>
+                      <span
+                        class={styles.forceCardDot}
+                        style={{ background: SIDE_COLORS_UI[stat.side] }}
+                      />
+                      <span
+                        class={styles.forceCardLabel}
+                        style={{ color: SIDE_COLORS_UI[stat.side] }}
+                      >
+                        {SIDE_LABELS[stat.side]}
                       </span>
                     </div>
-                    <div class={styles.forceStrengthBar}>
-                      <div
-                        class={styles.forceStrengthFill}
-                        style={{
-                          width: pct() + "%",
-                          background: SIDE_COLORS_UI[stat.side],
-                        }}
-                      />
-                    </div>
-                    <div class={styles.forceStats}>
-                      <div style={{ "text-align": "center" }}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--accent-red)" }}>
+                    <div class={styles.forceStatGrid}>
+                      <div class={styles.forceStatPill}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--text-secondary)" }}>
+                          {stat.total}
+                        </div>
+                        <div class={styles.forceStatLabel}>{t("total")}</div>
+                      </div>
+                      <div class={styles.forceStatPill}>
+                        <div class={styles.forceStatNum} style={{ color: "var(--accent-green)" }}>
+                          {stat.alive}
+                        </div>
+                        <div class={styles.forceStatLabel}>{t("alive")}</div>
+                      </div>
+                      <div class={styles.forceStatPill}>
+                        <div
+                          class={styles.forceStatNum}
+                          style={{ color: stat.kills > 0 ? "var(--accent-red)" : "var(--text-dimmest)" }}
+                        >
                           {stat.kills}
                         </div>
                         <div class={styles.forceStatLabel}>{t("kills_label")}</div>
                       </div>
-                      <div style={{ "text-align": "center" }}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--accent-orange)" }}>
+                      <div class={styles.forceStatPill}>
+                        <div
+                          class={styles.forceStatNum}
+                          style={{ color: stat.deaths > 0 ? "var(--accent-orange)" : "var(--text-dimmest)" }}
+                        >
                           {stat.deaths}
                         </div>
                         <div class={styles.forceStatLabel}>{t("deaths_label")}</div>
