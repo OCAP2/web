@@ -54,6 +54,19 @@ func TestLogin_WrongSecret(t *testing.T) {
 	assert.Equal(t, echo.ErrForbidden, err)
 }
 
+func TestLogin_BadBody(t *testing.T) {
+	hdlr := newAuthHandler()
+	e := echo.New()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader("not json"))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.Login(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
 func TestGetMe_Authenticated(t *testing.T) {
 	hdlr := newAuthHandler()
 	token := hdlr.sessions.Create()

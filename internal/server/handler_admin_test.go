@@ -143,6 +143,109 @@ func TestRetryConversion(t *testing.T) {
 	assert.Equal(t, ConversionStatusPending, updated.ConversionStatus)
 }
 
+func TestEditOperation_BadID(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"missionName":"X"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("notanumber")
+
+	err := hdlr.EditOperation(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
+func TestEditOperation_NotFound(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"missionName":"X"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("99999")
+
+	err := hdlr.EditOperation(c)
+	assert.Equal(t, echo.ErrNotFound, err)
+}
+
+func TestDeleteOperation_BadID(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	err := hdlr.DeleteOperation(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
+func TestDeleteOperation_Handler_NotFound(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("99999")
+
+	err := hdlr.DeleteOperation(c)
+	assert.Equal(t, echo.ErrNotFound, err)
+}
+
+func TestRetryConversion_BadID(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("xyz")
+
+	err := hdlr.RetryConversion(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
+func TestRetryConversion_NotFound(t *testing.T) {
+	hdlr, _ := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("99999")
+
+	err := hdlr.RetryConversion(c)
+	assert.Equal(t, echo.ErrNotFound, err)
+}
+
+func TestRetryConversion_NotFailed(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+	// op has ConversionStatus "completed", not "failed"
+	err := hdlr.RetryConversion(c)
+	he, ok := err.(*echo.HTTPError)
+	require.True(t, ok)
+	assert.Equal(t, http.StatusConflict, he.Code)
+}
+
 // TestAdminFlow_LoginEditDelete is an end-to-end integration test that exercises
 // the full admin flow through real HTTP calls on a live test server with a cookie
 // jar, verifying login, auth check, edit, delete, logout, and post-logout 401.
