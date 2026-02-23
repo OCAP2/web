@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -51,4 +53,32 @@ func (h *Handler) EditOperation(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, updated)
+}
+
+// DeleteOperation removes an operation from DB and cleans up data files.
+func (h *Handler) DeleteOperation(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	ctx := c.Request().Context()
+	op, err := h.repoOperation.GetByID(ctx, c.Param("id"))
+	if err != nil {
+		return echo.ErrNotFound
+	}
+
+	// Delete DB record first
+	if err := h.repoOperation.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	// Clean up files (best-effort, don't fail the request)
+	jsonGzPath := filepath.Join(h.setting.Data, op.Filename+".json.gz")
+	os.Remove(jsonGzPath)
+
+	pbDir := filepath.Join(h.setting.Data, op.Filename)
+	os.RemoveAll(pbDir)
+
+	return c.NoContent(http.StatusNoContent)
 }

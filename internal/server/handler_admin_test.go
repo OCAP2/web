@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -78,4 +79,37 @@ func TestEditOperation_Unauthorized(t *testing.T) {
 	handler := hdlr.requireAdmin(hdlr.EditOperation)
 	err := handler(c)
 	assert.Equal(t, echo.ErrUnauthorized, err)
+}
+
+func TestDeleteOperation_Handler(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+	token := hdlr.sessions.Create()
+
+	// Create fake data files on disk
+	dataDir := hdlr.setting.Data
+	jsonGzPath := filepath.Join(dataDir, op.Filename+".json.gz")
+	require.NoError(t, os.WriteFile(jsonGzPath, []byte("fake"), 0644))
+	pbDir := filepath.Join(dataDir, op.Filename)
+	require.NoError(t, os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644))
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	req.AddCookie(&http.Cookie{Name: "ocap_session", Value: token})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+	err := hdlr.DeleteOperation(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+
+	// DB record gone
+	_, err = hdlr.repoOperation.GetByID(t.Context(), fmt.Sprintf("%d", op.ID))
+	assert.Error(t, err)
+
+	// Files gone
+	assert.NoFileExists(t, jsonGzPath)
+	assert.NoDirExists(t, pbDir)
 }

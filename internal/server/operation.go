@@ -433,6 +433,22 @@ func (r *RepoOperation) ResetConversionStatus(ctx context.Context, fromStatus, t
 	return result.RowsAffected()
 }
 
+// Delete removes an operation record from the database.
+func (r *RepoOperation) Delete(ctx context.Context, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM operations WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // UpdateOperation updates the editable metadata fields of an operation.
 func (r *RepoOperation) UpdateOperation(ctx context.Context, id int64, missionName, tag, date string) error {
 	_, err := r.db.ExecContext(ctx,

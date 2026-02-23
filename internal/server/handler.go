@@ -152,6 +152,7 @@ func NewHandler(
 	// Admin routes (require session cookie)
 	admin := g.Group("", hdlr.requireAdmin)
 	admin.PATCH("/api/v1/operations/:id", hdlr.EditOperation)
+	admin.DELETE("/api/v1/operations/:id", hdlr.DeleteOperation)
 
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing
