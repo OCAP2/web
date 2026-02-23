@@ -6,6 +6,7 @@ import type { Operation } from "../../data/types";
 import { ApiClient, type BuildInfo } from "../../data/api-client";
 import { useI18n } from "../../hooks/useLocale";
 import { useCustomize } from "../../hooks/useCustomize";
+import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
@@ -22,8 +23,12 @@ export function MissionSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
+  const { authenticated, login, logout } = useAuth();
 
   // State
+  const [showLoginModal, setShowLoginModal] = createSignal(false);
+  const [loginError, setLoginError] = createSignal(false);
+  const [showUpload, setShowUpload] = createSignal(false);
   const [operations, setOperations] = createSignal<Operation[]>([]);
   const [loading, setLoading] = createSignal(false);
   const [search, setSearch] = createSignal("");
@@ -64,6 +69,7 @@ export function MissionSelector(): JSX.Element {
     if (e.key === "Escape") {
       setSelectedId(null);
       setLangOpen(false);
+      setShowLoginModal(false);
       searchRef?.blur();
     }
     if (e.key === "Enter" && selectedId()) {
@@ -251,6 +257,34 @@ export function MissionSelector(): JSX.Element {
                   </div>
                 </Show>
               </div>
+
+              <div class={styles.divider} />
+
+              <Show when={authenticated()} fallback={
+                <button class={styles.signInButton} onClick={() => setShowLoginModal(true)}>
+                  <Icons.Lock /> Sign in
+                </button>
+              }>
+                <div class={styles.adminArea}>
+                  <div class={styles.adminBadge}>
+                    <div class={styles.adminAvatar}>A</div>
+                    <div>
+                      <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>Admin</div>
+                      <div class={styles.adminLabel}><Icons.Shield /> ADMIN</div>
+                    </div>
+                  </div>
+                  <button
+                    class={`${styles.adminIconButton} ${showUpload() ? styles.adminIconButtonActive : ""}`}
+                    onClick={() => setShowUpload(u => !u)}
+                    title="Upload recording"
+                  >
+                    <Icons.Upload />
+                  </button>
+                  <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
+                    <Icons.LogOut />
+                  </button>
+                </div>
+              </Show>
             </div>
           </div>
 
@@ -450,6 +484,66 @@ export function MissionSelector(): JSX.Element {
             )}
           </Show>
         </div>
+
+        {/* ── Login Modal ── */}
+        <Show when={showLoginModal()}>
+          <LoginModal
+            onClose={() => { setShowLoginModal(false); setLoginError(false); }}
+            onSubmit={async (secret) => {
+              setLoginError(false);
+              const ok = await login(secret);
+              if (ok) {
+                setShowLoginModal(false);
+              } else {
+                setLoginError(true);
+              }
+            }}
+            error={loginError()}
+          />
+        </Show>
       </div>
+  );
+}
+
+// ─── Login Modal ───
+
+function LoginModal(props: {
+  onClose: () => void;
+  onSubmit: (secret: string) => void;
+  error: boolean;
+}): JSX.Element {
+  let inputRef: HTMLInputElement | undefined;
+  const [secret, setSecret] = createSignal("");
+
+  onMount(() => inputRef?.focus());
+
+  const handleSubmit = (e: Event) => {
+    e.preventDefault();
+    props.onSubmit(secret());
+  };
+
+  return (
+    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={styles.modalCard}>
+        <div class={styles.modalTitle}>Admin Login</div>
+        <form onSubmit={handleSubmit}>
+          <input
+            ref={inputRef}
+            type="password"
+            placeholder="Server secret"
+            value={secret()}
+            onInput={(e) => setSecret(e.currentTarget.value)}
+            class={styles.modalInput}
+          />
+          <Show when={props.error}>
+            <div class={styles.modalError}>Invalid secret</div>
+          </Show>
+          <div class={styles.modalActions}>
+            <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
+            <button type="submit" class={styles.modalSubmit}>Sign in</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
