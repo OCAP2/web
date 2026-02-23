@@ -3,7 +3,8 @@ import type { JSX } from "solid-js";
 import type { Operation } from "../../data/types";
 import { Icons } from "./icons";
 import { formatDuration, formatDate } from "./helpers";
-import styles from "./MissionSelector.module.css";
+import shared from "./MissionSelector.module.css";
+import styles from "./dialogs.module.css";
 
 // ─── Edit Modal ───
 
@@ -29,8 +30,8 @@ export function EditModal(props: {
   const TAG_OPTIONS = ["TvT", "COOP", "Zeus", "Training", "None"];
 
   return (
-    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={styles.modalCard} style={{ width: "420px", padding: "0" }}>
+    <div class={shared.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={shared.modalCard} style={{ width: "420px", padding: "0" }}>
         {/* Header */}
         <div class={styles.editModalHeader}>
           <div class={styles.editModalHeaderLeft}>
@@ -73,7 +74,7 @@ export function EditModal(props: {
                 type="text"
                 value={name()}
                 onInput={(e) => setName(e.currentTarget.value)}
-                class={styles.modalInput}
+                class={shared.modalInput}
               />
             </div>
 
@@ -114,15 +115,15 @@ export function EditModal(props: {
                 type="date"
                 value={date()}
                 onInput={(e) => setDate(e.currentTarget.value)}
-                class={styles.modalInput}
+                class={shared.modalInput}
                 style={{ "color-scheme": "dark" }}
               />
             </div>
           </div>
 
           <div class={styles.editModalFooter}>
-            <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={styles.modalSubmit}><Icons.Check /> Save Changes</button>
+            <button type="button" class={shared.modalCancel} onClick={props.onClose}>Cancel</button>
+            <button type="submit" class={shared.modalSubmit}><Icons.Check /> Save Changes</button>
           </div>
         </form>
       </div>
@@ -138,8 +139,8 @@ export function DeleteConfirm(props: {
   onConfirm: (id: string) => void;
 }): JSX.Element {
   return (
-    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={styles.modalCard} style={{ width: "420px", padding: "0" }}>
+    <div class={shared.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={shared.modalCard} style={{ width: "420px", padding: "0" }}>
         {/* Body */}
         <div class={styles.deleteBody}>
           <div class={styles.deleteIcon}>
@@ -156,7 +157,7 @@ export function DeleteConfirm(props: {
 
         {/* Footer */}
         <div class={styles.editModalFooter}>
-          <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
+          <button type="button" class={shared.modalCancel} onClick={props.onClose}>Cancel</button>
           <button type="button" class={styles.modalSubmitDanger} onClick={() => props.onConfirm(props.op.id)}>
             <span style={{ display: "flex", "align-items": "center", gap: "5px" }}>
               <Icons.Trash /> Delete Recording
