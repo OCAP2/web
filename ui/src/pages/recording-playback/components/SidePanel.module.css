@@ -431,7 +431,8 @@
 
 .forceSummary {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .forceCard {

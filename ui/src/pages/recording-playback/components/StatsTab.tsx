@@ -62,7 +62,7 @@ export function StatsTab(): JSX.Element {
     const units = engine.entityManager.getUnits();
     const { kills, deaths } = killDeathCounts();
     return units
-      .filter((u) => (kills.get(u.id) ?? 0) > 0 || (deaths.get(u.id) ?? 0) > 0)
+      .filter((u) => u.isPlayer && ((kills.get(u.id) ?? 0) > 0 || (deaths.get(u.id) ?? 0) > 0))
       .sort((a, b) => (kills.get(b.id) ?? 0) - (kills.get(a.id) ?? 0))
       .map((u) => ({
         name: u.name || `Unit ${u.id}`,
