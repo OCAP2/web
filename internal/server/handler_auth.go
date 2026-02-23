@@ -30,6 +30,7 @@ func (h *Handler) Login(c echo.Context) error {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   c.IsTLS(),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(h.setting.Admin.SessionTTL.Seconds()),
 	})

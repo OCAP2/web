@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route, useLocation } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
+import { AuthProvider } from "../../../hooks/useAuth";
 import { MissionSelector } from "..";
 import type { Operation } from "../../../data/types";
 
@@ -85,7 +86,7 @@ function RecordingStub() {
 
 function renderPage() {
   return render(() => (
-    <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
+    <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider><AuthProvider>{p.children}</AuthProvider></CustomizeProvider></I18nProvider>}>
       <Route path="/" component={MissionSelector} />
       <Route path="/recording/:id/:name" component={RecordingStub} />
     </Router>

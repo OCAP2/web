@@ -47,12 +47,11 @@ func (h *Handler) EditOperation(c echo.Context) error {
 		return err
 	}
 
-	updated, err := h.repoOperation.GetByID(c.Request().Context(), c.Param("id"))
-	if err != nil {
-		return err
-	}
+	current.MissionName = name
+	current.Tag = tag
+	current.Date = date
 
-	return c.JSON(http.StatusOK, updated)
+	return c.JSON(http.StatusOK, current)
 }
 
 // RetryConversion resets a failed operation to pending and removes partial output.
@@ -109,10 +108,14 @@ func (h *Handler) DeleteOperation(c echo.Context) error {
 
 	// Clean up files (best-effort, don't fail the request)
 	jsonGzPath := filepath.Join(h.setting.Data, op.Filename+".json.gz")
-	os.Remove(jsonGzPath)
+	if err := os.Remove(jsonGzPath); err != nil && !os.IsNotExist(err) {
+		c.Logger().Warnf("failed to remove %s: %v", jsonGzPath, err)
+	}
 
 	pbDir := filepath.Join(h.setting.Data, op.Filename)
-	os.RemoveAll(pbDir)
+	if err := os.RemoveAll(pbDir); err != nil {
+		c.Logger().Warnf("failed to remove %s: %v", pbDir, err)
+	}
 
 	return c.NoContent(http.StatusNoContent)
 }
