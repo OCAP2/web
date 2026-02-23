@@ -700,12 +700,47 @@ function EditModal(props: {
     });
   };
 
+  const TAG_OPTIONS = ["TvT", "COOP", "Zeus", "Training", "None"];
+
   return (
     <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={styles.modalCard} style={{ "min-width": "400px" }}>
-        <div class={styles.modalTitle}>Edit Operation</div>
+      <div class={styles.modalCard} style={{ width: "420px", padding: "0" }}>
+        {/* Header */}
+        <div class={styles.editModalHeader}>
+          <div class={styles.editModalHeaderLeft}>
+            <span style={{ color: "rgb(74, 158, 255)" }}><Icons.Edit /></span>
+            <span class={styles.editModalHeaderTitle}>Edit Recording</span>
+          </div>
+          <button class={styles.editModalClose} onClick={props.onClose}><Icons.X /></button>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div class={styles.editForm}>
+          <div class={styles.editModalBody}>
+            {/* Read-only info bar */}
+            <div class={styles.editInfoBar}>
+              <div class={styles.editInfoItem}>
+                <span class={styles.editInfoKey}>ID:</span>
+                <span class={styles.editInfoValue}>#{props.op.id}</span>
+              </div>
+              <div class={styles.editInfoItem}>
+                <span class={styles.editInfoKey}>Map:</span>
+                <span class={styles.editInfoValue}>{props.op.worldName}</span>
+              </div>
+              <Show when={props.op.storageFormat}>
+                <div class={styles.editInfoItem}>
+                  <span class={styles.editInfoKey}>Format:</span>
+                  <span class={styles.editInfoValue}>{props.op.storageFormat}</span>
+                </div>
+              </Show>
+              <Show when={props.op.conversionStatus}>
+                <div class={styles.editInfoItem}>
+                  <span class={styles.editInfoKey}>Status:</span>
+                  <span class={styles.editInfoValue}>{props.op.conversionStatus === "completed" ? "Ready" : props.op.conversionStatus}</span>
+                </div>
+              </Show>
+            </div>
+
+            {/* Mission Name */}
             <div class={styles.editField}>
               <label class={styles.editLabel}>Mission Name</label>
               <input
@@ -716,32 +751,36 @@ function EditModal(props: {
               />
             </div>
 
-            <div class={styles.editField}>
-              <label class={styles.editLabel}>Tag</label>
-              <div class={styles.editTagGroup}>
-                <button
-                  type="button"
-                  class={styles.adminActionBtn}
-                  style={{ flex: "0 0 auto", opacity: tag() === "" ? "1" : "0.5" }}
-                  onClick={() => setTag("")}
-                >
-                  None
-                </button>
-                <For each={props.tags}>
-                  {(t) => (
-                    <button
-                      type="button"
-                      class={styles.adminActionBtn}
-                      style={{ flex: "0 0 auto", opacity: tag() === t ? "1" : "0.5" }}
-                      onClick={() => setTag(t)}
-                    >
-                      {t}
-                    </button>
-                  )}
-                </For>
+            {/* Tag + Date side by side */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div class={styles.editField} style={{ flex: "1" }}>
+                <label class={styles.editLabel}>Tag</label>
+                <div class={styles.editTagGroup}>
+                  <For each={TAG_OPTIONS}>
+                    {(t) => {
+                      const val = t === "None" ? "" : t;
+                      const active = () => tag() === val;
+                      return (
+                        <button
+                          type="button"
+                          class={styles.editTagBtn}
+                          style={{
+                            background: active() ? "rgba(74, 158, 255, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                            color: active() ? "rgb(74, 158, 255)" : "rgb(102, 119, 136)",
+                            "border-color": active() ? "rgba(74, 158, 255, 0.3)" : "rgba(255, 255, 255, 0.06)",
+                          }}
+                          onClick={() => setTag(val)}
+                        >
+                          {t}
+                        </button>
+                      );
+                    }}
+                  </For>
+                </div>
               </div>
             </div>
 
+            {/* Date */}
             <div class={styles.editField}>
               <label class={styles.editLabel}>Date</label>
               <input
@@ -749,37 +788,14 @@ function EditModal(props: {
                 value={date()}
                 onInput={(e) => setDate(e.currentTarget.value)}
                 class={styles.modalInput}
+                style={{ "color-scheme": "dark" }}
               />
             </div>
-
-            <div class={styles.editField}>
-              <label class={styles.editLabel}>ID</label>
-              <div class={styles.editReadonly}>{props.op.id}</div>
-            </div>
-
-            <div class={styles.editField}>
-              <label class={styles.editLabel}>World</label>
-              <div class={styles.editReadonly}>{props.op.worldName}</div>
-            </div>
-
-            <Show when={props.op.storageFormat}>
-              <div class={styles.editField}>
-                <label class={styles.editLabel}>Format</label>
-                <div class={styles.editReadonly}>{props.op.storageFormat}</div>
-              </div>
-            </Show>
-
-            <Show when={props.op.conversionStatus}>
-              <div class={styles.editField}>
-                <label class={styles.editLabel}>Status</label>
-                <div class={styles.editReadonly}>{props.op.conversionStatus}</div>
-              </div>
-            </Show>
           </div>
 
-          <div class={styles.modalActions}>
+          <div class={styles.editModalFooter}>
             <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={styles.modalSubmit}>Save</button>
+            <button type="submit" class={styles.modalSubmit}><Icons.Check /> Save Changes</button>
           </div>
         </form>
       </div>
