@@ -1,4 +1,4 @@
-import { createSignal, createMemo, Show, For, onMount, onCleanup } from "solid-js";
+import { createSignal, createMemo, Show, For, onMount, onCleanup, batch } from "solid-js";
 import type { JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
@@ -10,7 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
-import { getMapColor, isOpReady } from "./helpers";
+import { getMapColor, isOpReady, formatDuration, formatDate } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
@@ -39,6 +39,8 @@ export function MissionSelector(): JSX.Element {
   const [sortDir, setSortDir] = createSignal("desc");
   const [langOpen, setLangOpen] = createSignal(false);
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
+  const [editingOp, setEditingOp] = createSignal<Operation | null>(null);
+  const [deletingOp, setDeletingOp] = createSignal<Operation | null>(null);
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
@@ -70,6 +72,8 @@ export function MissionSelector(): JSX.Element {
       setSelectedId(null);
       setLangOpen(false);
       setShowLoginModal(false);
+      setEditingOp(null);
+      setDeletingOp(null);
       searchRef?.blur();
     }
     if (e.key === "Enter" && selectedId()) {
@@ -183,6 +187,33 @@ export function MissionSelector(): JSX.Element {
       },
     });
   };
+
+  // Admin handlers
+  const refreshOperations = async () => {
+    const ops = await api.getOperations();
+    setOperations(ops.reverse());
+  };
+
+  const handleEditSave = async (id: string, data: { missionName?: string; tag?: string; date?: string }) => {
+    await api.editOperation(id, data);
+    setEditingOp(null);
+    await refreshOperations();
+  };
+
+  const handleDeleteConfirm = async (id: string) => {
+    await api.deleteOperation(id);
+    batch(() => {
+      setDeletingOp(null);
+      setSelectedId(null);
+    });
+    await refreshOperations();
+  };
+
+  const handleRetry = async (id: string) => {
+    await api.retryConversion(id);
+    await refreshOperations();
+  };
+
   return (
       <div data-testid="mission-selector" class={styles.page}>
         {/* ── Header ── */}
@@ -480,6 +511,10 @@ export function MissionSelector(): JSX.Element {
                 op={op()}
                 onLaunch={handleLaunch}
                 onClose={() => setSelectedId(null)}
+                isAdmin={authenticated()}
+                onEdit={setEditingOp}
+                onDelete={setDeletingOp}
+                onRetry={handleRetry}
               />
             )}
           </Show>
@@ -500,6 +535,29 @@ export function MissionSelector(): JSX.Element {
             }}
             error={loginError()}
           />
+        </Show>
+
+        {/* ── Edit Modal ── */}
+        <Show when={editingOp()}>
+          {(op) => (
+            <EditModal
+              op={op()}
+              tags={uniqueTags()}
+              onClose={() => setEditingOp(null)}
+              onSave={handleEditSave}
+            />
+          )}
+        </Show>
+
+        {/* ── Delete Confirm ── */}
+        <Show when={deletingOp()}>
+          {(op) => (
+            <DeleteConfirm
+              op={op()}
+              onClose={() => setDeletingOp(null)}
+              onConfirm={handleDeleteConfirm}
+            />
+          )}
         </Show>
       </div>
   );
@@ -543,6 +601,142 @@ function LoginModal(props: {
             <button type="submit" class={styles.modalSubmit}>Sign in</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Modal ───
+
+function EditModal(props: {
+  op: Operation;
+  tags: string[];
+  onClose: () => void;
+  onSave: (id: string, data: { missionName?: string; tag?: string; date?: string }) => void;
+}): JSX.Element {
+  const [name, setName] = createSignal(props.op.missionName);
+  const [tag, setTag] = createSignal(props.op.tag ?? "");
+  const [date, setDate] = createSignal(props.op.date?.slice(0, 10) ?? "");
+
+  const handleSubmit = (e: Event) => {
+    e.preventDefault();
+    props.onSave(props.op.id, {
+      missionName: name(),
+      tag: tag() || undefined,
+      date: date() || undefined,
+    });
+  };
+
+  return (
+    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={styles.modalCard} style={{ "min-width": "400px" }}>
+        <div class={styles.modalTitle}>Edit Operation</div>
+        <form onSubmit={handleSubmit}>
+          <div class={styles.editForm}>
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>Mission Name</label>
+              <input
+                type="text"
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+                class={styles.modalInput}
+              />
+            </div>
+
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>Tag</label>
+              <div class={styles.editTagGroup}>
+                <button
+                  type="button"
+                  class={styles.adminActionBtn}
+                  style={{ flex: "0 0 auto", opacity: tag() === "" ? "1" : "0.5" }}
+                  onClick={() => setTag("")}
+                >
+                  None
+                </button>
+                <For each={props.tags}>
+                  {(t) => (
+                    <button
+                      type="button"
+                      class={styles.adminActionBtn}
+                      style={{ flex: "0 0 auto", opacity: tag() === t ? "1" : "0.5" }}
+                      onClick={() => setTag(t)}
+                    >
+                      {t}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>Date</label>
+              <input
+                type="date"
+                value={date()}
+                onInput={(e) => setDate(e.currentTarget.value)}
+                class={styles.modalInput}
+              />
+            </div>
+
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>ID</label>
+              <div class={styles.editReadonly}>{props.op.id}</div>
+            </div>
+
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>World</label>
+              <div class={styles.editReadonly}>{props.op.worldName}</div>
+            </div>
+
+            <Show when={props.op.storageFormat}>
+              <div class={styles.editField}>
+                <label class={styles.editLabel}>Format</label>
+                <div class={styles.editReadonly}>{props.op.storageFormat}</div>
+              </div>
+            </Show>
+
+            <Show when={props.op.conversionStatus}>
+              <div class={styles.editField}>
+                <label class={styles.editLabel}>Status</label>
+                <div class={styles.editReadonly}>{props.op.conversionStatus}</div>
+              </div>
+            </Show>
+          </div>
+
+          <div class={styles.modalActions}>
+            <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
+            <button type="submit" class={styles.modalSubmit}>Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Delete Confirm ───
+
+function DeleteConfirm(props: {
+  op: Operation;
+  onClose: () => void;
+  onConfirm: (id: string) => void;
+}): JSX.Element {
+  return (
+    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={styles.modalCard}>
+        <div class={styles.modalTitle}>Delete Operation</div>
+
+        <div class={styles.deleteInfo}>{props.op.missionName}</div>
+        <div class={styles.deleteInfo}>{props.op.date?.slice(0, 10)} &middot; {formatDuration(props.op.missionDuration)}</div>
+
+        <div class={styles.deleteWarning}>
+          This will permanently delete the recording and all associated files.
+        </div>
+
+        <div class={styles.modalActions}>
+          <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
+          <button type="button" class={styles.modalSubmitDanger} onClick={() => props.onConfirm(props.op.id)}>Delete</button>
+        </div>
       </div>
     </div>
   );

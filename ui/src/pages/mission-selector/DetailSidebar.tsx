@@ -11,6 +11,10 @@ export function DetailSidebar(props: {
   op: Operation;
   onLaunch: (op: Operation) => void;
   onClose: () => void;
+  isAdmin?: boolean;
+  onEdit?: (op: Operation) => void;
+  onDelete?: (op: Operation) => void;
+  onRetry?: (id: string) => void;
 }) {
   const { t, locale } = useI18n();
   const mapColor = () => getMapColor(props.op.worldName);
@@ -179,6 +183,26 @@ export function DetailSidebar(props: {
           }}
         </Show>
       </div>
+
+      {/* Admin Actions */}
+      <Show when={props.isAdmin}>
+        <div class={styles.adminActions}>
+          <div class={styles.sidebarSectionLabel}>ADMIN</div>
+          <div class={styles.adminActionButtons}>
+            <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.op)}>
+              <Icons.Edit /> Edit
+            </button>
+            <button class={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`} onClick={() => props.onDelete?.(props.op)}>
+              <Icons.Trash /> Delete
+            </button>
+            <Show when={props.op.conversionStatus === "failed"}>
+              <button class={styles.adminActionBtn} onClick={() => props.onRetry?.(props.op.id)}>
+                <Icons.RefreshCw /> Retry
+              </button>
+            </Show>
+          </div>
+        </div>
+      </Show>
 
       {/* Launch Button */}
       <div class={styles.sidebarLaunchArea}>

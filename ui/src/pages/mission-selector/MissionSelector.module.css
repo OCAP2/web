@@ -1330,6 +1330,122 @@
   filter: brightness(1.1);
 }
 
+/* ── Admin actions in sidebar ── */
+.adminActions {
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.adminActionButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.adminActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.adminActionBtn:hover {
+  filter: brightness(1.2);
+}
+
+.adminActionBtnDanger {
+  background: rgba(255, 74, 74, 0.06);
+  border-color: rgba(255, 74, 74, 0.12);
+  color: #FF6B6B;
+}
+
+.adminActionBtnDanger:hover {
+  background: rgba(255, 74, 74, 0.12);
+}
+
+/* ── Edit modal ── */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editLabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.editReadonly {
+  font-size: 12px;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.editTagGroup {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ── Delete confirm ── */
+.deleteWarning {
+  font-size: 12px;
+  color: var(--accent-red);
+  font-family: var(--font-mono);
+  padding: 12px;
+  background: rgba(255, 74, 74, 0.06);
+  border: 1px solid rgba(255, 74, 74, 0.12);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.deleteInfo {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.modalSubmitDanger {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF4A4A, #CC3333);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalSubmitDanger:hover {
+  filter: brightness(1.1);
+}
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .filterBar {
