@@ -651,7 +651,7 @@ function mockAdminFetch(ops: Operation[]) {
     if (u.includes("/api/v1/auth/me")) {
       return Promise.resolve({
         ok: true, status: 200, statusText: "OK",
-        json: () => Promise.resolve({ authenticated: true }),
+        json: () => Promise.resolve({ authenticated: true, steamId: "76561198012345678", steamName: "TestPlayer", steamAvatar: "https://avatars.steamstatic.com/test.jpg" }),
       } as Response);
     }
 
@@ -742,12 +742,15 @@ describe("MissionSelector (Admin)", () => {
 
   // ── Auth UI ──
 
-  it("shows admin badge when authenticated", async () => {
+  it("shows admin badge with Steam profile when authenticated", async () => {
     const { findByTestId, container } = renderPage();
     await findByTestId("operation-1");
 
-    expect(container.textContent).toContain("Admin");
-    expect(container.textContent).toContain("ADMIN");
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("TestPlayer");
+      expect(container.textContent).toContain("ADMIN");
+      expect(container.querySelector("img[src='https://avatars.steamstatic.com/test.jpg']")).not.toBeNull();
+    });
   });
 
   it("shows sign-in button when not authenticated", async () => {
