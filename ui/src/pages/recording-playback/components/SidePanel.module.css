@@ -205,7 +205,7 @@
 }
 
 .unitRow:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-interactive);
 }
 
 .unitRowSelected {
@@ -251,7 +251,7 @@
 .unitAiBadge {
   font-size: 9px;
   color: var(--text-dimmest);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-interactive);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -321,7 +321,7 @@
 }
 
 .filterToggleInactive {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-interactive);
   color: var(--text-dimmer);
 }
 
@@ -341,7 +341,7 @@
 }
 
 .eventRow:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-interactive);
 }
 
 .eventBorder {
