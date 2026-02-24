@@ -178,6 +178,33 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "After Action Reviews", setting.Customize.HeaderSubtitle)
 	})
 
+	t.Run("cssOverrides from config file", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "setting.json")
+		configContent := `{
+			"secret": "valid-secret-value",
+			"customize": {
+				"cssOverrides": {
+					"--accent-blue": "#FF6600",
+					"--side-blufor": "#00FF88"
+				}
+			}
+		}`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		viper.Reset()
+		viper.AddConfigPath(dir)
+
+		setting, err := NewSetting()
+		require.NoError(t, err)
+
+		assert.Equal(t, map[string]string{
+			"--accent-blue":  "#FF6600",
+			"--side-blufor": "#00FF88",
+		}, setting.Customize.CSSOverrides)
+	})
+
 	t.Run("conversion values from config", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "setting.json")
@@ -276,6 +303,23 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		setting, err := NewSetting()
 		require.NoError(t, err)
 		assert.Equal(t, "/data/custom.db", setting.DB)
+	})
+
+	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES env var", func(t *testing.T) {
+		viper.Reset()
+		viper.AddConfigPath(dir)
+
+		os.Setenv("OCAP_SECRET", "env-secret")
+		os.Setenv("OCAP_CUSTOMIZE_CSSOVERRIDES", `{"--accent-blue":"#FF6600","--bg-dark":"#111"}`)
+		defer os.Unsetenv("OCAP_SECRET")
+		defer os.Unsetenv("OCAP_CUSTOMIZE_CSSOVERRIDES")
+
+		setting, err := NewSetting()
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"--accent-blue": "#FF6600",
+			"--bg-dark":     "#111",
+		}, setting.Customize.CSSOverrides)
 	})
 
 	t.Run("nested env vars with underscore", func(t *testing.T) {

@@ -1,4 +1,4 @@
-import { createContext, useContext, createSignal, onMount } from "solid-js";
+import { createContext, useContext, createSignal, onMount, onCleanup } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Accessor } from "solid-js";
 import { ApiClient } from "../data/apiClient";
@@ -13,15 +13,35 @@ export function CustomizeProvider(props: {
   children: JSX.Element;
 }): JSX.Element {
   const [config, setConfig] = createSignal<CustomizeConfig>({});
+  let appliedProps: string[] = [];
 
   onMount(async () => {
     try {
       const api = new ApiClient();
       const data = await api.getCustomize();
       setConfig(data);
+
+      // Apply CSS variable overrides to :root
+      if (data.cssOverrides) {
+        const style = document.documentElement.style;
+        for (const [prop, value] of Object.entries(data.cssOverrides)) {
+          if (prop.startsWith("--")) {
+            style.setProperty(prop, value);
+            appliedProps.push(prop);
+          }
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch customize config:", err);
     }
+  });
+
+  onCleanup(() => {
+    const style = document.documentElement.style;
+    for (const prop of appliedProps) {
+      style.removeProperty(prop);
+    }
+    appliedProps = [];
   });
 
   return (

@@ -9,6 +9,7 @@ export interface CustomizeConfig {
   disableKillCount?: boolean;
   headerTitle?: string;
   headerSubtitle?: string;
+  cssOverrides?: Record<string, string>;
 }
 
 export interface BuildInfo {

@@ -17,7 +17,8 @@
 		"headerTitle": "",
 		"websiteLogo": "",
 		"websiteLogoSize": "32px",
-		"websiteURL": ""
+		"websiteURL": "",
+		"cssOverrides": {}
 	},
 	"conversion": {
 		"batchSize": 1,

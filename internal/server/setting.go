@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -41,8 +42,9 @@ type Customize struct {
 	WebsiteLogo      string `json:"websiteLogo" yaml:"websiteLogo"`
 	WebsiteLogoSize  string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
 	DisableKillCount bool   `json:"disableKillCount" yaml:"disableKillCount"`
-	HeaderTitle      string `json:"headerTitle" yaml:"headerTitle"`
-	HeaderSubtitle   string `json:"headerSubtitle" yaml:"headerSubtitle"`
+	HeaderTitle      string            `json:"headerTitle" yaml:"headerTitle"`
+	HeaderSubtitle   string            `json:"headerSubtitle" yaml:"headerSubtitle"`
+	CSSOverrides     map[string]string `json:"cssOverrides,omitempty" yaml:"cssOverrides"`
 }
 
 type Admin struct {
@@ -116,6 +118,16 @@ func NewSetting() (setting Setting, err error) {
 	// Viper doesn't split comma-separated env var strings into slices,
 	// so a value like "id1,id2" ends up as ["id1,id2"]. Expand it.
 	setting.Admin.AllowedSteamIDs = splitCSV(setting.Admin.AllowedSteamIDs)
+
+	// Viper can't unmarshal a JSON string env var into map[string]string,
+	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set.
+	if raw := os.Getenv("OCAP_CUSTOMIZE_CSSOVERRIDES"); raw != "" && setting.Customize.CSSOverrides == nil {
+		var m map[string]string
+		if err = json.Unmarshal([]byte(raw), &m); err != nil {
+			return setting, fmt.Errorf("parse OCAP_CUSTOMIZE_CSSOVERRIDES: %w", err)
+		}
+		setting.Customize.CSSOverrides = m
+	}
 
 	if err = os.MkdirAll(setting.Data, 0755); err != nil {
 		return setting, fmt.Errorf("create data directory: %w", err)
