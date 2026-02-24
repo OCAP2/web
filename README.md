@@ -14,7 +14,7 @@ The configuration file is called `setting.json`
 | Setting | Description |
 |---------|-------------|
 | `listen` | Server address, e.g. `"0.0.0.0:5000"` to listen on all interfaces |
-| `secret` | Secret for authenticating record uploads and signing JWT tokens |
+| `secret` | Shared secret — authenticates record uploads and signs admin session JWTs |
 | `logger` | Enable request logging to STDOUT |
 
 ### Admin Authentication
