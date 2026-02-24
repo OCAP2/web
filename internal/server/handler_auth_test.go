@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -127,18 +128,15 @@ func TestSteamCallback_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
-	// Should set token cookie
-	cookies := rec.Result().Cookies()
-	var tokenValue string
-	for _, ck := range cookies {
-		if ck.Name == cookieToken {
-			tokenValue = ck.Value
-			assert.False(t, ck.HttpOnly, "token cookie must be readable by JS")
-		}
-	}
-	assert.NotEmpty(t, tokenValue, "token cookie should be set")
+	// Token should be in the redirect URL query param
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
 
-	// Token should be valid and contain the Steam ID as subject
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	assert.NotEmpty(t, tokenValue)
+
 	assert.NoError(t, hdlr.jwt.Validate(tokenValue))
 	assert.Equal(t, "76561198012345678", hdlr.jwt.Subject(tokenValue))
 }
@@ -362,7 +360,7 @@ func TestAuthRedirect_WithPrefixAndError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	err := hdlr.authRedirect(c, "steam_denied")
+	err := hdlr.authRedirect(c, "auth_error=steam_denied")
 	require.NoError(t, err)
 	assert.Equal(t, "/ocap/?auth_error=steam_denied", rec.Header().Get("Location"))
 }
@@ -434,13 +432,11 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
-	// Extract token from cookie and verify profile claims
-	var tokenValue string
-	for _, ck := range rec.Result().Cookies() {
-		if ck.Name == cookieToken {
-			tokenValue = ck.Value
-		}
-	}
+	// Extract token from redirect URL and verify profile claims
+	loc := rec.Header().Get("Location")
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
 	require.NotEmpty(t, tokenValue)
 
 	claims := hdlr.jwt.Claims(tokenValue)

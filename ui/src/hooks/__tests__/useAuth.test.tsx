@@ -9,7 +9,7 @@ import { setAuthToken } from "../../data/api-client";
 const mockGetMe = vi.fn();
 const mockLogout = vi.fn();
 const mockGetSteamLoginUrl = vi.fn().mockReturnValue("/api/v1/auth/steam");
-const mockConsumeAuthCookie = vi.fn().mockReturnValue(false);
+const mockConsumeAuthToken = vi.fn().mockReturnValue(false);
 
 vi.mock("../../data/api-client", async () => {
   const actual = await vi.importActual<typeof import("../../data/api-client")>("../../data/api-client");
@@ -19,7 +19,7 @@ vi.mock("../../data/api-client", async () => {
       getMe = mockGetMe;
       logout = mockLogout;
       getSteamLoginUrl = mockGetSteamLoginUrl;
-      consumeAuthCookie = mockConsumeAuthCookie;
+      consumeAuthToken = mockConsumeAuthToken;
     },
   };
 });
@@ -38,7 +38,7 @@ describe("useAuth", () => {
   beforeEach(() => {
     mockGetMe.mockResolvedValue({ authenticated: false });
     mockLogout.mockResolvedValue(undefined);
-    mockConsumeAuthCookie.mockReturnValue(false);
+    mockConsumeAuthToken.mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -67,7 +67,7 @@ describe("useAuth", () => {
     expect(mockGetMe).not.toHaveBeenCalled();
   });
 
-  it("consumes auth cookie on mount", async () => {
+  it("consumes auth token from URL params on mount", async () => {
     const { findByTestId } = render(() => (
       <AuthProvider>
         <TestConsumer onAuth={() => {}} />
@@ -75,7 +75,7 @@ describe("useAuth", () => {
     ));
 
     await findByTestId("authenticated");
-    expect(mockConsumeAuthCookie).toHaveBeenCalled();
+    expect(mockConsumeAuthToken).toHaveBeenCalled();
   });
 
   it("checks session on mount via getMe when token exists", async () => {

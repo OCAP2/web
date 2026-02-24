@@ -293,14 +293,10 @@ export class ApiClient {
     return `${this.baseUrl}/api/v1/auth/steam`;
   }
 
-  consumeAuthCookie(): boolean {
-    const match = document.cookie.split("; ").find((c) => c.startsWith("ocap_auth_token="));
-    if (!match) return false;
-    const token = match.split("=")[1];
+  consumeAuthToken(params: URLSearchParams): boolean {
+    const token = params.get("auth_token");
     if (!token) return false;
     setAuthToken(token);
-    // Delete the cookie
-    document.cookie = "ocap_auth_token=; Max-Age=0; Path=/";
     return true;
   }
 

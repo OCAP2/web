@@ -300,23 +300,20 @@ describe("ApiClient", () => {
     });
   });
 
-  // ─── consumeAuthCookie ───
+  // ─── consumeAuthToken ───
 
-  describe("consumeAuthCookie", () => {
-    afterEach(() => {
-      document.cookie = "ocap_auth_token=; Max-Age=0; Path=/";
-    });
-
-    it("returns false when no cookie exists", () => {
+  describe("consumeAuthToken", () => {
+    it("returns false when no auth_token param exists", () => {
       const client = new ApiClient();
-      expect(client.consumeAuthCookie()).toBe(false);
+      const params = new URLSearchParams("");
+      expect(client.consumeAuthToken(params)).toBe(false);
       expect(getAuthToken()).toBeNull();
     });
 
-    it("consumes token cookie and stores in session", () => {
-      document.cookie = "ocap_auth_token=test-jwt-token; Path=/";
+    it("reads auth_token from params and stores in session", () => {
       const client = new ApiClient();
-      expect(client.consumeAuthCookie()).toBe(true);
+      const params = new URLSearchParams("auth_token=test-jwt-token");
+      expect(client.consumeAuthToken(params)).toBe(true);
       expect(getAuthToken()).toBe("test-jwt-token");
     });
   });

@@ -32,19 +32,23 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const api = new ApiClient();
 
   onMount(async () => {
-    // Check for auth error from Steam callback redirect
+    // Read query params from Steam callback redirect
     const params = new URLSearchParams(window.location.search);
+
     const error = params.get("auth_error");
     if (error) {
       setAuthError(AUTH_ERROR_MESSAGES[error] ?? "Authentication failed.");
-      // Clean URL without reloading
-      const url = new URL(window.location.href);
-      url.searchParams.delete("auth_error");
-      window.history.replaceState({}, "", url.pathname + url.search);
     }
 
-    // Check for token cookie from Steam callback redirect
-    api.consumeAuthCookie();
+    api.consumeAuthToken(params);
+
+    // Clean auth params from URL without reloading
+    if (params.has("auth_error") || params.has("auth_token")) {
+      params.delete("auth_error");
+      params.delete("auth_token");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+    }
 
     if (!getAuthToken()) {
       setAuthenticated(false);

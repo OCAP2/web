@@ -17,8 +17,7 @@ import (
 
 const (
 	steamOpenIDURL = "https://steamcommunity.com/openid"
-	cookieNonce = "ocap_auth_nonce"
-	cookieToken = "ocap_auth_token"
+	cookieNonce    = "ocap_auth_nonce"
 )
 
 // openIDVerifier abstracts OpenID verification for testing.
@@ -95,19 +94,19 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 	fullURL := requestScheme(c) + "://" + requestHost(c) + c.Request().RequestURI
 	claimedID, err := h.openIDVerifier.Verify(fullURL, h.openIDCache, h.openIDNonceStore)
 	if err != nil {
-		return h.authRedirect(c, "steam_error")
+		return h.authRedirect(c, "auth_error=steam_error")
 	}
 
 	// Extract Steam64 ID from claimed ID URL
 	// Format: https://steamcommunity.com/openid/id/76561198012345678
 	steamID := extractSteamID(claimedID)
 	if steamID == "" {
-		return h.authRedirect(c, "steam_error")
+		return h.authRedirect(c, "auth_error=steam_error")
 	}
 
 	// Check allowlist
 	if !isSteamIDAllowed(steamID, h.setting.Admin.AllowedSteamIDs) {
-		return h.authRedirect(c, "steam_denied")
+		return h.authRedirect(c, "auth_error=steam_denied")
 	}
 
 	// Fetch Steam profile data if API key is configured
@@ -130,30 +129,19 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 		return err
 	}
 
-	// Short-lived cookie (30s) that the frontend reads on page load, moves
-	// to sessionStorage, then deletes. Not HttpOnly so JS can access it.
-	c.SetCookie(&http.Cookie{
-		Name:     cookieToken,
-		Value:    token,
-		MaxAge:   30,
-		HttpOnly: false,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	})
-
-	return h.authRedirect(c, "")
+	return h.authRedirect(c, "auth_token="+token)
 }
 
-// authRedirect redirects to the frontend root, optionally with an error query parameter.
-func (h *Handler) authRedirect(c echo.Context, authError string) error {
+// authRedirect redirects to the frontend root, optionally appending a raw query string.
+func (h *Handler) authRedirect(c echo.Context, query string) error {
 	prefix := strings.TrimRight(h.setting.PrefixURL, "/")
 	if prefix == "" {
 		prefix = "/"
 	} else {
 		prefix += "/"
 	}
-	if authError != "" {
-		prefix += "?auth_error=" + url.QueryEscape(authError)
+	if query != "" {
+		prefix += "?" + query
 	}
 	return c.Redirect(http.StatusTemporaryRedirect, prefix)
 }
