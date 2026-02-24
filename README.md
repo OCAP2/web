@@ -146,7 +146,7 @@ The configuration file is called `setting.json`. All settings can also be set vi
 | Setting | Env Var | Description | Default |
 |---------|---------|-------------|---------|
 | `listen` | `OCAP_LISTEN` | Server address | `127.0.0.1:5000` |
-| `prefixURL` | `OCAP_PREFIXURL` | URL prefix for all routes | |
+| `prefixURL` | `OCAP_PREFIXURL` | URL prefix for all routes | `""` |
 | `secret` | `OCAP_SECRET` | Shared secret — authenticates record uploads and signs admin session JWTs | *required* |
 | `logger` | `OCAP_LOGGER` | Enable request logging to STDOUT | `false` |
 
@@ -181,12 +181,12 @@ The Steam API key is optional. Without it, the admin badge shows the raw Steam64
 | Setting | Env Var | Description | Default |
 |---------|---------|-------------|---------|
 | `customize.enabled` | `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
-| `customize.websiteURL` | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
-| `customize.websiteLogo` | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
+| `customize.websiteURL` | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | `""` |
+| `customize.websiteLogo` | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | `""` |
 | `customize.websiteLogoSize` | `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
 | `customize.disableKillCount` | `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
-| `customize.headerTitle` | `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | |
-| `customize.headerSubtitle` | `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | |
+| `customize.headerTitle` | `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | `""` |
+| `customize.headerSubtitle` | `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | `""` |
 
 ### Conversion
 
