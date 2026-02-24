@@ -183,7 +183,7 @@
   height: 40px;
   border-radius: 10px;
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   display: flex;
   align-items: center;

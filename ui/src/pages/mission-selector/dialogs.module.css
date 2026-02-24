@@ -284,7 +284,7 @@
 
 .uploadSubmitBtn:not(:disabled) {
   background: linear-gradient(135deg, var(--accent-success), var(--accent-success-dark));
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-success) 25%, transparent);
 }

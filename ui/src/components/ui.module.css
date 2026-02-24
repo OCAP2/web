@@ -104,7 +104,7 @@
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--accent-danger), var(--accent-danger-dark));
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 12px;
   font-family: var(--font-mono);
   font-weight: 600;
