@@ -1049,6 +1049,257 @@ describe("MissionSelector (Admin)", () => {
     fireEvent.dragLeave(uploadZone);
   });
 
+  it("upload dialog closes on Cancel button", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    const cancelBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent === "Cancel",
+    )!;
+    fireEvent.click(cancelBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Upload Recording");
+    });
+  });
+
+  it("upload dialog closes on X button", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    // The X close button is the dialogCloseBtn inside the upload dialog header
+    const dialogCloseBtns = container.querySelectorAll("button");
+    const xBtn = Array.from(dialogCloseBtns).find((b) => {
+      // X button has no text besides the SVG icon, and is inside the upload dialog
+      const parent = b.closest("[class]");
+      return b.textContent?.trim() === "" && parent?.textContent?.includes("Upload Recording");
+    });
+    // Fallback: find by the SVG-only button near the header
+    const closeBtn = xBtn || Array.from(dialogCloseBtns).find(
+      (b) => b.innerHTML.includes("svg") && !b.textContent?.trim() && b.closest("div")?.textContent?.includes("Upload Recording"),
+    );
+    expect(closeBtn).toBeDefined();
+    fireEvent.click(closeBtn!);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("Upload Recording");
+    });
+  });
+
+  it("upload submit is disabled without file", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    // Submit button should be disabled when no file is selected
+    const submitBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Upload Recording") && b !== uploadBtn,
+    ) as HTMLButtonElement;
+    expect(submitBtn).toBeDefined();
+    expect(submitBtn.disabled).toBe(true);
+
+    // Footer hint should say "Select a file to upload"
+    expect(container.textContent).toContain("Select a file to upload");
+  });
+
+  it("upload submit is disabled when name is cleared after file select", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    // Select a file
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], "test.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("test.json.gz");
+    });
+
+    // Clear the name field (use placeholder to find the right input)
+    const nameInput = container.querySelector("input[placeholder*='MP_COOP']") as HTMLInputElement;
+    fireEvent.input(nameInput, { target: { value: "" } });
+
+    // Submit should be disabled and hint should say "Enter a mission name"
+    await vi.waitFor(() => {
+      const submitBtn = Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.includes("Upload Recording") && b !== uploadBtn,
+      ) as HTMLButtonElement;
+      expect(submitBtn.disabled).toBe(true);
+      expect(container.textContent).toContain("Enter a mission name");
+    });
+  });
+
+  it("auto-fills mission name from filename stripping extensions", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], "MP_COOP_m05.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    await vi.waitFor(() => {
+      const nameInput = container.querySelector("input[placeholder*='MP_COOP']") as HTMLInputElement;
+      expect(nameInput.value).toBe("MP_COOP_m05");
+    });
+  });
+
+  it("file remove button clears file and re-shows drop zone", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Drop .json.gz");
+    });
+
+    // Select a file
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], "mission.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("mission.json.gz");
+      // Drop text should be gone
+      expect(container.textContent).not.toContain("Drop .json.gz");
+    });
+
+    // Click the remove button (the X button inside the file row)
+    // It's distinct from the dialog close X — it's inside the file info area
+    const removeBtn = Array.from(container.querySelectorAll("button")).find((b) => {
+      const text = b.textContent?.trim();
+      return text === "" && b.closest("div")?.textContent?.includes("mission.json.gz");
+    });
+    expect(removeBtn).toBeDefined();
+    fireEvent.click(removeBtn!);
+
+    // Drop zone should reappear
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Drop .json.gz");
+      expect(container.textContent).not.toContain("mission.json.gz");
+    });
+  });
+
+  it("upload sends form data with all fields", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Upload Recording");
+    });
+
+    // Select file
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], "op_test.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("op_test.json.gz");
+    });
+
+    // Fill map field (use placeholder to find the right input)
+    const mapInput = container.querySelector("input[placeholder*='altis']") as HTMLInputElement;
+    fireEvent.input(mapInput, { target: { value: "altis" } });
+
+    // Select a tag — find the TvT button inside the upload dialog (near the TAG label)
+    const tagLabel = Array.from(container.querySelectorAll("label")).find(
+      (l) => l.textContent === "TAG",
+    )!;
+    const tagGroup = tagLabel.nextElementSibling!;
+    const tvtBtn = Array.from(tagGroup.querySelectorAll("button")).find(
+      (b) => b.textContent === "TvT",
+    );
+    expect(tvtBtn).toBeDefined();
+    fireEvent.click(tvtBtn!);
+
+    // Submit
+    const submitBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Upload Recording") && !(b as HTMLButtonElement).disabled,
+    )!;
+    fireEvent.click(submitBtn);
+
+    // Verify the API call includes all fields
+    await vi.waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const uploadCall = calls.find(
+        ([url, init]: [string, RequestInit?]) =>
+          url.includes("/api/v1/operations/add") && init?.method === "POST",
+      );
+      expect(uploadCall).toBeDefined();
+
+      const body = uploadCall![1]!.body as FormData;
+      expect(body.get("missionName")).toBe("op_test");
+      expect(body.get("worldName")).toBe("altis");
+      expect(body.get("tag")).toBe("TvT");
+      expect(body.get("filename")).toBe("op_test");
+    });
+  });
+
+  it("footer hint updates based on form state", async () => {
+    const { findByTestId, container } = renderPage();
+    await findByTestId("operation-1");
+
+    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    fireEvent.click(uploadBtn);
+
+    // No file: "Select a file to upload"
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Select a file to upload");
+    });
+
+    // Add file → should show "Ready to upload" (name auto-fills)
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], "test.json.gz", { type: "application/gzip" });
+    Object.defineProperty(fileInput, "files", { value: [file], writable: false });
+    fireEvent.change(fileInput);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Ready to upload");
+    });
+  });
+
   // ── Escape closes login modal ──
 
   it("Escape closes login modal", async () => {
