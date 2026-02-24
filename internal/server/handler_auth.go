@@ -56,8 +56,9 @@ func (h *Handler) SteamLogin(c echo.Context) error {
 	})
 
 	prefix := strings.TrimRight(h.setting.PrefixURL, "/")
-	callbackURL := requestScheme(c) + "://" + c.Request().Host + prefix + "/api/v1/auth/steam/callback?nonce=" + nonce
-	realm := requestScheme(c) + "://" + c.Request().Host + prefix + "/"
+	host := requestHost(c)
+	callbackURL := requestScheme(c) + "://" + host + prefix + "/api/v1/auth/steam/callback?nonce=" + nonce
+	realm := requestScheme(c) + "://" + host + prefix + "/"
 
 	redirectURL, err := openid.RedirectURL(steamOpenIDURL, callbackURL, realm)
 	if err != nil {
@@ -86,8 +87,9 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 		Path:   "/",
 	})
 
-	// Verify OpenID response with Steam
-	fullURL := requestScheme(c) + "://" + c.Request().Host + c.Request().RequestURI
+	// Verify OpenID response with Steam — use forwarded host so the URL
+	// matches the return_to that was sent to Steam via the proxy.
+	fullURL := requestScheme(c) + "://" + requestHost(c) + c.Request().RequestURI
 	claimedID, err := h.openIDVerifier.Verify(fullURL, h.openIDCache, h.openIDNonceStore)
 	if err != nil {
 		return h.authRedirect(c, "steam_error")
@@ -179,6 +181,15 @@ func extractSteamID(claimedID string) string {
 // isSteamIDAllowed checks if a Steam ID is in the allowlist.
 func isSteamIDAllowed(steamID string, allowed []string) bool {
 	return slices.Contains(allowed, steamID)
+}
+
+// requestHost returns the original client-facing host, respecting X-Forwarded-Host
+// from reverse proxies (including Vite dev proxy).
+func requestHost(c echo.Context) string {
+	if fh := c.Request().Header.Get("X-Forwarded-Host"); fh != "" {
+		return fh
+	}
+	return c.Request().Host
 }
 
 // requestScheme returns "https" or "http" based on the request.
