@@ -59,7 +59,7 @@ func TestSteamLogin_Redirects(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	var foundNonce bool
 	for _, ck := range cookies {
-		if ck.Name == nonceCookie {
+		if ck.Name == cookieNonce {
 			foundNonce = true
 			assert.True(t, ck.HttpOnly)
 			assert.NotEmpty(t, ck.Value)
@@ -88,7 +88,7 @@ func TestSteamCallback_NonceMismatch(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "xyz"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "xyz"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -104,7 +104,7 @@ func TestSteamCallback_UnauthorizedSteamID(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "abc"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -119,7 +119,7 @@ func TestSteamCallback_Success(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "abc"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -131,7 +131,7 @@ func TestSteamCallback_Success(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	var tokenValue string
 	for _, ck := range cookies {
-		if ck.Name == tokenCookie {
+		if ck.Name == cookieToken {
 			tokenValue = ck.Value
 			assert.False(t, ck.HttpOnly, "token cookie must be readable by JS")
 		}
@@ -373,7 +373,7 @@ func TestSteamCallback_VerifyError(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "abc"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -389,7 +389,7 @@ func TestSteamCallback_InvalidClaimedID(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "abc"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -426,7 +426,7 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: nonceCookie, Value: "abc"})
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -437,7 +437,7 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 	// Extract token from cookie and verify profile claims
 	var tokenValue string
 	for _, ck := range rec.Result().Cookies() {
-		if ck.Name == tokenCookie {
+		if ck.Name == cookieToken {
 			tokenValue = ck.Value
 		}
 	}

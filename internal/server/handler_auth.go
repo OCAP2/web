@@ -17,8 +17,8 @@ import (
 
 const (
 	steamOpenIDURL = "https://steamcommunity.com/openid"
-	nonceCookie    = "ocap_auth_nonce"
-	tokenCookie    = "ocap_auth_token"
+	cookieNonce = "ocap_auth_nonce"
+	cookieToken = "ocap_auth_token"
 )
 
 // openIDVerifier abstracts OpenID verification for testing.
@@ -50,7 +50,7 @@ func (h *Handler) SteamLogin(c echo.Context) error {
 	}
 
 	c.SetCookie(&http.Cookie{
-		Name:     nonceCookie,
+		Name:     cookieNonce,
 		Value:    nonce,
 		MaxAge:   300,
 		HttpOnly: true,
@@ -75,7 +75,7 @@ func (h *Handler) SteamLogin(c echo.Context) error {
 // checks the allowlist, issues a JWT, and redirects to the frontend.
 func (h *Handler) SteamCallback(c echo.Context) error {
 	// Verify nonce for CSRF protection
-	cookie, err := c.Cookie(nonceCookie)
+	cookie, err := c.Cookie(cookieNonce)
 	if err != nil || cookie.Value == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "missing auth nonce")
 	}
@@ -85,7 +85,7 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 
 	// Clear nonce cookie
 	c.SetCookie(&http.Cookie{
-		Name:   nonceCookie,
+		Name:   cookieNonce,
 		MaxAge: -1,
 		Path:   "/",
 	})
@@ -130,12 +130,13 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 		return err
 	}
 
-	// Set short-lived cookie for frontend to pick up
+	// Short-lived cookie (30s) that the frontend reads on page load, moves
+	// to sessionStorage, then deletes. Not HttpOnly so JS can access it.
 	c.SetCookie(&http.Cookie{
-		Name:     tokenCookie,
+		Name:     cookieToken,
 		Value:    token,
 		MaxAge:   30,
-		HttpOnly: false, // JS needs to read this
+		HttpOnly: false,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})

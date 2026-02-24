@@ -24,7 +24,7 @@ Admin access uses Steam OpenID — no passwords. Admins authenticate via their S
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `admin.sessionTTL` | How long admin sessions last | `"24h"` |
-| `admin.allowedSteamIds` | Array of Steam64 IDs authorized for admin access | `[]` |
+| `admin.allowedSteamIds` | Array of Steam64 IDs authorized for admin access (comma-separated when set via `OCAP_ADMIN_ALLOWEDSTEAMIDS` env var) | `[]` |
 | `admin.steamApiKey` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
 
 The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
