@@ -421,6 +421,7 @@
 .tableHeader {
   display: grid;
   grid-template-columns: 1fr 130px 100px 70px 100px 40px;
+  align-items: center;
   padding: 10px 20px;
   border-bottom: var(--border-subtle);
   flex-shrink: 0;
@@ -771,6 +772,8 @@
   color: var(--text-primary);
   font-family: var(--font-heading);
   margin-bottom: 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .sidebarMeta {

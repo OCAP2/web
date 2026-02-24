@@ -512,12 +512,12 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "COMPOSITION DES FORCES",
   },
   total_kills: {
-    ru: "ВСЕГО УБИЙСТВ",
-    en: "TOTAL KILLS",
-    de: "GESAMTE ABSCHÜSSE",
-    cs: "CELKEM ZABITÍ",
-    it: "UCCISIONI TOTALI",
-    fr: "ÉLIMINATIONS TOTALES",
+    ru: "Убийства",
+    en: "Kills",
+    de: "Abschüsse",
+    cs: "Zabití",
+    it: "Uccisioni",
+    fr: "Éliminations",
   },
   kills_per_min: {
     ru: "УБИЙСТВ/МИН",
