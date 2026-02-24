@@ -5,52 +5,117 @@
 
 OCAP Web serves and plays back Arma 3 mission recordings. It supports both legacy JSON recordings and chunked Protobuf format for efficient streaming of large recordings.
 
+## Installation
+
+### Pre-built binaries
+
+Download the latest release from [GitHub Releases](https://github.com/OCAP2/web/releases):
+
+| Platform | Archive |
+|----------|---------|
+| Windows x64 | `ocap-webserver-windows-amd64.zip` |
+| Linux x64 | `ocap-webserver-linux-amd64.tar.gz` |
+| Linux ARM64 | `ocap-webserver-linux-arm64.tar.gz` |
+
+Each archive contains the binary and required assets (markers, ammo icons).
+
+### Build from source
+
+Requires [Go 1.26+](https://golang.org/dl/) and [Node.js 24+](https://nodejs.org/).
+
+```bash
+# Build the frontend
+cd ui && npm ci && npm run build && cd ..
+
+# Build the server (frontend is embedded into the binary)
+go build -o ocap-webserver ./cmd/ocap-webserver
+
+# Or build everything via Docker
+docker build -t ocap-webserver .
+```
+
+For development setup and workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Docker
+
+Docker images are available for `linux/amd64` and `linux/arm64` architectures.
+
+```bash
+docker run --name ocap-web -d \
+  -p 5000:5000/tcp \
+  -e OCAP_SECRET="same-secret" \
+  -e OCAP_CONVERSION_ENABLED="true" \
+  -v ocap-records:/var/lib/ocap/data \
+  -v ocap-maps:/var/lib/ocap/maps \
+  -v ocap-database:/var/lib/ocap/db \
+  ghcr.io/ocap2/web:latest
+```
+
+### Volumes
+
+| Path | Description |
+|------|-------------|
+| `/var/lib/ocap/data` | Recording storage (JSON and chunked formats) |
+| `/var/lib/ocap/maps` | Map tiles ([download here](https://drive.google.com/drive/folders/1qtT0Fr4Dfwd48ihZNc8YN-xgxHchKoiu)) |
+| `/var/lib/ocap/db` | SQLite database |
+
+### Map Tool
+
+The map tool processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles. It provides a web UI for uploading and managing maps, and CLI commands for scripted workflows.
+
+The image bundles all required tools (gdal2tiles, pmtiles, tippecanoe).
+
+```bash
+docker pull ghcr.io/ocap2/maptool:latest
+```
+
+**Environment Variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OCAP_MAPTOOL_LISTEN` | Server address | `0.0.0.0:5001` |
+| `OCAP_MAPS` | Maps output directory | `/var/lib/ocap/maps` |
+
+**Start the maptool web UI alongside the webserver:**
+
+```bash
+docker run --name ocap-maptool -d \
+  -p 5001:5001/tcp \
+  -v ocap-maps:/var/lib/ocap/maps \
+  ghcr.io/ocap2/maptool:latest
+```
+
+The shared `ocap-maps` volume lets the maptool write processed map tiles that the webserver serves directly.
+
+**CLI usage (import a grad_meh export):**
+
+```bash
+docker run --rm \
+  -v ocap-maps:/var/lib/ocap/maps \
+  -v /path/to/exports:/input:ro \
+  ghcr.io/ocap2/maptool:latest \
+  ./ocap-maptool import -maps /var/lib/ocap/maps /input/altis
+```
+
+**Restyle all existing maps:**
+
+```bash
+docker run --rm \
+  -v ocap-maps:/var/lib/ocap/maps \
+  ghcr.io/ocap2/maptool:latest \
+  ./ocap-maptool restyle -maps /var/lib/ocap/maps
+```
+
+## Pelican Panel
+
+A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web as a managed server instance. Import `egg-ocap2-web.json` in the Pelican admin panel under **Eggs → Import Egg**.
+
+The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persistent data (database, recordings, maps) is stored under `/home/container/` via Pelican's volume mount.
+
 ## Configuration
 
-The configuration file is called `setting.json`
+The configuration file is called `setting.json`. All settings can also be set via environment variables with the `OCAP_` prefix. Nested keys use underscores: `admin.sessionTTL` → `OCAP_ADMIN_SESSIONTTL`.
 
-### Basic Settings
-
-| Setting | Description |
-|---------|-------------|
-| `listen` | Server address, e.g. `"0.0.0.0:5000"` to listen on all interfaces |
-| `secret` | Shared secret — authenticates record uploads and signs admin session JWTs |
-| `logger` | Enable request logging to STDOUT |
-
-### Admin Authentication
-
-Admin access uses Steam OpenID — no passwords. Admins authenticate via their Steam account and are authorized against an allowlist of Steam64 IDs.
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `admin.sessionTTL` | How long admin sessions last | `"24h"` |
-| `admin.allowedSteamIds` | Array of Steam64 IDs authorized for admin access (comma-separated when set via `OCAP_ADMIN_ALLOWEDSTEAMIDS` env var) | `[]` |
-| `admin.steamApiKey` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
-
-The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
-
-### Conversion Settings
-
-Large recordings can be automatically converted to chunked binary format for better performance.
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `conversion.enabled` | Enable automatic background conversion | `false` |
-| `conversion.interval` | How often to check for pending conversions | `"5m"` |
-| `conversion.batchSize` | Max recordings to convert per interval | `10` |
-| `conversion.chunkSize` | Frames per chunk (~5 min at 1 fps) | `300` |
-
-### Streaming Settings
-
-Live mission data can be streamed to the server via WebSocket.
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `streaming.enabled` | Enable the WebSocket streaming endpoint | `false` |
-| `streaming.pingInterval` | Interval between WebSocket keepalive pings | `"30s"` |
-| `streaming.pingTimeout` | Timeout waiting for pong response | `"10s"` |
-
-Example `setting.json`:
 ```json
 {
   "listen": "127.0.0.1:5000",
@@ -61,6 +126,11 @@ Example `setting.json`:
     "allowedSteamIds": ["76561198012345678"],
     "steamApiKey": ""
   },
+  "customize": {
+    "enabled": true,
+    "websiteURL": "https://example.com",
+    "websiteLogo": "https://example.com/logo.png"
+  },
   "conversion": {
     "enabled": true,
     "interval": "5m"
@@ -70,6 +140,75 @@ Example `setting.json`:
   }
 }
 ```
+
+### Server
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `listen` | `OCAP_LISTEN` | Server address | `127.0.0.1:5000` |
+| `prefixURL` | `OCAP_PREFIXURL` | URL prefix for all routes | |
+| `secret` | `OCAP_SECRET` | Shared secret — authenticates record uploads and signs admin session JWTs | *required* |
+| `logger` | `OCAP_LOGGER` | Enable request logging to STDOUT | `false` |
+
+### Paths
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `db` | `OCAP_DB` | Path to SQLite database | `data.db` |
+| `data` | `OCAP_DATA` | Path to recording storage | `data` |
+| `maps` | `OCAP_MAPS` | Path to map tiles | `maps` |
+| `markers` | `OCAP_MARKERS` | Path to marker icons | `assets/markers` |
+| `ammo` | `OCAP_AMMO` | Path to ammo icons | `assets/ammo` |
+| `fonts` | `OCAP_FONTS` | Path to fonts | `assets/fonts` |
+| `static` | `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
+
+> **Docker note:** The Docker image overrides path defaults to `/var/lib/ocap/...` and `/usr/local/ocap/...`. See [Volumes](#volumes) for the Docker-specific paths.
+
+### Admin Authentication
+
+Admin access uses Steam OpenID — no passwords. Admins authenticate via their Steam account and are authorized against an allowlist of Steam64 IDs.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `admin.sessionTTL` | `OCAP_ADMIN_SESSIONTTL` | How long admin sessions last | `24h` |
+| `admin.allowedSteamIds` | `OCAP_ADMIN_ALLOWEDSTEAMIDS` | Steam64 IDs authorized for admin access (comma-separated in env var) | `[]` |
+| `admin.steamApiKey` | `OCAP_ADMIN_STEAMAPIKEY` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
+
+The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
+
+### Customization
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `customize.enabled` | `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
+| `customize.websiteURL` | `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
+| `customize.websiteLogo` | `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
+| `customize.websiteLogoSize` | `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
+| `customize.disableKillCount` | `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
+| `customize.headerTitle` | `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | |
+| `customize.headerSubtitle` | `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | |
+
+### Conversion
+
+Large recordings can be automatically converted to chunked binary format for better performance.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `conversion.enabled` | `OCAP_CONVERSION_ENABLED` | Enable automatic background conversion | `false` |
+| `conversion.interval` | `OCAP_CONVERSION_INTERVAL` | How often to check for pending conversions | `5m` |
+| `conversion.batchSize` | `OCAP_CONVERSION_BATCHSIZE` | Max recordings to convert per interval | `1` |
+| `conversion.chunkSize` | `OCAP_CONVERSION_CHUNKSIZE` | Frames per chunk (~5 min at 1 fps) | `300` |
+| `conversion.retryFailed` | `OCAP_CONVERSION_RETRYFAILED` | Retry previously failed conversions | `false` |
+
+### Streaming
+
+Live mission data can be streamed to the server via WebSocket.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `streaming.enabled` | `OCAP_STREAMING_ENABLED` | Enable the WebSocket streaming endpoint | `false` |
+| `streaming.pingInterval` | `OCAP_STREAMING_PINGINTERVAL` | Interval between WebSocket keepalive pings | `30s` |
+| `streaming.pingTimeout` | `OCAP_STREAMING_PINGTIMEOUT` | Timeout waiting for pong response | `10s` |
 
 ## Large Recording Support
 
@@ -152,168 +291,3 @@ data/
         ├── 0001.pb              # Frames 300-599
         └── ...
 ```
-
-## Docker
-
-Docker images are available for `linux/amd64` and `linux/arm64` architectures.
-
-### Environment Variables
-
-#### Server & Paths
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_LISTEN` | Server address | `0.0.0.0:5000` |
-| `OCAP_PREFIXURL` | URL prefix for all routes | |
-| `OCAP_SECRET` | Secret for authorizing record uploads | *required* |
-| `OCAP_DB` | Path to SQLite database | `/var/lib/ocap/db/data.db` |
-| `OCAP_DATA` | Path to recording storage | `/var/lib/ocap/data` |
-| `OCAP_MAPS` | Path to map tiles | `/var/lib/ocap/maps` |
-| `OCAP_MARKERS` | Path to marker icons | `/usr/local/ocap/markers` |
-| `OCAP_AMMO` | Path to ammo icons | `/usr/local/ocap/ammo` |
-| `OCAP_FONTS` | Path to fonts | `/usr/local/ocap/fonts` |
-| `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
-| `OCAP_LOGGER` | Enable request logging | `false` |
-
-#### Admin Authentication
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_ADMIN_SESSIONTTL` | Admin session duration | `24h` |
-| `OCAP_ADMIN_ALLOWEDSTEAMIDS` | Comma-separated Steam64 IDs for admin access | |
-| `OCAP_ADMIN_STEAMAPIKEY` | Steam Web API key for profile display names and avatars | |
-
-#### Customization
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
-| `OCAP_CUSTOMIZE_WEBSITEURL` | Link on the logo to your website | |
-| `OCAP_CUSTOMIZE_WEBSITELOGO` | URL to your website logo | |
-| `OCAP_CUSTOMIZE_WEBSITELOGOSIZE` | Logo size | `32px` |
-| `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
-| `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | |
-| `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | |
-
-#### Conversion
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_CONVERSION_ENABLED` | Enable automatic conversion | `false` |
-| `OCAP_CONVERSION_INTERVAL` | Conversion check interval | `5m` |
-| `OCAP_CONVERSION_BATCHSIZE` | Max recordings to convert per interval | `1` |
-| `OCAP_CONVERSION_CHUNKSIZE` | Frames per chunk | `300` |
-| `OCAP_CONVERSION_RETRYFAILED` | Retry previously failed conversions | `false` |
-
-#### Streaming
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_STREAMING_ENABLED` | Enable the WebSocket streaming endpoint | `false` |
-| `OCAP_STREAMING_PINGINTERVAL` | Interval between WebSocket keepalive pings | `30s` |
-| `OCAP_STREAMING_PINGTIMEOUT` | Timeout waiting for pong response | `10s` |
-
-### Volumes
-
-| Path | Description |
-|------|-------------|
-| `/var/lib/ocap/data` | Recording storage (JSON and chunked formats) |
-| `/var/lib/ocap/maps` | Map tiles ([download here](https://drive.google.com/drive/folders/1qtT0Fr4Dfwd48ihZNc8YN-xgxHchKoiu)) |
-| `/var/lib/ocap/db` | SQLite database |
-
-### Start an OCAP webserver instance
-
-```bash
-docker run --name ocap-web -d \
-  -p 5000:5000/tcp \
-  -e OCAP_SECRET="same-secret" \
-  -e OCAP_CONVERSION_ENABLED="true" \
-  -v ocap-records:/var/lib/ocap/data \
-  -v ocap-maps:/var/lib/ocap/maps \
-  -v ocap-database:/var/lib/ocap/db \
-  ghcr.io/ocap2/web:latest
-```
-
-### Map Tool
-
-The map tool processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles. It provides a web UI for uploading and managing maps, and CLI commands for scripted workflows.
-
-The image bundles all required tools (gdal2tiles, pmtiles, tippecanoe).
-
-```bash
-docker pull ghcr.io/ocap2/maptool:latest
-```
-
-**Environment Variables:**
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_MAPTOOL_LISTEN` | Server address | `0.0.0.0:5001` |
-| `OCAP_MAPS` | Maps output directory | `/var/lib/ocap/maps` |
-
-**Start the maptool web UI alongside the webserver:**
-
-```bash
-docker run --name ocap-maptool -d \
-  -p 5001:5001/tcp \
-  -v ocap-maps:/var/lib/ocap/maps \
-  ghcr.io/ocap2/maptool:latest
-```
-
-The shared `ocap-maps` volume lets the maptool write processed map tiles that the webserver serves directly.
-
-**CLI usage (import a grad_meh export):**
-
-```bash
-docker run --rm \
-  -v ocap-maps:/var/lib/ocap/maps \
-  -v /path/to/exports:/input:ro \
-  ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool import -maps /var/lib/ocap/maps /input/altis
-```
-
-**Restyle all existing maps:**
-
-```bash
-docker run --rm \
-  -v ocap-maps:/var/lib/ocap/maps \
-  ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool restyle -maps /var/lib/ocap/maps
-```
-
-## Pelican Panel
-
-A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web as a managed server instance. Import `egg-ocap2-web.json` in the Pelican admin panel under **Eggs → Import Egg**.
-
-The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persistent data (database, recordings, maps) is stored under `/home/container/` via Pelican's volume mount.
-
-## Installation
-
-### Pre-built binaries
-
-Download the latest release from [GitHub Releases](https://github.com/OCAP2/web/releases):
-
-| Platform | Archive |
-|----------|---------|
-| Windows x64 | `ocap-webserver-windows-amd64.zip` |
-| Linux x64 | `ocap-webserver-linux-amd64.tar.gz` |
-| Linux ARM64 | `ocap-webserver-linux-arm64.tar.gz` |
-
-Each archive contains the binary and required assets (markers, ammo icons).
-
-### Build from source
-
-Requires [Go 1.26+](https://golang.org/dl/) and [Node.js 24+](https://nodejs.org/).
-
-```bash
-# Build the frontend
-cd ui && npm ci && npm run build && cd ..
-
-# Build the server (frontend is embedded into the binary)
-go build -o ocap-webserver ./cmd/ocap-webserver
-
-# Or build everything via Docker
-docker build -t ocap-webserver .
-```
-
-For development setup and workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).
