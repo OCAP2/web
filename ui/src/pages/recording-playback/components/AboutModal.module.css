@@ -17,7 +17,7 @@
 .link {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   text-decoration: none;
 }
 

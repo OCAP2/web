@@ -87,7 +87,7 @@
   width: 4px;
   height: 12px;
   border-radius: 1px;
-  background: var(--accent-red);
+  background: var(--accent-danger);
   opacity: 0.7;
   transform: translateX(-50%);
   pointer-events: none;
@@ -100,7 +100,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent-blue);
+  background: var(--accent-primary);
   border: 2px solid #0d1520;
   box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
   pointer-events: none;
@@ -145,7 +145,7 @@
 .panelToggleActive {
   background: rgba(74, 158, 255, 0.12);
   border-color: rgba(74, 158, 255, 0.2);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
 }
 
 .timeDisplay {
@@ -192,7 +192,7 @@
 }
 
 .playBtnPlay {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-dark));
   box-shadow: var(--shadow-accent);
 }
 
@@ -249,7 +249,7 @@
 
 .speedOptionActive {
   background: rgba(74, 158, 255, 0.15);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-weight: 700;
 }
 

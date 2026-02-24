@@ -49,7 +49,7 @@
 .loadingBarFill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
   animation: loadBar 2s ease-in-out forwards;
 }
 

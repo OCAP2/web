@@ -63,7 +63,7 @@
 .styleBtnActive {
   background: rgba(74, 158, 255, 0.15);
   border-color: rgba(74, 158, 255, 0.3);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
 }
 
 .styleBtn:hover {

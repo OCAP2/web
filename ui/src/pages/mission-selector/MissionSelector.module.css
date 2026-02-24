@@ -61,7 +61,7 @@
 .versionBadge {
   font-size: 10px;
   font-weight: 600;
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-family: var(--font-mono);
   background: rgba(74, 158, 255, 0.1);
   border: 1px solid rgba(74, 158, 255, 0.2);
@@ -241,13 +241,13 @@
 }
 
 .langOptionLabelActive {
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-weight: 600;
 }
 
 .langOptionCheck {
   margin-left: auto;
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-size: 11px;
 }
 
@@ -524,7 +524,7 @@
 
 .missionRowSelected {
   background: rgba(74, 158, 255, 0.06);
-  border-left-color: var(--accent-blue);
+  border-left-color: var(--accent-primary);
 }
 
 .missionRowSelected:hover {
@@ -643,10 +643,10 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-dark));
   border: none;
   cursor: pointer;
-  color: #fff;
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -845,7 +845,7 @@
   font-size: 9px;
   font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   background: rgba(74, 158, 255, 0.1);
   padding: 2px 7px;
   border-radius: 3px;
@@ -960,8 +960,8 @@
 
 .launchButtonReady {
   cursor: pointer;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-dark));
+  color: var(--text-on-accent);
   box-shadow: 0 4px 20px rgba(74, 158, 255, 0.25);
 }
 
@@ -1038,7 +1038,7 @@
 }
 
 .footerHeart {
-  color: var(--accent-red);
+  color: var(--accent-danger);
 }
 
 .footerCenter {
@@ -1179,7 +1179,7 @@
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent-green), #1a9a74);
+  background: linear-gradient(135deg, var(--accent-success), #1a9a74);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1198,7 +1198,7 @@
 
 .adminLabel {
   font-size: 8px;
-  color: var(--accent-green);
+  color: var(--accent-success);
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -1228,7 +1228,7 @@
 .adminIconButtonActive {
   background: rgba(74, 158, 255, 0.15);
   border-color: rgba(74, 158, 255, 0.3);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
 }
 
 .signInButton {
@@ -1267,7 +1267,7 @@
   background: var(--bg-modal);
   border: 1px solid rgba(255, 80, 80, 0.3);
   border-radius: 10px;
-  color: var(--accent-red);
+  color: var(--accent-danger);
   font-size: 13px;
   font-family: var(--font-mono);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -1306,7 +1306,7 @@
 /* ── Login Modal (content-specific) ── */
 .modalError {
   font-size: 11px;
-  color: var(--accent-red);
+  color: var(--accent-danger);
   font-family: var(--font-mono);
   margin-top: 8px;
 }
@@ -1336,7 +1336,7 @@
   border-radius: 8px;
   background: rgba(74, 158, 255, 0.06);
   border: 1px solid rgba(74, 158, 255, 0.15);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-size: 11px;
   font-family: var(--font-mono);
   font-weight: 600;
@@ -1351,7 +1351,7 @@
 .adminActionBtnDanger {
   background: rgba(255, 74, 74, 0.06);
   border-color: rgba(255, 74, 74, 0.12);
-  color: var(--accent-red);
+  color: var(--accent-danger);
 }
 
 .adminActionBtnDanger:hover {
@@ -1381,12 +1381,12 @@
 .uploadZoneDragOver {
   border-color: rgba(74, 158, 255, 0.4);
   background: rgba(74, 158, 255, 0.06);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
 }
 
 .uploadProgress {
   font-size: 11px;
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   font-family: var(--font-mono);
 }
 

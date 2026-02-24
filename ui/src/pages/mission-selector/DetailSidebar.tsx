@@ -122,15 +122,15 @@ export function DetailSidebar(props: {
                               <div class={styles.sideCardStatLabel}>{t("total")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: alive() > 0 ? C.green : C.dimmer }}>{alive().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: alive() > 0 ? C.success : C.dimmer }}>{alive().toLocaleString()}</div>
                               <div class={styles.sideCardStatLabel}>{t("alive")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: dead() > 0 ? C.red : C.dimmer }}>{dead().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: dead() > 0 ? C.danger : C.dimmer }}>{dead().toLocaleString()}</div>
                               <div class={styles.sideCardStatLabel}>{t("dead")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: kills() > 0 ? C.orange : C.dimmer }}>{kills().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: kills() > 0 ? C.warning : C.dimmer }}>{kills().toLocaleString()}</div>
                               <div class={styles.sideCardStatLabel}>{t("kills_label")}</div>
                             </div>
                           </div>
@@ -158,15 +158,15 @@ export function DetailSidebar(props: {
                 <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,74,74,0.04)", "border-color": "rgba(255,74,74,0.08)" }}>
                   <div class={styles.sidebarCombatCellTop}>
                     <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
-                    <span class={styles.sidebarCombatCellValue} style={{ color: C.red }}>{kills().toLocaleString()}</span>
+                    <span class={styles.sidebarCombatCellValue} style={{ color: C.danger }}>{kills().toLocaleString()}</span>
                   </div>
                   <div class={styles.sidebarCombatCellLabel}>{t("total_kills")}</div>
                 </div>
                 <Show when={playerKills() > 0}>
                   <div class={styles.sidebarCombatCell} style={{ background: "rgba(74,158,255,0.04)", "border-color": "rgba(74,158,255,0.08)" }}>
                     <div class={styles.sidebarCombatCellTop}>
-                      <span style={{ color: `${C.blue}88` }}><Icons.Users /></span>
-                      <span class={styles.sidebarCombatCellValue} style={{ color: C.blue }}>{playerKills().toLocaleString()}</span>
+                      <span style={{ color: `${C.primary}88` }}><Icons.Users /></span>
+                      <span class={styles.sidebarCombatCellValue} style={{ color: C.primary }}>{playerKills().toLocaleString()}</span>
                     </div>
                     <div class={styles.sidebarCombatCellLabel}>{t("player_kills")}</div>
                   </div>
@@ -174,7 +174,7 @@ export function DetailSidebar(props: {
                 <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,184,74,0.04)", "border-color": "rgba(255,184,74,0.08)" }}>
                   <div class={styles.sidebarCombatCellTop}>
                     <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
-                    <span class={styles.sidebarCombatCellValue} style={{ color: C.orange }}>{killsPerMin()}</span>
+                    <span class={styles.sidebarCombatCellValue} style={{ color: C.warning }}>{killsPerMin()}</span>
                   </div>
                   <div class={styles.sidebarCombatCellLabel}>{t("kills_per_min")}</div>
                 </div>

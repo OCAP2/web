@@ -17,11 +17,11 @@ describe("CSS style files", () => {
     });
 
     it("defines accent color custom properties", () => {
-      expect(css).toContain("--accent-blue");
-      expect(css).toContain("--accent-red");
-      expect(css).toContain("--accent-green");
+      expect(css).toContain("--accent-primary");
+      expect(css).toContain("--accent-danger");
+      expect(css).toContain("--accent-success");
       expect(css).toContain("--accent-purple");
-      expect(css).toContain("--accent-orange");
+      expect(css).toContain("--accent-warning");
     });
 
     it("defines base color custom properties", () => {

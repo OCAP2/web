@@ -2,28 +2,28 @@ import type { Locale } from "../../i18n/i18n";
 
 // All accent colors in one place — CSS vars for inline styles
 export const C = {
-  blue:    "var(--accent-blue)",
-  red:     "var(--accent-red)",
-  green:   "var(--accent-green)",
+  primary: "var(--accent-primary)",
+  danger:  "var(--accent-danger)",
+  success: "var(--accent-success)",
   purple:  "var(--accent-purple)",
-  orange:  "var(--accent-orange)",
+  warning: "var(--accent-warning)",
   muted:   "var(--text-muted)",
   dimmer:  "var(--text-dimmer)",
 } as const;
 
 // Labels are i18n keys — resolve via t() at render time
 export const STATUS_MAP: Record<string, { labelKey: string; color: string; icon: string }> = {
-  ready:      { labelKey: "status_ready",      color: C.green,  icon: "\u25CF" },
-  streaming:  { labelKey: "status_live",       color: C.blue,   icon: "\u25C9" },
-  converting: { labelKey: "status_converting", color: C.orange,  icon: "\u25CC" },
-  pending:    { labelKey: "status_pending",    color: C.muted,  icon: "\u25CB" },
-  failed:     { labelKey: "status_failed",     color: C.red,    icon: "\u2715" },
+  ready:      { labelKey: "status_ready",      color: C.success, icon: "\u25CF" },
+  streaming:  { labelKey: "status_live",       color: C.primary, icon: "\u25C9" },
+  converting: { labelKey: "status_converting", color: C.warning, icon: "\u25CC" },
+  pending:    { labelKey: "status_pending",    color: C.muted,   icon: "\u25CB" },
+  failed:     { labelKey: "status_failed",     color: C.danger,  icon: "\u2715" },
 };
 
 export const SIDE_COLORS: Record<string, string> = {
-  BLUFOR: C.blue,  WEST: C.blue,
-  OPFOR:  C.red,   EAST: C.red,
-  IND:    C.green, GUER: C.green,
+  BLUFOR: C.primary, WEST: C.primary,
+  OPFOR:  C.danger,  EAST: C.danger,
+  IND:    C.success, GUER: C.success,
   CIV:    C.purple,
 };
 

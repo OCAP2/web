@@ -18,9 +18,9 @@ export const SIDE_COLORS_DARK: Record<Side, string> = {
 
 /** Redesign UI colors for side indicators. */
 export const SIDE_COLORS_UI: Record<Side, string> = {
-  WEST: "var(--accent-blue)",
-  EAST: "var(--accent-red)",
-  GUER: "var(--accent-green)",
+  WEST: "var(--accent-primary)",
+  EAST: "var(--accent-danger)",
+  GUER: "var(--accent-success)",
   CIV: "var(--accent-purple)",
 };
 

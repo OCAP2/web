@@ -34,7 +34,7 @@ export function EditModal(props: {
         {/* Header */}
         <div class={ui.dialogHeader}>
           <div class={styles.editModalHeaderLeft}>
-            <span style={{ color: "var(--accent-blue)" }}><Icons.Edit /></span>
+            <span style={{ color: "var(--accent-primary)" }}><Icons.Edit /></span>
             <span class={ui.dialogTitle}>Edit Recording</span>
           </div>
           <button class={ui.dialogCloseBtn} onClick={props.onClose}><Icons.X /></button>

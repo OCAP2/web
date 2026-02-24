@@ -38,10 +38,10 @@ function eventIcon(event: GameEvent): JSX.Element {
 
 function eventColor(event: GameEvent): string {
   if (event instanceof HitKilledEvent) {
-    return event.type === "killed" ? "var(--accent-red)" : "var(--accent-orange)";
+    return event.type === "killed" ? "var(--accent-danger)" : "var(--accent-warning)";
   }
   if (event instanceof ConnectEvent) {
-    return event.type === "connected" ? "var(--accent-green)" : "#888";
+    return event.type === "connected" ? "var(--accent-success)" : "#888";
   }
   if (event instanceof EndMissionEvent) return "var(--accent-purple)";
   return "#888";
@@ -125,7 +125,7 @@ export function EventsTab(): JSX.Element {
           }}
           style={showHits() ? {
             background: "rgba(255,74,74,0.15)",
-            color: "var(--accent-red)",
+            color: "var(--accent-danger)",
           } : undefined}
           onClick={() => setShowHits(!showHits())}
         >
@@ -138,7 +138,7 @@ export function EventsTab(): JSX.Element {
           }}
           style={showConnects() ? {
             background: "rgba(45,212,160,0.15)",
-            color: "var(--accent-green)",
+            color: "var(--accent-success)",
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
         >

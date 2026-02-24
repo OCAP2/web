@@ -61,7 +61,7 @@
 }
 
 .tabActive {
-  border-bottom-color: var(--accent-blue);
+  border-bottom-color: var(--accent-primary);
   color: var(--text-primary);
 }
 
@@ -76,7 +76,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent-red);
+  background: var(--accent-danger);
   color: #fff;
   font-size: 8px;
   font-weight: 700;
@@ -181,7 +181,7 @@
 }
 
 .groupAlive {
-  color: var(--accent-green);
+  color: var(--accent-success);
 }
 
 .groupAliveSlash {
@@ -269,7 +269,7 @@
   gap: 3px;
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--accent-red);
+  color: var(--accent-danger);
   background: rgba(255, 74, 74, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
@@ -529,7 +529,7 @@
 .leaderboardKills {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--accent-red);
+  color: var(--accent-danger);
   min-width: 20px;
   text-align: right;
 }
@@ -537,7 +537,7 @@
 .leaderboardDeaths {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--accent-orange);
+  color: var(--accent-warning);
   min-width: 20px;
   text-align: right;
 }

@@ -69,7 +69,7 @@
 
 .editTagBtnActive {
   background: rgba(74, 158, 255, 0.15);
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   border-color: rgba(74, 158, 255, 0.3);
 }
 
@@ -89,7 +89,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-red);
+  color: var(--accent-danger);
 }
 
 .deleteTitle {
@@ -140,7 +140,7 @@
 }
 
 .uploadHeaderIcon {
-  color: var(--accent-green);
+  color: var(--accent-success);
 }
 
 .uploadDropZone {
@@ -162,7 +162,7 @@
 }
 
 .uploadDropZoneDragOver {
-  border-color: var(--accent-blue);
+  border-color: var(--accent-primary);
   background: rgba(74, 158, 255, 0.06);
 }
 
@@ -174,7 +174,7 @@
 }
 
 .uploadDropIcon {
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   opacity: 0.6;
 }
 
@@ -190,7 +190,7 @@
 }
 
 .uploadDropBrowse {
-  color: var(--accent-blue);
+  color: var(--accent-primary);
   text-decoration: underline;
 }
 
@@ -211,7 +211,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-green);
+  color: var(--accent-success);
 }
 
 .uploadFileInfo {
@@ -247,7 +247,7 @@
 }
 
 .uploadRequired {
-  color: var(--accent-red);
+  color: var(--accent-danger);
 }
 
 .uploadFooter {
@@ -283,7 +283,7 @@
 }
 
 .uploadSubmitBtn:not(:disabled) {
-  background: linear-gradient(135deg, var(--accent-green), var(--accent-green-dark));
+  background: linear-gradient(135deg, var(--accent-success), var(--accent-success-dark));
   color: #fff;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(45, 212, 160, 0.25);
