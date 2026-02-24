@@ -15,7 +15,7 @@
   border-radius: 8px;
   background: rgba(13, 21, 32, 0.85);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: var(--border-subtle);
   color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
@@ -44,7 +44,7 @@
   height: 36px;
   border-radius: 8px;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: var(--border-subtle);
   font-size: 8px;
   cursor: pointer;
   display: flex;

@@ -119,7 +119,7 @@
 .btnGhost {
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: var(--border-subtle);
   background: transparent;
   color: var(--text-muted);
   font-size: 12px;
@@ -170,7 +170,7 @@
   font-family: var(--font-mono);
   color: var(--text-secondary);
   background: var(--bg-interactive);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: var(--border-subtle);
   border-radius: var(--radius-sm);
   outline: none;
   cursor: pointer;
