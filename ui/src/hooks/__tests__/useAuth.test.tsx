@@ -117,9 +117,80 @@ describe("useAuth", () => {
     expect(hrefSetter).toHaveBeenCalledWith("/api/v1/auth/steam");
   });
 
-  it("logout sets authenticated to false", async () => {
+  it("reads auth_error from URL and sets authError signal", async () => {
+    // jsdom supports setting location via navigation
+    const origSearch = window.location.search;
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    let authRef!: Auth;
+    render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={(a) => { authRef = a; }} />
+      </AuthProvider>
+    ));
+
+    await vi.waitFor(() => {
+      expect(authRef).toBeDefined();
+      expect(authRef.authError()).toBe("Your Steam account is not authorized for admin access.");
+    });
+  });
+
+  it("dismissAuthError clears the error", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=steam_error", href: window.location.origin + "/?auth_error=steam_error", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    let authRef!: Auth;
+    render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={(a) => { authRef = a; }} />
+      </AuthProvider>
+    ));
+
+    await vi.waitFor(() => {
+      expect(authRef.authError()).toBe("Steam login failed. Please try again.");
+    });
+
+    authRef.dismissAuthError();
+    expect(authRef.authError()).toBeNull();
+  });
+
+  it("populates steamName and steamAvatar from getMe", async () => {
     setAuthToken("stored-jwt");
-    mockGetMe.mockResolvedValue({ authenticated: true });
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      steamId: "76561198012345678",
+      steamName: "TestPlayer",
+      steamAvatar: "https://avatars.steamstatic.com/abc.jpg",
+    });
+
+    let authRef!: Auth;
+    render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={(a) => { authRef = a; }} />
+      </AuthProvider>
+    ));
+
+    await vi.waitFor(() => {
+      expect(authRef.steamName()).toBe("TestPlayer");
+      expect(authRef.steamAvatar()).toBe("https://avatars.steamstatic.com/abc.jpg");
+    });
+  });
+
+  it("logout clears steamName and steamAvatar", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      steamId: "76561198012345678",
+      steamName: "TestPlayer",
+      steamAvatar: "https://avatars.steamstatic.com/abc.jpg",
+    });
     mockLogout.mockResolvedValue(undefined);
 
     let authRef!: Auth;
@@ -132,9 +203,13 @@ describe("useAuth", () => {
     // Wait until authenticated is true from getMe
     await findByText("true");
     expect(authRef.authenticated()).toBe(true);
+    expect(authRef.steamName()).toBe("TestPlayer");
+    expect(authRef.steamAvatar()).toBe("https://avatars.steamstatic.com/abc.jpg");
 
     await authRef.logout();
     expect(authRef.authenticated()).toBe(false);
+    expect(authRef.steamName()).toBeNull();
+    expect(authRef.steamAvatar()).toBeNull();
     expect(mockLogout).toHaveBeenCalledOnce();
   });
 });

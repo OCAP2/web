@@ -571,6 +571,35 @@ describe("MissionSelector", () => {
     expect(container.textContent).toContain("2");
     expect(container.textContent).toContain("MAPS");
   });
+
+  // ── Auth error toast ──
+
+  it("shows auth error toast and dismisses on click", async () => {
+    // Mock location with auth_error param so AuthProvider picks it up
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    const { container } = renderPage();
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Your Steam account is not authorized for admin access.");
+    });
+
+    // Click the dismiss button on the toast (it's the button whose parent contains the error message)
+    const toastDiv = Array.from(container.querySelectorAll("div")).find(
+      (d) => d.textContent?.includes("not authorized for admin access"),
+    )!;
+    const dismissBtn = toastDiv.querySelector("button")!;
+    expect(dismissBtn).toBeDefined();
+    fireEvent.click(dismissBtn);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("not authorized for admin access");
+    });
+  });
 });
 
 // ─── Admin tests ───
