@@ -6,6 +6,7 @@ import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
 import { LOCALE_LABELS } from "../../mission-selector/constants";
 import { XIcon } from "./Icons";
+import ui from "../../../components/ui.module.css";
 import styles from "./AboutModal.module.css";
 
 export interface AboutModalProps {
@@ -37,14 +38,14 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
 
   return (
     <Show when={props.open()}>
-      <div data-testid="about-modal" class={styles.overlay} onClick={(e) => {
+      <div data-testid="about-modal" class={ui.dialogOverlay} onClick={(e) => {
         if (e.target === e.currentTarget) props.onClose();
       }}>
-        <div class={styles.modal}>
+        <div class={ui.dialogCard} style={{ width: "340px" }}>
           {/* Header */}
-          <div class={styles.header}>
-            <span class={styles.headerTitle}>{t("info")}</span>
-            <button class={styles.closeBtn} onClick={() => props.onClose()}>
+          <div class={ui.dialogHeader}>
+            <span class={ui.dialogTitle}>{t("info")}</span>
+            <button class={ui.dialogCloseBtn} onClick={() => props.onClose()}>
               <XIcon size={14} />
             </button>
           </div>
@@ -96,7 +97,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               <div class={styles.sectionLabel}>{t("language")}</div>
               <select
                 data-testid="language-select"
-                class={styles.langSelect}
+                class={ui.select}
                 value={locale()}
                 onChange={(e) => setLocale(e.currentTarget.value as Locale)}
               >

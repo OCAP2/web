@@ -303,7 +303,7 @@
 }
 
 .filterInput:focus {
-  border-color: rgba(74, 158, 255, 0.3);
+  border-color: var(--focus-ring);
 }
 
 .filterToggle {

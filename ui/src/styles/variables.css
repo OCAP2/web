@@ -5,6 +5,8 @@
   --accent-green: #2DD4A0;
   --accent-purple: #A78BFA;
   --accent-orange: #FFB84A;
+  --accent-blue-dark: #3585dd;
+  --accent-red-dark: #CC3333;
 
   /* ── Text scale ── */
   --text-primary: #e5ebf1;
@@ -36,6 +38,29 @@
   --side-blufor-dark: #004D99;  --side-opfor-dark: #800000;
   --side-ind-dark: #007F00;     --side-civ-dark: #650080;
   --color-dead: #333333;  --color-hit: #FF8800;
+
+  /* ── Spacing scale ── */
+  --space-xs: 4px;  --space-sm: 8px;  --space-md: 12px;
+  --space-lg: 16px;  --space-xl: 20px;  --space-2xl: 24px;
+
+  /* ── Border radius ── */
+  --radius-sm: 6px;  --radius-md: 8px;  --radius-lg: 12px;  --radius-xl: 14px;
+
+  /* ── Borders & shadows ── */
+  --border-subtle: 1px solid rgba(255, 255, 255, 0.06);
+  --border-default: 1px solid rgba(255, 255, 255, 0.1);
+  --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 2px 12px rgba(74, 158, 255, 0.3);
+
+  /* ── Z-index scale ── */
+  --z-dropdown: 100;
+  --z-modal: 500;
+
+  /* ── Interactive surfaces ── */
+  --bg-interactive: rgba(255, 255, 255, 0.04);
+  --bg-interactive-hover: rgba(255, 255, 255, 0.08);
+  --focus-ring: rgba(74, 158, 255, 0.3);
 
   /* ── Playback layout ── */
   --pb-top-height: 48px;

@@ -137,7 +137,6 @@ describe("CSS style files", () => {
 
   describe("CSS Modules", () => {
     const moduleFiles = [
-      "MissionModal.module.css",
       "Hint.module.css",
       "CounterDisplay.module.css",
       "TopBar.module.css",

@@ -3,7 +3,7 @@ import type { JSX } from "solid-js";
 import type { Operation } from "../../data/types";
 import { Icons } from "./icons";
 import { formatDuration, formatDate } from "./helpers";
-import shared from "./MissionSelector.module.css";
+import ui from "../../components/ui.module.css";
 import styles from "./dialogs.module.css";
 
 // ─── Edit Modal ───
@@ -30,19 +30,19 @@ export function EditModal(props: {
   const TAG_OPTIONS = ["TvT", "COOP", "Zeus", "Training", "None"];
 
   return (
-    <div class={shared.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={shared.modalCard} style={{ width: "420px", padding: "0" }}>
+    <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={ui.dialogCard} style={{ width: "420px", padding: "0" }}>
         {/* Header */}
-        <div class={styles.editModalHeader}>
+        <div class={ui.dialogHeader}>
           <div class={styles.editModalHeaderLeft}>
             <span style={{ color: "var(--accent-blue)" }}><Icons.Edit /></span>
-            <span class={styles.editModalHeaderTitle}>Edit Recording</span>
+            <span class={ui.dialogTitle}>Edit Recording</span>
           </div>
-          <button class={styles.editModalClose} onClick={props.onClose}><Icons.X /></button>
+          <button class={ui.dialogCloseBtn} onClick={props.onClose}><Icons.X /></button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div class={styles.editModalBody}>
+          <div class={ui.dialogBody} style={{ gap: "14px" }}>
             {/* Read-only info bar */}
             <div class={styles.editInfoBar}>
               <div class={styles.editInfoItem}>
@@ -74,7 +74,7 @@ export function EditModal(props: {
                 type="text"
                 value={name()}
                 onInput={(e) => setName(e.currentTarget.value)}
-                class={shared.modalInput}
+                class={ui.input}
               />
             </div>
 
@@ -115,15 +115,15 @@ export function EditModal(props: {
                 type="date"
                 value={date()}
                 onInput={(e) => setDate(e.currentTarget.value)}
-                class={shared.modalInput}
+                class={ui.input}
                 style={{ "color-scheme": "dark" }}
               />
             </div>
           </div>
 
-          <div class={styles.editModalFooter}>
-            <button type="button" class={shared.modalCancel} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={shared.modalSubmit}><Icons.Check /> Save Changes</button>
+          <div class={ui.dialogFooter}>
+            <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
+            <button type="submit" class={ui.btnPrimary}><Icons.Check /> Save Changes</button>
           </div>
         </form>
       </div>
@@ -139,8 +139,8 @@ export function DeleteConfirm(props: {
   onConfirm: (id: string) => void;
 }): JSX.Element {
   return (
-    <div class={shared.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={shared.modalCard} style={{ width: "420px", padding: "0" }}>
+    <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={ui.dialogCard} style={{ width: "420px", padding: "0" }}>
         {/* Body */}
         <div class={styles.deleteBody}>
           <div class={styles.deleteIcon}>
@@ -156,9 +156,9 @@ export function DeleteConfirm(props: {
         </div>
 
         {/* Footer */}
-        <div class={styles.editModalFooter}>
-          <button type="button" class={shared.modalCancel} onClick={props.onClose}>Cancel</button>
-          <button type="button" class={styles.modalSubmitDanger} onClick={() => props.onConfirm(props.op.id)}>
+        <div class={ui.dialogFooter}>
+          <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
+          <button type="button" class={ui.btnDanger} onClick={() => props.onConfirm(props.op.id)}>
             <span style={{ display: "flex", "align-items": "center", gap: "5px" }}>
               <Icons.Trash /> Delete Recording
             </span>

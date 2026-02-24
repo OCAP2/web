@@ -1,0 +1,186 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   Shared UI primitives
+   Reusable dialog, button, and input classes imported across pages.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Dialog / Modal ── */
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.dialogCard {
+  background: var(--bg-surface);
+  border: var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dialog);
+  min-width: 320px;
+  max-width: 90vw;
+  animation: slideUp 0.2s ease-out;
+  overflow: hidden;
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: var(--border-subtle);
+}
+
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  border-top: var(--border-subtle);
+}
+
+.dialogTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dialogCloseBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-interactive);
+  border: var(--border-subtle);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.dialogCloseBtn:hover {
+  background: var(--bg-interactive-hover);
+}
+
+/* ── Buttons ── */
+
+.btnPrimary {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.1);
+}
+
+.btnDanger {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-red-dark));
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 74, 74, 0.25);
+}
+
+.btnDanger:hover {
+  filter: brightness(1.1);
+}
+
+.btnGhost {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.btnIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-interactive);
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btnIcon:hover {
+  background: var(--bg-interactive-hover);
+}
+
+/* ── Inputs ── */
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-interactive);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--focus-ring);
+}
+
+.select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: var(--bg-interactive);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--focus-ring);
+}
+
+.select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}

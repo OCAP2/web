@@ -194,7 +194,7 @@
   padding: 4px;
   min-width: 170px;
   z-index: 100;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dropdown);
   animation: fadeIn 0.15s ease-out;
 }
 
@@ -289,7 +289,7 @@
 }
 
 .searchInput:focus {
-  border-color: rgba(74, 158, 255, 0.3);
+  border-color: var(--focus-ring);
 }
 
 .searchInput::placeholder {
@@ -642,14 +642,14 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-blue), #3585dd);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
   border: none;
   cursor: pointer;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 12px rgba(74, 158, 255, 0.3);
+  box-shadow: var(--shadow-accent);
   animation: fadeScale 0.2s ease-out;
 }
 
@@ -957,7 +957,7 @@
 
 .launchButtonReady {
   cursor: pointer;
-  background: linear-gradient(135deg, var(--accent-blue), #3585dd);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-dark));
   color: #fff;
   box-shadow: 0 4px 20px rgba(74, 158, 255, 0.25);
 }
@@ -1242,95 +1242,12 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* ── Login Modal ── */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  animation: fadeIn 0.15s ease-out;
-}
-
-.modalCard {
-  background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 24px;
-  min-width: 320px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-}
-
-.modalTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-heading);
-  margin-bottom: 16px;
-}
-
-.modalInput {
-  width: 100%;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-family: var(--font-mono);
-  outline: none;
-  box-sizing: border-box;
-}
-
-.modalInput:focus {
-  border-color: rgba(74, 158, 255, 0.3);
-}
-
+/* ── Login Modal (content-specific) ── */
 .modalError {
   font-size: 11px;
   color: var(--accent-red);
   font-family: var(--font-mono);
   margin-top: 8px;
-}
-
-.modalActions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.modalCancel {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-family: var(--font-mono);
-  cursor: pointer;
-}
-
-.modalSubmit {
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-blue), #3585dd);
-  border: none;
-  color: #fff;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.modalSubmit:hover {
-  filter: brightness(1.1);
 }
 
 /* ── Admin actions in sidebar ── */

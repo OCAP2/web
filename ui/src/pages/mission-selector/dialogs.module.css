@@ -1,45 +1,7 @@
-/* ── Edit modal ── */
-.editModalHeader {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
+/* ── Edit modal (content-specific) ── */
 .editModalHeaderLeft {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.editModalHeaderTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-family: var(--font-heading);
-}
-
-.editModalClose {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex;
-}
-
-.editModalBody {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.editModalFooter {
-  padding: 12px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -168,19 +130,3 @@
   line-height: 1.4;
 }
 
-.modalSubmitDanger {
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-red), #CC3333);
-  border: none;
-  color: #fff;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255, 74, 74, 0.25);
-}
-
-.modalSubmitDanger:hover {
-  filter: brightness(1.1);
-}

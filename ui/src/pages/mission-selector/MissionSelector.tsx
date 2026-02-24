@@ -15,6 +15,7 @@ import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
 import { EditModal, DeleteConfirm } from "./dialogs";
+import ui from "../../components/ui.module.css";
 import styles from "./MissionSelector.module.css";
 
 // ─── Main Component ───
@@ -655,24 +656,28 @@ function LoginModal(props: {
   };
 
   return (
-    <div class={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={styles.modalCard}>
-        <div class={styles.modalTitle}>Admin Login</div>
+    <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class={ui.dialogCard}>
+        <div class={ui.dialogHeader}>
+          <span class={ui.dialogTitle}>Admin Login</span>
+        </div>
         <form onSubmit={handleSubmit}>
-          <input
-            ref={inputRef}
-            type="password"
-            placeholder="Server secret"
-            value={secret()}
-            onInput={(e) => setSecret(e.currentTarget.value)}
-            class={styles.modalInput}
-          />
-          <Show when={props.error}>
-            <div class={styles.modalError}>Invalid secret</div>
-          </Show>
-          <div class={styles.modalActions}>
-            <button type="button" class={styles.modalCancel} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={styles.modalSubmit}>Sign in</button>
+          <div class={ui.dialogBody}>
+            <input
+              ref={inputRef}
+              type="password"
+              placeholder="Server secret"
+              value={secret()}
+              onInput={(e) => setSecret(e.currentTarget.value)}
+              class={ui.input}
+            />
+            <Show when={props.error}>
+              <div class={styles.modalError}>Invalid secret</div>
+            </Show>
+          </div>
+          <div class={ui.dialogFooter}>
+            <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
+            <button type="submit" class={ui.btnPrimary}>Sign in</button>
           </div>
         </form>
       </div>
