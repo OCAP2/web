@@ -2,7 +2,8 @@ import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Operation } from "../../data/types";
 import { Icons } from "./icons";
-import { formatDuration, formatDate } from "./helpers";
+import { formatDuration, formatDate, stripRecordingExtension } from "./helpers";
+import { TAG_OPTIONS } from "./constants";
 import ui from "../../components/ui.module.css";
 import styles from "./dialogs.module.css";
 
@@ -26,8 +27,6 @@ export function EditModal(props: {
       date: date() || undefined,
     });
   };
-
-  const TAG_OPTIONS = ["TvT", "COOP", "Zeus", "Training", "None"];
 
   return (
     <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
@@ -85,21 +84,15 @@ export function EditModal(props: {
                 <div class={styles.editTagGroup}>
                   <For each={TAG_OPTIONS}>
                     {(t) => {
-                      const val = t === "None" ? "" : t;
-                      const active = () => tag() === val;
+                      const active = () => tag() === t;
                       return (
                         <button
                           type="button"
                           class={styles.editTagBtn}
                           classList={{ [styles.editTagBtnActive]: active() }}
-                          style={active() ? undefined : {
-                            background: "rgba(255, 255, 255, 0.03)",
-                            color: "var(--text-dimmer)",
-                            "border-color": "rgba(255, 255, 255, 0.06)",
-                          }}
-                          onClick={() => setTag(val)}
+                          onClick={() => setTag(t)}
                         >
-                          {t}
+                          {t || "None"}
                         </button>
                       );
                     }}
@@ -152,8 +145,7 @@ export function UploadDialog(props: {
     if (!f) return;
     setFile(f);
     if (!name()) {
-      const base = f.name.replace(/\.json\.gz$/, "").replace(/\.json$/, "").replace(/\.gz$/, "");
-      setName(base);
+      setName(stripRecordingExtension(f.name));
     }
   };
 
@@ -170,8 +162,6 @@ export function UploadDialog(props: {
   };
 
   const canSubmit = () => !!file() && !!name() && !props.uploading;
-
-  const TAG_OPTIONS = ["TvT", "COOP", "Zeus", "Training", ""];
 
   return (
     <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onCancel(); }}>
@@ -266,11 +256,6 @@ export function UploadDialog(props: {
                       type="button"
                       class={styles.editTagBtn}
                       classList={{ [styles.editTagBtnActive]: active() }}
-                      style={active() ? undefined : {
-                        background: "rgba(255, 255, 255, 0.03)",
-                        color: "var(--text-dimmer)",
-                        "border-color": "rgba(255, 255, 255, 0.06)",
-                      }}
                       onClick={() => setTag(t)}
                     >
                       {t || "None"}

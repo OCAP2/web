@@ -87,3 +87,8 @@ export function getStatusInfo(op: Operation): { labelKey: string; color: string;
 export function isOpReady(op: Operation): boolean {
   return getStatusInfo(op).key === "ready";
 }
+
+/** Strip .json.gz / .json / .gz extensions from a recording filename. */
+export function stripRecordingExtension(filename: string): string {
+  return filename.replace(/\.json\.gz$/, "").replace(/\.json$/, "").replace(/\.gz$/, "");
+}

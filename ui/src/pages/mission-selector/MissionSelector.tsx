@@ -10,7 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
-import { getMapColor, isOpReady } from "./helpers";
+import { getMapColor, isOpReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
@@ -223,7 +223,7 @@ export function MissionSelector(): JSX.Element {
       const formData = new FormData();
       formData.append("file", data.file);
 
-      const baseName = data.file.name.replace(/\.json(\.gz)?$/, "").replace(/\.gz$/, "");
+      const baseName = stripRecordingExtension(data.file.name);
       formData.append("filename", baseName);
       formData.append("worldName", data.map || "unknown");
       formData.append("missionName", data.name);
