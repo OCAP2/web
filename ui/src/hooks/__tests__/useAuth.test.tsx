@@ -7,8 +7,9 @@ import { setAuthToken } from "../../data/api-client";
 // ─── Mock ApiClient ───
 
 const mockGetMe = vi.fn();
-const mockLogin = vi.fn();
 const mockLogout = vi.fn();
+const mockGetSteamLoginUrl = vi.fn().mockReturnValue("/api/v1/auth/steam");
+const mockConsumeAuthCookie = vi.fn().mockReturnValue(false);
 
 vi.mock("../../data/api-client", async () => {
   const actual = await vi.importActual<typeof import("../../data/api-client")>("../../data/api-client");
@@ -16,8 +17,9 @@ vi.mock("../../data/api-client", async () => {
     ...actual,
     ApiClient: class {
       getMe = mockGetMe;
-      login = mockLogin;
       logout = mockLogout;
+      getSteamLoginUrl = mockGetSteamLoginUrl;
+      consumeAuthCookie = mockConsumeAuthCookie;
     },
   };
 });
@@ -35,8 +37,8 @@ function TestConsumer(props: { onAuth: (auth: Auth) => void }) {
 describe("useAuth", () => {
   beforeEach(() => {
     mockGetMe.mockResolvedValue({ authenticated: false });
-    mockLogin.mockResolvedValue({ authenticated: true });
     mockLogout.mockResolvedValue(undefined);
+    mockConsumeAuthCookie.mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -65,9 +67,20 @@ describe("useAuth", () => {
     expect(mockGetMe).not.toHaveBeenCalled();
   });
 
+  it("consumes auth cookie on mount", async () => {
+    const { findByTestId } = render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={() => {}} />
+      </AuthProvider>
+    ));
+
+    await findByTestId("authenticated");
+    expect(mockConsumeAuthCookie).toHaveBeenCalled();
+  });
+
   it("checks session on mount via getMe when token exists", async () => {
     setAuthToken("stored-jwt");
-    mockGetMe.mockResolvedValue({ authenticated: true });
+    mockGetMe.mockResolvedValue({ authenticated: true, steamId: "76561198012345678" });
 
     const { findByText } = render(() => (
       <AuthProvider>
@@ -79,44 +92,15 @@ describe("useAuth", () => {
     expect(mockGetMe).toHaveBeenCalledOnce();
   });
 
-  it("sets authenticated to true when getMe returns authenticated", async () => {
-    setAuthToken("stored-jwt");
-    mockGetMe.mockResolvedValue({ authenticated: true });
-
-    const { findByText } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={() => {}} />
-      </AuthProvider>
-    ));
-
-    expect(await findByText("true")).toBeDefined();
-  });
-
-  it("login sets authenticated to true on success", async () => {
-    mockGetMe.mockResolvedValue({ authenticated: false });
-    mockLogin.mockResolvedValue({ authenticated: true });
-
-    let authRef!: Auth;
-    render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
-
-    // Wait for mount to settle
-    await vi.waitFor(() => {
-      expect(authRef).toBeDefined();
+  it("loginWithSteam redirects to Steam login URL", async () => {
+    const originalLocation = window.location.href;
+    // Mock window.location.href setter
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, get href() { return originalLocation; }, set href(v: string) { hrefSetter(v); } },
+      writable: true,
+      configurable: true,
     });
-
-    const result = await authRef.login("correct-secret");
-    expect(result).toBe(true);
-    expect(authRef.authenticated()).toBe(true);
-    expect(mockLogin).toHaveBeenCalledWith("correct-secret");
-  });
-
-  it("login returns false on failure", async () => {
-    mockGetMe.mockResolvedValue({ authenticated: false });
-    mockLogin.mockRejectedValue(new Error("401 Unauthorized"));
 
     let authRef!: Auth;
     render(() => (
@@ -129,9 +113,8 @@ describe("useAuth", () => {
       expect(authRef).toBeDefined();
     });
 
-    const result = await authRef.login("wrong-secret");
-    expect(result).toBe(false);
-    expect(authRef.authenticated()).toBe(false);
+    authRef.loginWithSteam();
+    expect(hrefSetter).toHaveBeenCalledWith("/api/v1/auth/steam");
   });
 
   it("logout sets authenticated to false", async () => {

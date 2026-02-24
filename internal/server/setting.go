@@ -46,7 +46,8 @@ type Customize struct {
 }
 
 type Admin struct {
-	SessionTTL time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
+	SessionTTL      time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
+	AllowedSteamIDs []string      `json:"allowedSteamIds" yaml:"allowedSteamIds"`
 }
 
 type Streaming struct {
@@ -91,9 +92,10 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("streaming.pingInterval", "30s")
 	viper.SetDefault("streaming.pingTimeout", "10s")
 	viper.SetDefault("admin.sessionTTL", "24h")
+	viper.SetDefault("admin.allowedSteamIds", []string{})
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

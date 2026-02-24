@@ -18,6 +18,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/yohcop/openid-go"
 )
 
 const CacheDuration = 7 * 24 * time.Hour
@@ -41,6 +42,9 @@ type Handler struct {
 	jwt               *JWTManager
 	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
 	staticFS          fs.FS             // optional, nil disables static file serving
+	openIDVerifier    openIDVerifier
+	openIDCache       openid.DiscoveryCache
+	openIDNonceStore  openid.NonceStore
 }
 
 // HandlerOption configures the Handler
@@ -81,6 +85,9 @@ func NewHandler(
 	}
 
 	hdlr.jwt = NewJWTManager(setting.Secret, setting.Admin.SessionTTL)
+	hdlr.openIDCache = openid.NewSimpleDiscoveryCache()
+	hdlr.openIDNonceStore = openid.NewSimpleNonceStore()
+	hdlr.openIDVerifier = defaultOpenIDVerifier{}
 
 	e.Use(hdlr.errorHandler)
 
@@ -145,7 +152,8 @@ func NewHandler(
 	)
 
 	// Auth endpoints
-	g.POST("/api/v1/auth/login", hdlr.Login)
+	g.GET("/api/v1/auth/steam", hdlr.SteamLogin)
+	g.GET("/api/v1/auth/steam/callback", hdlr.SteamCallback)
 	g.GET("/api/v1/auth/me", hdlr.GetMe)
 	g.POST("/api/v1/auth/logout", hdlr.Logout)
 

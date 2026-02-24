@@ -32,6 +32,7 @@
 		"pingTimeout": "10s"
 	},
 	"admin": {
-		"sessionTTL": "24h"
+		"sessionTTL": "24h",
+		"allowedSteamIds": []
 	}
 }

@@ -101,6 +101,16 @@
             "user_editable": true,
             "rules": ["required", "string", "in:true,false"],
             "sort": 7
+        },
+        {
+            "name": "Allowed Steam IDs",
+            "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID. Leave empty to disable Steam admin login.",
+            "env_variable": "OCAP_ADMIN_ALLOWEDSTEAMIDS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": ["nullable", "string"],
+            "sort": 8
         }
     ]
 }

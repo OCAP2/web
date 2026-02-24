@@ -15,7 +15,6 @@ import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
 import { EditModal, DeleteConfirm, UploadDialog } from "./dialogs";
-import ui from "../../components/ui.module.css";
 import styles from "./MissionSelector.module.css";
 
 // ─── Main Component ───
@@ -25,11 +24,9 @@ export function MissionSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { authenticated, login, logout } = useAuth();
+  const { authenticated, steamId, authError, loginWithSteam, logout } = useAuth();
 
   // State
-  const [showLoginModal, setShowLoginModal] = createSignal(false);
-  const [loginError, setLoginError] = createSignal(false);
   const [showUpload, setShowUpload] = createSignal(false);
   const [operations, setOperations] = createSignal<Operation[]>([]);
   const [loading, setLoading] = createSignal(false);
@@ -74,7 +71,6 @@ export function MissionSelector(): JSX.Element {
     if (e.key === "Escape") {
       setSelectedId(null);
       setLangOpen(false);
-      setShowLoginModal(false);
       setEditingOp(null);
       setDeletingOp(null);
       searchRef?.blur();
@@ -317,15 +313,22 @@ export function MissionSelector(): JSX.Element {
               <div class={styles.divider} />
 
               <Show when={authenticated()} fallback={
-                <button class={styles.signInButton} onClick={() => setShowLoginModal(true)}>
-                  <Icons.Lock /> Sign in
-                </button>
+                <div class={styles.authArea}>
+                  <Show when={authError()}>
+                    <div class={styles.authError}>{authError()}</div>
+                  </Show>
+                  <button class={styles.signInButton} onClick={() => loginWithSteam()}>
+                    <Icons.Lock /> Sign in with Steam
+                  </button>
+                </div>
               }>
                 <div class={styles.adminArea}>
                   <div class={styles.adminBadge}>
                     <div class={styles.adminAvatar}>A</div>
                     <div>
-                      <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>Admin</div>
+                      <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>
+                        {steamId() ? steamId() : "Admin"}
+                      </div>
                       <div class={styles.adminLabel}><Icons.Shield /> ADMIN</div>
                     </div>
                   </div>
@@ -555,23 +558,6 @@ export function MissionSelector(): JSX.Element {
           </Show>
         </div>
 
-        {/* ── Login Modal ── */}
-        <Show when={showLoginModal()}>
-          <LoginModal
-            onClose={() => { setShowLoginModal(false); setLoginError(false); }}
-            onSubmit={async (secret) => {
-              setLoginError(false);
-              const ok = await login(secret);
-              if (ok) {
-                setShowLoginModal(false);
-              } else {
-                setLoginError(true);
-              }
-            }}
-            error={loginError()}
-          />
-        </Show>
-
         {/* ── Edit Modal ── */}
         <Show when={editingOp()}>
           {(op) => (
@@ -598,49 +584,3 @@ export function MissionSelector(): JSX.Element {
   );
 }
 
-// ─── Login Modal ───
-
-function LoginModal(props: {
-  onClose: () => void;
-  onSubmit: (secret: string) => void;
-  error: boolean;
-}): JSX.Element {
-  let inputRef: HTMLInputElement | undefined;
-  const [secret, setSecret] = createSignal("");
-
-  onMount(() => inputRef?.focus());
-
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    props.onSubmit(secret());
-  };
-
-  return (
-    <div class={ui.dialogOverlay} onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>
-      <div class={ui.dialogCard}>
-        <div class={ui.dialogHeader}>
-          <span class={ui.dialogTitle}>Admin Login</span>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div class={ui.dialogBody}>
-            <input
-              ref={inputRef}
-              type="password"
-              placeholder="Server secret"
-              value={secret()}
-              onInput={(e) => setSecret(e.currentTarget.value)}
-              class={ui.input}
-            />
-            <Show when={props.error}>
-              <div class={styles.modalError}>Invalid secret</div>
-            </Show>
-          </div>
-          <div class={ui.dialogFooter}>
-            <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={ui.btnPrimary}>Sign in</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}

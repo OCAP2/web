@@ -42,7 +42,7 @@ func setupAdminTest(t *testing.T) (Handler, *Operation) {
 
 func TestEditOperation(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create()
+	token, err := hdlr.jwt.Create("")
 	require.NoError(t, err)
 
 	e := echo.New()
@@ -86,7 +86,7 @@ func TestEditOperation_Unauthorized(t *testing.T) {
 
 func TestDeleteOperation_Handler(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create()
+	token, err := hdlr.jwt.Create("")
 	require.NoError(t, err)
 
 	// Create fake data files on disk
@@ -120,7 +120,7 @@ func TestDeleteOperation_Handler(t *testing.T) {
 
 func TestRetryConversion(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create()
+	token, err := hdlr.jwt.Create("")
 	require.NoError(t, err)
 
 	// Set op to failed status
@@ -290,7 +290,6 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	}
 
 	e.Use(hdlr.errorHandler)
-	e.POST("/api/v1/auth/login", hdlr.Login)
 	e.GET("/api/v1/auth/me", hdlr.GetMe)
 	e.POST("/api/v1/auth/logout", hdlr.Logout)
 	admin := e.Group("", hdlr.requireAdmin)
@@ -304,28 +303,12 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 
 	client := &http.Client{}
 	opID := fmt.Sprintf("%d", op.ID)
-	var authToken string
 
-	// Step 1: Login with correct secret — verify 200 and token in response
-	t.Run("Login", func(t *testing.T) {
-		resp, err := client.Post(
-			ts.URL+"/api/v1/auth/login",
-			"application/json",
-			strings.NewReader(`{"secret":"test-secret"}`),
-		)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+	// Create a JWT directly (simulates successful Steam login)
+	authToken, err := jwtMgr.Create("76561198012345678")
+	require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-		var body map[string]any
-		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-		assert.Equal(t, true, body["authenticated"])
-		assert.NotEmpty(t, body["token"])
-		authToken = body["token"].(string)
-	})
-
-	// Step 2: Check auth status — verify authenticated:true
+	// Step 1: Check auth status — verify authenticated:true
 	t.Run("CheckAuth", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/v1/auth/me", nil)
 		require.NoError(t, err)
@@ -337,9 +320,9 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var body map[string]bool
+		var body map[string]any
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-		assert.True(t, body["authenticated"])
+		assert.Equal(t, true, body["authenticated"])
 	})
 
 	// Step 3: Edit operation — PATCH with new name and tag

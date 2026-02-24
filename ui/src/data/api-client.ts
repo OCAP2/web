@@ -19,6 +19,7 @@ export interface BuildInfo {
 
 export interface AuthState {
   authenticated: boolean;
+  steamId?: string;
 }
 
 // ─── Error types ───
@@ -286,24 +287,19 @@ export class ApiClient {
 
   // ─── Auth methods ───
 
-  async login(secret: string): Promise<AuthState> {
-    const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret }),
-    });
-    if (!response.ok) {
-      throw new ApiError(
-        `Login failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    const data = (await response.json()) as AuthState & { token?: string };
-    if (data.token) {
-      setAuthToken(data.token);
-    }
-    return { authenticated: data.authenticated };
+  getSteamLoginUrl(): string {
+    return `${this.baseUrl}/api/v1/auth/steam`;
+  }
+
+  consumeAuthCookie(): boolean {
+    const match = document.cookie.split("; ").find((c) => c.startsWith("ocap_auth_token="));
+    if (!match) return false;
+    const token = match.split("=")[1];
+    if (!token) return false;
+    setAuthToken(token);
+    // Delete the cookie
+    document.cookie = "ocap_auth_token=; Max-Age=0; Path=/";
+    return true;
   }
 
   async getMe(): Promise<AuthState> {

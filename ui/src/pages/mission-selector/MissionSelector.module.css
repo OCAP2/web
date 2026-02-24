@@ -1242,6 +1242,19 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+.authArea {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.authError {
+  font-size: 11px;
+  color: var(--accent-red);
+  font-family: var(--font-mono);
+  max-width: 200px;
+}
+
 /* ── Login Modal (content-specific) ── */
 .modalError {
   font-size: 11px;

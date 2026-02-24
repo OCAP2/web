@@ -1244,7 +1244,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 	}
 
 	t.Run("valid JWT token without secret succeeds", func(t *testing.T) {
-		token, err := jwtMgr.Create()
+		token, err := jwtMgr.Create("")
 		require.NoError(t, err)
 
 		body := &bytes.Buffer{}

@@ -4,20 +4,43 @@ import { ApiClient, getAuthToken } from "../data/api-client";
 
 export interface Auth {
   authenticated: Accessor<boolean>;
-  login: (secret: string) => Promise<boolean>;
+  steamId: Accessor<string | null>;
+  authError: Accessor<string | null>;
+  loginWithSteam: () => void;
   logout: () => Promise<void>;
 }
+
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  steam_denied: "Your Steam account is not authorized for admin access.",
+  steam_error: "Steam login failed. Please try again.",
+};
 
 const AuthContext = createContext<Auth>();
 
 /**
- * Provider that checks session state on mount and exposes login/logout actions app-wide.
+ * Provider that checks session state on mount and exposes Steam login/logout actions app-wide.
  */
 export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const [authenticated, setAuthenticated] = createSignal(false);
+  const [steamId, setSteamId] = createSignal<string | null>(null);
+  const [authError, setAuthError] = createSignal<string | null>(null);
   const api = new ApiClient();
 
   onMount(async () => {
+    // Check for auth error from Steam callback redirect
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("auth_error");
+    if (error) {
+      setAuthError(AUTH_ERROR_MESSAGES[error] ?? "Authentication failed.");
+      // Clean URL without reloading
+      const url = new URL(window.location.href);
+      url.searchParams.delete("auth_error");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+
+    // Check for token cookie from Steam callback redirect
+    api.consumeAuthCookie();
+
     if (!getAuthToken()) {
       setAuthenticated(false);
       return;
@@ -25,20 +48,15 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
     try {
       const state = await api.getMe();
       setAuthenticated(state.authenticated);
+      setSteamId(state.steamId ?? null);
     } catch {
       setAuthenticated(false);
     }
   });
 
-  const login = async (secret: string): Promise<boolean> => {
-    try {
-      const state = await api.login(secret);
-      setAuthenticated(state.authenticated);
-      return state.authenticated;
-    } catch {
-      setAuthenticated(false);
-      return false;
-    }
+  const loginWithSteam = () => {
+    setAuthError(null);
+    window.location.href = api.getSteamLoginUrl();
   };
 
   const logout = async (): Promise<void> => {
@@ -46,11 +64,12 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
       await api.logout();
     } finally {
       setAuthenticated(false);
+      setSteamId(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ authenticated, login, logout }}>
+    <AuthContext.Provider value={{ authenticated, steamId, authError, loginWithSteam, logout }}>
       {props.children}
     </AuthContext.Provider>
   );

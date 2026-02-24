@@ -286,29 +286,38 @@ describe("ApiClient", () => {
     });
   });
 
-  // ─── login ───
+  // ─── getSteamLoginUrl ───
 
-  describe("login", () => {
-    it("posts secret, stores token, and returns auth state", async () => {
-      mockFetchJson({ authenticated: true, token: "jwt-test-token" });
-
+  describe("getSteamLoginUrl", () => {
+    it("returns the Steam auth endpoint URL", () => {
       const client = new ApiClient("/aar/");
-      const result = await client.login("my-secret");
-
-      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: "my-secret" }),
-      });
-      expect(result).toEqual({ authenticated: true });
-      expect(getAuthToken()).toBe("jwt-test-token");
+      expect(client.getSteamLoginUrl()).toBe("/aar/api/v1/auth/steam");
     });
 
-    it("throws ApiError on invalid credentials", async () => {
-      mockFetchError(401, "Unauthorized");
+    it("works with empty base URL", () => {
+      const client = new ApiClient();
+      expect(client.getSteamLoginUrl()).toBe("/api/v1/auth/steam");
+    });
+  });
 
-      const client = new ApiClient("/aar/");
-      await expect(client.login("wrong")).rejects.toThrow(ApiError);
+  // ─── consumeAuthCookie ───
+
+  describe("consumeAuthCookie", () => {
+    afterEach(() => {
+      document.cookie = "ocap_auth_token=; Max-Age=0; Path=/";
+    });
+
+    it("returns false when no cookie exists", () => {
+      const client = new ApiClient();
+      expect(client.consumeAuthCookie()).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it("consumes token cookie and stores in session", () => {
+      document.cookie = "ocap_auth_token=test-jwt-token; Path=/";
+      const client = new ApiClient();
+      expect(client.consumeAuthCookie()).toBe(true);
+      expect(getAuthToken()).toBe("test-jwt-token");
     });
   });
 
