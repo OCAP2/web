@@ -20,8 +20,8 @@
 
   /* ── Backgrounds ── */
   --bg-dark: #0a0f14;
-  --bg-panel: rgba(13, 21, 32, 0.88);
-  --bg-panel-header: rgba(13, 21, 32, 0.6);
+  --bg-panel: color-mix(in srgb, var(--bg-dark) 88%, transparent);
+  --bg-panel-header: color-mix(in srgb, var(--bg-dark) 60%, transparent);
   --bg-surface: #151e2b;
   --bg-surface-hover: #1a2332;
 
@@ -53,7 +53,7 @@
   --border-default: 1px solid rgba(255, 255, 255, 0.1);
   --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.5);
   --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-accent: 0 2px 12px rgba(74, 158, 255, 0.3);
+  --shadow-accent: 0 2px 12px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 
   /* ── Z-index scale ── */
   --z-dropdown: 100;
@@ -62,7 +62,7 @@
   /* ── Interactive surfaces ── */
   --bg-interactive: rgba(255, 255, 255, 0.04);
   --bg-interactive-hover: rgba(255, 255, 255, 0.08);
-  --focus-ring: rgba(74, 158, 255, 0.3);
+  --focus-ring: color-mix(in srgb, var(--accent-primary) 30%, transparent);
 
   /* ── Playback layout ── */
   --pb-top-height: 48px;

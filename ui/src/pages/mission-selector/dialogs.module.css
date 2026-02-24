@@ -68,9 +68,9 @@
 }
 
 .editTagBtnActive {
-  background: rgba(74, 158, 255, 0.15);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
   color: var(--accent-primary);
-  border-color: rgba(74, 158, 255, 0.3);
+  border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
 /* ── Delete confirm ── */
@@ -84,8 +84,8 @@
   height: 48px;
   border-radius: 12px;
   margin: 0 auto 16px;
-  background: rgba(255, 74, 74, 0.1);
-  border: 1px solid rgba(255, 74, 74, 0.2);
+  background: color-mix(in srgb, var(--accent-danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 20%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,8 +125,8 @@
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: rgba(255, 74, 74, 0.06);
-  border: 1px solid rgba(255, 74, 74, 0.1);
+  background: color-mix(in srgb, var(--accent-danger) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 10%, transparent);
   font-size: 11px;
   color: rgba(255, 107, 107, 0.53);
   line-height: 1.4;
@@ -158,18 +158,18 @@
 
 .uploadDropZone:hover {
   border-color: var(--focus-ring);
-  background: rgba(74, 158, 255, 0.04);
+  background: color-mix(in srgb, var(--accent-primary) 4%, transparent);
 }
 
 .uploadDropZoneDragOver {
   border-color: var(--accent-primary);
-  background: rgba(74, 158, 255, 0.06);
+  background: color-mix(in srgb, var(--accent-primary) 6%, transparent);
 }
 
 .uploadDropZoneHasFile {
   padding: 10px 14px;
-  border-color: rgba(45, 212, 160, 0.3);
-  background: rgba(45, 212, 160, 0.04);
+  border-color: color-mix(in srgb, var(--accent-success) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-success) 4%, transparent);
   cursor: default;
 }
 
@@ -206,8 +206,8 @@
   height: 32px;
   border-radius: var(--radius-md);
   flex-shrink: 0;
-  background: rgba(45, 212, 160, 0.1);
-  border: 1px solid rgba(45, 212, 160, 0.2);
+  background: color-mix(in srgb, var(--accent-success) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-success) 20%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -286,7 +286,7 @@
   background: linear-gradient(135deg, var(--accent-success), var(--accent-success-dark));
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(45, 212, 160, 0.25);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-success) 25%, transparent);
 }
 
 .uploadSubmitBtn:not(:disabled):hover {

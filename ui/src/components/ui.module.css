@@ -109,7 +109,7 @@
   font-family: var(--font-mono);
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255, 74, 74, 0.25);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-danger) 25%, transparent);
 }
 
 .btnDanger:hover {

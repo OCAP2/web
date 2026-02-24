@@ -21,10 +21,10 @@ export const STATUS_MAP: Record<string, { labelKey: string; color: string; icon:
 };
 
 export const SIDE_COLORS: Record<string, string> = {
-  BLUFOR: C.primary, WEST: C.primary,
-  OPFOR:  C.danger,  EAST: C.danger,
-  IND:    C.success, GUER: C.success,
-  CIV:    C.purple,
+  BLUFOR: "var(--side-blufor)", WEST: "var(--side-blufor)",
+  OPFOR:  "var(--side-opfor)",  EAST: "var(--side-opfor)",
+  IND:    "var(--side-ind)",    GUER: "var(--side-ind)",
+  CIV:    "var(--side-civ)",
 };
 
 /** Raw hex side colors for inline style interpolation (hex alpha, rgba). */

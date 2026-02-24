@@ -18,18 +18,18 @@ export const SIDE_COLORS_DARK: Record<Side, string> = {
 
 /** Redesign UI colors for side indicators. */
 export const SIDE_COLORS_UI: Record<Side, string> = {
-  WEST: "var(--accent-primary)",
-  EAST: "var(--accent-danger)",
-  GUER: "var(--accent-success)",
-  CIV: "var(--accent-purple)",
+  WEST: "var(--side-blufor)",
+  EAST: "var(--side-opfor)",
+  GUER: "var(--side-ind)",
+  CIV: "var(--side-civ)",
 };
 
 /** Translucent background variants for redesign UI. */
 export const SIDE_BG_COLORS: Record<Side, string> = {
-  WEST: "rgba(74,158,255,0.12)",
-  EAST: "rgba(255,74,74,0.12)",
-  GUER: "rgba(45,212,160,0.12)",
-  CIV: "rgba(167,139,250,0.12)",
+  WEST: "color-mix(in srgb, var(--side-blufor) 12%, transparent)",
+  EAST: "color-mix(in srgb, var(--side-opfor) 12%, transparent)",
+  GUER: "color-mix(in srgb, var(--side-ind) 12%, transparent)",
+  CIV: "color-mix(in srgb, var(--side-civ) 12%, transparent)",
 };
 
 /** CSS class name for each side. */

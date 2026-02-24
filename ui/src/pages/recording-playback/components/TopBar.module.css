@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: linear-gradient(180deg, rgba(10, 15, 20, 0.95) 0%, rgba(10, 15, 20, 0.7) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-dark) 95%, transparent) 0%, color-mix(in srgb, var(--bg-dark) 70%, transparent) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: var(--border-subtle);
@@ -238,7 +238,7 @@
 
 .layerCheckboxActive {
   border: 1px solid var(--accent-primary);
-  background: rgba(74, 158, 255, 0.2);
+  background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
 }
 
 .layerCheckboxInactive {

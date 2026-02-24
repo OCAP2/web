@@ -68,10 +68,10 @@ describe("EventsTab", () => {
     ));
 
     const victim = screen.getByText("BluforGuy");
-    expect(victim.getAttribute("style")).toContain("var(--accent-primary)");
+    expect(victim.getAttribute("style")).toContain("var(--side-blufor)");
 
     const killer = screen.getByText("OpforGuy");
-    expect(killer.getAttribute("style")).toContain("var(--accent-danger)");
+    expect(killer.getAttribute("style")).toContain("var(--side-opfor)");
   });
 
   it("shows '(suicide)' when victimId equals causedById", () => {

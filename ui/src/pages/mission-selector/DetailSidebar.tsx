@@ -155,7 +155,7 @@ export function DetailSidebar(props: {
             };
             return (
               <div class={styles.sidebarCombatGrid}>
-                <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,74,74,0.04)", "border-color": "rgba(255,74,74,0.08)" }}>
+                <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-danger) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-danger) 8%, transparent)" }}>
                   <div class={styles.sidebarCombatCellTop}>
                     <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
                     <span class={styles.sidebarCombatCellValue} style={{ color: C.danger }}>{kills().toLocaleString()}</span>
@@ -163,7 +163,7 @@ export function DetailSidebar(props: {
                   <div class={styles.sidebarCombatCellLabel}>{t("total_kills")}</div>
                 </div>
                 <Show when={playerKills() > 0}>
-                  <div class={styles.sidebarCombatCell} style={{ background: "rgba(74,158,255,0.04)", "border-color": "rgba(74,158,255,0.08)" }}>
+                  <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-primary) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-primary) 8%, transparent)" }}>
                     <div class={styles.sidebarCombatCellTop}>
                       <span style={{ color: `${C.primary}88` }}><Icons.Users /></span>
                       <span class={styles.sidebarCombatCellValue} style={{ color: C.primary }}>{playerKills().toLocaleString()}</span>
@@ -171,7 +171,7 @@ export function DetailSidebar(props: {
                     <div class={styles.sidebarCombatCellLabel}>{t("player_kills")}</div>
                   </div>
                 </Show>
-                <div class={styles.sidebarCombatCell} style={{ background: "rgba(255,184,74,0.04)", "border-color": "rgba(255,184,74,0.08)" }}>
+                <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-warning) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-warning) 8%, transparent)" }}>
                   <div class={styles.sidebarCombatCellTop}>
                     <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
                     <span class={styles.sidebarCombatCellValue} style={{ color: C.warning }}>{killsPerMin()}</span>

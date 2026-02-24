@@ -209,7 +209,7 @@
 }
 
 .unitRowSelected {
-  background: rgba(74, 158, 255, 0.08);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 }
 
 .unitRowDead {
@@ -270,7 +270,7 @@
   font-size: 10px;
   font-family: var(--font-mono);
   color: var(--accent-danger);
-  background: rgba(255, 74, 74, 0.1);
+  background: color-mix(in srgb, var(--accent-danger) 10%, transparent);
   padding: 2px 6px;
   border-radius: 4px;
 }

@@ -6,7 +6,7 @@
   left: 0;
   right: 0;
   height: var(--pb-bottom-height);
-  background: linear-gradient(0deg, rgba(10, 15, 20, 0.97) 0%, rgba(10, 15, 20, 0.85) 100%);
+  background: linear-gradient(0deg, color-mix(in srgb, var(--bg-dark) 97%, transparent) 0%, color-mix(in srgb, var(--bg-dark) 85%, transparent) 100%);
   backdrop-filter: blur(16px);
   border-top: var(--border-subtle);
   z-index: 20;
@@ -73,7 +73,7 @@
   left: 0;
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #4A9EFF, #60b4ff);
+  background: linear-gradient(90deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 80%, white));
   pointer-events: none;
 }
 
@@ -101,8 +101,8 @@
   height: 14px;
   border-radius: 50%;
   background: var(--accent-primary);
-  border: 2px solid #0d1520;
-  box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
+  border: 2px solid var(--bg-dark);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary) 50%, transparent);
   pointer-events: none;
 }
 
@@ -143,8 +143,8 @@
 }
 
 .panelToggleActive {
-  background: rgba(74, 158, 255, 0.12);
-  border-color: rgba(74, 158, 255, 0.2);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary) 20%, transparent);
   color: var(--accent-primary);
 }
 
@@ -197,8 +197,8 @@
 }
 
 .playBtnPause {
-  background: rgba(74, 158, 255, 0.15);
-  border: 1px solid rgba(74, 158, 255, 0.3);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
   box-shadow: none;
 }
 
@@ -248,7 +248,7 @@
 }
 
 .speedOptionActive {
-  background: rgba(74, 158, 255, 0.15);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
   color: var(--accent-primary);
   font-weight: 700;
 }
