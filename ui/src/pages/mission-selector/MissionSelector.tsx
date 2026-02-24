@@ -14,7 +14,7 @@ import { getMapColor, isOpReady } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { MissionRow } from "./MissionRow";
 import { DetailSidebar } from "./DetailSidebar";
-import { EditModal, DeleteConfirm } from "./dialogs";
+import { EditModal, DeleteConfirm, UploadDialog } from "./dialogs";
 import ui from "../../components/ui.module.css";
 import styles from "./MissionSelector.module.css";
 
@@ -44,11 +44,9 @@ export function MissionSelector(): JSX.Element {
   const [editingOp, setEditingOp] = createSignal<Operation | null>(null);
   const [deletingOp, setDeletingOp] = createSignal<Operation | null>(null);
   const [uploading, setUploading] = createSignal(false);
-  const [dragOver, setDragOver] = createSignal(false);
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
-  let fileInputRef: HTMLInputElement | undefined;
 
   // Fetch operations
   onMount(async () => {
@@ -219,17 +217,19 @@ export function MissionSelector(): JSX.Element {
     await refreshOperations();
   };
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (data: { file: File; name: string; map: string; tag: string; date: string }) => {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", data.file);
 
-      const baseName = file.name.replace(/\.json(\.gz)?$/, "").replace(/\.gz$/, "");
+      const baseName = data.file.name.replace(/\.json(\.gz)?$/, "").replace(/\.gz$/, "");
       formData.append("filename", baseName);
-      formData.append("worldName", "unknown");
-      formData.append("missionName", baseName);
+      formData.append("worldName", data.map || "unknown");
+      formData.append("missionName", data.name);
       formData.append("missionDuration", "0");
+      if (data.tag) formData.append("tag", data.tag);
+      if (data.date) formData.append("date", data.date);
 
       await api.uploadOperation(formData);
       setShowUpload(false);
@@ -237,29 +237,6 @@ export function MissionSelector(): JSX.Element {
     } finally {
       setUploading(false);
     }
-  };
-
-  const handleFileSelect = (e: Event) => {
-    const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) handleUpload(file);
-    input.value = "";
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer?.files[0];
-    if (file) handleUpload(file);
-  };
-
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setDragOver(false);
   };
 
   return (
@@ -435,31 +412,14 @@ export function MissionSelector(): JSX.Element {
           </div>
         </header>
 
-        {/* ── Upload Zone ── */}
+        {/* ── Upload Dialog (modal) ── */}
         <Show when={showUpload() && authenticated()}>
-          <div
-            class={`${styles.uploadZone} ${dragOver() ? styles.uploadZoneDragOver : ""}`}
-            onClick={() => fileInputRef?.click()}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
-            <Show when={uploading()} fallback={
-              <>
-                <Icons.Upload />
-                <div>Drop .json.gz recording files here or click to browse</div>
-              </>
-            }>
-              <div class={styles.uploadProgress}>Uploading...</div>
-            </Show>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".gz"
-              onChange={handleFileSelect}
-              hidden
-            />
-          </div>
+          <UploadDialog
+            maps={uniqueMaps()}
+            onUpload={handleUpload}
+            onCancel={() => setShowUpload(false)}
+            uploading={uploading()}
+          />
         </Show>
 
         {/* ── Main Content ── */}

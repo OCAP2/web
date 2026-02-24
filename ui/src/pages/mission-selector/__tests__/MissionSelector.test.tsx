@@ -990,9 +990,10 @@ describe("MissionSelector (Admin)", () => {
     expect(uploadBtn).not.toBeNull();
     fireEvent.click(uploadBtn);
 
-    // Upload zone should appear
+    // Upload dialog should appear
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Drop .json.gz");
+      expect(container.textContent).toContain("Upload Recording");
+      expect(container.textContent).toContain("Drop");
     });
 
     // Use the hidden file input (jsdom doesn't support DragEvent.dataTransfer)
@@ -1002,6 +1003,18 @@ describe("MissionSelector (Admin)", () => {
     const file = new File(["data"], "mission.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
+
+    // File info should appear and name auto-filled
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("mission.json.gz");
+    });
+
+    // Click the Upload Recording submit button
+    const submitBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Upload Recording") && !b.disabled,
+    )!;
+    expect(submitBtn).toBeDefined();
+    fireEvent.click(submitBtn);
 
     // Verify upload API was called
     await vi.waitFor(() => {

@@ -130,3 +130,170 @@
   line-height: 1.4;
 }
 
+/* ── Upload dialog ── */
+.uploadHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.uploadHeaderIcon {
+  color: var(--accent-green);
+}
+
+.uploadDropZone {
+  padding: var(--space-xl) 14px;
+  border-radius: var(--radius-lg);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.uploadDropZone:hover {
+  border-color: var(--focus-ring);
+  background: rgba(74, 158, 255, 0.04);
+}
+
+.uploadDropZoneDragOver {
+  border-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.06);
+}
+
+.uploadDropZoneHasFile {
+  padding: 10px 14px;
+  border-color: rgba(45, 212, 160, 0.3);
+  background: rgba(45, 212, 160, 0.04);
+  cursor: default;
+}
+
+.uploadDropIcon {
+  color: var(--accent-blue);
+  opacity: 0.6;
+}
+
+.uploadDropText {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.uploadDropHighlight {
+  color: var(--text-secondary);
+}
+
+.uploadDropBrowse {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+.uploadFileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.uploadFileIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  background: rgba(45, 212, 160, 0.1);
+  border: 1px solid rgba(45, 212, 160, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+}
+
+.uploadFileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.uploadFileName {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uploadFileSize {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.uploadFileRemove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  display: flex;
+}
+
+.uploadFileRemove:hover {
+  color: var(--text-muted);
+}
+
+.uploadRequired {
+  color: var(--accent-red);
+}
+
+.uploadFooter {
+  padding: var(--space-md) var(--space-xl);
+  border-top: var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.uploadFooterHint {
+  font-size: 10px;
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
+}
+
+.uploadFooterButtons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.uploadSubmitBtn {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+
+.uploadSubmitBtn:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-green), var(--accent-green-dark));
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(45, 212, 160, 0.25);
+}
+
+.uploadSubmitBtn:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+.uploadSubmitBtn:disabled {
+  background: var(--bg-interactive);
+  color: var(--text-dimmest);
+  cursor: not-allowed;
+}
+
