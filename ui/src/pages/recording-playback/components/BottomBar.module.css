@@ -8,7 +8,7 @@
   height: var(--pb-bottom-height);
   background: linear-gradient(0deg, rgba(10, 15, 20, 0.97) 0%, rgba(10, 15, 20, 0.85) 100%);
   backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: var(--border-subtle);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -129,7 +129,7 @@
 
 .panelToggle {
   background: var(--bg-interactive);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: var(--border-subtle);
   border-radius: 6px;
   padding: 4px 10px;
   cursor: pointer;

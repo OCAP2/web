@@ -11,7 +11,7 @@
   background: linear-gradient(180deg, rgba(10, 15, 20, 0.95) 0%, rgba(10, 15, 20, 0.7) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: var(--border-subtle);
   z-index: 20;
   animation: fadeIn 0.4s ease-out;
   box-sizing: border-box;
@@ -31,7 +31,7 @@
   height: 32px;
   border-radius: 8px;
   background: var(--bg-interactive);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: var(--border-subtle);
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -149,7 +149,7 @@
   height: 36px;
   border-radius: 8px;
   background: var(--bg-interactive);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: var(--border-subtle);
   color: var(--text-muted);
   display: flex;
   align-items: center;
