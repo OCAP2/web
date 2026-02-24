@@ -45,6 +45,7 @@ type Handler struct {
 	openIDVerifier    openIDVerifier
 	openIDCache       openid.DiscoveryCache
 	openIDNonceStore  openid.NonceStore
+	steamAPIBaseURL   string // override for testing; empty uses default
 }
 
 // HandlerOption configures the Handler

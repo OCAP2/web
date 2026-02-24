@@ -24,7 +24,7 @@ export function MissionSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { authenticated, steamId, authError, dismissAuthError, loginWithSteam, logout } = useAuth();
+  const { authenticated, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -324,10 +324,12 @@ export function MissionSelector(): JSX.Element {
               }>
                 <div class={styles.adminArea}>
                   <div class={styles.adminBadge}>
-                    <div class={styles.adminAvatar}>A</div>
+                    <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
+                      {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" />}
+                    </Show>
                     <div>
                       <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>
-                        {steamId() ? steamId() : "Admin"}
+                        {steamName() || steamId() || "Admin"}
                       </div>
                       <div class={styles.adminLabel}><Icons.Shield /> ADMIN</div>
                     </div>

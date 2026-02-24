@@ -5,6 +5,8 @@ import { ApiClient, getAuthToken } from "../data/api-client";
 export interface Auth {
   authenticated: Accessor<boolean>;
   steamId: Accessor<string | null>;
+  steamName: Accessor<string | null>;
+  steamAvatar: Accessor<string | null>;
   authError: Accessor<string | null>;
   dismissAuthError: () => void;
   loginWithSteam: () => void;
@@ -24,6 +26,8 @@ const AuthContext = createContext<Auth>();
 export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const [authenticated, setAuthenticated] = createSignal(false);
   const [steamId, setSteamId] = createSignal<string | null>(null);
+  const [steamName, setSteamName] = createSignal<string | null>(null);
+  const [steamAvatar, setSteamAvatar] = createSignal<string | null>(null);
   const [authError, setAuthError] = createSignal<string | null>(null);
   const api = new ApiClient();
 
@@ -50,6 +54,8 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
       const state = await api.getMe();
       setAuthenticated(state.authenticated);
       setSteamId(state.steamId ?? null);
+      setSteamName(state.steamName ?? null);
+      setSteamAvatar(state.steamAvatar ?? null);
     } catch {
       setAuthenticated(false);
     }
@@ -68,11 +74,13 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
     } finally {
       setAuthenticated(false);
       setSteamId(null);
+      setSteamName(null);
+      setSteamAvatar(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ authenticated, steamId, authError, dismissAuthError, loginWithSteam, logout }}>
+    <AuthContext.Provider value={{ authenticated, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout }}>
       {props.children}
     </AuthContext.Provider>
   );

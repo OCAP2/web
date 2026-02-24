@@ -20,6 +20,8 @@ export interface BuildInfo {
 export interface AuthState {
   authenticated: boolean;
   steamId?: string;
+  steamName?: string;
+  steamAvatar?: string;
 }
 
 // ─── Error types ───

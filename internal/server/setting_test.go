@@ -333,6 +333,72 @@ func TestSetting_AdminSessionTTL_Default(t *testing.T) {
 	assert.Equal(t, 24*time.Hour, setting.Admin.SessionTTL)
 }
 
+func TestSetting_AdminAllowedSteamIDs(t *testing.T) {
+	defer viper.Reset()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	err := os.WriteFile(configPath, []byte(`{
+		"secret": "test-secret-value",
+		"admin": {
+			"allowedSteamIds": ["76561198012345678", "76561198087654321"]
+		}
+	}`), 0644)
+	require.NoError(t, err)
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"76561198012345678", "76561198087654321"}, setting.Admin.AllowedSteamIDs)
+}
+
+func TestSetting_AdminSteamAPIKey(t *testing.T) {
+	defer viper.Reset()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	err := os.WriteFile(configPath, []byte(`{
+		"secret": "test-secret-value",
+		"admin": {
+			"steamApiKey": "ABCDEF0123456789"
+		}
+	}`), 0644)
+	require.NoError(t, err)
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, "ABCDEF0123456789", setting.Admin.SteamAPIKey)
+}
+
+func TestSplitCSV(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"nil input", nil, nil},
+		{"empty slice", []string{}, nil},
+		{"single value", []string{"abc"}, []string{"abc"}},
+		{"already split", []string{"a", "b"}, []string{"a", "b"}},
+		{"comma-separated single element", []string{"a,b,c"}, []string{"a", "b", "c"}},
+		{"mixed", []string{"a,b", "c"}, []string{"a", "b", "c"}},
+		{"whitespace trimmed", []string{" a , b , c "}, []string{"a", "b", "c"}},
+		{"empty parts skipped", []string{"a,,b,"}, []string{"a", "b"}},
+		{"all empty", []string{",,"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := splitCSV(tt.in)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestNewSetting_NoConfigFile(t *testing.T) {
 	viper.Reset()
 	// Use a directory with no config file

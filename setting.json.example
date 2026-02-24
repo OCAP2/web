@@ -33,6 +33,7 @@
 	},
 	"admin": {
 		"sessionTTL": "24h",
-		"allowedSteamIds": []
+		"allowedSteamIds": [],
+		"steamApiKey": ""
 	}
 }

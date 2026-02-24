@@ -1186,6 +1186,13 @@
   font-family: var(--font-heading);
 }
 
+.adminAvatarImg {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 .adminLabel {
   font-size: 8px;
   color: var(--accent-green);

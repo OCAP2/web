@@ -58,3 +58,75 @@ func TestJWT_MalformedToken(t *testing.T) {
 	mgr := NewJWTManager("test-secret", time.Hour)
 	assert.Error(t, mgr.Validate("not.a.jwt"))
 }
+
+func TestJWT_Subject(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	token, err := mgr.Create("steam123")
+	require.NoError(t, err)
+	assert.Equal(t, "steam123", mgr.Subject(token))
+}
+
+func TestJWT_SubjectEmpty(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	token, err := mgr.Create("")
+	require.NoError(t, err)
+	assert.Equal(t, "", mgr.Subject(token))
+}
+
+func TestJWT_SubjectInvalidToken(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+	assert.Equal(t, "", mgr.Subject("garbage"))
+}
+
+func TestJWT_WithSteamProfile(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	token, err := mgr.Create("76561198012345678", WithSteamProfile("PlayerOne", "https://avatars.steamstatic.com/abc.jpg"))
+	require.NoError(t, err)
+
+	claims := mgr.Claims(token)
+	require.NotNil(t, claims)
+	assert.Equal(t, "76561198012345678", claims.Subject)
+	assert.Equal(t, "PlayerOne", claims.SteamName)
+	assert.Equal(t, "https://avatars.steamstatic.com/abc.jpg", claims.SteamAvatar)
+}
+
+func TestJWT_ClaimsWithoutProfile(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	token, err := mgr.Create("76561198012345678")
+	require.NoError(t, err)
+
+	claims := mgr.Claims(token)
+	require.NotNil(t, claims)
+	assert.Equal(t, "76561198012345678", claims.Subject)
+	assert.Empty(t, claims.SteamName)
+	assert.Empty(t, claims.SteamAvatar)
+}
+
+func TestJWT_ClaimsInvalidToken(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+	assert.Nil(t, mgr.Claims("garbage"))
+}
+
+func TestJWT_ClaimsExpiredToken(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Millisecond)
+
+	token, err := mgr.Create("steam123", WithSteamProfile("Name", "url"))
+	require.NoError(t, err)
+
+	time.Sleep(5 * time.Millisecond)
+	assert.Nil(t, mgr.Claims(token))
+}
+
+func TestJWT_ClaimsWrongSecret(t *testing.T) {
+	mgr1 := NewJWTManager("secret-1", time.Hour)
+	mgr2 := NewJWTManager("secret-2", time.Hour)
+
+	token, err := mgr1.Create("steam123")
+	require.NoError(t, err)
+
+	assert.Nil(t, mgr2.Claims(token))
+}

@@ -48,6 +48,7 @@ type Customize struct {
 type Admin struct {
 	SessionTTL      time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
 	AllowedSteamIDs []string      `json:"allowedSteamIds" yaml:"allowedSteamIds"`
+	SteamAPIKey     string        `json:"steamApiKey" yaml:"steamApiKey"`
 }
 
 type Streaming struct {
@@ -93,9 +94,10 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("streaming.pingTimeout", "10s")
 	viper.SetDefault("admin.sessionTTL", "24h")
 	viper.SetDefault("admin.allowedSteamIds", []string{})
+	viper.SetDefault("admin.steamApiKey", "")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds", "admin.steamApiKey"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
@@ -111,6 +113,10 @@ func NewSetting() (setting Setting, err error) {
 		return
 	}
 
+	// Viper doesn't split comma-separated env var strings into slices,
+	// so a value like "id1,id2" ends up as ["id1,id2"]. Expand it.
+	setting.Admin.AllowedSteamIDs = splitCSV(setting.Admin.AllowedSteamIDs)
+
 	if err = os.MkdirAll(setting.Data, 0755); err != nil {
 		return setting, fmt.Errorf("create data directory: %w", err)
 	}
@@ -120,4 +126,18 @@ func NewSetting() (setting Setting, err error) {
 	}
 
 	return
+}
+
+// splitCSV expands a []string where one element may contain comma-separated
+// values (from an env var) into individual trimmed entries.
+func splitCSV(in []string) []string {
+	var out []string
+	for _, s := range in {
+		for _, part := range strings.Split(s, ",") {
+			if v := strings.TrimSpace(part); v != "" {
+				out = append(out, v)
+			}
+		}
+	}
+	return out
 }

@@ -3,10 +3,13 @@ package server
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/yohcop/openid-go"
@@ -107,8 +110,22 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 		return h.authRedirect(c, "steam_denied")
 	}
 
-	// Create JWT with Steam ID as subject
-	token, err := h.jwt.Create(steamID)
+	// Fetch Steam profile data if API key is configured
+	var claimOpts []ClaimOption
+	if h.setting.Admin.SteamAPIKey != "" {
+		baseURL := steamAPIBaseURL
+		if h.steamAPIBaseURL != "" {
+			baseURL = h.steamAPIBaseURL
+		}
+		if name, avatar, err := fetchSteamProfileFrom(baseURL, steamID, h.setting.Admin.SteamAPIKey); err == nil {
+			claimOpts = append(claimOpts, WithSteamProfile(name, avatar))
+		} else {
+			log.Printf("WARN: failed to fetch Steam profile for %s: %v", steamID, err)
+		}
+	}
+
+	// Create JWT with Steam ID as subject and optional profile data
+	token, err := h.jwt.Create(steamID, claimOpts...)
 	if err != nil {
 		return err
 	}
@@ -147,8 +164,16 @@ func (h *Handler) GetMe(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{"authenticated": false})
 	}
 	resp := map[string]any{"authenticated": true}
-	if sub := h.jwt.Subject(token); sub != "" {
-		resp["steamId"] = sub
+	if claims := h.jwt.Claims(token); claims != nil {
+		if claims.Subject != "" {
+			resp["steamId"] = claims.Subject
+		}
+		if claims.SteamName != "" {
+			resp["steamName"] = claims.SteamName
+		}
+		if claims.SteamAvatar != "" {
+			resp["steamAvatar"] = claims.SteamAvatar
+		}
 	}
 	return c.JSON(http.StatusOK, resp)
 }
@@ -202,6 +227,46 @@ func requestScheme(c echo.Context) string {
 		return "https"
 	}
 	return "http"
+}
+
+// steamProfileResponse models the Steam Web API GetPlayerSummaries response.
+type steamProfileResponse struct {
+	Response struct {
+		Players []struct {
+			PersonaName string `json:"personaname"`
+			AvatarURL   string `json:"avatarmedium"`
+		} `json:"players"`
+	} `json:"response"`
+}
+
+const steamAPIBaseURL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
+
+// fetchSteamProfileFrom calls the Steam Web API to get the player's display name and avatar.
+func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string, err error) {
+	u := baseURL + "?key=" + url.QueryEscape(apiKey) + "&steamids=" + url.QueryEscape(steamID)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(u)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", echo.NewHTTPError(resp.StatusCode, "Steam API error")
+	}
+
+	var data steamProfileResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", "", err
+	}
+
+	if len(data.Response.Players) == 0 {
+		return "", "", echo.NewHTTPError(http.StatusNotFound, "Steam profile not found")
+	}
+
+	p := data.Response.Players[0]
+	return p.PersonaName, p.AvatarURL, nil
 }
 
 func randomHex(n int) (string, error) {

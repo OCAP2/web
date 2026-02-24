@@ -14,8 +14,20 @@ The configuration file is called `setting.json`
 | Setting | Description |
 |---------|-------------|
 | `listen` | Server address, e.g. `"0.0.0.0:5000"` to listen on all interfaces |
-| `secret` | Secret for authenticating record uploads |
+| `secret` | Secret for authenticating record uploads and signing JWT tokens |
 | `logger` | Enable request logging to STDOUT |
+
+### Admin Authentication
+
+Admin access uses Steam OpenID — no passwords. Admins authenticate via their Steam account and are authorized against an allowlist of Steam64 IDs.
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `admin.sessionTTL` | How long admin sessions last | `"24h"` |
+| `admin.allowedSteamIds` | Array of Steam64 IDs authorized for admin access | `[]` |
+| `admin.steamApiKey` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
+
+The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
 
 ### Conversion Settings
 
@@ -44,6 +56,11 @@ Example `setting.json`:
   "listen": "127.0.0.1:5000",
   "secret": "your-secret",
   "logger": true,
+  "admin": {
+    "sessionTTL": "24h",
+    "allowedSteamIds": ["76561198012345678"],
+    "steamApiKey": ""
+  },
   "conversion": {
     "enabled": true,
     "interval": "5m"
@@ -157,6 +174,14 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures.
 | `OCAP_FONTS` | Path to fonts | `/usr/local/ocap/fonts` |
 | `OCAP_STATIC` | Serve frontend from this directory instead of the embedded build | *embedded* |
 | `OCAP_LOGGER` | Enable request logging | `false` |
+
+#### Admin Authentication
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OCAP_ADMIN_SESSIONTTL` | Admin session duration | `24h` |
+| `OCAP_ADMIN_ALLOWEDSTEAMIDS` | Comma-separated Steam64 IDs for admin access | |
+| `OCAP_ADMIN_STEAMAPIKEY` | Steam Web API key for profile display names and avatars | |
 
 #### Customization
 
