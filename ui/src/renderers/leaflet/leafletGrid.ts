@@ -7,7 +7,7 @@
  */
 import L from "leaflet";
 import type { ArmaCoord } from "../../utils/coordinates";
-import { getGridInterval, formatCoordLabel, computeGridLines } from "./grid-utils";
+import { getGridInterval, formatCoordLabel, computeGridLines } from "./gridUtils";
 
 // --------------- Types ---------------
 

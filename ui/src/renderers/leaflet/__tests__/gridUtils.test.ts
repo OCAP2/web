@@ -4,7 +4,7 @@ import {
   formatGridLabel,
   formatCoordLabel,
   computeGridLines,
-} from "../grid-utils";
+} from "../gridUtils";
 
 // ------------------------------------------------------------------
 // getGridInterval — Legacy mode (zoom levels ~0-8)

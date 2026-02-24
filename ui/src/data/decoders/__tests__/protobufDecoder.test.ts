@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ProtobufDecoder } from "../protobuf-decoder";
+import { ProtobufDecoder } from "../protobufDecoder";
 
 import {
   Manifest as PbManifest,

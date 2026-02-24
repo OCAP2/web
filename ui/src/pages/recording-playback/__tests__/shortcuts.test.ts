@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PlaybackEngine } from "../../../playback/engine";
-import { MockRenderer } from "../../../renderers/mock-renderer";
+import { MockRenderer } from "../../../renderers/mockRenderer";
 import {
   registerShortcuts,
   unregisterShortcuts,

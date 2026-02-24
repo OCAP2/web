@@ -3,7 +3,7 @@ import type { Accessor, JSX } from "solid-js";
 import { UsersIcon, ActivityIcon, BarChartIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
-import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
+import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { UnitsTab } from "./UnitsTab";
 import { EventsTab } from "./EventsTab";
 import { StatsTab } from "./StatsTab";

@@ -15,7 +15,7 @@ export function createScaleControl(): L.Control.Scale {
 }
 
 /**
- * Style candidate used by the leaflet-renderer for MapLibre style probing.
+ * Style candidate used by the leafletRenderer for MapLibre style probing.
  */
 export interface StyleCandidate {
   label: string;

@@ -1,11 +1,11 @@
 import type { Operation, WorldConfig } from "../../data/types";
-import type { ApiClient } from "../../data/api-client";
-import { JsonDecoder } from "../../data/decoders/json-decoder";
-import { ProtobufDecoder } from "../../data/decoders/protobuf-decoder";
+import type { ApiClient } from "../../data/apiClient";
+import { JsonDecoder } from "../../data/decoders/jsonDecoder";
+import { ProtobufDecoder } from "../../data/decoders/protobufDecoder";
 import type { DecoderStrategy } from "../../data/decoders/decoder.interface";
-import { ChunkManager } from "../../data/chunk-manager";
+import { ChunkManager } from "../../data/chunkManager";
 import type { PlaybackEngine } from "../../playback/engine";
-import type { MarkerManager } from "../../playback/marker-manager";
+import type { MarkerManager } from "../../playback/markerManager";
 
 export interface LoadResult {
   worldConfig: WorldConfig;

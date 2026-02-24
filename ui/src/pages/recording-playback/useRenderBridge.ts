@@ -1,12 +1,12 @@
 import { createEffect } from "solid-js";
 import type { MarkerHandle, LineHandle } from "../../renderers/renderer.types";
-import { SIDE_COLORS_DARK } from "../../config/side-colors";
+import { SIDE_COLORS_DARK } from "../../config/sideColors";
 import type { PlaybackEngine } from "../../playback/engine";
-import type { EntityManager } from "../../playback/entity-manager";
-import type { MarkerManager } from "../../playback/marker-manager";
+import type { EntityManager } from "../../playback/entityManager";
+import type { MarkerManager } from "../../playback/markerManager";
 import { Vehicle } from "../../playback/entities/vehicle";
 import { Unit } from "../../playback/entities/unit";
-import { HitKilledEvent } from "../../playback/events/hit-killed-event";
+import { HitKilledEvent } from "../../playback/events/hitKilledEvent";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { leftPanelVisible, activeSide } from "./shortcuts";
 

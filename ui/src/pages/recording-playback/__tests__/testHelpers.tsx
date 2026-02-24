@@ -3,7 +3,7 @@
  */
 import type { JSX } from "solid-js";
 import { PlaybackEngine } from "../../../playback/engine";
-import { MockRenderer } from "../../../renderers/mock-renderer";
+import { MockRenderer } from "../../../renderers/mockRenderer";
 import { EngineProvider } from "../../../hooks/useEngine";
 import { RendererProvider } from "../../../hooks/useRenderer";
 import { I18nProvider } from "../../../hooks/useLocale";

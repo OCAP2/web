@@ -6,7 +6,7 @@ import {
   createTestEngine,
   TestProviders,
   makeManifest,
-} from "./test-helpers";
+} from "./testHelpers";
 
 afterEach(() => {
   cleanup();

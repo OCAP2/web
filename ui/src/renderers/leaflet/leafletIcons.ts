@@ -1,6 +1,6 @@
 import L from "leaflet";
 import type { Side, AliveState } from "../../data/types";
-import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/side-colors";
+import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/sideColors";
 
 // --------------- Side → CSS class / colour mapping ---------------
 

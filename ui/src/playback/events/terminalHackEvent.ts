@@ -1,4 +1,4 @@
-import { GameEvent } from "./game-event";
+import { GameEvent } from "./gameEvent";
 
 /**
  * Represents a terminal hack event (started or canceled).

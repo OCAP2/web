@@ -1,11 +1,11 @@
-import { createSignal, createMemo, Show, For } from "solid-js";
+import { createSignal, createMemo, onCleanup, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
 import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
-import { SIDE_COLORS_UI } from "../../../config/side-colors";
+import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import type { Side, WorldConfig } from "../../../data/types";
 import type { RenderLayer } from "../../../renderers/renderer.types";
 import { useClickOutside } from "../../../hooks/useClickOutside";

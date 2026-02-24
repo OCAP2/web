@@ -3,7 +3,7 @@ import type { JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { Operation } from "../../data/types";
-import { ApiClient, type BuildInfo } from "../../data/api-client";
+import { ApiClient, type BuildInfo } from "../../data/apiClient";
 import { useI18n } from "../../hooks/useLocale";
 import { useCustomize } from "../../hooks/useCustomize";
 import { useAuth } from "../../hooks/useAuth";

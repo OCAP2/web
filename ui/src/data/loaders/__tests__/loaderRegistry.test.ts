@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DecoderStrategy } from "../../decoders/decoder.interface";
 import type { ChunkData, Manifest } from "../../types";
-import { LoaderRegistry } from "../loader-registry";
+import { LoaderRegistry } from "../loaderRegistry";
 
 /** Minimal stub decoder for testing the registry. */
 function makeStubDecoder(label: string): DecoderStrategy {

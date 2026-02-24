@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test-setup.ts"],
+    setupFiles: ["./src/testSetup.ts"],
     server: {
       deps: {
         inline: [/@solidjs\//],
@@ -24,7 +24,7 @@ export default defineConfig({
       exclude: [
         "src/**/__tests__/**",
         "src/**/*.test.{ts,tsx}",
-        "src/test-setup.ts",
+        "src/testSetup.ts",
         "src/**/generated/**",
       ],
     },

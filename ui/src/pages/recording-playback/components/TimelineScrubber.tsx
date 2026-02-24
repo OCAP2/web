@@ -1,7 +1,7 @@
 import { createSignal, createMemo, For, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
-import { HitKilledEvent } from "../../../playback/events/hit-killed-event";
+import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { formatElapsedTime } from "../../../playback/time";
 import styles from "./BottomBar.module.css";
 

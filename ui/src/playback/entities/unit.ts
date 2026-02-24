@@ -2,7 +2,7 @@ import type { EntityState, EntityType, Side } from "../../data/types";
 import type { ArmaCoord } from "../../utils/coordinates";
 import type { EntitySnapshot } from "../types";
 import { Entity } from "./entity";
-import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/side-colors";
+import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/sideColors";
 
 /**
  * A human unit entity -- pure data, NO DOM, NO Leaflet, NO map dependencies.

@@ -1,8 +1,8 @@
 import { createContext, useContext, createSignal, onMount } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Accessor } from "solid-js";
-import { ApiClient } from "../data/api-client";
-import type { CustomizeConfig } from "../data/api-client";
+import { ApiClient } from "../data/apiClient";
+import type { CustomizeConfig } from "../data/apiClient";
 
 const CustomizeContext = createContext<Accessor<CustomizeConfig>>();
 

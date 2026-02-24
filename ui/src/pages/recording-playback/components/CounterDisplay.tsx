@@ -1,7 +1,7 @@
 import { Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
-import { getCounterStateAtFrame } from "../../../playback/events/counter-event";
+import { getCounterStateAtFrame } from "../../../playback/events/counterEvent";
 import styles from "./CounterDisplay.module.css";
 
 /**

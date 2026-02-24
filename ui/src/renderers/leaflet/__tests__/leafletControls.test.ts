@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createScaleControl } from "../leaflet-controls";
+import { createScaleControl } from "../leafletControls";
 
 describe("createScaleControl", () => {
   it("returns a scale control object", () => {

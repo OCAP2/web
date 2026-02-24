@@ -3,11 +3,11 @@ import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import { useParams, useNavigate, useLocation } from "@solidjs/router";
 import type { WorldConfig } from "../../data/types";
-import { ApiClient } from "../../data/api-client";
+import { ApiClient } from "../../data/apiClient";
 import { PlaybackEngine } from "../../playback/engine";
-import { MarkerManager } from "../../playback/marker-manager";
+import { MarkerManager } from "../../playback/markerManager";
 import { formatElapsedTime } from "../../playback/time";
-import { LeafletRenderer } from "../../renderers/leaflet/leaflet-renderer";
+import { LeafletRenderer } from "../../renderers/leaflet/leafletRenderer";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { EngineProvider } from "../../hooks/useEngine";
 import { RendererProvider } from "../../hooks/useRenderer";
@@ -32,7 +32,7 @@ import {
   setActivePanelTab,
   setLeftPanelVisible,
 } from "./shortcuts";
-import { loadOperation } from "./load-operation";
+import { loadOperation } from "./loadOperation";
 import { useRenderBridge } from "./useRenderBridge";
 
 interface LocationState {

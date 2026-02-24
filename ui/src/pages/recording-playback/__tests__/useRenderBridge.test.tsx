@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createRoot } from "solid-js";
-import { MockRenderer } from "../../../renderers/mock-renderer";
-import { MarkerManager } from "../../../playback/marker-manager";
+import { MockRenderer } from "../../../renderers/mockRenderer";
+import { MarkerManager } from "../../../playback/markerManager";
 import { PlaybackEngine } from "../../../playback/engine";
 import { useRenderBridge } from "../useRenderBridge";
 import { setLeftPanelVisible } from "../shortcuts";
-import { unitDef, vehicleDef, makeManifest, hitEvent } from "./test-helpers";
+import { unitDef, vehicleDef, makeManifest, hitEvent } from "./testHelpers";
 import type { RendererEvent } from "../../../renderers/renderer.types";
 
 /**

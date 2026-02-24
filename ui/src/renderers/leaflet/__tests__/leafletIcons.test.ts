@@ -6,7 +6,7 @@ import {
   iconSize,
   getEntityIcon,
   ICON_STATES,
-} from "../leaflet-icons";
+} from "../leafletIcons";
 
 // --------------- sideStyle ---------------
 

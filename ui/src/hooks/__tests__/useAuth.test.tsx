@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
 import { AuthProvider, useAuth } from "../useAuth";
 import type { Auth } from "../useAuth";
-import { setAuthToken } from "../../data/api-client";
+import { setAuthToken } from "../../data/apiClient";
 
 // ─── Mock ApiClient ───
 
@@ -11,8 +11,8 @@ const mockLogout = vi.fn();
 const mockGetSteamLoginUrl = vi.fn().mockReturnValue("/api/v1/auth/steam");
 const mockConsumeAuthToken = vi.fn().mockReturnValue(false);
 
-vi.mock("../../data/api-client", async () => {
-  const actual = await vi.importActual<typeof import("../../data/api-client")>("../../data/api-client");
+vi.mock("../../data/apiClient", async () => {
+  const actual = await vi.importActual<typeof import("../../data/apiClient")>("../../data/apiClient");
   return {
     ...actual,
     ApiClient: class {

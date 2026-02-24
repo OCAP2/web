@@ -2,7 +2,7 @@ import { createSignal, createMemo, createEffect, For, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Side } from "../../../data/types";
 import type { Unit } from "../../../playback/entities/unit";
-import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
+import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
 import { activeSide, setActiveSide } from "../shortcuts";

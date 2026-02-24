@@ -4,7 +4,7 @@ import { Router, Route, useLocation } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { AuthProvider } from "../../../hooks/useAuth";
-import { setAuthToken } from "../../../data/api-client";
+import { setAuthToken } from "../../../data/apiClient";
 import { MissionSelector } from "..";
 import type { Operation } from "../../../data/types";
 

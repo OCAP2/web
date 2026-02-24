@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { PlaybackEngine } from "../playback/engine";
-import { MockRenderer } from "../renderers/mock-renderer";
-import { EntityManager } from "../playback/entity-manager";
+import { MockRenderer } from "../renderers/mockRenderer";
+import { EntityManager } from "../playback/entityManager";
 import { Unit } from "../playback/entities/unit";
 import { Vehicle } from "../playback/entities/vehicle";
-import { HitKilledEvent } from "../playback/events/hit-killed-event";
+import { HitKilledEvent } from "../playback/events/hitKilledEvent";
 import type {
   Manifest,
   EntityDef,
@@ -12,7 +12,7 @@ import type {
   ChunkData,
   EntityState,
 } from "../data/types";
-import type { ChunkManager } from "../data/chunk-manager";
+import type { ChunkManager } from "../data/chunkManager";
 
 // ---------------------------------------------------------------------------
 // Helpers

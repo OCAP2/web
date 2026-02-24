@@ -1,6 +1,6 @@
 import { createContext, useContext, createSignal, onMount } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
-import { ApiClient, getAuthToken } from "../data/api-client";
+import { ApiClient, getAuthToken } from "../data/apiClient";
 
 export interface Auth {
   authenticated: Accessor<boolean>;

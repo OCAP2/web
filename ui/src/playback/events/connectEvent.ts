@@ -1,4 +1,4 @@
-import { GameEvent } from "./game-event";
+import { GameEvent } from "./gameEvent";
 
 /**
  * Represents a player connect or disconnect event during mission playback.

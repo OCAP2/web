@@ -3,7 +3,7 @@ import {
   parseMarkerPosition,
   findPositionIndex,
   MarkerManager,
-} from "../marker-manager";
+} from "../markerManager";
 import type { MarkerDef } from "../../data/types";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 

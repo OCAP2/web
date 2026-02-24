@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JsonDecoder } from "../json-decoder";
+import { JsonDecoder } from "../jsonDecoder";
 
 /** Convert a JSON object to an ArrayBuffer. */
 function toBuffer(obj: unknown): ArrayBuffer {

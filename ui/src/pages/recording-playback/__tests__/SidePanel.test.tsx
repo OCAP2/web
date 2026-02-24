@@ -7,7 +7,7 @@ import {
   TestProviders,
   unitDef,
   makeManifest,
-} from "./test-helpers";
+} from "./testHelpers";
 
 afterEach(() => {
   cleanup();

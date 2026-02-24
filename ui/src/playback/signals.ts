@@ -3,5 +3,5 @@
  */
 export { PlaybackEngine } from "./engine";
 export type { EntitySnapshot } from "./types";
-export type { GameEvent } from "./events/game-event";
-export type { CounterState } from "./events/counter-event";
+export type { GameEvent } from "./events/gameEvent";
+export type { CounterState } from "./events/counterEvent";

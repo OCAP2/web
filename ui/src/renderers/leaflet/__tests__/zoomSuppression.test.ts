@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import L from "leaflet";
-import { LeafletRenderer } from "../leaflet-renderer";
+import { LeafletRenderer } from "../leafletRenderer";
 import type { BriefingMarkerHandle } from "../../renderer.types";
 
 /**

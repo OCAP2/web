@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { ChunkManager } from "../chunk-manager";
+import { ChunkManager } from "../chunkManager";
 import type { DecoderStrategy } from "../decoders/decoder.interface";
-import type { ApiClient } from "../api-client";
+import type { ApiClient } from "../apiClient";
 import type { ChunkData, Manifest } from "../types";
 
 // ─── Helpers ───

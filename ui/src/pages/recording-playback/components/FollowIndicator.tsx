@@ -2,7 +2,7 @@ import { Show } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import type { Side } from "../../../data/types";
-import { SIDE_COLORS_UI } from "../../../config/side-colors";
+import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import styles from "./FollowIndicator.module.css";
 
 export function FollowIndicator(): JSX.Element {

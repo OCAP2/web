@@ -20,15 +20,15 @@ import type {
   RendererEvent,
   RendererControls,
 } from "../renderer.types";
-import { entityIcon, hitIcon } from "./leaflet-icons";
-import { createScaleControl } from "./leaflet-controls";
-import type { StyleCandidate } from "./leaflet-controls";
-import { createGridLayer } from "./leaflet-grid";
+import { entityIcon, hitIcon } from "./leafletIcons";
+import { createScaleControl } from "./leafletControls";
+import type { StyleCandidate } from "./leafletControls";
+import { createGridLayer } from "./leafletGrid";
 import {
   enableSmoothing,
   disableSmoothing,
   setZooming,
-} from "./leaflet-smoothing";
+} from "./leafletSmoothing";
 import {
   ensureDefs,
   nextPatternId,
@@ -36,7 +36,7 @@ import {
   createGridPattern,
   removePattern,
   patchSVGUpdateStyle,
-} from "./svg-patterns";
+} from "./svgPatterns";
 
 // --------------- Internal handle wrapper ---------------
 

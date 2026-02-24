@@ -1,4 +1,4 @@
-import { GameEvent } from "./game-event";
+import { GameEvent } from "./gameEvent";
 
 /**
  * Represents a general mission event (custom message from the mission).

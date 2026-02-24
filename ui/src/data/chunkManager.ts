@@ -1,6 +1,6 @@
 import type { ChunkData, Manifest } from "./types";
 import type { DecoderStrategy } from "./decoders/decoder.interface";
-import type { ApiClient } from "./api-client";
+import type { ApiClient } from "./apiClient";
 
 // ─── Options & callbacks ───
 

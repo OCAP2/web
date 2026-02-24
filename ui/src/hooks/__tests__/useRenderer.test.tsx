@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, renderHook } from "@solidjs/testing-library";
-import { MockRenderer } from "../../renderers/mock-renderer";
+import { MockRenderer } from "../../renderers/mockRenderer";
 import { RendererProvider, useRenderer } from "../useRenderer";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 

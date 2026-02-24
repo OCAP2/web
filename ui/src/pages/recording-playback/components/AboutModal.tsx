@@ -1,6 +1,6 @@
 import { createSignal, Show, onMount, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
-import { ApiClient, type BuildInfo } from "../../../data/api-client";
+import { ApiClient, type BuildInfo } from "../../../data/apiClient";
 import { useI18n } from "../../../hooks/useLocale";
 import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";

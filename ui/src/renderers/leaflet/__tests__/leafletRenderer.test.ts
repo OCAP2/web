@@ -5,10 +5,10 @@ import { closestEquivalentAngle } from "../../../utils/math";
 import {
   armaToLatLngMapLibre,
   latLngToArmaMapLibre,
-} from "../leaflet-renderer";
-import { sideStyle } from "../leaflet-icons";
+} from "../leafletRenderer";
+import { sideStyle } from "../leafletIcons";
 import type { MapRenderer } from "../../renderer.interface";
-import type { LeafletRenderer } from "../leaflet-renderer";
+import type { LeafletRenderer } from "../leafletRenderer";
 
 // ------------------------------------------------------------------
 // Coordinate conversion (MapLibre / EPSG:3857 mode) — pure functions

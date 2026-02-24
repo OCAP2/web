@@ -2,7 +2,7 @@ import { createMemo, For, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Side } from "../../../data/types";
 import { Unit } from "../../../playback/entities/unit";
-import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/side-colors";
+import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
 import styles from "./SidePanel.module.css";

@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { GameEvent } from "../events/game-event";
-import { HitKilledEvent } from "../events/hit-killed-event";
-import { ConnectEvent } from "../events/connect-event";
+import { GameEvent } from "../events/gameEvent";
+import { HitKilledEvent } from "../events/hitKilledEvent";
+import { ConnectEvent } from "../events/connectEvent";
 import {
   getCounterStateAtFrame,
   type CounterState,
-} from "../events/counter-event";
-import { EventManager } from "../event-manager";
-import { EntityManager } from "../entity-manager";
+} from "../events/counterEvent";
+import { EventManager } from "../eventManager";
+import { EntityManager } from "../entityManager";
 import type { EntityDef } from "../../data/types";
 
 // ---------------------------------------------------------------------------

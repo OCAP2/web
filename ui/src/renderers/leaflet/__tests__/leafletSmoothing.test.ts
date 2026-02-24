@@ -4,7 +4,7 @@ import {
   enableSmoothing,
   disableSmoothing,
   setZooming,
-} from "../leaflet-smoothing";
+} from "../leafletSmoothing";
 
 // --------------- getTransitionDuration ---------------
 

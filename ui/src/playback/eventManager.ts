@@ -1,8 +1,8 @@
-import type { EntityManager } from "./entity-manager";
+import type { EntityManager } from "./entityManager";
 import { Unit } from "./entities/unit";
 import { Vehicle } from "./entities/vehicle";
-import { GameEvent } from "./events/game-event";
-import { HitKilledEvent } from "./events/hit-killed-event";
+import { GameEvent } from "./events/gameEvent";
+import { HitKilledEvent } from "./events/hitKilledEvent";
 
 /**
  * Manages all mission events for a playback session.

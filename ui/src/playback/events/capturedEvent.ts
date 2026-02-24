@@ -1,4 +1,4 @@
-import { GameEvent } from "./game-event";
+import { GameEvent } from "./gameEvent";
 
 /**
  * Represents a capture event (flag capture or object capture).

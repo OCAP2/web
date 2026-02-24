@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { MockRenderer } from "../mock-renderer";
+import { MockRenderer } from "../mockRenderer";
 import type { MapRenderer } from "../renderer.interface";
 
 describe("MapRenderer interface", () => {

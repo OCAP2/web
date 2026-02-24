@@ -7,7 +7,7 @@ import {
   unitDef,
   makeManifest,
   killedEvent,
-} from "./test-helpers";
+} from "./testHelpers";
 
 afterEach(() => {
   cleanup();

@@ -5,7 +5,7 @@ import { App } from "../App";
 import { MissionSelector } from "../pages/mission-selector";
 
 // Mock LeafletRenderer to avoid Leaflet in jsdom
-vi.mock("../renderers/leaflet/leaflet-renderer", () => ({
+vi.mock("../renderers/leaflet/leafletRenderer", () => ({
   LeafletRenderer: vi.fn().mockImplementation(() => ({
     init: vi.fn(),
     dispose: vi.fn(),

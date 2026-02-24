@@ -10,7 +10,7 @@ import {
   hitEvent,
   connectEvent,
   endMissionEvent,
-} from "./test-helpers";
+} from "./testHelpers";
 
 afterEach(() => {
   cleanup();

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { SpeedSelector } from "../components/SpeedSelector";
-import { createTestEngine, TestProviders } from "./test-helpers";
+import { createTestEngine, TestProviders } from "./testHelpers";
 
 afterEach(() => {
   cleanup();

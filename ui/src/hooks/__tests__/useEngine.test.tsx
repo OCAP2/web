@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, renderHook } from "@solidjs/testing-library";
 import { PlaybackEngine } from "../../playback/engine";
-import { MockRenderer } from "../../renderers/mock-renderer";
+import { MockRenderer } from "../../renderers/mockRenderer";
 import { EngineProvider, useEngine } from "../useEngine";
 
 function createEngine(): PlaybackEngine {
