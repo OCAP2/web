@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, Show, For } from "solid-js";
+import { createSignal, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
@@ -15,6 +15,7 @@ import {
 } from "./Icons";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { SpeedSelector } from "./SpeedSelector";
+import { useClickOutside } from "../../../hooks/useClickOutside";
 import styles from "./BottomBar.module.css";
 
 export interface BottomBarProps {
@@ -72,21 +73,8 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
   const [nameMode, setNameMode] = createSignal<NameMode>("all");
   let namesRef: HTMLDivElement | undefined;
 
-  const handleClickOutside = (e: MouseEvent) => {
-    if (timeModeRef && !timeModeRef.contains(e.target as Node)) {
-      setTimeModeOpen(false);
-    }
-    if (namesRef && !namesRef.contains(e.target as Node)) {
-      setNamesOpen(false);
-    }
-  };
-
-  onMount(() => {
-    document.addEventListener("pointerdown", handleClickOutside);
-  });
-  onCleanup(() => {
-    document.removeEventListener("pointerdown", handleClickOutside);
-  });
+  useClickOutside(() => timeModeRef, setTimeModeOpen);
+  useClickOutside(() => namesRef, setNamesOpen);
 
   return (
     <div class={styles.bottomBar}>

@@ -1,4 +1,4 @@
-import { createMemo, Switch, Match } from "solid-js";
+import { createMemo, Switch, Match, For } from "solid-js";
 import type { Accessor, JSX } from "solid-js";
 import { UsersIcon, ActivityIcon, BarChartIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
@@ -36,22 +36,24 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
   return (
     <div class={styles.panel}>
       <div class={styles.tabs}>
-        {tabs.map((tab) => (
-          <button
-            class={styles.tab}
-            classList={{ [styles.tabActive]: props.activeTab() === tab.id }}
-            onClick={() => props.onTabChange(tab.id)}
-          >
-            <tab.Icon size={14} />
-            <span class={styles.tabLabel}>{t(tab.labelKey)}</span>
-            {/* TODO: repurpose badge for unread/new events, not total kill count */}
-            {false && tab.id === "events" && killCount() > 0 && (
-              <span class={styles.tabBadge}>
-                {killCount() > 99 ? "99" : killCount()}
-              </span>
-            )}
-          </button>
-        ))}
+        <For each={tabs}>
+          {(tab) => (
+            <button
+              class={styles.tab}
+              classList={{ [styles.tabActive]: props.activeTab() === tab.id }}
+              onClick={() => props.onTabChange(tab.id)}
+            >
+              <tab.Icon size={14} />
+              <span class={styles.tabLabel}>{t(tab.labelKey)}</span>
+              {/* TODO: repurpose badge for unread/new events, not total kill count */}
+              {false && tab.id === "events" && killCount() > 0 && (
+                <span class={styles.tabBadge}>
+                  {killCount() > 99 ? "99" : killCount()}
+                </span>
+              )}
+            </button>
+          )}
+        </For>
       </div>
 
       <Switch>

@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onCleanup, Show, For } from "solid-js";
+import { createSignal, createMemo, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "./Icons";
 import { useEngine } from "../../../hooks/useEngine";
@@ -8,6 +8,7 @@ import { useI18n } from "../../../hooks/useLocale";
 import { SIDE_COLORS_UI } from "../../../config/side-colors";
 import type { Side, WorldConfig } from "../../../data/types";
 import type { RenderLayer } from "../../../renderers/renderer.types";
+import { useClickOutside } from "../../../hooks/useClickOutside";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
@@ -77,20 +78,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
   });
 
   let layerRef: HTMLDivElement | undefined;
-
-  const handleClickOutside = (e: MouseEvent) => {
-    if (layerRef && !layerRef.contains(e.target as Node)) {
-      setLayersOpen(false);
-    }
-  };
-
-  // Attach/detach click-outside listener
-  if (typeof document !== "undefined") {
-    document.addEventListener("pointerdown", handleClickOutside);
-    onCleanup(() => {
-      document.removeEventListener("pointerdown", handleClickOutside);
-    });
-  }
+  useClickOutside(() => layerRef, setLayersOpen);
 
   const toggleLayer = (key: string) => {
     const current = layers();
