@@ -72,6 +72,7 @@ export class Entity {
       side: state.name ? "CIV" : "CIV", // base entity has no side; subclasses override
       name: state.name ?? this.name,
       iconType: this.iconType,
+      isPlayer: false,
       isInVehicle: state.isInVehicle ?? false,
     };
   }

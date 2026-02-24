@@ -12,6 +12,7 @@ describe("MapRenderer interface", () => {
   it("createEntityMarker returns a handle", () => {
     const renderer = new MockRenderer();
     const handle = renderer.createEntityMarker(1, {
+      position: [0, 0],
       iconType: "man",
       side: "WEST",
       name: "Player1",
@@ -59,12 +60,14 @@ describe("MapRenderer interface", () => {
   it("each handle has a unique _internal value", () => {
     const renderer = new MockRenderer();
     const h1 = renderer.createEntityMarker(1, {
+      position: [0, 0],
       iconType: "man",
       side: "WEST",
       name: "A",
       isPlayer: false,
     });
     const h2 = renderer.createEntityMarker(2, {
+      position: [100, 100],
       iconType: "car",
       side: "EAST",
       name: "B",

@@ -59,8 +59,8 @@ export function vehicleDef(overrides: Partial<EntityDef> = {}): EntityDef {
     id: 50,
     type: "car",
     name: "HMMWV",
-    side: undefined,
-    groupName: undefined,
+    side: "CIV",
+    groupName: "",
     isPlayer: false,
     startFrame: 0,
     endFrame: 100,
@@ -77,12 +77,17 @@ export function makeManifest(
   frameCount = 100,
 ): Manifest {
   return {
+    version: 1,
+    worldName: "test_world",
+    missionName: "test_mission",
     frameCount,
-    captureDelayMs: 1000,
     chunkSize: 300,
+    chunkCount: Math.ceil(frameCount / 300),
+    captureDelayMs: 1000,
     entities,
     events,
     markers: [],
+    times: [],
   };
 }
 
