@@ -43,6 +43,7 @@ describe("useAuth", () => {
 
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     vi.restoreAllMocks();
     setAuthToken(null);
   });
@@ -76,6 +77,19 @@ describe("useAuth", () => {
 
     await findByTestId("authenticated");
     expect(mockConsumeAuthToken).toHaveBeenCalled();
+  });
+
+  it("falls back to unauthenticated when getMe throws", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockRejectedValue(new Error("network error"));
+
+    const { findByText } = render(() => (
+      <AuthProvider>
+        <TestConsumer onAuth={() => {}} />
+      </AuthProvider>
+    ));
+
+    expect(await findByText("false")).toBeDefined();
   });
 
   it("checks session on mount via getMe when token exists", async () => {

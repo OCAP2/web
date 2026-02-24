@@ -574,6 +574,32 @@ describe("MissionSelector", () => {
 
   // ── Auth error toast ──
 
+  it("auto-dismisses auth error toast after timeout", async () => {
+    vi.useFakeTimers();
+
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    const { container } = renderPage();
+
+    // Wait for toast to appear (flush microtasks with real timers temporarily)
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Your Steam account is not authorized for admin access.");
+    });
+
+    // Advance past the 5s auto-dismiss timeout
+    vi.advanceTimersByTime(5000);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).not.toContain("not authorized for admin access");
+    });
+
+    vi.useRealTimers();
+  });
+
   it("shows auth error toast and dismisses on click", async () => {
     // Mock location with auth_error param so AuthProvider picks it up
     Object.defineProperty(window, "location", {
