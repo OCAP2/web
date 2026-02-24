@@ -24,7 +24,7 @@ export function MissionSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { authenticated, steamId, authError, loginWithSteam, logout } = useAuth();
+  const { authenticated, steamId, authError, dismissAuthError, loginWithSteam, logout } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -237,6 +237,11 @@ export function MissionSelector(): JSX.Element {
 
   return (
       <div data-testid="mission-selector" class={styles.page}>
+        {/* ── Auth error toast ── */}
+        <Show when={authError()}>
+          {(msg) => <Toast message={msg()} onDismiss={() => dismissAuthError()} />}
+        </Show>
+
         {/* ── Header ── */}
         <header class={styles.header}>
           <div class={styles.headerRow}>
@@ -313,14 +318,9 @@ export function MissionSelector(): JSX.Element {
               <div class={styles.divider} />
 
               <Show when={authenticated()} fallback={
-                <div class={styles.authArea}>
-                  <Show when={authError()}>
-                    <div class={styles.authError}>{authError()}</div>
-                  </Show>
-                  <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-                    <Icons.Lock /> Sign in with Steam
-                  </button>
-                </div>
+                <button class={styles.signInButton} onClick={() => loginWithSteam()}>
+                  <Icons.Lock /> Sign in with Steam
+                </button>
               }>
                 <div class={styles.adminArea}>
                   <div class={styles.adminBadge}>
@@ -581,6 +581,28 @@ export function MissionSelector(): JSX.Element {
           )}
         </Show>
       </div>
+  );
+}
+
+// ─── Toast notification ───
+
+function Toast(props: { message: string; onDismiss: () => void }): JSX.Element {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  onMount(() => {
+    timer = setTimeout(() => props.onDismiss(), 5000);
+  });
+
+  onCleanup(() => clearTimeout(timer));
+
+  return (
+    <div class={styles.toast}>
+      <Icons.AlertTriangle />
+      <span>{props.message}</span>
+      <button class={styles.toastClose} onClick={() => props.onDismiss()}>
+        <Icons.X />
+      </button>
+    </div>
   );
 }
 

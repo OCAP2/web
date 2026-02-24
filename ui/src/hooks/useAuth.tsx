@@ -6,6 +6,7 @@ export interface Auth {
   authenticated: Accessor<boolean>;
   steamId: Accessor<string | null>;
   authError: Accessor<string | null>;
+  dismissAuthError: () => void;
   loginWithSteam: () => void;
   logout: () => Promise<void>;
 }
@@ -54,6 +55,8 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
     }
   });
 
+  const dismissAuthError = () => setAuthError(null);
+
   const loginWithSteam = () => {
     setAuthError(null);
     window.location.href = api.getSteamLoginUrl();
@@ -69,7 +72,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   };
 
   return (
-    <AuthContext.Provider value={{ authenticated, steamId, authError, loginWithSteam, logout }}>
+    <AuthContext.Provider value={{ authenticated, steamId, authError, dismissAuthError, loginWithSteam, logout }}>
       {props.children}
     </AuthContext.Provider>
   );
