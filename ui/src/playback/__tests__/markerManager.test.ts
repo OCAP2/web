@@ -607,3 +607,104 @@ describe("MarkerManager ICON marker popup text", () => {
     );
   });
 });
+
+// ─── MarkerManager.setBlacklist ───
+
+describe("MarkerManager.setBlacklist", () => {
+  it("hides markers from blacklisted players", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: 5, side: "WEST" }),
+      makeDef("mil_dot", { player: 10, side: "WEST" }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Blacklist player 5 — its marker should be removed
+    mgr.setBlacklist(new Set([5]));
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not blacklist system markers (player === -1)", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: -1, side: "GLOBAL" }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Blacklisting -1 should have no effect on system markers
+    mgr.setBlacklist(new Set([-1]));
+    expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
+  });
+
+  it("prevents blacklisted markers from appearing in updateFrame", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: 3, side: "WEST" }),
+    ]);
+
+    // Blacklist before any frame update
+    mgr.setBlacklist(new Set([3]));
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).not.toHaveBeenCalled();
+  });
+
+  it("removes existing markers during updateFrame when blacklisted", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: 7, side: "EAST" }),
+    ]);
+
+    // Show marker first
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Now blacklist and update frame
+    mgr.setBlacklist(new Set([7]));
+    // setBlacklist already removed it, but updateFrame should also skip
+    mgr.updateFrame(1);
+    // No new creates
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── MarkerManager.getMarkerCountsByPlayer ───
+
+describe("MarkerManager.getMarkerCountsByPlayer", () => {
+  it("counts markers per player entity ID", () => {
+    const mgr = new MarkerManager(makeStubRenderer());
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: 1 }),
+      makeDef("mil_dot", { player: 1 }),
+      makeDef("mil_dot", { player: 2 }),
+    ]);
+
+    const counts = mgr.getMarkerCountsByPlayer();
+    expect(counts.get(1)).toBe(2);
+    expect(counts.get(2)).toBe(1);
+  });
+
+  it("excludes system markers (player === -1)", () => {
+    const mgr = new MarkerManager(makeStubRenderer());
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: -1 }),
+      makeDef("mil_dot", { player: 3 }),
+    ]);
+
+    const counts = mgr.getMarkerCountsByPlayer();
+    expect(counts.has(-1)).toBe(false);
+    expect(counts.get(3)).toBe(1);
+  });
+
+  it("returns empty map when no markers loaded", () => {
+    const mgr = new MarkerManager(makeStubRenderer());
+    expect(mgr.getMarkerCountsByPlayer().size).toBe(0);
+  });
+});

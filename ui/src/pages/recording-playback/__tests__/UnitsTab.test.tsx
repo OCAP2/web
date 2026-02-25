@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { UnitsTab } from "../components/UnitsTab";
 import {
   createTestEngine,
@@ -274,5 +275,94 @@ describe("UnitsTab", () => {
     expect(killerRow).toBeTruthy();
     // The kill badge renders the count inside a span after the crosshair icon
     expect(killerRow!.textContent).toContain("1");
+  });
+
+  it("shows blacklist button for admin when unit has markers", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Marker Player", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+        unitDef({ id: 2, name: "No Markers", side: "WEST", groupName: "Alpha", role: "Medic" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set<number>());
+    const [markerCounts] = createSignal(new Map([[1, 3]]));
+    const [isAdmin] = createSignal(true);
+    const onToggle = vi.fn();
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+          onToggleBlacklist={onToggle}
+        />
+      </TestProviders>
+    ));
+
+    // Player 1 has 3 markers — blacklist button should show "3"
+    const markerPlayerRow = screen.getByText("Marker Player").closest("button");
+    expect(markerPlayerRow!.textContent).toContain("3");
+
+    // Player 2 has no markers — no blacklist button
+    const noMarkersRow = screen.getByText("No Markers").closest("button");
+    expect(noMarkersRow!.textContent).not.toContain("Toggle marker blacklist");
+  });
+
+  it("calls onToggleBlacklist when clicking the blacklist button", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 7, name: "Troll", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set<number>());
+    const [markerCounts] = createSignal(new Map([[7, 2]]));
+    const [isAdmin] = createSignal(true);
+    const onToggle = vi.fn();
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+          onToggleBlacklist={onToggle}
+        />
+      </TestProviders>
+    ));
+
+    const blacklistBtn = screen.getByTitle("Toggle marker blacklist");
+    fireEvent.click(blacklistBtn);
+
+    expect(onToggle).toHaveBeenCalledWith(7);
+  });
+
+  it("does not show blacklist button for non-admins", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Player", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set<number>());
+    const [markerCounts] = createSignal(new Map([[1, 5]]));
+    const [isAdmin] = createSignal(false);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+        />
+      </TestProviders>
+    ));
+
+    expect(screen.queryByTitle("Toggle marker blacklist")).toBeNull();
   });
 });

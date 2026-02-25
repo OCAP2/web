@@ -738,6 +738,80 @@ describe("ApiClient", () => {
     });
   });
 
+  // ─── Marker blacklist ───
+
+  describe("getMarkerBlacklist", () => {
+    it("fetches blacklisted player IDs", async () => {
+      mockFetchJson([5, 10, 42]);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getMarkerBlacklist("99");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations/99/marker-blacklist",
+        expect.objectContaining({ cache: "no-cache" }),
+      );
+      expect(result).toEqual([5, 10, 42]);
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(500, "Internal Server Error");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.getMarkerBlacklist("99")).rejects.toThrow(ApiError);
+    });
+  });
+
+  describe("addMarkerBlacklist", () => {
+    it("sends PUT with auth header", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson(null, 204);
+
+      const client = new ApiClient("/aar/");
+      await client.addMarkerBlacklist("99", 42);
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations/99/marker-blacklist/42",
+        expect.objectContaining({
+          method: "PUT",
+          headers: { Authorization: "Bearer admin-jwt" },
+        }),
+      );
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.addMarkerBlacklist("99", 42)).rejects.toThrow(ApiError);
+    });
+  });
+
+  describe("removeMarkerBlacklist", () => {
+    it("sends DELETE with auth header", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson(null, 204);
+
+      const client = new ApiClient("/aar/");
+      await client.removeMarkerBlacklist("99", 42);
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations/99/marker-blacklist/42",
+        expect.objectContaining({
+          method: "DELETE",
+          headers: { Authorization: "Bearer admin-jwt" },
+        }),
+      );
+    });
+
+    it("throws ApiError on failure", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.removeMarkerBlacklist("99", 42)).rejects.toThrow(ApiError);
+    });
+  });
+
   // ─── Error handling ───
 
   describe("error handling", () => {
