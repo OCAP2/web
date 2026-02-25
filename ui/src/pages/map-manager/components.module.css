@@ -1,9 +1,92 @@
+/* ─── Collapsible section ─── */
+
+.section {
+  margin-bottom: 10px;
+}
+
+.sectionToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 0;
+  color: var(--text-muted);
+}
+
+.sectionLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.countBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+
+.countBadgeOk {
+  background: rgba(45, 212, 160, 0.08);
+  color: var(--accent-success);
+  border: 1px solid rgba(45, 212, 160, 0.12);
+}
+
+.countBadgeErr {
+  background: rgba(255, 74, 74, 0.08);
+  color: var(--accent-danger);
+  border: 1px solid rgba(255, 74, 74, 0.12);
+}
+
+.optionalMissing {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--accent-warning);
+}
+
+.queuedBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(136, 153, 170, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(136, 153, 170, 0.12);
+}
+
+.pastCount {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+}
+
+.chevron {
+  margin-left: auto;
+  display: flex;
+  transform: rotate(-90deg);
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(0deg);
+}
+
 /* ─── ToolStatus ─── */
 
 .toolGrid {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  margin-top: 4px;
+  padding-left: 22px;
+  animation: fadeIn 0.15s ease-out;
 }
 
 .toolItem {
@@ -74,6 +157,7 @@
 .pipeline {
   padding: 12px 14px;
   border-radius: 10px;
+  margin-bottom: 12px;
   background: rgba(74, 158, 255, 0.04);
   border: 1px solid rgba(74, 158, 255, 0.08);
   animation: fadeIn 0.2s ease-out;
@@ -191,21 +275,24 @@
   margin-top: 6px;
 }
 
-.pipelineStatus {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 3px;
-  text-transform: uppercase;
-}
-
 /* ─── JobHistory ─── */
 
 .jobList {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  margin-top: 4px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.jobItemPending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(136, 153, 170, 0.04);
+  border: 1px solid rgba(136, 153, 170, 0.06);
 }
 
 .jobItem {
@@ -231,6 +318,14 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+}
+
+.jobNamePending {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
   font-weight: 500;
   flex: 1;
 }

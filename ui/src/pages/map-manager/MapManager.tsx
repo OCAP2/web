@@ -17,6 +17,7 @@ import {
   GridIcon,
   ListIcon,
   GlobeIcon,
+  FilePlusIcon,
 } from "../../components/Icons";
 import styles from "./MapManager.module.css";
 
@@ -30,6 +31,8 @@ export function MapManager(): JSX.Element {
   const [tools, setTools] = createSignal<ToolSet>([]);
   const [maps, setMaps] = createSignal<MapInfo[]>([]);
   const [search, setSearch] = createSignal("");
+  const [statusFilter, setStatusFilter] = createSignal<string | null>(null);
+  const [sortBy, setSortBy] = createSignal("name");
   const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
   const [selected, setSelected] = createSignal<string | null>(null);
   const [showImport, setShowImport] = createSignal(false);
@@ -43,17 +46,26 @@ export function MapManager(): JSX.Element {
 
   // ─── Derived ───
   const filteredMaps = createMemo(() => {
+    let result = maps();
     const q = search().toLowerCase();
-    if (!q) return maps();
-    return maps().filter((m) => m.name.toLowerCase().includes(q));
+    if (q) {
+      result = result.filter((m) => m.name.toLowerCase().includes(q));
+    }
+    const sf = statusFilter();
+    if (sf) {
+      result = result.filter((m) => m.status === sf);
+    }
+    const sort = sortBy();
+    result = [...result].sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "size") return (b.worldSize ?? 0) - (a.worldSize ?? 0);
+      return 0;
+    });
+    return result;
   });
 
   const selectedMap = createMemo(() =>
     maps().find((m) => m.name === selected()) ?? null,
-  );
-
-  const activeJobs = createMemo(() =>
-    jobs().filter((j) => j.status === "running" || j.status === "pending"),
   );
 
   // ─── Load data ───
@@ -129,8 +141,10 @@ export function MapManager(): JSX.Element {
               <GlobeIcon size={16} />
             </div>
             <div>
-              <span class={styles.headerTitle}>OCAP</span>
-              <span class={styles.headerSubtitle}>Map Tool</span>
+              <div class={styles.headerTitleRow}>
+                <span class={styles.headerTitle}>OCAP</span>
+                <span class={styles.headerSubtitle}>Map Tool</span>
+              </div>
             </div>
           </div>
           <div class={styles.headerRight}>
@@ -139,7 +153,7 @@ export function MapManager(): JSX.Element {
                 class={styles.importBtn}
                 onClick={() => setShowImport(true)}
               >
-                <UploadIcon size={12} /> Import Map
+                <FilePlusIcon size={12} /> Import Map
               </button>
               <button class={styles.restyleBtn} onClick={handleRestyle}>
                 <PaletteIcon size={12} /> Restyle All
@@ -149,17 +163,11 @@ export function MapManager(): JSX.Element {
         </div>
 
         <Show when={!loading()}>
-          {/* Tool status */}
-          <div class={styles.toolBar}>
-            <ToolStatus tools={tools()} />
-          </div>
+          {/* Tool status — collapsible */}
+          <ToolStatus tools={tools()} />
 
-          {/* Active jobs */}
-          <Show when={activeJobs().length > 0}>
-            <div class={styles.jobsBar}>
-              <JobHistory jobs={activeJobs()} onCancel={handleCancelJob} />
-            </div>
-          </Show>
+          {/* Jobs — collapsible with active pipeline */}
+          <JobHistory jobs={jobs()} onCancel={handleCancelJob} />
 
           {/* Filter bar */}
           <div class={styles.filterBar}>
@@ -175,6 +183,39 @@ export function MapManager(): JSX.Element {
                 class={styles.searchInput}
               />
             </div>
+
+            {/* Status filter */}
+            <div class={styles.filterGroup}>
+              <For each={[{ val: null, label: "All" }, { val: "complete", label: "Complete" }, { val: "incomplete", label: "Partial" }]}>
+                {(f) => (
+                  <button
+                    class={styles.filterBtn}
+                    classList={{ [styles.filterBtnActive]: statusFilter() === f.val }}
+                    onClick={() => setStatusFilter(statusFilter() === f.val ? null : f.val)}
+                  >
+                    {f.label}
+                  </button>
+                )}
+              </For>
+            </div>
+
+            {/* Sort */}
+            <div class={styles.sortGroup}>
+              <span class={styles.sortLabel}>Sort</span>
+              <For each={[{ id: "name", label: "Name" }, { id: "size", label: "Size" }]}>
+                {(s) => (
+                  <button
+                    class={styles.sortBtn}
+                    classList={{ [styles.sortBtnActive]: sortBy() === s.id }}
+                    onClick={() => setSortBy(s.id)}
+                  >
+                    {s.label}
+                  </button>
+                )}
+              </For>
+            </div>
+
+            {/* View toggle */}
             <div class={styles.viewToggle}>
               <button
                 class={styles.viewBtn}
@@ -191,9 +232,8 @@ export function MapManager(): JSX.Element {
                 <ListIcon size={14} />
               </button>
             </div>
-            <span class={styles.mapCount}>
-              {filteredMaps().length} map{filteredMaps().length !== 1 ? "s" : ""}
-            </span>
+
+            <span class={styles.mapCount}>{filteredMaps().length}</span>
           </div>
         </Show>
       </header>
@@ -201,16 +241,26 @@ export function MapManager(): JSX.Element {
       <Show when={!loading()}>
         {/* Main content */}
         <div class={styles.main}>
-          <div class={styles.content}>
+          <div
+            class={styles.content}
+            classList={{ [styles.contentList]: viewMode() === "list" }}
+          >
             <Show
               when={viewMode() === "grid"}
               fallback={
                 <div class={styles.listContainer}>
                   <div class={styles.listHeader}>
-                    <span class={styles.listHeaderLabel}>MAP</span>
-                    <span class={styles.listHeaderLabel}>SIZE</span>
-                    <span class={styles.listHeaderLabel}>LAYERS</span>
-                    <span class={styles.listHeaderLabel}>STATUS</span>
+                    <span />
+                    <For each={["SIZE", "LAYERS", "STATUS"]}>
+                      {(h) => (
+                        <span
+                          class={styles.listHeaderLabel}
+                          classList={{ [styles.listHeaderRight]: h === "STATUS" }}
+                        >
+                          {h}
+                        </span>
+                      )}
+                    </For>
                   </div>
                   <For each={filteredMaps()}>
                     {(m) => (
@@ -244,7 +294,20 @@ export function MapManager(): JSX.Element {
 
             <Show when={filteredMaps().length === 0}>
               <div class={styles.empty}>
-                <p class={styles.emptyText}>No maps found</p>
+                <GlobeIcon size={14} />
+                <span class={styles.emptyText}>
+                  {search()
+                    ? "No maps match your search"
+                    : "No maps imported yet"}
+                </span>
+                <Show when={!search()}>
+                  <button
+                    class={styles.emptyImportBtn}
+                    onClick={() => setShowImport(true)}
+                  >
+                    <FilePlusIcon size={12} /> Import Map
+                  </button>
+                </Show>
               </div>
             </Show>
           </div>
@@ -261,26 +324,6 @@ export function MapManager(): JSX.Element {
             )}
           </Show>
         </div>
-
-        {/* Completed/failed jobs history */}
-        <Show
-          when={jobs().some(
-            (j) => j.status === "done" || j.status === "failed",
-          )}
-        >
-          <div class={styles.historySection}>
-            <h3 class={styles.historyTitle}>Job History</h3>
-            <JobHistory
-              jobs={jobs().filter(
-                (j) =>
-                  j.status === "done" ||
-                  j.status === "failed" ||
-                  j.status === "cancelled",
-              )}
-              onCancel={handleCancelJob}
-            />
-          </div>
-        </Show>
       </Show>
 
       {/* Modals */}
