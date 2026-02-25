@@ -1,7 +1,7 @@
 .counterDisplay {
   display: inline-flex;
   align-items: center;
-  font-size: 18px;
+  font-size: var(--font-size-3xl);
   margin: 10px 15px;
   padding-left: 15px;
   border-left: 1px solid var(--text-dim);
@@ -19,6 +19,6 @@
 
 @media (max-width: 768px) {
   .counterDisplay {
-    font-size: 14px;
+    font-size: var(--font-size-xl);
   }
 }

@@ -7,7 +7,7 @@
 }
 
 .appName {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   font-family: var(--font-heading);
@@ -15,7 +15,7 @@
 }
 
 .link {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--accent-primary);
   text-decoration: none;
@@ -36,7 +36,7 @@
 }
 
 .sectionLabel {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-dimmer);
   font-family: var(--font-mono);
@@ -53,13 +53,13 @@
 }
 
 .rowLabel {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
 .rowValue {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   color: var(--text-secondary);
   font-family: var(--font-mono);
 }

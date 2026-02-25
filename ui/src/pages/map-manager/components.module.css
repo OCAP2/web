@@ -65,7 +65,7 @@
 
 .toolsLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -79,7 +79,7 @@
 
 .degradedLabel {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--accent-warning);
 }
@@ -97,7 +97,7 @@
 
 .activeWorldName {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -144,7 +144,7 @@
 
 .activeStageLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--accent-primary);
   white-space: nowrap;
@@ -152,14 +152,14 @@
 
 .activeElapsed {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
   white-space: nowrap;
 }
 
 .activeIdle {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
 }
 
@@ -204,7 +204,7 @@
 
 .pendingBadge {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 3px;
@@ -214,7 +214,7 @@
 
 .pastLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--text-dimmer);
 }
@@ -257,7 +257,7 @@
 
 .dropdownHeading {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -299,7 +299,7 @@
 
 .toolName {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   min-width: 130px;
 }
@@ -318,13 +318,13 @@
 
 .toolPath {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
 }
 
 .toolLabel {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
 }
 
 .toolLabelReq {
@@ -347,7 +347,7 @@
 
 .degradedHeading {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--accent-warning);
   font-weight: 600;
   margin-bottom: 4px;
@@ -355,7 +355,7 @@
 
 .degradedItem {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
   padding: 1px 0;
 }
@@ -393,7 +393,7 @@
 
 .jobName {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   flex: 1;
 }
@@ -408,13 +408,13 @@
 
 .jobElapsed {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
 }
 
 .jobStatusLabel {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -422,14 +422,14 @@
 .jobError {
   padding: 3px 8px 3px 30px;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: rgba(255, 107, 107, 0.53);
   line-height: 1.4;
 }
 
 .emptyJobs {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmest);
   text-align: center;
   padding: 16px;

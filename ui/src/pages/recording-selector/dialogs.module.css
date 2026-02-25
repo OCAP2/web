@@ -22,13 +22,13 @@
 }
 
 .editInfoKey {
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
   font-family: var(--font-mono);
 }
 
 .editInfoValue {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-weight: 500;
@@ -41,7 +41,7 @@
 }
 
 .editLabel {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dim);
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
@@ -58,7 +58,7 @@
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   font-weight: 600;
   background: rgba(255, 255, 255, 0.03);
@@ -93,7 +93,7 @@
 }
 
 .deleteTitle {
-  font-size: 16px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   color: var(--text-primary);
   font-family: var(--font-heading);
@@ -101,14 +101,14 @@
 }
 
 .deleteSubtext {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   color: var(--text-muted);
   line-height: 1.5;
   margin-bottom: 4px;
 }
 
 .deleteName {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-weight: 600;
@@ -116,7 +116,7 @@
 }
 
 .deleteMeta {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   color: var(--text-dim);
   font-family: var(--font-mono);
 }
@@ -127,7 +127,7 @@
   border-radius: 6px;
   background: color-mix(in srgb, var(--accent-danger) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-danger) 10%, transparent);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   color: rgba(255, 107, 107, 0.53);
   line-height: 1.4;
 }
@@ -179,7 +179,7 @@
 }
 
 .uploadDropText {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   color: var(--text-muted);
   font-family: var(--font-mono);
   text-align: center;
@@ -220,7 +220,7 @@
 }
 
 .uploadFileName {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -229,7 +229,7 @@
 }
 
 .uploadFileSize {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dim);
   font-family: var(--font-mono);
 }
@@ -259,7 +259,7 @@
 }
 
 .uploadFooterHint {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmest);
   font-family: var(--font-mono);
 }
@@ -273,7 +273,7 @@
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
   border: none;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   font-family: var(--font-mono);
   display: flex;

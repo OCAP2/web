@@ -48,7 +48,7 @@
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--text-dimmer);
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   cursor: pointer;
   font-family: var(--font-mono);
@@ -66,7 +66,7 @@
 }
 
 .tabLabel {
-  font-size: 11px;
+  font-size: var(--font-size-md);
 }
 
 .tabBadge {
@@ -78,7 +78,7 @@
   border-radius: 50%;
   background: var(--accent-danger);
   color: #fff;
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -104,7 +104,7 @@
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -127,7 +127,7 @@
 
 .sideCount {
   opacity: 0.6;
-  font-size: 10px;
+  font-size: var(--font-size-sm);
 }
 
 /* ── Groups ── */
@@ -167,7 +167,7 @@
 
 .groupName {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -176,7 +176,7 @@
 .groupCount {
   margin-left: auto;
   color: var(--text-dimmest);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
 }
 
@@ -233,7 +233,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
@@ -249,7 +249,7 @@
 }
 
 .unitAiBadge {
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
   background: var(--bg-interactive);
   padding: 1px 4px;
@@ -257,7 +257,7 @@
 }
 
 .unitRole {
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
   font-family: var(--font-mono);
 }
@@ -267,7 +267,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--accent-danger);
   background: color-mix(in srgb, var(--accent-danger) 10%, transparent);
@@ -312,14 +312,14 @@
 }
 
 .detailStatValue {
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   font-family: var(--font-mono);
   line-height: 1;
 }
 
 .detailStatLabel {
-  font-size: 7px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
@@ -340,7 +340,7 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-dimmer);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   font-family: var(--font-mono);
   display: flex;
@@ -367,7 +367,7 @@
 }
 
 .detailAdminLabel {
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
@@ -383,7 +383,7 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-dimmer);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   font-family: var(--font-mono);
   display: flex;
@@ -421,7 +421,7 @@
   border-radius: 6px;
   padding: 6px 10px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   outline: none;
 }
@@ -439,7 +439,7 @@
   border-radius: 4px;
   border: none;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   transition: all 0.15s;
 }
@@ -491,7 +491,7 @@
 }
 
 .eventNames {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-family: var(--font-mono);
   text-align: left;
 }
@@ -508,7 +508,7 @@
 }
 
 .eventTime {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--text-dimmest);
   display: flex;
@@ -517,13 +517,13 @@
 }
 
 .eventDistance {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--text-dimmer);
 }
 
 .eventWeapon {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--text-dimmest);
   overflow: hidden;
@@ -533,7 +533,7 @@
 }
 
 .eventMessage {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--text-muted);
   text-align: left;
@@ -549,7 +549,7 @@
 }
 
 .statsLabel {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--text-dimmer);
   letter-spacing: 0.1em;
@@ -583,7 +583,7 @@
 }
 
 .forceCardLabel {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   font-family: var(--font-mono);
 }
@@ -602,14 +602,14 @@
 }
 
 .forceStatNum {
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   font-family: var(--font-mono);
   line-height: 1;
 }
 
 .forceStatLabel {
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
@@ -637,7 +637,7 @@
 }
 
 .leaderboardRank {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--text-dimmest);
   width: 16px;
@@ -645,7 +645,7 @@
 }
 
 .leaderboardName {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--text-secondary);
   flex: 1;
@@ -655,7 +655,7 @@
 }
 
 .leaderboardKills {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--accent-danger);
   min-width: 20px;
@@ -663,7 +663,7 @@
 }
 
 .leaderboardDeaths {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--accent-warning);
   min-width: 20px;
@@ -692,7 +692,7 @@
 }
 
 .placeholder {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   color: var(--text-dimmer);
   padding: 32px;
   text-align: center;

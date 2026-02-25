@@ -118,7 +118,7 @@
   color: var(--text-secondary);
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   pointer-events: none;
   white-space: nowrap;
@@ -134,7 +134,7 @@
   padding: 4px 10px;
   cursor: pointer;
   color: var(--text-dimmer);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   font-weight: 600;
   display: flex;
@@ -149,7 +149,7 @@
 }
 
 .timeDisplay {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   font-family: var(--font-mono);
   color: var(--text-primary);
   font-weight: 500;
@@ -211,7 +211,7 @@
   padding: 4px 10px;
   cursor: pointer;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   font-weight: 600;
   display: flex;
@@ -242,7 +242,7 @@
   border-radius: 4px;
   padding: 4px 16px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   cursor: pointer;
 }

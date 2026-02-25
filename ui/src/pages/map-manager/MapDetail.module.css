@@ -44,14 +44,14 @@
 .heroTitle {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 17px;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
   color: var(--text-secondary);
 }
 
 .heroSubtitle {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmer);
   margin-top: 2px;
 }
@@ -105,7 +105,7 @@
 
 .infoLabel {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dim);
   letter-spacing: 0.08em;
   font-weight: 600;
@@ -115,7 +115,7 @@
 
 .infoValue {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-weight: 500;
 }
 
@@ -136,7 +136,7 @@
 
 .elevLabel {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dim);
   letter-spacing: 0.08em;
   font-weight: 600;
@@ -146,7 +146,7 @@
 
 .elevValue {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   line-height: 1;
 }
@@ -178,7 +178,7 @@
   justify-content: space-between;
   margin-top: 2px;
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
 }
 
@@ -192,7 +192,7 @@
 .sectionTitle {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dim);
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -210,7 +210,7 @@
 
 .layerTag {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   padding: 2px 6px;
   border-radius: 3px;
@@ -251,7 +251,7 @@
 
 .fileName {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   flex: 1;
 }
 
@@ -266,7 +266,7 @@
 
 .fileSize {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
 }
 
@@ -287,20 +287,20 @@
 
 .variantLabel {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   color: var(--text-primary);
   font-weight: 600;
 }
 
 .variantDesc {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmer);
 }
 
 .variantFile {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   color: var(--text-dimmest);
 }
 
@@ -321,7 +321,7 @@
   border: 1px solid color-mix(in srgb, var(--accent-danger) 12%, transparent);
   color: var(--accent-danger);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   display: flex;
   align-items: center;

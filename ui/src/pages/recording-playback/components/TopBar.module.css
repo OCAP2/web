@@ -59,14 +59,14 @@
 }
 
 .brandTitle {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
 .brandSubtitle {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmer);
   white-space: nowrap;
 }
@@ -85,7 +85,7 @@
 }
 
 .missionName {
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   color: var(--text-primary);
   font-family: var(--font-heading);
@@ -95,7 +95,7 @@
 }
 
 .missionSubtitle {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmer);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -125,13 +125,13 @@
 }
 
 .forceAlive {
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   font-family: var(--font-mono);
 }
 
 .forceTotal {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmest);
   font-family: var(--font-mono);
 }
@@ -199,7 +199,7 @@
 }
 
 .layerLabel {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--text-dimmer);
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
@@ -254,7 +254,7 @@
 }
 
 .layerItemText {
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
 }
 
@@ -283,7 +283,7 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--text-secondary);
   white-space: nowrap;

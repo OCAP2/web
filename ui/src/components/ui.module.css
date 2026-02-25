@@ -52,7 +52,7 @@
 }
 
 .dialogTitle {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   font-family: var(--font-heading);
@@ -86,7 +86,7 @@
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-dark));
   border: none;
   color: var(--text-on-accent);
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-family: var(--font-mono);
   font-weight: 600;
   cursor: pointer;
@@ -105,7 +105,7 @@
   background: linear-gradient(135deg, var(--accent-danger), var(--accent-danger-dark));
   border: none;
   color: var(--text-on-accent);
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-family: var(--font-mono);
   font-weight: 600;
   cursor: pointer;
@@ -122,7 +122,7 @@
   border: var(--border-subtle);
   background: transparent;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-family: var(--font-mono);
   cursor: pointer;
 }
@@ -153,7 +153,7 @@
   border: var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   font-family: var(--font-mono);
   outline: none;
   box-sizing: border-box;
@@ -166,7 +166,7 @@
 .select {
   width: 100%;
   padding: 6px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   color: var(--text-secondary);
   background: var(--bg-interactive);

@@ -17,7 +17,7 @@
   backdrop-filter: blur(12px);
   border: var(--border-subtle);
   color: var(--text-muted);
-  font-size: 18px;
+  font-size: var(--font-size-3xl);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -45,7 +45,7 @@
   border-radius: 8px;
   backdrop-filter: blur(12px);
   border: var(--border-subtle);
-  font-size: 8px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   display: flex;
   align-items: center;

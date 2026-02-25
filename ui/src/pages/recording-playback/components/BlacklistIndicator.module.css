@@ -13,7 +13,7 @@
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--accent-danger) 20%, transparent);
   color: var(--accent-danger);
-  font-size: 11px;
+  font-size: var(--font-size-md);
   font-family: var(--font-mono);
   font-weight: 500;
   pointer-events: none;
