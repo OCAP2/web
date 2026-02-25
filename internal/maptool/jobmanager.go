@@ -147,6 +147,7 @@ func (jm *JobManager) Submit(inputPath, worldName string) (JobInfo, error) {
 	jm.mu.Unlock()
 
 	snap := job.Snapshot()
+	jm.broadcastStatus(job)
 	jm.queue <- job
 	return snap, nil
 }
@@ -165,6 +166,7 @@ func (jm *JobManager) SubmitFunc(id, worldName string, fn func(ctx context.Conte
 	jm.mu.Unlock()
 
 	snap := job.Snapshot()
+	jm.broadcastStatus(job)
 	jm.queue <- job
 	return snap, nil
 }
@@ -225,6 +227,7 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 
 	if job.customRun != nil {
 		job.Start()
+		jm.broadcastStatus(job)
 		if err := job.customRun(jobCtx, job); err != nil {
 			if jobCtx.Err() != nil {
 				job.setStatus(StatusCancelled, "")
@@ -252,6 +255,8 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	}
 
 	job.SubDirs = true
+	job.Start()
+	jm.broadcastStatus(job)
 
 	pipeline := jm.newPipeline()
 
