@@ -34,6 +34,7 @@ export function MapDetail(props: {
             alt={props.map.name}
             class={styles.heroImg}
           />
+          <div class={styles.heroOverlay} />
         </Show>
         <div class={styles.heroText}>
           <h2 class={styles.heroTitle}>{props.map.name}</h2>
