@@ -773,7 +773,7 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in with Steam");
+      expect(container.textContent).toContain("Sign in");
     });
   });
 
@@ -787,7 +787,7 @@ describe("RecordingSelector (Admin)", () => {
     fireEvent.click(logoutBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in with Steam");
+      expect(container.textContent).toContain("Sign in");
     });
   });
 
@@ -812,11 +812,11 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in with Steam");
+      expect(container.textContent).toContain("Sign in");
     });
 
     const signInBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Sign in with Steam"),
+      (b) => b.textContent?.includes("Sign in"),
     );
     expect(signInBtn).toBeDefined();
   });

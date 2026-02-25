@@ -1238,9 +1238,9 @@
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-  background: var(--bg-interactive);
+  background: linear-gradient(135deg, #171a21, #1b2838); /* Steam brand colors */
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-muted);
+  color: #c7d5e0; /* Steam brand text */
   font-size: 12px;
   font-family: var(--font-mono);
   font-weight: 600;

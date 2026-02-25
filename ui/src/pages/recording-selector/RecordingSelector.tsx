@@ -319,7 +319,7 @@ export function RecordingSelector(): JSX.Element {
 
               <Show when={authenticated()} fallback={
                 <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-                  <Icons.Lock /> Sign in with Steam
+                  <Icons.Steam /> Sign in
                 </button>
               }>
                 <div class={styles.adminArea}>
