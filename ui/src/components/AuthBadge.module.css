@@ -1,0 +1,89 @@
+/* ── AuthBadge ── */
+
+.adminBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-success) 15%, transparent);
+}
+
+.adminAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent-success), #1a9a74);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-dark);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-heading);
+}
+
+.adminAvatarImg {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.adminLabel {
+  font-size: 8px;
+  color: var(--accent-success);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.adminName {
+  font-size: 11px;
+  color: #e0e6ed;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.adminIconButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg-interactive);
+  border: var(--border-subtle);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.adminIconButton:hover {
+  filter: brightness(1.2);
+}
+
+.signInButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #171a21, #1b2838);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #c7d5e0;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.signInButton:hover {
+  filter: brightness(1.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
