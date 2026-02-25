@@ -9,7 +9,8 @@ import { useCustomize } from "../../hooks/useCustomize";
 import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
-import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, SteamIcon, ShieldIcon, UploadIcon, LogOutIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon } from "../../components/Icons";
+import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon } from "../../components/Icons";
+import { AuthBadge } from "../../components/AuthBadge";
 import { getMapColor, isRecordingReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { RecordingRow } from "./RecordingRow";
@@ -24,7 +25,7 @@ export function RecordingSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { authenticated, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout } = useAuth();
+  const { authenticated, authError, dismissAuthError } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -317,23 +318,9 @@ export function RecordingSelector(): JSX.Element {
 
               <div class={styles.divider} />
 
-              <Show when={authenticated()} fallback={
-                <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-                  <SteamIcon /> Sign in
-                </button>
-              }>
-                <div class={styles.adminArea}>
-                  <div class={styles.adminBadge}>
-                    <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
-                      {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" data-testid="admin-avatar" />}
-                    </Show>
-                    <div>
-                      <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>
-                        {steamName() || steamId() || "Admin"}
-                      </div>
-                      <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
-                    </div>
-                  </div>
+              <div class={styles.adminArea}>
+                <AuthBadge />
+                <Show when={authenticated()}>
                   <button
                     class={`${styles.adminIconButton} ${showUpload() ? styles.adminIconButtonActive : ""}`}
                     onClick={() => setShowUpload(u => !u)}
@@ -341,11 +328,8 @@ export function RecordingSelector(): JSX.Element {
                   >
                     <UploadIcon />
                   </button>
-                  <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
-                    <LogOutIcon />
-                  </button>
-                </div>
-              </Show>
+                </Show>
+              </div>
             </div>
           </div>
 
