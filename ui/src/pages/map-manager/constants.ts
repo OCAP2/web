@@ -18,10 +18,10 @@ export const OUTPUT_FILES = [
 ];
 
 export const STYLE_VARIANTS = [
-  { file: "topo.json", label: "Topo" },
-  { file: "topo-dark.json", label: "Topo Dark" },
-  { file: "topo-relief.json", label: "Topo Relief" },
-  { file: "color-relief.json", label: "Color Relief" },
+  { file: "topo.json", label: "Topo", desc: "Satellite + hillshade + vector" },
+  { file: "topo-dark.json", label: "Topo Dark", desc: "Dark satellite variant" },
+  { file: "topo-relief.json", label: "Relief", desc: "Elevation-focused view" },
+  { file: "color-relief.json", label: "Color", desc: "Pure elevation coloring" },
 ];
 
 export const STATUS_COLORS: Record<string, string> = {

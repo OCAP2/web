@@ -4,10 +4,10 @@ import type { MapInfo } from "./types";
 import {
   XIcon,
   UploadIcon,
-  AlertTriangleIcon,
   TrashIcon,
   CheckIcon,
   FilePlusIcon,
+  AlertTriangleIcon,
 } from "../../components/Icons";
 import styles from "./dialogs.module.css";
 
@@ -44,10 +44,10 @@ export function ImportDialog(props: {
         <div class={styles.dialogHeader}>
           <div class={styles.dialogTitleGroup}>
             <span class={styles.dialogTitleIcon}><FilePlusIcon size={16} /></span>
-            <span>Import Map</span>
+            <span class={styles.dialogTitleText}>Import Map</span>
           </div>
           <button class={styles.closeBtn} onClick={props.onClose}>
-            <XIcon size={18} />
+            <XIcon size={14} />
           </button>
         </div>
 
@@ -92,7 +92,7 @@ export function ImportDialog(props: {
               when={file()}
               fallback={
                 <>
-                  <FilePlusIcon size={28} />
+                  <span class={styles.dropIcon}><FilePlusIcon size={28} /></span>
                   <p class={styles.dropLabel}>
                     Drop <span class={styles.dropHighlight}>.zip</span> here or{" "}
                     <span class={styles.dropBrowse}>browse</span>
@@ -143,11 +143,11 @@ export function ImportDialog(props: {
                   {file() ? "Ready to import" : "Select a .zip file"}
                 </span>
                 <div class={styles.footerActions}>
-                  <button class={styles.btnSecondary} onClick={props.onClose}>
+                  <button class={styles.btnCancel} onClick={props.onClose}>
                     Cancel
                   </button>
                   <button
-                    class={styles.btnPrimary}
+                    class={styles.btnImport}
                     disabled={!file()}
                     onClick={() => file() && props.onImport(file()!)}
                   >
@@ -190,33 +190,25 @@ export function DeleteConfirm(props: {
 }): JSX.Element {
   return (
     <div class={styles.overlay} onClick={props.onClose}>
-      <div class={styles.dialog} onClick={(e) => e.stopPropagation()}>
-        <div class={styles.dialogHeader}>
-          <h3>
-            <TrashIcon size={16} /> Delete Map
-          </h3>
-          <button class={styles.closeBtn} onClick={props.onClose}>
-            <XIcon size={18} />
-          </button>
-        </div>
-
-        <div class={styles.dialogBody}>
-          <div class={styles.warningBlock}>
+      <div class={styles.deleteDialog} onClick={(e) => e.stopPropagation()}>
+        <div class={styles.deleteBody}>
+          <div class={styles.deleteIconWrap}>
             <AlertTriangleIcon size={20} />
-            <p>
-              This will permanently delete all files for{" "}
-              <strong>{props.map.name}</strong> including tiles, styles, and
-              metadata.
-            </p>
           </div>
+          <div class={styles.deleteTitle}>
+            Delete {props.map.name}?
+          </div>
+          <p class={styles.deleteDesc}>
+            This removes all tiles, styles, previews, and metadata.
+            This action cannot be undone.
+          </p>
         </div>
-
-        <div class={styles.dialogFooter}>
-          <button class={styles.btnSecondary} onClick={props.onClose}>
+        <div class={styles.deleteFooter}>
+          <button class={styles.btnCancel} onClick={props.onClose}>
             Cancel
           </button>
-          <button class={styles.btnDanger} onClick={props.onConfirm}>
-            Delete
+          <button class={styles.btnDelete} onClick={props.onConfirm}>
+            <TrashIcon size={12} /> Delete
           </button>
         </div>
       </div>

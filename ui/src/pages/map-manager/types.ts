@@ -14,6 +14,8 @@ export interface MapInfo {
   worldSize?: number;
   status: "none" | "incomplete" | "complete";
   hasPreview?: boolean;
+  featureLayers?: string[];
+  files?: Record<string, number>;
 }
 
 export interface JobInfo {

@@ -1,26 +1,33 @@
 .sidebar {
-  width: 340px;
-  min-width: 340px;
-  background: var(--bg-panel);
-  border-left: 1px solid var(--border-subtle);
+  width: 330px;
+  flex-shrink: 0;
+  background: rgba(8, 12, 17, 0.97);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  animation: slideInRight 0.2s ease;
+  animation: slideInRight 0.2s ease-out;
+  overflow: hidden;
 }
 
 /* ─── Hero ─── */
 
 .hero {
+  height: 110px;
   position: relative;
-  height: 180px;
-  overflow: hidden;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .heroImg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0.4;
 }
 
 .heroPlaceholder {
@@ -29,74 +36,87 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-dim);
+  color: var(--text-dimmest);
 }
 
-.heroOverlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: var(--space-md);
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+.heroText {
+  text-align: center;
+  z-index: 1;
 }
 
 .heroTitle {
   margin: 0;
-  font-size: 1.2rem;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.heroSubtitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  margin-top: 2px;
 }
 
 .heroClose {
   position: absolute;
-  top: var(--space-sm);
-  right: var(--space-sm);
-  background: rgba(0, 0, 0, 0.4);
-  border: none;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-sm);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
   cursor: pointer;
-  padding: 4px;
+  color: var(--text-dimmer);
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .heroClose:hover {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* ─── Content ─── */
 
 .content {
-  padding: var(--space-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
 }
+
+/* ─── Info grid ─── */
 
 .infoGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
 .infoItem {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .infoLabel {
-  font-size: 0.7rem;
-  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-dimmest);
+  letter-spacing: 0.08em;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
 
 .infoValue {
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 /* ─── Sections ─── */
@@ -105,15 +125,40 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  margin-bottom: 12px;
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmest);
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin-bottom: 5px;
 }
+
+/* ─── Feature layers ─── */
+
+.layerTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.layerTag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--bg-interactive);
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  color: var(--text-dim);
+}
+
+/* ─── File list ─── */
 
 .fileList {
   display: flex;
@@ -123,49 +168,126 @@
 
 .fileItem {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
 }
 
-.fileItem:nth-child(odd) {
-  background: var(--bg-interactive);
+.fileIcon {
+  display: flex;
+  width: 14px;
+  flex-shrink: 0;
 }
 
-.fileCheck {
+.fileIconFound {
+  color: var(--accent-success);
+}
+
+.fileIconMissing {
+  color: var(--text-dimmest);
+}
+
+.fileName {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font-size: 10px;
+  flex: 1;
+}
+
+.fileNameFound {
+  color: var(--text-muted);
+}
+
+.fileNameMissing {
+  color: var(--text-dimmer);
+  opacity: 0.5;
+}
+
+.fileSize {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+}
+
+/* ─── Style variants ─── */
+
+.variantList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.variantCard {
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.variantLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.variantDesc {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+}
+
+.variantFile {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dimmest);
+}
+
+/* ─── Total disk ─── */
+
+.totalDisk {
+  margin-top: 10px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 /* ─── Actions ─── */
 
 .actions {
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--border-subtle);
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .deleteBtn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  background: rgba(255, 74, 74, 0.03);
+  border: 1px solid rgba(255, 74, 74, 0.08);
+  color: rgba(255, 107, 107, 0.47);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 8px 16px;
-  border: 1px solid var(--accent-danger);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--accent-danger);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.15s;
-  width: 100%;
   justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
 }
 
 .deleteBtn:hover {
-  background: rgba(255, 74, 74, 0.1);
+  background: rgba(255, 74, 74, 0.06);
+  color: rgba(255, 107, 107, 0.7);
 }
 
 /* ─── Animation ─── */
@@ -173,7 +295,7 @@
 @keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;

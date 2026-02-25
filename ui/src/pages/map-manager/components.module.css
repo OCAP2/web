@@ -2,102 +2,202 @@
 
 .toolGrid {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
+  flex-direction: column;
+  gap: 1px;
 }
 
 .toolItem {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-interactive);
-  font-size: 0.8rem;
-  color: var(--accent-success);
-}
-
-.toolMissing {
-  color: var(--text-dim);
+  gap: 6px;
+  padding: 3px 0;
 }
 
 .toolIcon {
   display: flex;
+  width: 14px;
   align-items: center;
+}
+
+.toolFound {
+  color: var(--accent-success);
+}
+
+.toolMissingReq {
+  color: var(--accent-danger);
+}
+
+.toolMissingOpt {
+  color: var(--accent-warning);
 }
 
 .toolName {
   font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  min-width: 130px;
 }
 
-.toolRequired {
-  font-size: 0.7rem;
+.toolNameFound {
+  color: var(--text-muted);
+}
+
+.toolNameMissingReq {
   color: var(--accent-danger);
-  text-transform: uppercase;
 }
 
-.toolOptional {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
+.toolNameMissingOpt {
+  color: var(--accent-warning);
+}
+
+.toolPath {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dimmest);
+}
+
+.toolLabel {
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.toolLabelReq {
+  color: rgba(255, 74, 74, 0.53);
+}
+
+.toolLabelOpt {
+  color: rgba(255, 184, 74, 0.53);
 }
 
 /* ─── PipelineProgress ─── */
 
 .pipeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.04);
+  border: 1px solid rgba(74, 158, 255, 0.08);
+  animation: fadeIn 0.2s ease-out;
 }
 
 .pipelineHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pipelineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .pipelineWorld {
+  font-family: var(--font-heading);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
-.pipelineStatus {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.progressBar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--bg-interactive);
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: var(--accent-primary);
-  transition: width 0.3s ease;
-  border-radius: 2px;
-}
-
-.pipelineDetail {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.pipelineStageCount {
   font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.pipelineElapsed {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  margin-left: auto;
+}
+
+.cancelBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 74, 74, 0.15);
+  background: rgba(255, 74, 74, 0.06);
+  cursor: pointer;
+  color: rgba(255, 107, 107, 0.53);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 74, 74, 0.12);
+  color: var(--accent-danger);
+}
+
+/* ─── Segmented progress bar ─── */
+
+.progressSegments {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.progressSegment {
+  flex: 1;
+  height: 3px;
+  border-radius: 1.5px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+
+.segmentDone {
+  background: var(--accent-success);
+}
+
+.segmentActive {
+  background: rgba(74, 158, 255, 0.3);
+}
+
+.segmentActiveBar {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-primary);
+  width: 60%;
+  animation: loadBar 2s ease-in-out infinite;
+  border-radius: 1.5px;
+}
+
+.segmentPending {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pipelineStageLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
 }
 
 .pipelineError {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-xs);
-  font-size: 0.8rem;
-  color: var(--accent-danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 107, 107, 0.53);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.pipelineStatus {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
 }
 
 /* ─── JobHistory ─── */
@@ -105,30 +205,90 @@
 .jobList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 3px;
 }
 
 .jobItem {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm);
-  border-radius: var(--radius-md);
-  background: var(--bg-interactive);
-}
-
-.cancelBtn {
-  padding: 4px 12px;
-  border: 1px solid var(--accent-danger);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--accent-danger);
-  font-size: 0.75rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
+  background: rgba(255, 255, 255, 0.012);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-.cancelBtn:hover {
-  background: rgba(255, 74, 74, 0.1);
+.jobItemFailed {
+  border-color: rgba(255, 74, 74, 0.08);
+}
+
+.jobIcon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.jobName {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+}
+
+.jobElapsed {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmest);
+}
+
+.jobStatusBadge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.jobError {
+  padding: 4px 10px 4px 32px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 107, 107, 0.53);
+  line-height: 1.4;
+}
+
+/* ─── Animations ─── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes loadBar {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
 }
