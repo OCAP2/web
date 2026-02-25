@@ -102,10 +102,10 @@ describe("ApiClient", () => {
       ]);
 
       const client = new ApiClient("/aar/");
-      const ops = await client.getRecordings();
+      const recs = await client.getRecordings();
 
-      expect(ops).toHaveLength(1);
-      expect(ops[0]).toEqual({
+      expect(recs).toHaveLength(1);
+      expect(recs[0]).toEqual({
         id: "42",
         worldName: "Altis",
         missionName: "Op Thunder",
@@ -143,11 +143,11 @@ describe("ApiClient", () => {
       expect(url).toContain("name=test");
     });
 
-    it("returns empty array when no operations", async () => {
+    it("returns empty array when no recordings", async () => {
       mockFetchJson([]);
       const client = new ApiClient();
-      const ops = await client.getRecordings();
-      expect(ops).toEqual([]);
+      const recs = await client.getRecordings();
+      expect(recs).toEqual([]);
     });
   });
 

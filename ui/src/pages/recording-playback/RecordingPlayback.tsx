@@ -75,9 +75,9 @@ export function RecordingPlayback(): JSX.Element {
 
     const id = decodeURIComponent(params.id);
     void (async () => {
-      let op;
+      let rec;
       try {
-        op = await api.getRecording(id);
+        rec = await api.getRecording(id);
       } catch {
         showHint(t("recording_not_found"));
         setLoading(false);
@@ -85,7 +85,7 @@ export function RecordingPlayback(): JSX.Element {
       }
       try {
         const result = await loadRecording(
-          api, engine, markerManager, op,
+          api, engine, markerManager, rec,
           (world) => setWorldConfig(world),
         );
         setWorldConfig(result.worldConfig);
