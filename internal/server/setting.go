@@ -120,8 +120,9 @@ func NewSetting() (setting Setting, err error) {
 	setting.Admin.AllowedSteamIDs = splitCSV(setting.Admin.AllowedSteamIDs)
 
 	// Viper can't unmarshal a JSON string env var into map[string]string,
-	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set.
-	if raw := os.Getenv("OCAP_CUSTOMIZE_CSSOVERRIDES"); raw != "" && setting.Customize.CSSOverrides == nil {
+	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set. Env var takes
+	// precedence over config file.
+	if raw := os.Getenv("OCAP_CUSTOMIZE_CSSOVERRIDES"); raw != "" {
 		var m map[string]string
 		if err = json.Unmarshal([]byte(raw), &m); err != nil {
 			return setting, fmt.Errorf("parse OCAP_CUSTOMIZE_CSSOVERRIDES: %w", err)

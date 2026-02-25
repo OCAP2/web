@@ -322,6 +322,45 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		}, setting.Customize.CSSOverrides)
 	})
 
+	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES env var overrides config file", func(t *testing.T) {
+		// Config file has cssOverrides; env var should take precedence
+		dirOverride := t.TempDir()
+		err := os.WriteFile(filepath.Join(dirOverride, "setting.json"), []byte(`{
+			"secret": "env-secret",
+			"customize": {
+				"cssOverrides": {"--bg-dark": "#000", "--accent-primary": "#aaa"}
+			}
+		}`), 0644)
+		require.NoError(t, err)
+
+		viper.Reset()
+		viper.AddConfigPath(dirOverride)
+
+		os.Setenv("OCAP_SECRET", "env-secret")
+		os.Setenv("OCAP_CUSTOMIZE_CSSOVERRIDES", `{"--bg-dark":"#fff"}`)
+		defer os.Unsetenv("OCAP_SECRET")
+		defer os.Unsetenv("OCAP_CUSTOMIZE_CSSOVERRIDES")
+
+		setting, err := NewSetting()
+		require.NoError(t, err)
+		// Env var completely replaces config file value
+		assert.Equal(t, map[string]string{"--bg-dark": "#fff"}, setting.Customize.CSSOverrides)
+	})
+
+	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES invalid JSON fails", func(t *testing.T) {
+		viper.Reset()
+		viper.AddConfigPath(dir)
+
+		os.Setenv("OCAP_SECRET", "env-secret")
+		os.Setenv("OCAP_CUSTOMIZE_CSSOVERRIDES", `not-json`)
+		defer os.Unsetenv("OCAP_SECRET")
+		defer os.Unsetenv("OCAP_CUSTOMIZE_CSSOVERRIDES")
+
+		_, err := NewSetting()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "OCAP_CUSTOMIZE_CSSOVERRIDES")
+	})
+
 	t.Run("nested env vars with underscore", func(t *testing.T) {
 		viper.Reset()
 		viper.AddConfigPath(dir)
