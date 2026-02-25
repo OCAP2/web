@@ -6,7 +6,7 @@ import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
 import { activeSide, setActiveSide } from "../shortcuts";
-import { CrosshairIcon, ChevronRightIcon, EyeOffIcon } from "../../../components/Icons";
+import { CrosshairIcon, ChevronRightIcon, EyeOffIcon, EyeIcon, NavigationIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
@@ -23,7 +23,7 @@ interface GroupData {
   units: Unit[];
 }
 
-interface UnitsTabProps {
+export interface UnitsTabProps {
   blacklist?: Accessor<Set<number>>;
   markerCounts?: Accessor<Map<number, number>>;
   isAdmin?: Accessor<boolean>;
@@ -34,6 +34,7 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
   const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
+  const [selectedUnit, setSelectedUnit] = createSignal<number | null>(null);
 
   const unitsForSide = (side: Side): Unit[] => {
     // Access endFrame to create reactive dependency on operation load
@@ -113,6 +114,14 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
     return count;
   };
 
+  const toggleFollow = (unitId: number) => {
+    if (engine.followTarget() === unitId) {
+      engine.unfollowEntity();
+    } else {
+      engine.followEntity(unitId);
+    }
+  };
+
   return (
     <>
       {/* Side tabs */}
@@ -174,66 +183,66 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
                   <For each={group.units}>
                     {(unit) => {
                       const alive = () => isAlive(unit.id);
-                      const followed = () => engine.followTarget() === unit.id;
+                      const selected = () => selectedUnit() === unit.id;
                       return (
-                        <button
-                          class={styles.unitRow}
-                          classList={{
-                            [styles.unitRowSelected]: followed(),
-                            [styles.unitRowDead]: !alive(),
-                          }}
-                          onClick={() =>
-                            engine.followTarget() === unit.id
-                              ? engine.unfollowEntity()
-                              : engine.followEntity(unit.id)
-                          }
-                        >
-                          <span
-                            class={styles.unitIcon}
-                            style={{
-                              width: "8px",
-                              height: "8px",
-                              background: SIDE_COLORS_UI[activeSide()],
+                        <>
+                          <button
+                            class={styles.unitRow}
+                            classList={{
+                              [styles.unitRowSelected]: selected(),
+                              [styles.unitRowDead]: !alive(),
                             }}
-                          />
-                          <span class={styles.unitInfo}>
+                            onClick={() =>
+                              setSelectedUnit(selected() ? null : unit.id)
+                            }
+                          >
                             <span
-                              class={styles.unitName}
-                              classList={{
-                                [styles.unitNameAlive]: alive(),
-                                [styles.unitNameDead]: !alive(),
+                              class={styles.unitIcon}
+                              style={{
+                                width: "8px",
+                                height: "8px",
+                                background: SIDE_COLORS_UI[activeSide()],
                               }}
-                            >
-                              {unit.name || `Unit ${unit.id}`}
-                              <Show when={!unit.isPlayer}>
-                                <span class={styles.unitAiBadge}>{t("ai_label")}</span>
+                            />
+                            <span class={styles.unitInfo}>
+                              <span
+                                class={styles.unitName}
+                                classList={{
+                                  [styles.unitNameAlive]: alive(),
+                                  [styles.unitNameDead]: !alive(),
+                                }}
+                              >
+                                {unit.name || `Unit ${unit.id}`}
+                                <Show when={!unit.isPlayer}>
+                                  <span class={styles.unitAiBadge}>{t("ai_label")}</span>
+                                </Show>
+                              </span>
+                              <Show when={unit.role}>
+                                <span class={styles.unitRole}>{unit.role}</span>
                               </Show>
                             </span>
-                            <Show when={unit.role}>
-                              <span class={styles.unitRole}>{unit.role}</span>
+                            <Show when={(killDeathCounts().kills.get(unit.id) ?? 0) > 0}>
+                              <span class={styles.unitKills}>
+                                <CrosshairIcon size={10} />
+                                {killDeathCounts().kills.get(unit.id)}
+                              </span>
                             </Show>
-                          </span>
-                          <Show when={(killDeathCounts().kills.get(unit.id) ?? 0) > 0}>
-                            <span class={styles.unitKills}>
-                              <CrosshairIcon size={10} />
-                              {killDeathCounts().kills.get(unit.id)}
-                            </span>
+                          </button>
+                          <Show when={selected()}>
+                            <UnitDetailCard
+                              unitId={unit.id}
+                              kills={killDeathCounts().kills.get(unit.id) ?? 0}
+                              deaths={killDeathCounts().deaths.get(unit.id) ?? 0}
+                              markerCount={props.markerCounts?.()?.get(unit.id) ?? 0}
+                              isBlacklisted={props.blacklist?.()?.has(unit.id) ?? false}
+                              isFollowed={engine.followTarget() === unit.id}
+                              isAdmin={props.isAdmin?.() ?? false}
+                              onToggleFollow={toggleFollow}
+                              onToggleBlacklist={props.onToggleBlacklist}
+                              side={activeSide()}
+                            />
                           </Show>
-                          <Show when={props.isAdmin?.() && (props.markerCounts?.()?.get(unit.id) ?? 0) > 0}>
-                            <button
-                              class={styles.blacklistBtn}
-                              classList={{ [styles.blacklistBtnActive]: props.blacklist?.()?.has(unit.id) ?? false }}
-                              title="Toggle marker blacklist"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                props.onToggleBlacklist?.(unit.id);
-                              }}
-                            >
-                              <EyeOffIcon size={10} />
-                              {props.markerCounts?.()?.get(unit.id)}
-                            </button>
-                          </Show>
-                        </button>
+                        </>
                       );
                     }}
                   </For>
@@ -244,5 +253,94 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
         </For>
       </div>
     </>
+  );
+}
+
+interface UnitDetailCardProps {
+  unitId: number;
+  kills: number;
+  deaths: number;
+  markerCount: number;
+  isBlacklisted: boolean;
+  isFollowed: boolean;
+  isAdmin: boolean;
+  onToggleFollow: (unitId: number) => void;
+  onToggleBlacklist?: (playerEntityId: number) => void;
+  side: Side;
+}
+
+function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
+  return (
+    <div
+      class={styles.detailCard}
+      style={{ "border-color": `color-mix(in srgb, ${SIDE_COLORS_UI[props.side]} 8%, transparent)` }}
+    >
+      {/* Stats row */}
+      <div class={styles.detailStats}>
+        <div class={styles.detailStatPill}>
+          <div
+            class={styles.detailStatValue}
+            style={{ color: props.kills > 0 ? "var(--accent-danger)" : "var(--text-dimmest)" }}
+          >
+            {props.kills}
+          </div>
+          <div class={styles.detailStatLabel}>KILLS</div>
+        </div>
+        <div class={styles.detailStatPill}>
+          <div
+            class={styles.detailStatValue}
+            style={{ color: props.deaths > 0 ? "var(--accent-warning)" : "var(--text-dimmest)" }}
+          >
+            {props.deaths}
+          </div>
+          <div class={styles.detailStatLabel}>DEATHS</div>
+        </div>
+        <div class={styles.detailStatPill}>
+          {(() => {
+            const visible = props.isBlacklisted ? 0 : props.markerCount;
+            return (
+              <>
+                <div
+                  class={styles.detailStatValue}
+                  style={{ color: visible > 0 ? "#A78BFA" : "var(--text-dimmest)" }}
+                >
+                  {visible}
+                </div>
+                <div class={styles.detailStatLabel}>MARKERS</div>
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* Follow button */}
+      <div class={styles.detailActions}>
+        <button
+          class={styles.detailFollowBtn}
+          classList={{ [styles.detailFollowBtnActive]: props.isFollowed }}
+          onClick={() => props.onToggleFollow(props.unitId)}
+        >
+          <NavigationIcon size={12} />
+          {props.isFollowed ? "Following" : "Follow"}
+        </button>
+      </div>
+
+      {/* Admin Actions */}
+      <Show when={props.isAdmin && props.markerCount > 0}>
+        <div class={styles.detailAdminSection}>
+          <div class={styles.detailAdminLabel}>ADMIN ACTIONS</div>
+          <button
+            class={styles.detailBlacklistBtn}
+            classList={{ [styles.detailBlacklistBtnActive]: props.isBlacklisted }}
+            title="Toggle marker blacklist"
+            onClick={() => props.onToggleBlacklist?.(props.unitId)}
+          >
+            <Show when={props.isBlacklisted} fallback={<><EyeOffIcon size={12} /> Blacklist {props.markerCount} markers</>}>
+              <EyeIcon size={12} /> Restore {props.markerCount} markers
+            </Show>
+          </button>
+        </div>
+      </Show>
+    </div>
   );
 }

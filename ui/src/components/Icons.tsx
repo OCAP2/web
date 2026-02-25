@@ -352,6 +352,12 @@ export const RefreshCwIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const NavigationIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <polygon points="3 11 22 2 13 21 11 13" />
+  </svg>
+);
+
 export const CheckIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size) - 2} height={s(p.size) - 2}>
     <polyline points="20 6 9 17 4 12" />

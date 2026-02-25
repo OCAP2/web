@@ -86,7 +86,34 @@ describe("UnitsTab", () => {
     expect(screen.getByText("Soldier C")).toBeTruthy();
   });
 
-  it("clicking a unit row follows that entity", () => {
+  it("clicking a unit row expands the detail card with Follow button", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Pointman", side: "WEST", groupName: "Alpha", role: "Point" }),
+      ]),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // Detail card should not be visible initially
+    expect(screen.queryByText("Follow")).toBeNull();
+
+    // Click unit row to expand detail card
+    fireEvent.click(screen.getByText("Pointman"));
+
+    // Detail card should now show with Follow button and stats
+    expect(screen.getByText("Follow")).toBeTruthy();
+    expect(screen.getByText("KILLS")).toBeTruthy();
+    expect(screen.getByText("DEATHS")).toBeTruthy();
+    expect(screen.getByText("MARKERS")).toBeTruthy();
+  });
+
+  it("clicking Follow button in detail card follows the entity", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
@@ -102,12 +129,15 @@ describe("UnitsTab", () => {
 
     expect(engine.followTarget()).toBeNull();
 
+    // Expand detail card
     fireEvent.click(screen.getByText("Pointman"));
+    // Click Follow button
+    fireEvent.click(screen.getByText("Follow"));
 
     expect(engine.followTarget()).toBe(1);
   });
 
-  it("clicking an already-followed unit unfollows it (toggle)", () => {
+  it("clicking Following button unfollows the entity (toggle)", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
@@ -121,15 +151,39 @@ describe("UnitsTab", () => {
       </TestProviders>
     ));
 
-    const unitRow = screen.getByText("Scout");
+    // Expand detail card
+    fireEvent.click(screen.getByText("Scout"));
 
-    // First click: follow
-    fireEvent.click(unitRow);
+    // Follow
+    fireEvent.click(screen.getByText("Follow"));
     expect(engine.followTarget()).toBe(1);
 
-    // Second click: unfollow (toggle OFF)
-    fireEvent.click(unitRow);
+    // Unfollow (button now says "Following")
+    fireEvent.click(screen.getByText("Following"));
     expect(engine.followTarget()).toBeNull();
+  });
+
+  it("clicking an already-selected unit collapses the detail card", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Scout", side: "WEST", groupName: "Alpha", role: "Recon" }),
+      ]),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // Expand
+    fireEvent.click(screen.getByText("Scout"));
+    expect(screen.getByText("Follow")).toBeTruthy();
+
+    // Collapse
+    fireEvent.click(screen.getByText("Scout"));
+    expect(screen.queryByText("Follow")).toBeNull();
   });
 
   it("shows group header with alive count", () => {
@@ -277,12 +331,11 @@ describe("UnitsTab", () => {
     expect(killerRow!.textContent).toContain("1");
   });
 
-  it("shows blacklist button for admin when unit has markers", () => {
+  it("shows blacklist button in detail card for admin when unit has markers", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Marker Player", side: "WEST", groupName: "Alpha", role: "Trooper" }),
-        unitDef({ id: 2, name: "No Markers", side: "WEST", groupName: "Alpha", role: "Medic" }),
       ]),
     );
 
@@ -302,16 +355,15 @@ describe("UnitsTab", () => {
       </TestProviders>
     ));
 
-    // Player 1 has 3 markers — blacklist button should show "3"
-    const markerPlayerRow = screen.getByText("Marker Player").closest("button");
-    expect(markerPlayerRow!.textContent).toContain("3");
+    // Expand detail card for the player
+    fireEvent.click(screen.getByText("Marker Player"));
 
-    // Player 2 has no markers — no blacklist button
-    const noMarkersRow = screen.getByText("No Markers").closest("button");
-    expect(noMarkersRow!.textContent).not.toContain("Toggle marker blacklist");
+    // Admin section should show with blacklist button
+    expect(screen.getByText("ADMIN ACTIONS")).toBeTruthy();
+    expect(screen.getByText(/Blacklist 3 markers/)).toBeTruthy();
   });
 
-  it("calls onToggleBlacklist when clicking the blacklist button", () => {
+  it("calls onToggleBlacklist when clicking the blacklist button in detail card", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
@@ -335,13 +387,17 @@ describe("UnitsTab", () => {
       </TestProviders>
     ));
 
+    // Expand detail card
+    fireEvent.click(screen.getByText("Troll"));
+
+    // Click the blacklist button
     const blacklistBtn = screen.getByTitle("Toggle marker blacklist");
     fireEvent.click(blacklistBtn);
 
     expect(onToggle).toHaveBeenCalledWith(7);
   });
 
-  it("does not show blacklist button for non-admins", () => {
+  it("does not show admin actions for non-admins", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
@@ -363,6 +419,105 @@ describe("UnitsTab", () => {
       </TestProviders>
     ));
 
+    // Expand detail card
+    fireEvent.click(screen.getByText("Player"));
+
+    // Follow button should show but no admin section
+    expect(screen.getByText("Follow")).toBeTruthy();
+    expect(screen.queryByText("ADMIN ACTIONS")).toBeNull();
     expect(screen.queryByTitle("Toggle marker blacklist")).toBeNull();
+  });
+
+  it("shows Restore text when unit is already blacklisted", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Troll Player", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set([1]));
+    const [markerCounts] = createSignal(new Map([[1, 4]]));
+    const [isAdmin] = createSignal(true);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+        />
+      </TestProviders>
+    ));
+
+    // Expand detail card
+    fireEvent.click(screen.getByText("Troll Player"));
+
+    // Should show "Restore" instead of "Blacklist"
+    expect(screen.getByText(/Restore 4 markers/)).toBeTruthy();
+    expect(screen.queryByText(/Blacklist \d+ markers/)).toBeNull();
+  });
+
+  it("shows 0 markers in stats when unit is blacklisted", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Spammer", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set([1]));
+    const [markerCounts] = createSignal(new Map([[1, 55]]));
+    const [isAdmin] = createSignal(true);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+        />
+      </TestProviders>
+    ));
+
+    // Expand detail card
+    fireEvent.click(screen.getByText("Spammer"));
+
+    // Stats grid should show 0 visible markers (blacklisted)
+    const markersStat = screen.getByText("MARKERS").parentElement!;
+    expect(markersStat.textContent).toContain("0");
+
+    // But the restore button still shows the total
+    expect(screen.getByText(/Restore 55 markers/)).toBeTruthy();
+  });
+
+  it("does not show admin actions when unit has no markers", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "No Markers", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      ]),
+    );
+
+    const [blacklist] = createSignal(new Set<number>());
+    const [markerCounts] = createSignal(new Map<number, number>());
+    const [isAdmin] = createSignal(true);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab
+          blacklist={blacklist}
+          markerCounts={markerCounts}
+          isAdmin={isAdmin}
+        />
+      </TestProviders>
+    ));
+
+    // Expand detail card
+    fireEvent.click(screen.getByText("No Markers"));
+
+    // Follow should show, but no admin section (no markers)
+    expect(screen.getByText("Follow")).toBeTruthy();
+    expect(screen.queryByText("ADMIN ACTIONS")).toBeNull();
   });
 });
