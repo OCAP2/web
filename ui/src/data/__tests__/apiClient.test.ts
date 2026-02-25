@@ -855,4 +855,256 @@ describe("ApiClient", () => {
       await expect(client.getRecordings()).rejects.toThrow(TypeError);
     });
   });
+
+  // ─── MapTool methods ───
+
+  describe("getMapToolTools", () => {
+    it("fetches tools from maptool API", async () => {
+      const tools = [{ name: "pmtiles", found: true, path: "/usr/bin/pmtiles", required: true }];
+      mockFetchJson(tools);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const result = await client.getMapToolTools();
+      expect(result).toEqual(tools);
+
+      const [url, opts] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/tools");
+      expect(opts.headers.Authorization).toBe("Bearer tok");
+    });
+
+    it("throws on error", async () => {
+      mockFetchError(403, "Forbidden");
+      setAuthToken("tok");
+      const client = new ApiClient();
+      await expect(client.getMapToolTools()).rejects.toThrow(ApiError);
+    });
+  });
+
+  describe("getMapToolMaps", () => {
+    it("fetches maps list", async () => {
+      const maps = [{ name: "Altis", status: "complete", worldSize: 30720 }];
+      mockFetchJson(maps);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const result = await client.getMapToolMaps();
+      expect(result).toEqual(maps);
+
+      const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/maps");
+    });
+  });
+
+  describe("deleteMapToolMap", () => {
+    it("sends DELETE with auth header", async () => {
+      mockFetchJson(null);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      await client.deleteMapToolMap("Altis");
+
+      const [url, opts] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/maps/Altis");
+      expect(opts.method).toBe("DELETE");
+      expect(opts.headers.Authorization).toBe("Bearer tok");
+    });
+
+    it("throws on error", async () => {
+      mockFetchError(404, "Not Found");
+      setAuthToken("tok");
+      const client = new ApiClient();
+      await expect(client.deleteMapToolMap("NoMap")).rejects.toThrow(ApiError);
+    });
+
+    it("encodes map name in URL", async () => {
+      mockFetchJson(null);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      await client.deleteMapToolMap("map with spaces");
+
+      const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/maps/map%20with%20spaces");
+    });
+  });
+
+  describe("restyleMapToolAll", () => {
+    it("sends POST to restyle endpoint", async () => {
+      const job = { id: "j1", worldName: "all", status: "pending" };
+      mockFetchJson(job);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const result = await client.restyleMapToolAll();
+      expect(result).toEqual(job);
+
+      const [url, opts] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/maps/restyle");
+      expect(opts.method).toBe("POST");
+    });
+  });
+
+  describe("getMapToolJobs", () => {
+    it("fetches jobs list", async () => {
+      const jobs = [{ id: "j1", worldName: "Altis", status: "done" }];
+      mockFetchJson(jobs);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const result = await client.getMapToolJobs();
+      expect(result).toEqual(jobs);
+    });
+  });
+
+  describe("cancelMapToolJob", () => {
+    it("sends POST to cancel endpoint", async () => {
+      mockFetchJson(null);
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      await client.cancelMapToolJob("job-123");
+
+      const [url, opts] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe("/api/v1/maptool/jobs/job-123/cancel");
+      expect(opts.method).toBe("POST");
+    });
+
+    it("throws on error", async () => {
+      mockFetchError(404, "Not Found");
+      setAuthToken("tok");
+      const client = new ApiClient();
+      await expect(client.cancelMapToolJob("bad")).rejects.toThrow(ApiError);
+    });
+  });
+
+  describe("getMapToolEventsUrl", () => {
+    it("returns URL without token when not authenticated", () => {
+      setAuthToken(null as unknown as string);
+      const client = new ApiClient();
+      expect(client.getMapToolEventsUrl()).toBe("/api/v1/maptool/events");
+    });
+
+    it("returns URL with token when authenticated", () => {
+      setAuthToken("my-token");
+      const client = new ApiClient();
+      expect(client.getMapToolEventsUrl()).toBe(
+        "/api/v1/maptool/events?token=my-token",
+      );
+    });
+
+    it("encodes token in URL", () => {
+      setAuthToken("tok/en=special");
+      const client = new ApiClient();
+      expect(client.getMapToolEventsUrl()).toContain(
+        "token=tok%2Fen%3Dspecial",
+      );
+    });
+
+    it("respects base URL prefix", () => {
+      setAuthToken("tok");
+      const client = new ApiClient("/aar");
+      expect(client.getMapToolEventsUrl()).toBe(
+        "/aar/api/v1/maptool/events?token=tok",
+      );
+    });
+  });
+
+  describe("importMapToolZip", () => {
+    let lastXhr: {
+      open: ReturnType<typeof vi.fn>;
+      setRequestHeader: ReturnType<typeof vi.fn>;
+      send: ReturnType<typeof vi.fn>;
+      upload: { onprogress: ((e: unknown) => void) | null };
+      onload: (() => void) | null;
+      onerror: (() => void) | null;
+      status: number;
+      statusText: string;
+      responseText: string;
+    };
+
+    class MockXHR {
+      open = vi.fn();
+      setRequestHeader = vi.fn();
+      send = vi.fn();
+      upload = { onprogress: null as ((e: unknown) => void) | null };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      status = 200;
+      statusText = "OK";
+      responseText = "";
+      constructor() {
+        lastXhr = this;
+      }
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal("XMLHttpRequest", MockXHR);
+    });
+
+    it("sends file via XHR with FormData", async () => {
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const file = new File(["data"], "test.zip", { type: "application/zip" });
+
+      const promise = client.importMapToolZip(file);
+
+      lastXhr.status = 200;
+      lastXhr.responseText = JSON.stringify({ id: "j1", worldName: "Altis", status: "pending" });
+      lastXhr.onload!();
+
+      const result = await promise;
+      expect(result.id).toBe("j1");
+      expect(lastXhr.open).toHaveBeenCalledWith("POST", "/api/v1/maptool/maps/import");
+      expect(lastXhr.setRequestHeader).toHaveBeenCalledWith("Authorization", "Bearer tok");
+    });
+
+    it("rejects on HTTP error", async () => {
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const file = new File(["data"], "test.zip");
+
+      const promise = client.importMapToolZip(file);
+
+      lastXhr.status = 413;
+      lastXhr.statusText = "Payload Too Large";
+      lastXhr.onload!();
+
+      await expect(promise).rejects.toThrow(ApiError);
+    });
+
+    it("rejects on network error", async () => {
+      setAuthToken("tok");
+
+      const client = new ApiClient();
+      const file = new File(["data"], "test.zip");
+
+      const promise = client.importMapToolZip(file);
+      lastXhr.onerror!();
+
+      await expect(promise).rejects.toThrow(ApiError);
+    });
+
+    it("calls onProgress callback", async () => {
+      setAuthToken("tok");
+
+      const onProgress = vi.fn();
+      const client = new ApiClient();
+      const file = new File(["data"], "test.zip");
+
+      const promise = client.importMapToolZip(file, onProgress);
+
+      // Simulate progress
+      lastXhr.upload.onprogress!({ lengthComputable: true, loaded: 500, total: 1000 });
+      expect(onProgress).toHaveBeenCalledWith(500, 1000);
+
+      // Complete
+      lastXhr.status = 200;
+      lastXhr.responseText = JSON.stringify({ id: "j1", worldName: "Altis", status: "pending" });
+      lastXhr.onload!();
+      await promise;
+    });
+  });
 });
