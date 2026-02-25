@@ -2,7 +2,7 @@ import type { JSX } from "solid-js";
 import { Show, For } from "solid-js";
 import type { MapInfo } from "./types";
 import { MAP_STATUS_COLORS, OUTPUT_FILES, STYLE_VARIANTS } from "./constants";
-import { mapHue, formatWorldSize } from "./helpers";
+import { mapHue, formatWorldSize, statusLabel } from "./helpers";
 import {
   XIcon,
   TrashIcon,
@@ -57,7 +57,7 @@ export function MapDetail(props: {
               class={styles.infoValue}
               style={{ color: MAP_STATUS_COLORS[props.map.status] }}
             >
-              {props.map.status}
+              {statusLabel(props.map.status)}
             </div>
           </div>
           <Show when={props.map.worldSize}>

@@ -20,9 +20,22 @@ export function formatFileSize(bytes: number): string {
   return `${bytes} B`;
 }
 
-export function elapsed(start: string): string {
+export function totalDiskMB(files?: Record<string, number>): number {
+  if (!files) return 0;
+  return Object.values(files).reduce((a, b) => a + b, 0);
+}
+
+export function statusLabel(status: string): string {
+  if (status === "complete") return "Complete";
+  if (status === "incomplete") return "Partial";
+  return "None";
+}
+
+export function elapsed(start: string, end?: string): string {
   if (!start) return "";
-  const ms = Date.now() - new Date(start).getTime();
+  const from = new Date(start).getTime();
+  const to = end ? new Date(end).getTime() : Date.now();
+  const ms = to - from;
   if (ms < 0) return "";
   const secs = Math.floor(ms / 1000);
   if (secs < 60) return `${secs}s`;
@@ -31,10 +44,4 @@ export function elapsed(start: string): string {
   if (mins < 60) return `${mins}m ${rem}s`;
   const hrs = Math.floor(mins / 60);
   return `${hrs}h ${mins % 60}m`;
-}
-
-export function stageName(raw: string): string {
-  return raw
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }

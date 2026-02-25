@@ -1,99 +1,282 @@
-/* ─── Collapsible section ─── */
+/* ─── StatusStrip ─── */
 
-.section {
-  margin-bottom: 10px;
+.stripWrap {
+  position: relative;
+  margin-bottom: 12px;
 }
 
-.sectionToggle {
+.strip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  background: none;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+/* ── Tools button ── */
+
+.toolsBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: transparent;
   border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
-  padding: 5px 0;
+  transition: background 0.15s;
+}
+
+.toolsBtn:hover,
+.toolsBtnActive {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Status dot ── */
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotOk {
+  background: var(--accent-success);
+  box-shadow: 0 0 6px rgba(45, 212, 160, 0.3);
+}
+
+.dotErr {
+  background: var(--accent-danger);
+  box-shadow: 0 0 6px rgba(255, 74, 74, 0.3);
+}
+
+.dotPulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.toolsLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.toolsLabelOk {
   color: var(--text-muted);
 }
 
-.sectionLabel {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-dimmer);
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-
-.countBadge {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 4px;
-}
-
-.countBadgeOk {
-  background: rgba(45, 212, 160, 0.08);
-  color: var(--accent-success);
-  border: 1px solid rgba(45, 212, 160, 0.12);
-}
-
-.countBadgeErr {
-  background: rgba(255, 74, 74, 0.08);
+.toolsLabelErr {
   color: var(--accent-danger);
-  border: 1px solid rgba(255, 74, 74, 0.12);
 }
 
-.optionalMissing {
+.degradedLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8px;
+  font-weight: 500;
   color: var(--accent-warning);
 }
 
-.queuedBadge {
+/* ── Active job section ── */
+
+.activeSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-width: 0;
+}
+
+.activeWorldName {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.stageBar {
+  flex: 1;
+  display: flex;
+  gap: 1px;
+  align-items: center;
+  min-width: 60px;
+}
+
+.segment {
+  flex: 1;
+  height: 3px;
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+
+.segmentDone {
+  background: var(--accent-success);
+}
+
+.segmentActive {
+  background: color-mix(in srgb, var(--accent-success) 25%, transparent);
+}
+
+.segmentPending {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.segmentShimmer {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--accent-success), transparent);
+  border-radius: 1px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.activeStageLabel {
   font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: rgba(136, 153, 170, 0.08);
-  color: var(--text-muted);
-  border: 1px solid rgba(136, 153, 170, 0.12);
+  color: var(--accent-primary);
+  white-space: nowrap;
 }
 
-.pastCount {
+.activeElapsed {
   font-family: var(--font-mono);
   font-size: 9px;
+  color: var(--text-dimmest);
+  white-space: nowrap;
+}
+
+.activeIdle {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmest);
+}
+
+.cancelBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 74, 74, 0.12);
+  background: rgba(255, 74, 74, 0.04);
+  cursor: pointer;
+  color: rgba(255, 107, 107, 0.47);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 74, 74, 0.12);
+  color: var(--accent-danger);
+}
+
+/* ── Jobs button ── */
+
+.jobsBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.jobsBtn:hover,
+.jobsBtnActive {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pendingBadge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(74, 158, 255, 0.1);
+  color: var(--accent-primary);
+}
+
+.pastLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
   color: var(--text-dimmer);
 }
 
 .chevron {
-  margin-left: auto;
   display: flex;
-  transform: rotate(-90deg);
+  color: var(--text-dimmest);
   transition: transform 0.2s;
 }
 
 .chevronOpen {
-  transform: rotate(0deg);
+  transform: rotate(180deg);
 }
 
-/* ─── ToolStatus ─── */
+/* ── Dropdowns ── */
 
-.toolGrid {
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  z-index: var(--z-dropdown);
+  animation: fadeIn 0.12s ease-out;
+}
+
+.toolsDropdown {
+  left: 0;
+  width: 420px;
+}
+
+.jobsDropdown {
+  right: 0;
+  width: 380px;
+}
+
+.dropdownHeading {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+/* ── Tool rows in dropdown ── */
+
+.toolRows {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  margin-top: 4px;
-  padding-left: 22px;
-  animation: fadeIn 0.15s ease-out;
 }
 
-.toolItem {
+.toolRow {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 0;
+  padding: 4px 0;
 }
 
 .toolIcon {
@@ -152,161 +335,55 @@
   color: rgba(255, 184, 74, 0.53);
 }
 
-/* ─── PipelineProgress ─── */
+/* ── Degraded outputs box ── */
 
-.pipeline {
-  padding: 12px 14px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  background: rgba(74, 158, 255, 0.04);
-  border: 1px solid rgba(74, 158, 255, 0.08);
-  animation: fadeIn 0.2s ease-out;
+.degradedBox {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 184, 74, 0.04);
+  border: 1px solid rgba(255, 184, 74, 0.06);
 }
 
-.pipelineHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.pipelineDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-primary);
-  animation: pulse 1.5s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-.pipelineWorld {
-  font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.pipelineStageCount {
+.degradedHeading {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 8px;
+  color: var(--accent-warning);
   font-weight: 600;
-  color: var(--accent-primary);
+  margin-bottom: 4px;
 }
 
-.pipelineElapsed {
+.degradedItem {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 8px;
   color: var(--text-dimmer);
-  margin-left: auto;
+  padding: 1px 0;
 }
 
-.cancelBtn {
-  width: 24px;
-  height: 24px;
+/* ── Job rows in dropdown ── */
+
+.jobRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
   border-radius: 5px;
-  border: 1px solid rgba(255, 74, 74, 0.15);
-  background: rgba(255, 74, 74, 0.06);
-  cursor: pointer;
-  color: rgba(255, 107, 107, 0.53);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: 3px;
 }
 
-.cancelBtn:hover {
-  background: rgba(255, 74, 74, 0.12);
-  color: var(--accent-danger);
+.jobRowPending {
+  background: rgba(136, 153, 170, 0.03);
+  border: 1px solid rgba(136, 153, 170, 0.05);
 }
 
-/* ─── Segmented progress bar ─── */
-
-.progressSegments {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 6px;
+.jobRowDone {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.025);
 }
 
-.progressSegment {
-  flex: 1;
-  height: 3px;
-  border-radius: 1.5px;
-  position: relative;
-  overflow: hidden;
-  transition: background 0.3s;
-}
-
-.segmentDone {
-  background: var(--accent-success);
-}
-
-.segmentActive {
-  background: rgba(74, 158, 255, 0.3);
-}
-
-.segmentActiveBar {
-  position: absolute;
-  inset: 0;
-  background: var(--accent-primary);
-  width: 60%;
-  animation: loadBar 2s ease-in-out infinite;
-  border-radius: 1.5px;
-}
-
-.segmentPending {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.pipelineStageLabel {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent-primary);
-}
-
-.pipelineError {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: rgba(255, 107, 107, 0.53);
-  line-height: 1.4;
-  margin-top: 6px;
-}
-
-/* ─── JobHistory ─── */
-
-.jobList {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 4px;
-  animation: fadeIn 0.15s ease-out;
-}
-
-.jobItemPending {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(136, 153, 170, 0.04);
-  border: 1px solid rgba(136, 153, 170, 0.06);
-}
-
-.jobItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.012);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.jobItemFailed {
-  border-color: rgba(255, 74, 74, 0.08);
+.jobRowFailed {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 74, 74, 0.06);
 }
 
 .jobIcon {
@@ -316,41 +393,46 @@
 
 .jobName {
   font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-primary);
+  font-size: 10px;
   font-weight: 500;
   flex: 1;
 }
 
 .jobNamePending {
-  font-family: var(--font-mono);
-  font-size: 11px;
   color: var(--text-muted);
-  font-weight: 500;
-  flex: 1;
+}
+
+.jobNamePast {
+  color: var(--text-secondary);
 }
 
 .jobElapsed {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-dimmest);
 }
 
-.jobStatusBadge {
+.jobStatusLabel {
   font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 3px;
   text-transform: uppercase;
 }
 
 .jobError {
-  padding: 4px 10px 4px 32px;
+  padding: 3px 8px 3px 30px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8px;
   color: rgba(255, 107, 107, 0.53);
   line-height: 1.4;
+}
+
+.emptyJobs {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmest);
+  text-align: center;
+  padding: 16px;
 }
 
 /* ─── Animations ─── */
@@ -376,14 +458,11 @@
   }
 }
 
-@keyframes loadBar {
+@keyframes shimmer {
   0% {
-    width: 0%;
-  }
-  50% {
-    width: 100%;
+    left: -40%;
   }
   100% {
-    width: 0%;
+    left: 100%;
   }
 }

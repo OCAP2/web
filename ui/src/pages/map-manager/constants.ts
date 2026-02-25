@@ -1,11 +1,17 @@
-export const PIPELINE_STAGES = [
-  "parse_gradmeh",
-  "prepare",
-  "render",
-  "process_geojson",
-  "generate_vector_tiles",
-  "generate_styles",
-  "generate_metadata",
+export interface PipelineStage {
+  id: string;
+  label: string;
+  short: string;
+}
+
+export const PIPELINE_STAGES: PipelineStage[] = [
+  { id: "parse_gradmeh", label: "Parse grad_meh", short: "Parse" },
+  { id: "prepare", label: "Prepare sources", short: "Prepare" },
+  { id: "render", label: "Render tile layers", short: "Render" },
+  { id: "process_geojson", label: "Process GeoJSON", short: "GeoJSON" },
+  { id: "generate_vector_tiles", label: "Generate vector tiles", short: "Vectors" },
+  { id: "generate_styles", label: "Generate styles", short: "Styles" },
+  { id: "generate_metadata", label: "Generate metadata", short: "Metadata" },
 ];
 
 export const OUTPUT_FILES = [

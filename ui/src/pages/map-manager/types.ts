@@ -27,6 +27,7 @@ export interface JobInfo {
   status: "pending" | "running" | "done" | "failed" | "cancelled";
   error?: string;
   startedAt: string;
+  finishedAt?: string;
   stage?: string;
   stageNum?: number;
   totalStages?: number;

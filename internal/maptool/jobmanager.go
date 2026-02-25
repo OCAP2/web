@@ -61,6 +61,8 @@ func (h *eventHub) broadcast(evt Event) {
 }
 
 // JobManager manages import jobs — one active, rest queued.
+// TODO: job history is in-memory only — lost on restart, grows unbounded.
+// Consider capping to last N jobs or persisting to disk.
 type JobManager struct {
 	mapsDir     string
 	newPipeline func() *Pipeline

@@ -5,12 +5,13 @@ import { ApiClient } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
 import type { ToolSet, MapInfo, JobInfo } from "./types";
 import { useMapToolEvents } from "./useMapToolEvents";
-import { ToolStatus, JobHistory } from "./components";
+import { StatusStrip } from "./components";
 import { MapCard } from "./MapCard";
 import { MapRow } from "./MapRow";
 import { MapDetail } from "./MapDetail";
 import { ImportDialog, DeleteConfirm } from "./dialogs";
 import {
+  ArrowLeftIcon,
   SearchIcon,
   UploadIcon,
   PaletteIcon,
@@ -149,9 +150,9 @@ export function MapManager(): JSX.Element {
       <header class={styles.header}>
         <div class={styles.headerTop}>
           <div class={styles.headerLeft}>
-            <div class={styles.headerIcon}>
-              <GlobeIcon size={16} />
-            </div>
+            <button class={styles.backBtn} title="Back to recordings" onClick={() => navigate("/")}>
+              <ArrowLeftIcon size={16} />
+            </button>
             <div>
               <div class={styles.headerTitleRow}>
                 <span class={styles.headerTitle}>OCAP</span>
@@ -175,11 +176,8 @@ export function MapManager(): JSX.Element {
         </div>
 
         <Show when={!loading()}>
-          {/* Tool status — collapsible */}
-          <ToolStatus tools={tools()} />
-
-          {/* Jobs — collapsible with active pipeline */}
-          <JobHistory jobs={jobs()} onCancel={handleCancelJob} />
+          {/* Status strip — tools | active job | jobs */}
+          <StatusStrip tools={tools()} jobs={jobs()} onCancel={handleCancelJob} />
 
           {/* Filter bar */}
           <div class={styles.filterBar}>
@@ -263,7 +261,7 @@ export function MapManager(): JSX.Element {
                 <div class={styles.listContainer}>
                   <div class={styles.listHeader}>
                     <span />
-                    <For each={["SIZE", "LAYERS", "STATUS"]}>
+                    <For each={["SIZE", "LAYERS", "DISK", "STATUS"]}>
                       {(h) => (
                         <span
                           class={styles.listHeaderLabel}
