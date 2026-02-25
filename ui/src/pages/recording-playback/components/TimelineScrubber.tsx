@@ -70,6 +70,7 @@ export function TimelineScrubber(): JSX.Element {
     <div class={styles.scrubberWrap}>
       <div
         ref={trackRef}
+        data-testid="scrubber-track"
         class={styles.scrubberTrack}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -78,6 +79,7 @@ export function TimelineScrubber(): JSX.Element {
         onPointerLeave={onPointerLeave}
       >
         <div
+          data-testid="scrubber-progress"
           class={styles.scrubberProgress}
           classList={{ [styles.scrubberProgressSmooth]: !dragging() }}
           style={{ width: `${progress()}%` }}
@@ -86,6 +88,7 @@ export function TimelineScrubber(): JSX.Element {
         <For each={killEvents()}>
           {(ev) => (
             <div
+              data-testid="event-marker"
               class={styles.eventMarker}
               style={{
                 left: `${(ev.frameNum / engine.endFrame()) * 100}%`,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
@@ -36,86 +36,79 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("DetailSidebar preview", () => {
   it("renders an img element for the map preview", () => {
-    const { container } = renderSidebar();
-    const img = container.querySelector("img");
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute("src")).toContain("Altis/preview_512.png");
+    renderSidebar();
+    const img = screen.getByTestId("map-preview");
+    expect(img.getAttribute("src")).toContain("Altis/preview_512.png");
   });
 
   it("shows SVG fallback when preview image fails to load", async () => {
     const { container } = renderSidebar();
-    const img = container.querySelector("img");
-    expect(img).not.toBeNull();
+    const img = screen.getByTestId("map-preview");
 
     // Simulate image load error
-    fireEvent.error(img!);
+    fireEvent.error(img);
 
     await vi.waitFor(() => {
       // Image should be gone, fallback SVGs should appear
-      expect(container.querySelector("img")).toBeNull();
-      const svgs = container.querySelectorAll("svg");
-      expect(svgs.length).toBeGreaterThanOrEqual(2);
-      // Check for contour ellipses
+      expect(screen.queryByTestId("map-preview")).toBeNull();
+      // Check for contour ellipses in fallback SVG
       expect(container.querySelector("ellipse")).not.toBeNull();
     });
   });
 
   it("resets preview when switching to a different map", async () => {
-    const { container, setRec } = renderSidebar();
-    const img = container.querySelector("img");
+    const { setRec } = renderSidebar();
+    const img = screen.getByTestId("map-preview");
 
     // Fail the preview for Altis
-    fireEvent.error(img!);
+    fireEvent.error(img);
     await vi.waitFor(() => {
-      expect(container.querySelector("img")).toBeNull();
+      expect(screen.queryByTestId("map-preview")).toBeNull();
     });
 
     // Switch to a different map — preview should be attempted again
     setRec({ ...baseRec, id: "2", worldName: "Stratis" });
 
     await vi.waitFor(() => {
-      const newImg = container.querySelector("img");
-      expect(newImg).not.toBeNull();
-      expect(newImg!.getAttribute("src")).toContain("Stratis/preview_512.png");
+      const newImg = screen.getByTestId("map-preview");
+      expect(newImg.getAttribute("src")).toContain("Stratis/preview_512.png");
     });
   });
 
   it("restores preview when switching back to a map with preview", async () => {
-    const { container, setRec } = renderSidebar();
+    const { setRec } = renderSidebar();
 
     // Fail preview for Altis
-    fireEvent.error(container.querySelector("img")!);
-    await vi.waitFor(() => expect(container.querySelector("img")).toBeNull());
+    fireEvent.error(screen.getByTestId("map-preview"));
+    await vi.waitFor(() => expect(screen.queryByTestId("map-preview")).toBeNull());
 
     // Switch to Stratis (which also fails)
     setRec({ ...baseRec, id: "2", worldName: "Stratis" });
     await vi.waitFor(() => {
-      expect(container.querySelector("img")).not.toBeNull();
+      expect(screen.getByTestId("map-preview")).toBeDefined();
     });
-    fireEvent.error(container.querySelector("img")!);
-    await vi.waitFor(() => expect(container.querySelector("img")).toBeNull());
+    fireEvent.error(screen.getByTestId("map-preview"));
+    await vi.waitFor(() => expect(screen.queryByTestId("map-preview")).toBeNull());
 
     // Switch back to Altis — img should be attempted again (reset)
     setRec({ ...baseRec, id: "1", worldName: "Altis" });
     await vi.waitFor(() => {
-      const img = container.querySelector("img");
-      expect(img).not.toBeNull();
-      expect(img!.getAttribute("src")).toContain("Altis/preview_512.png");
+      const img = screen.getByTestId("map-preview");
+      expect(img.getAttribute("src")).toContain("Altis/preview_512.png");
     });
   });
 
   it("keeps preview when switching between ops on the same map", async () => {
-    const { container, setRec } = renderSidebar();
-    expect(container.querySelector("img")).not.toBeNull();
+    const { setRec } = renderSidebar();
+    expect(screen.getByTestId("map-preview")).toBeDefined();
 
     // Switch to a different op on the same map
     setRec({ ...baseRec, id: "2", worldName: "Altis", missionName: "Op Bravo" });
 
     // img should still be present (same worldName, no reset needed)
     await vi.waitFor(() => {
-      const img = container.querySelector("img");
-      expect(img).not.toBeNull();
-      expect(img!.getAttribute("src")).toContain("Altis/preview_512.png");
+      const img = screen.getByTestId("map-preview");
+      expect(img.getAttribute("src")).toContain("Altis/preview_512.png");
     });
   });
 });

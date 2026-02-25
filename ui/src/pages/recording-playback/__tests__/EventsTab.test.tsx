@@ -220,9 +220,8 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    // Click the event row (find by victim name, then click the parent button)
-    const victimEl = screen.getByText("Victim");
-    const eventRow = victimEl.closest("button")!;
+    // Click the event row
+    const eventRow = screen.getByTestId("event-row-5");
     fireEvent.click(eventRow);
 
     expect(seekSpy).toHaveBeenCalledWith(5);
@@ -242,26 +241,21 @@ describe("EventsTab", () => {
     engine.loadRecording(makeManifest(entities, events));
     engine.seekTo(15); // Both events active
 
-    const { container } = render(() => (
+    render(() => (
       <TestProviders engine={engine} renderer={renderer}>
         <EventsTab />
       </TestProviders>
     ));
 
-    // Get all event row buttons
-    const buttons = container.querySelectorAll("button");
-    // Filter to only event rows (the ones that contain event content, not filter buttons)
-    const eventRows: Element[] = [];
-    buttons.forEach((btn) => {
-      if (btn.textContent?.includes("First") || btn.textContent?.includes("Third")) {
-        eventRows.push(btn);
-      }
-    });
+    // Event rows have data-testid="event-row-{frameNum}"
+    const row10 = screen.getByTestId("event-row-10");
+    const row5 = screen.getByTestId("event-row-5");
 
     // Third (frame 10) should come before First (frame 5) because of reverse order
-    expect(eventRows.length).toBe(2);
-    expect(eventRows[0].textContent).toContain("Third");
-    expect(eventRows[1].textContent).toContain("First");
+    expect(row10.textContent).toContain("Third");
+    expect(row5.textContent).toContain("First");
+    // Verify DOM order: frame 10 comes first
+    expect(row10.compareDocumentPosition(row5) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("events become visible only after seeking to their frame", () => {

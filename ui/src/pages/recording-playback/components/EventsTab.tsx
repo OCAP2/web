@@ -156,6 +156,7 @@ export function EventsTab(): JSX.Element {
               const color = eventColor(event);
               return (
                 <button
+                  data-testid={`event-row-${event.frameNum}`}
                   class={`${styles.eventRow} ${styles.eventBorder}`}
                   style={{ "border-left-color": color }}
                   onClick={() => handleEventClick(event)}

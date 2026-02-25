@@ -325,7 +325,7 @@ export function RecordingSelector(): JSX.Element {
                 <div class={styles.adminArea}>
                   <div class={styles.adminBadge}>
                     <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
-                      {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" />}
+                      {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" data-testid="admin-avatar" />}
                     </Show>
                     <div>
                       <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>
@@ -376,6 +376,7 @@ export function RecordingSelector(): JSX.Element {
                     clickable
                     active={tagFilter() === null || tagFilter() === tag}
                     onClick={() => setTagFilter(tagFilter() === tag ? null : tag)}
+                    data-testid={`tag-filter-${tag}`}
                   />
                 )}
               </For>
@@ -392,6 +393,7 @@ export function RecordingSelector(): JSX.Element {
                     return (
                       <button
                         class={styles.mapButton}
+                        data-testid={`map-filter-${mapName}`}
                         style={{
                           background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
                           color: active() ? color : "var(--text-dimmer)",
@@ -410,7 +412,7 @@ export function RecordingSelector(): JSX.Element {
 
             {/* Clear */}
             <Show when={hasFilters()}>
-              <button class={styles.clearButton} onClick={clearFilters}>
+              <button class={styles.clearButton} data-testid="clear-filters" onClick={clearFilters}>
                 <Icons.X /> {t("clear")}
               </button>
             </Show>
@@ -598,10 +600,10 @@ function Toast(props: { message: string; onDismiss: () => void }): JSX.Element {
   onCleanup(() => clearTimeout(timer));
 
   return (
-    <div class={styles.toast}>
+    <div class={styles.toast} data-testid="auth-toast">
       <Icons.AlertTriangle />
       <span>{props.message}</span>
-      <button class={styles.toastClose} onClick={() => props.onDismiss()}>
+      <button class={styles.toastClose} onClick={() => props.onDismiss()} data-testid="auth-toast-dismiss">
         <Icons.X />
       </button>
     </div>

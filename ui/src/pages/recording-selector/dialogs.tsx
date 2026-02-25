@@ -172,13 +172,14 @@ export function UploadDialog(props: {
             <span class={styles.uploadHeaderIcon}><Icons.Upload /></span>
             <span class={ui.dialogTitle}>Upload Recording</span>
           </div>
-          <button class={ui.dialogCloseBtn} onClick={props.onCancel}><Icons.X /></button>
+          <button class={ui.dialogCloseBtn} data-testid="upload-dialog-close" onClick={props.onCancel}><Icons.X /></button>
         </div>
 
         <div class={ui.dialogBody} style={{ gap: "14px" }}>
           {/* File drop zone */}
           <div
             class={`${styles.uploadDropZone} ${dragOver() ? styles.uploadDropZoneDragOver : ""} ${file() ? styles.uploadDropZoneHasFile : ""}`}
+            data-testid="upload-drop-zone"
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -186,6 +187,7 @@ export function UploadDialog(props: {
           >
             <input
               ref={fileInputRef}
+              data-testid="upload-file-input"
               type="file"
               accept=".json.gz,.json,.gz"
               style={{ display: "none" }}
@@ -206,7 +208,7 @@ export function UploadDialog(props: {
                     <div class={styles.uploadFileName}>{f().name}</div>
                     <div class={styles.uploadFileSize}>{(f().size / 1024).toFixed(0)} KB</div>
                   </div>
-                  <button class={styles.uploadFileRemove} onClick={(e) => { e.stopPropagation(); setFile(null); }}>
+                  <button class={styles.uploadFileRemove} data-testid="upload-file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
                     <Icons.X />
                   </button>
                 </div>
@@ -288,6 +290,7 @@ export function UploadDialog(props: {
             <button type="button" class={ui.btnGhost} onClick={props.onCancel}>Cancel</button>
             <button
               class={styles.uploadSubmitBtn}
+              data-testid="upload-submit"
               disabled={!canSubmit()}
               onClick={handleSubmit}
             >

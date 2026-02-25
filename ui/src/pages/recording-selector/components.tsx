@@ -18,12 +18,13 @@ export function StatPill(props: { icon: JSX.Element; value: string | number; lab
   );
 }
 
-export function TagBadge(props: { tag: string; clickable?: boolean; active?: boolean; onClick?: () => void }) {
+export function TagBadge(props: { tag: string; clickable?: boolean; active?: boolean; onClick?: () => void; "data-testid"?: string }) {
   const tc = () => getTagColor(props.tag);
   const isActive = () => props.active !== false;
   return (
     <button
       class={`${styles.tagBadge} ${props.clickable ? styles.tagBadgeClickable : ""}`}
+      data-testid={props["data-testid"]}
       style={{
         color: isActive() ? tc().color : "var(--text-dimmer)",
         background: isActive() ? tc().bg : "rgba(255,255,255,0.02)",

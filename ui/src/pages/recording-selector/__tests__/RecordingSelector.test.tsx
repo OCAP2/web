@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
+import { render, cleanup, fireEvent, screen, within } from "@solidjs/testing-library";
 import { Router, Route, useLocation } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
@@ -121,35 +121,36 @@ describe("RecordingSelector", () => {
   it("shows operation details in rows", async () => {
     const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
-    expect(op1.textContent).toContain("Op Alpha");
-    expect(op1.textContent).toContain("Altis");
-    expect(op1.textContent).toContain("1h 0m 0s");
+    const row = within(op1);
+    expect(row.getByText(/Op Alpha/)).toBeDefined();
+    expect(row.getByText(/Altis/)).toBeDefined();
+    expect(row.getByText(/1h 0m 0s/)).toBeDefined();
   });
 
   it("shows tag badges on operations", async () => {
     const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
-    expect(op1.textContent).toContain("TvT");
+    expect(within(op1).getByText("TvT")).toBeDefined();
     const op2 = await findByTestId("recording-2");
-    expect(op2.textContent).toContain("COOP");
+    expect(within(op2).getByText("COOP")).toBeDefined();
   });
 
   it("shows status badges on operations", async () => {
     const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
-    expect(op1.textContent).toContain("Ready");
+    expect(within(op1).getByText("Ready")).toBeDefined();
     const op3 = await findByTestId("recording-3");
-    expect(op3.textContent).toContain("Ready");
+    expect(within(op3).getByText("Ready")).toBeDefined();
     const op4 = await findByTestId("recording-4");
-    expect(op4.textContent).toContain("Live");
+    expect(within(op4).getByText("Live")).toBeDefined();
     const op5 = await findByTestId("recording-5");
-    expect(op5.textContent).toContain("Pending");
+    expect(within(op5).getByText("Pending")).toBeDefined();
   });
 
   it("shows footer with mission count", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
-    expect(container.textContent).toContain("5 of 5 recordings");
+    expect(screen.getByText(/5 of 5 recordings/)).toBeDefined();
   });
 
   // ── Search ──
@@ -196,31 +197,25 @@ describe("RecordingSelector", () => {
   });
 
   it("shows empty state when search matches nothing", async () => {
-    const { findByTestId, getByTestId, container } = renderPage();
+    const { findByTestId, getByTestId } = renderPage();
     await findByTestId("recording-1");
 
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "nonexistent" } });
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("No recordings found");
+      expect(screen.getByText(/No recordings found/)).toBeDefined();
     });
   });
 
   // ── Tag filter ──
 
   it("filters by tag when tag badge is clicked", async () => {
-    const { findByTestId, queryByTestId, container } = renderPage();
+    const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    // Find the COOP tag filter button in the filter bar
-    const tagButtons = container.querySelectorAll("button");
-    const coopButton = Array.from(tagButtons).find(
-      (b) => b.textContent === "COOP" && b !== queryByTestId("recording-2")?.querySelector("button"),
-    );
-    expect(coopButton).toBeDefined();
-
-    fireEvent.click(coopButton!);
+    const coopButton = screen.getByTestId("tag-filter-COOP");
+    fireEvent.click(coopButton);
 
     await vi.waitFor(() => {
       expect(queryByTestId("recording-1")).toBeNull();
@@ -230,34 +225,24 @@ describe("RecordingSelector", () => {
   });
 
   it("toggles tag filter off when clicked again", async () => {
-    const { findByTestId, queryByTestId, container } = renderPage();
+    const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const tagButtons = container.querySelectorAll("button");
-    const coopButton = Array.from(tagButtons).find(
-      (b) => b.textContent === "COOP" && b !== queryByTestId("recording-2")?.querySelector("button"),
-    );
+    const coopButton = screen.getByTestId("tag-filter-COOP");
 
-    fireEvent.click(coopButton!);
+    fireEvent.click(coopButton);
     await vi.waitFor(() => expect(queryByTestId("recording-1")).toBeNull());
 
-    fireEvent.click(coopButton!);
+    fireEvent.click(coopButton);
     await vi.waitFor(() => expect(queryByTestId("recording-1")).not.toBeNull());
   });
 
   it("does not crash when rapidly toggling tag filters", async () => {
-    const { findByTestId, queryByTestId, container } = renderPage();
+    const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const findTagButton = (tag: string) =>
-      Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent === tag && b !== queryByTestId("recording-1")?.querySelector("button"),
-      );
-
-    const tvtButton = findTagButton("TvT")!;
-    const coopButton = findTagButton("COOP")!;
-    expect(tvtButton).toBeDefined();
-    expect(coopButton).toBeDefined();
+    const tvtButton = screen.getByTestId("tag-filter-TvT");
+    const coopButton = screen.getByTestId("tag-filter-COOP");
 
     // Rapidly toggle between tag filters
     fireEvent.click(coopButton);
@@ -275,16 +260,11 @@ describe("RecordingSelector", () => {
   // ── Map filter ──
 
   it("filters by map when map button is clicked", async () => {
-    const { findByTestId, queryByTestId, container } = renderPage();
+    const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const buttons = container.querySelectorAll("button");
-    const stratisButton = Array.from(buttons).find(
-      (b) => b.textContent?.trim() === "Stratis",
-    );
-    expect(stratisButton).toBeDefined();
-
-    fireEvent.click(stratisButton!);
+    const stratisButton = screen.getByTestId("map-filter-Stratis");
+    fireEvent.click(stratisButton);
 
     await vi.waitFor(() => {
       expect(queryByTestId("recording-1")).toBeNull();
@@ -294,18 +274,11 @@ describe("RecordingSelector", () => {
   });
 
   it("does not crash when rapidly toggling map filters", async () => {
-    const { findByTestId, queryByTestId, container } = renderPage();
+    const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const findMapButton = (name: string) =>
-      Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent?.trim() === name,
-      );
-
-    const altisButton = findMapButton("Altis")!;
-    const stratisButton = findMapButton("Stratis")!;
-    expect(altisButton).toBeDefined();
-    expect(stratisButton).toBeDefined();
+    const altisButton = screen.getByTestId("map-filter-Altis");
+    const stratisButton = screen.getByTestId("map-filter-Stratis");
 
     // Rapidly toggle between filters — previously caused
     // "Cannot read properties of undefined (reading 'storageFormat')"
@@ -325,7 +298,7 @@ describe("RecordingSelector", () => {
   // ── Clear filters ──
 
   it("shows clear button when filter is active and clears on click", async () => {
-    const { findByTestId, queryByTestId, container, getByTestId } = renderPage();
+    const { findByTestId, queryByTestId, getByTestId } = renderPage();
     await findByTestId("recording-1");
 
     // Apply a search filter
@@ -335,11 +308,8 @@ describe("RecordingSelector", () => {
     await vi.waitFor(() => expect(queryByTestId("recording-1")).toBeNull());
 
     // Find and click clear button
-    const clearButton = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Clear"),
-    );
-    expect(clearButton).toBeDefined();
-    fireEvent.click(clearButton!);
+    const clearButton = screen.getByTestId("clear-filters");
+    fireEvent.click(clearButton);
 
     await vi.waitFor(() => {
       expect(queryByTestId("recording-1")).not.toBeNull();
@@ -351,31 +321,27 @@ describe("RecordingSelector", () => {
   // ── Row selection & sidebar ──
 
   it("opens detail sidebar when a row is clicked", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
 
     await vi.waitFor(() => {
-      // Sidebar should show the mission name and map name
-      const sidebarText = container.textContent!;
-      expect(sidebarText).toContain("Op Alpha");
-      // Launch button should appear
-      expect(container.querySelector("[data-testid='launch-button']")).not.toBeNull();
+      // Op Alpha appears in both the row and the sidebar
+      expect(screen.getAllByText(/Op Alpha/).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByTestId("launch-button")).toBeDefined();
     });
   });
 
   it("sidebar shows correct mission details", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
-    await findByTestId("launch-button");
+    const sidebar = await findByTestId("detail-sidebar");
 
-    // The sidebar contains stats with duration and date
-    const sidebarText = container.textContent!;
-    expect(sidebarText).toContain("1h 0m 0s");
-    expect(sidebarText).toContain("1 Jan 2024");
+    expect(within(sidebar).getByText(/1h 0m 0s/)).toBeDefined();
+    expect(within(sidebar).getByText(/1 Jan 2024/)).toBeDefined();
   });
 
   it("closes sidebar when close button is clicked", async () => {
@@ -393,17 +359,17 @@ describe("RecordingSelector", () => {
   });
 
   it("switching selection updates sidebar content", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const op1 = await findByTestId("recording-1");
     const op2 = await findByTestId("recording-2");
 
     fireEvent.click(op1);
-    await findByTestId("launch-button");
-    expect(container.textContent).toContain("Op Alpha");
+    const sidebar = await findByTestId("detail-sidebar");
+    expect(within(sidebar).getByText(/Op Alpha/)).toBeDefined();
 
     fireEvent.click(op2);
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Op Bravo");
+      expect(within(sidebar).getByText(/Op Bravo/)).toBeDefined();
     });
   });
 
@@ -419,8 +385,9 @@ describe("RecordingSelector", () => {
     fireEvent.click(launchButton);
 
     const loadingScreen = await findByTestId("loading-screen");
-    expect(loadingScreen.textContent).toContain("Op Alpha");
-    expect(loadingScreen.textContent).toContain("Altis");
+    const ls = within(loadingScreen);
+    expect(ls.getByText(/Op Alpha/)).toBeDefined();
+    expect(ls.getByText(/Altis/)).toBeDefined();
   });
 
   it("launch button is disabled for non-ready operations", async () => {
@@ -444,21 +411,17 @@ describe("RecordingSelector", () => {
     const launchButton = await findByTestId("launch-button");
 
     expect((launchButton as HTMLButtonElement).disabled).toBe(true);
-    expect(launchButton.textContent).toContain("Converting");
+    expect(within(launchButton).getByText(/Converting/)).toBeDefined();
   });
 
   // ── Sorting ──
 
   it("sorts by name when Name header is clicked", async () => {
-    const { findByTestId, container, getByTestId } = renderPage();
+    const { findByTestId, getByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const nameHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Name",
-    );
-    expect(nameHeader).toBeDefined();
-
-    fireEvent.click(nameHeader!);
+    const nameHeader = screen.getByRole("button", { name: "Name" });
+    fireEvent.click(nameHeader);
 
     await vi.waitFor(() => {
       const list = getByTestId("recordings-list");
@@ -471,17 +434,15 @@ describe("RecordingSelector", () => {
   });
 
   it("toggles sort direction on second click", async () => {
-    const { findByTestId, container, getByTestId } = renderPage();
+    const { findByTestId, getByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const nameHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Name",
-    );
+    const nameHeader = screen.getByRole("button", { name: "Name" });
 
     // First click: descending
-    fireEvent.click(nameHeader!);
+    fireEvent.click(nameHeader);
     // Second click: ascending
-    fireEvent.click(nameHeader!);
+    fireEvent.click(nameHeader);
 
     await vi.waitFor(() => {
       const list = getByTestId("recordings-list");
@@ -516,10 +477,10 @@ describe("RecordingSelector", () => {
 
   it("shows empty state when no operations exist", async () => {
     mockFetchWith([]);
-    const { container } = renderPage();
+    renderPage();
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("No recordings found");
+      expect(screen.getByText(/No recordings found/)).toBeDefined();
     });
   });
 
@@ -564,12 +525,12 @@ describe("RecordingSelector", () => {
   // ── Header stats ──
 
   it("shows correct map count in stats", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
     // 2 unique maps: Altis and Stratis
-    expect(container.textContent).toContain("2");
-    expect(container.textContent).toContain("MAPS");
+    expect(screen.getByText("2")).toBeDefined();
+    expect(screen.getByText("MAPS")).toBeDefined();
   });
 
   // ── Auth error toast ──
@@ -583,18 +544,19 @@ describe("RecordingSelector", () => {
       configurable: true,
     });
 
-    const { container } = renderPage();
+    renderPage();
 
-    // Wait for toast to appear (flush microtasks with real timers temporarily)
+    // Wait for toast to appear
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Your Steam account is not authorized for admin access.");
+      expect(screen.getByTestId("auth-toast")).toBeDefined();
+      expect(screen.getByText(/not authorized for admin access/)).toBeDefined();
     });
 
     // Advance past the 5s auto-dismiss timeout
     vi.advanceTimersByTime(5000);
 
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("not authorized for admin access");
+      expect(screen.queryByTestId("auth-toast")).toBeNull();
     });
 
     vi.useRealTimers();
@@ -608,22 +570,17 @@ describe("RecordingSelector", () => {
       configurable: true,
     });
 
-    const { container } = renderPage();
+    renderPage();
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Your Steam account is not authorized for admin access.");
+      expect(screen.getByTestId("auth-toast")).toBeDefined();
     });
 
-    // Click the dismiss button on the toast (it's the button whose parent contains the error message)
-    const toastDiv = Array.from(container.querySelectorAll("div")).find(
-      (d) => d.textContent?.includes("not authorized for admin access"),
-    )!;
-    const dismissBtn = toastDiv.querySelector("button")!;
-    expect(dismissBtn).toBeDefined();
+    const dismissBtn = screen.getByTestId("auth-toast-dismiss");
     fireEvent.click(dismissBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("not authorized for admin access");
+      expect(screen.queryByTestId("auth-toast")).toBeNull();
     });
   });
 });
@@ -743,13 +700,13 @@ describe("RecordingSelector (Admin)", () => {
   // ── Auth UI ──
 
   it("shows admin badge with Steam profile when authenticated", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("TestPlayer");
-      expect(container.textContent).toContain("ADMIN");
-      expect(container.querySelector("img[src='https://avatars.steamstatic.com/test.jpg']")).not.toBeNull();
+      expect(screen.getByText("TestPlayer")).toBeDefined();
+      expect(screen.getByText("ADMIN")).toBeDefined();
+      expect(screen.getByTestId("admin-avatar").getAttribute("src")).toBe("https://avatars.steamstatic.com/test.jpg");
     });
   });
 
@@ -769,25 +726,23 @@ describe("RecordingSelector (Admin)", () => {
       } as Response);
     });
 
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in");
+      expect(screen.getByRole("button", { name: /Sign in/ })).toBeDefined();
     });
   });
 
   it("logout button clears admin UI", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const logoutBtn = container.querySelector("button[title='Sign out']") as HTMLButtonElement;
-    expect(logoutBtn).not.toBeNull();
-
+    const logoutBtn = screen.getByTitle("Sign out");
     fireEvent.click(logoutBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in");
+      expect(screen.getByRole("button", { name: /Sign in/ })).toBeDefined();
     });
   });
 
@@ -808,23 +763,18 @@ describe("RecordingSelector (Admin)", () => {
       } as Response);
     });
 
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Sign in");
+      expect(screen.getByRole("button", { name: /Sign in/ })).toBeDefined();
     });
-
-    const signInBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Sign in"),
-    );
-    expect(signInBtn).toBeDefined();
   });
 
   // ── Edit operation ──
 
   it("edit flow: sidebar Edit → modal → save", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const row = await findByTestId("recording-1");
 
     // Select operation to open sidebar
@@ -832,75 +782,60 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("launch-button");
 
     // Click Edit in sidebar
-    const editBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Edit"),
-    )!;
-    fireEvent.click(editBtn);
+    fireEvent.click(screen.getByRole("button", { name: /Edit/ }));
 
     // Edit modal should appear
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Edit Recording");
+      expect(screen.getByText("Edit Recording")).toBeDefined();
     });
 
     // Save (click the save button)
-    const saveBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Save"),
-    )!;
-    fireEvent.click(saveBtn);
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
 
     // Modal should close
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("Edit Recording");
+      expect(screen.queryByText("Edit Recording")).toBeNull();
     });
   });
 
   // ── Delete operation ──
 
   it("delete flow: sidebar Delete → confirm dialog → confirm", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const row = await findByTestId("recording-1");
 
     fireEvent.click(row);
     await findByTestId("launch-button");
 
     // Click Delete in sidebar
-    const deleteBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Delete"),
-    )!;
-    fireEvent.click(deleteBtn);
+    fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
 
-    // Confirm dialog should appear
+    // Confirm dialog should appear (title + danger button both say "Delete Recording")
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Delete Recording");
+      expect(screen.getAllByText("Delete Recording").length).toBeGreaterThanOrEqual(2);
     });
 
-    // Click confirm delete
-    const confirmBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Delete") && b !== deleteBtn,
-    )!;
-    fireEvent.click(confirmBtn);
+    // Click confirm delete (the last button with "Delete Recording" is the dialog's danger button)
+    const confirmBtns = screen.getAllByRole("button", { name: /Delete Recording/ });
+    fireEvent.click(confirmBtns[confirmBtns.length - 1]);
 
     // Dialog should close
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("Delete Recording");
+      expect(screen.queryByText("Delete Recording")).toBeNull();
     });
   });
 
   // ── Retry conversion ──
 
   it("retry button appears for failed operations and calls API", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     const row = await findByTestId("recording-6");
 
     fireEvent.click(row);
     await findByTestId("launch-button");
 
     // Retry button should be visible for failed operation
-    const retryBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Retry"),
-    )!;
-    expect(retryBtn).toBeDefined();
-
+    const retryBtn = screen.getByRole("button", { name: /Retry/ });
     fireEvent.click(retryBtn);
 
     // Verify retry API was called
@@ -917,22 +852,21 @@ describe("RecordingSelector (Admin)", () => {
   // ── Upload zone ──
 
   it("toggle upload zone and upload a file via input", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
     // Click upload button
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
-    expect(uploadBtn).not.toBeNull();
+    const uploadBtn = screen.getByTitle("Upload recording");
     fireEvent.click(uploadBtn);
 
     // Upload dialog should appear
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
-      expect(container.textContent).toContain("Drop");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
+      expect(screen.getByText(/Drop/)).toBeDefined();
     });
 
     // Use the hidden file input (jsdom doesn't support DragEvent.dataTransfer)
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     expect(fileInput).not.toBeNull();
 
     const file = new File(["data"], "mission.json.gz", { type: "application/gzip" });
@@ -941,14 +875,11 @@ describe("RecordingSelector (Admin)", () => {
 
     // File info should appear and name auto-filled
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("mission.json.gz");
+      expect(screen.getByText("mission.json.gz")).toBeDefined();
     });
 
     // Click the Upload Recording submit button
-    const submitBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Upload Recording") && !b.disabled,
-    )!;
-    expect(submitBtn).toBeDefined();
+    const submitBtn = screen.getByTestId("upload-submit");
     fireEvent.click(submitBtn);
 
     // Verify upload API was called
@@ -963,20 +894,18 @@ describe("RecordingSelector (Admin)", () => {
   });
 
   it("drag over adds visual state", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
     // Open upload zone
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Drop .json.gz");
+      expect(screen.getByTestId("upload-drop-zone")).toBeDefined();
     });
 
-    const uploadZone = Array.from(container.querySelectorAll("div")).find(
-      (d) => d.textContent?.includes("Drop .json.gz"),
-    )!;
+    const uploadZone = screen.getByTestId("upload-drop-zone");
 
     fireEvent.dragOver(uploadZone, { preventDefault: () => {} });
 
@@ -985,215 +914,180 @@ describe("RecordingSelector (Admin)", () => {
   });
 
   it("upload dialog closes on Cancel button", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
-    const cancelBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent === "Cancel",
-    )!;
-    fireEvent.click(cancelBtn);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("Upload Recording");
+      expect(screen.queryByTestId("upload-submit")).toBeNull();
     });
   });
 
   it("upload dialog closes on X button", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
-    // The X close button is the dialogCloseBtn inside the upload dialog header
-    const dialogCloseBtns = container.querySelectorAll("button");
-    const xBtn = Array.from(dialogCloseBtns).find((b) => {
-      // X button has no text besides the SVG icon, and is inside the upload dialog
-      const parent = b.closest("[class]");
-      return b.textContent?.trim() === "" && parent?.textContent?.includes("Upload Recording");
-    });
-    // Fallback: find by the SVG-only button near the header
-    const closeBtn = xBtn || Array.from(dialogCloseBtns).find(
-      (b) => b.innerHTML.includes("svg") && !b.textContent?.trim() && b.closest("div")?.textContent?.includes("Upload Recording"),
-    );
-    expect(closeBtn).toBeDefined();
-    fireEvent.click(closeBtn!);
+    fireEvent.click(screen.getByTestId("upload-dialog-close"));
 
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("Upload Recording");
+      expect(screen.queryByTestId("upload-submit")).toBeNull();
     });
   });
 
   it("upload submit is disabled without file", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
     // Submit button should be disabled when no file is selected
-    const submitBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Upload Recording") && b !== uploadBtn,
-    ) as HTMLButtonElement;
-    expect(submitBtn).toBeDefined();
+    const submitBtn = screen.getByTestId("upload-submit") as HTMLButtonElement;
     expect(submitBtn.disabled).toBe(true);
 
     // Footer hint should say "Select a file to upload"
-    expect(container.textContent).toContain("Select a file to upload");
+    expect(screen.getByText("Select a file to upload")).toBeDefined();
   });
 
   it("upload submit is disabled when name is cleared after file select", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
     // Select a file
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     const file = new File(["data"], "test.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("test.json.gz");
+      expect(screen.getByText("test.json.gz")).toBeDefined();
     });
 
     // Clear the name field (use placeholder to find the right input)
-    const nameInput = container.querySelector("input[placeholder*='MP_COOP']") as HTMLInputElement;
+    const nameInput = screen.getByPlaceholderText(/MP_COOP/) as HTMLInputElement;
     fireEvent.input(nameInput, { target: { value: "" } });
 
     // Submit should be disabled and hint should say "Enter a mission name"
     await vi.waitFor(() => {
-      const submitBtn = Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent?.includes("Upload Recording") && b !== uploadBtn,
-      ) as HTMLButtonElement;
-      expect(submitBtn.disabled).toBe(true);
-      expect(container.textContent).toContain("Enter a mission name");
+      expect((screen.getByTestId("upload-submit") as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText("Enter a mission name")).toBeDefined();
     });
   });
 
   it("auto-fills mission name from filename stripping extensions", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     const file = new File(["data"], "MP_COOP_m05.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
 
     await vi.waitFor(() => {
-      const nameInput = container.querySelector("input[placeholder*='MP_COOP']") as HTMLInputElement;
+      const nameInput = screen.getByPlaceholderText(/MP_COOP/) as HTMLInputElement;
       expect(nameInput.value).toBe("MP_COOP_m05");
     });
   });
 
   it("file remove button clears file and re-shows drop zone", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Drop .json.gz");
+      expect(screen.getByTestId("upload-drop-zone")).toBeDefined();
     });
 
     // Select a file
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     const file = new File(["data"], "mission.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("mission.json.gz");
-      // Drop text should be gone
-      expect(container.textContent).not.toContain("Drop .json.gz");
+      expect(screen.getByText("mission.json.gz")).toBeDefined();
+      // Drop text should be gone (browse link only visible when no file selected)
+      expect(screen.queryByText("browse")).toBeNull();
     });
 
-    // Click the remove button (the X button inside the file row)
-    // It's distinct from the dialog close X — it's inside the file info area
-    const removeBtn = Array.from(container.querySelectorAll("button")).find((b) => {
-      const text = b.textContent?.trim();
-      return text === "" && b.closest("div")?.textContent?.includes("mission.json.gz");
-    });
-    expect(removeBtn).toBeDefined();
-    fireEvent.click(removeBtn!);
+    // Click the remove button
+    fireEvent.click(screen.getByTestId("upload-file-remove"));
 
     // Drop zone should reappear
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Drop .json.gz");
-      expect(container.textContent).not.toContain("mission.json.gz");
+      expect(screen.getByTestId("upload-drop-zone")).toBeDefined();
+      expect(screen.queryByText("mission.json.gz")).toBeNull();
     });
   });
 
   it("upload sends form data with all fields", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Upload Recording");
+      expect(screen.getByTestId("upload-submit")).toBeDefined();
     });
 
     // Select file
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     const file = new File(["data"], "op_test.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("op_test.json.gz");
+      expect(screen.getByText("op_test.json.gz")).toBeDefined();
     });
 
     // Fill map field (use placeholder to find the right input)
-    const mapInput = container.querySelector("input[placeholder*='altis']") as HTMLInputElement;
+    const mapInput = screen.getByPlaceholderText(/altis/) as HTMLInputElement;
     fireEvent.input(mapInput, { target: { value: "altis" } });
 
-    // Select a tag — find the TvT button inside the upload dialog (near the TAG label)
-    const tagLabel = Array.from(container.querySelectorAll("label")).find(
-      (l) => l.textContent === "TAG",
-    )!;
+    // Select a tag — find the TvT button inside the upload dialog
+    const tagLabel = screen.getByText("TAG");
     const tagGroup = tagLabel.nextElementSibling!;
-    const tvtBtn = Array.from(tagGroup.querySelectorAll("button")).find(
-      (b) => b.textContent === "TvT",
-    );
-    expect(tvtBtn).toBeDefined();
-    fireEvent.click(tvtBtn!);
+    const tvtBtn = within(tagGroup as HTMLElement).getByText("TvT");
+    fireEvent.click(tvtBtn);
 
     // Submit
-    const submitBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Upload Recording") && !(b as HTMLButtonElement).disabled,
-    )!;
-    fireEvent.click(submitBtn);
+    fireEvent.click(screen.getByTestId("upload-submit"));
 
     // Verify the API call includes all fields
     await vi.waitFor(() => {
@@ -1213,25 +1107,25 @@ describe("RecordingSelector (Admin)", () => {
   });
 
   it("footer hint updates based on form state", async () => {
-    const { findByTestId, container } = renderPage();
+    const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     // No file: "Select a file to upload"
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Select a file to upload");
+      expect(screen.getByText("Select a file to upload")).toBeDefined();
     });
 
     // Add file → should show "Ready to upload" (name auto-fills)
-    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const fileInput = screen.getByTestId("upload-file-input") as HTMLInputElement;
     const file = new File(["data"], "test.json.gz", { type: "application/gzip" });
     Object.defineProperty(fileInput, "files", { value: [file], writable: false });
     fireEvent.change(fileInput);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Ready to upload");
+      expect(screen.getByText("Ready to upload")).toBeDefined();
     });
   });
 

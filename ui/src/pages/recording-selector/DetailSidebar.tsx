@@ -26,7 +26,7 @@ export function DetailSidebar(props: {
   createEffect(on(() => props.rec.worldName, () => setPreviewFailed(false)));
 
   return (
-    <div class={styles.sidebar}>
+    <div data-testid="detail-sidebar" class={styles.sidebar}>
       {/* Map Hero */}
       <div class={styles.sidebarHero} style={{ background: `linear-gradient(135deg, ${mapColor()}15, ${mapColor()}05)` }}>
         <Show when={!previewFailed()} fallback={
@@ -47,6 +47,7 @@ export function DetailSidebar(props: {
           </>
         }>
           <img
+            data-testid="map-preview"
             src={`${import.meta.env.BASE_URL}images/maps/${encodeURIComponent(props.rec.worldName)}/preview_512.png`}
             alt=""
             class={styles.sidebarHeroImg}

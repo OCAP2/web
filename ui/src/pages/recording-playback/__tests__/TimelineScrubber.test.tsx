@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
 import { TimelineScrubber } from "../components/TimelineScrubber";
 import {
   createTestEngine,
@@ -33,23 +33,21 @@ function renderScrubber(
 
 describe("TimelineScrubber", () => {
   it("renders scrubber track", () => {
-    const { container } = renderScrubber();
+    renderScrubber();
 
-    const track = container.querySelector('[class*="scrubberTrack"]');
-    expect(track).toBeTruthy();
+    expect(screen.getByTestId("scrubber-track")).toBeTruthy();
   });
 
   it("progress bar width is 0% at frame 0", () => {
-    const { container } = renderScrubber();
+    renderScrubber();
 
-    const progress = container.querySelector('[class*="scrubberProgress"]');
-    expect(progress).toBeTruthy();
-    expect((progress as HTMLElement).style.width).toBe("0%");
+    const progress = screen.getByTestId("scrubber-progress");
+    expect(progress.style.width).toBe("0%");
   });
 
   it("progress bar width updates when engine seeks", () => {
     // frameCount=100 -> endFrame=99, so 50/99*100 ~= 50.505%
-    const { engine, container } = renderScrubber(
+    const { engine } = renderScrubber(
       [unitDef({ endFrame: 99 })],
       [],
       100,
@@ -57,9 +55,8 @@ describe("TimelineScrubber", () => {
 
     engine.seekTo(50);
 
-    const progress = container.querySelector('[class*="scrubberProgress"]');
-    expect(progress).toBeTruthy();
-    const width = parseFloat((progress as HTMLElement).style.width);
+    const progress = screen.getByTestId("scrubber-progress");
+    const width = parseFloat(progress.style.width);
     expect(width).toBeCloseTo((50 / 99) * 100, 1);
   });
 
@@ -73,25 +70,22 @@ describe("TimelineScrubber", () => {
       killedEvent(30, 2, 1, "M4A1", 200),
     ];
 
-    const { container } = renderScrubber(entities, events, 100);
+    renderScrubber(entities, events, 100);
 
-    const markers = container.querySelectorAll('[class*="eventMarker"]');
-    expect(markers.length).toBe(2);
+    expect(screen.getAllByTestId("event-marker").length).toBe(2);
   });
 
   it("no event markers when no kill events exist", () => {
-    const { container } = renderScrubber([unitDef()], [], 100);
+    renderScrubber([unitDef()], [], 100);
 
-    const markers = container.querySelectorAll('[class*="eventMarker"]');
-    expect(markers.length).toBe(0);
+    expect(screen.queryAllByTestId("event-marker").length).toBe(0);
   });
 
   it("pointer down on track calls engine.seekTo", () => {
-    const { engine, container } = renderScrubber([unitDef()], [], 100);
+    const { engine } = renderScrubber([unitDef()], [], 100);
     const spy = vi.spyOn(engine, "seekTo");
 
-    const track = container.querySelector('[class*="scrubberTrack"]') as HTMLElement;
-    expect(track).toBeTruthy();
+    const track = screen.getByTestId("scrubber-track");
 
     // jsdom does not implement setPointerCapture — stub it on the element
     track.setPointerCapture = vi.fn();
@@ -115,14 +109,13 @@ describe("TimelineScrubber", () => {
   });
 
   it("pauses playback during drag and resumes on pointer up", () => {
-    const { engine, container } = renderScrubber(
+    const { engine } = renderScrubber(
       [unitDef({ endFrame: 99 })],
       [],
       100,
     );
 
-    const track = container.querySelector('[class*="scrubberTrack"]') as HTMLElement;
-    expect(track).toBeTruthy();
+    const track = screen.getByTestId("scrubber-track");
     track.setPointerCapture = vi.fn();
     vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
       left: 0, right: 200, width: 200,
@@ -144,14 +137,13 @@ describe("TimelineScrubber", () => {
   });
 
   it("does not resume playback on pointer up if was not playing", () => {
-    const { engine, container } = renderScrubber(
+    const { engine } = renderScrubber(
       [unitDef({ endFrame: 99 })],
       [],
       100,
     );
 
-    const track = container.querySelector('[class*="scrubberTrack"]') as HTMLElement;
-    expect(track).toBeTruthy();
+    const track = screen.getByTestId("scrubber-track");
     track.setPointerCapture = vi.fn();
     vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
       left: 0, right: 200, width: 200,
