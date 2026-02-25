@@ -290,8 +290,23 @@ export class ApiClient {
 
   // ─── Auth methods ───
 
-  getSteamLoginUrl(): string {
+  getSteamLoginUrl(returnTo?: string): string {
+    if (returnTo) {
+      sessionStorage.setItem("ocap_return_to", returnTo);
+    }
     return `${this.baseUrl}/api/v1/auth/steam`;
+  }
+
+  /**
+   * Pops the saved return-to path (if any) from sessionStorage.
+   * Returns null if nothing was saved.
+   */
+  popReturnTo(): string | null {
+    const path = sessionStorage.getItem("ocap_return_to");
+    if (path) {
+      sessionStorage.removeItem("ocap_return_to");
+    }
+    return path;
   }
 
   consumeAuthToken(params: URLSearchParams): boolean {

@@ -508,6 +508,36 @@ describe("ApiClient", () => {
       const client = new ApiClient();
       expect(client.getSteamLoginUrl()).toBe("/api/v1/auth/steam");
     });
+
+    it("saves returnTo path in sessionStorage when provided", () => {
+      const client = new ApiClient();
+      client.getSteamLoginUrl("/recording/42/my-mission");
+      expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/42/my-mission");
+    });
+
+    it("does not save returnTo when not provided", () => {
+      const client = new ApiClient();
+      sessionStorage.removeItem("ocap_return_to");
+      client.getSteamLoginUrl();
+      expect(sessionStorage.getItem("ocap_return_to")).toBeNull();
+    });
+  });
+
+  // ─── popReturnTo ───
+
+  describe("popReturnTo", () => {
+    it("returns and removes saved path", () => {
+      const client = new ApiClient();
+      sessionStorage.setItem("ocap_return_to", "/recording/7/test");
+      expect(client.popReturnTo()).toBe("/recording/7/test");
+      expect(sessionStorage.getItem("ocap_return_to")).toBeNull();
+    });
+
+    it("returns null when nothing saved", () => {
+      const client = new ApiClient();
+      sessionStorage.removeItem("ocap_return_to");
+      expect(client.popReturnTo()).toBeNull();
+    });
   });
 
   // ─── consumeAuthToken ───

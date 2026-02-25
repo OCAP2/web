@@ -10,6 +10,7 @@ const mockGetMe = vi.fn();
 const mockLogout = vi.fn();
 const mockGetSteamLoginUrl = vi.fn().mockReturnValue("/api/v1/auth/steam");
 const mockConsumeAuthToken = vi.fn().mockReturnValue(false);
+const mockPopReturnTo = vi.fn().mockReturnValue(null);
 
 vi.mock("../../data/apiClient", async () => {
   const actual = await vi.importActual<typeof import("../../data/apiClient")>("../../data/apiClient");
@@ -20,16 +21,25 @@ vi.mock("../../data/apiClient", async () => {
       logout = mockLogout;
       getSteamLoginUrl = mockGetSteamLoginUrl;
       consumeAuthToken = mockConsumeAuthToken;
+      popReturnTo = mockPopReturnTo;
     },
   };
 });
 
-// ─── Test consumer component ───
+// ─── Test helpers ───
 
 function TestConsumer(props: { onAuth: (auth: Auth) => void }) {
   const auth = useAuth();
   props.onAuth(auth);
   return <div data-testid="authenticated">{String(auth.authenticated())}</div>;
+}
+
+function renderAuth(onAuth: (a: Auth) => void = () => {}) {
+  return render(() => (
+    <AuthProvider>
+      <TestConsumer onAuth={onAuth} />
+    </AuthProvider>
+  ));
 }
 
 // ─── Tests ───
@@ -39,6 +49,7 @@ describe("useAuth", () => {
     mockGetMe.mockResolvedValue({ authenticated: false });
     mockLogout.mockResolvedValue(undefined);
     mockConsumeAuthToken.mockReturnValue(false);
+    mockPopReturnTo.mockReturnValue(null);
   });
 
   afterEach(() => {
@@ -58,22 +69,14 @@ describe("useAuth", () => {
   });
 
   it("skips getMe when no token is stored", async () => {
-    const { findByTestId } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={() => {}} />
-      </AuthProvider>
-    ));
+    const { findByTestId } = renderAuth();
 
     await findByTestId("authenticated");
     expect(mockGetMe).not.toHaveBeenCalled();
   });
 
   it("consumes auth token from URL params on mount", async () => {
-    const { findByTestId } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={() => {}} />
-      </AuthProvider>
-    ));
+    const { findByTestId } = renderAuth();
 
     await findByTestId("authenticated");
     expect(mockConsumeAuthToken).toHaveBeenCalled();
@@ -83,11 +86,7 @@ describe("useAuth", () => {
     setAuthToken("stored-jwt");
     mockGetMe.mockRejectedValue(new Error("network error"));
 
-    const { findByText } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={() => {}} />
-      </AuthProvider>
-    ));
+    const { findByText } = renderAuth();
 
     expect(await findByText("false")).toBeDefined();
   });
@@ -96,32 +95,29 @@ describe("useAuth", () => {
     setAuthToken("stored-jwt");
     mockGetMe.mockResolvedValue({ authenticated: true, steamId: "76561198012345678" });
 
-    const { findByText } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={() => {}} />
-      </AuthProvider>
-    ));
+    const { findByText } = renderAuth();
 
     expect(await findByText("true")).toBeDefined();
     expect(mockGetMe).toHaveBeenCalledOnce();
   });
 
-  it("loginWithSteam redirects to Steam login URL", async () => {
-    const originalLocation = window.location.href;
-    // Mock window.location.href setter
+  it("loginWithSteam redirects to Steam login URL with current path", async () => {
+    // Mock window.location with pathname and search
     const hrefSetter = vi.fn();
     Object.defineProperty(window, "location", {
-      value: { ...window.location, get href() { return originalLocation; }, set href(v: string) { hrefSetter(v); } },
+      value: {
+        ...window.location,
+        pathname: "/recording/42/my-mission",
+        search: "",
+        get href() { return "http://localhost/recording/42/my-mission"; },
+        set href(v: string) { hrefSetter(v); },
+      },
       writable: true,
       configurable: true,
     });
 
     let authRef!: Auth;
-    render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
+    renderAuth((a) => { authRef = a; });
 
     await vi.waitFor(() => {
       expect(authRef).toBeDefined();
@@ -129,11 +125,10 @@ describe("useAuth", () => {
 
     authRef.loginWithSteam();
     expect(hrefSetter).toHaveBeenCalledWith("/api/v1/auth/steam");
+    expect(mockGetSteamLoginUrl).toHaveBeenCalledWith("/recording/42/my-mission");
   });
 
   it("reads auth_error from URL and sets authError signal", async () => {
-    // jsdom supports setting location via navigation
-    const origSearch = window.location.search;
     Object.defineProperty(window, "location", {
       value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
       writable: true,
@@ -141,11 +136,7 @@ describe("useAuth", () => {
     });
 
     let authRef!: Auth;
-    render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
+    renderAuth((a) => { authRef = a; });
 
     await vi.waitFor(() => {
       expect(authRef).toBeDefined();
@@ -161,11 +152,7 @@ describe("useAuth", () => {
     });
 
     let authRef!: Auth;
-    render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
+    renderAuth((a) => { authRef = a; });
 
     await vi.waitFor(() => {
       expect(authRef.authError()).toBe("Steam login failed. Please try again.");
@@ -185,11 +172,7 @@ describe("useAuth", () => {
     });
 
     let authRef!: Auth;
-    render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
+    renderAuth((a) => { authRef = a; });
 
     await vi.waitFor(() => {
       expect(authRef.steamName()).toBe("TestPlayer");
@@ -208,11 +191,7 @@ describe("useAuth", () => {
     mockLogout.mockResolvedValue(undefined);
 
     let authRef!: Auth;
-    const { findByText } = render(() => (
-      <AuthProvider>
-        <TestConsumer onAuth={(a) => { authRef = a; }} />
-      </AuthProvider>
-    ));
+    const { findByText } = renderAuth((a) => { authRef = a; });
 
     // Wait until authenticated is true from getMe
     await findByText("true");
