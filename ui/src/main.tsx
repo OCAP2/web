@@ -3,6 +3,7 @@ import { Router, Route } from "@solidjs/router";
 import { App } from "./App";
 import { RecordingSelector } from "./pages/recording-selector";
 import { RecordingPlayback } from "./pages/recording-playback";
+import { MapManager } from "./pages/map-manager";
 
 // Backwards compat: redirect ?op=<id> to /recording/<id>/<id>
 const params = new URLSearchParams(window.location.search);
@@ -21,6 +22,7 @@ if (root) {
       <Router root={App}>
         <Route path="/" component={RecordingSelector} />
         <Route path="/recording/:id/:name" component={RecordingPlayback} />
+        <Route path="/map-manager" component={MapManager} />
       </Router>
     ),
     root,

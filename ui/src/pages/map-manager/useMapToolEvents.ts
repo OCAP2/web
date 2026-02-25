@@ -1,0 +1,81 @@
+import { createSignal, onCleanup } from "solid-js";
+import type { JobInfo, MapToolEvent } from "./types";
+
+export function useMapToolEvents(eventsUrl: () => string) {
+  const [jobs, setJobs] = createSignal<JobInfo[]>([]);
+  const [connected, setConnected] = createSignal(false);
+
+  let es: EventSource | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let backoff = 1000;
+
+  function connect() {
+    if (es) {
+      es.close();
+      es = null;
+    }
+
+    const url = eventsUrl();
+    if (!url) return;
+
+    es = new EventSource(url);
+
+    es.addEventListener("snapshot", (e: MessageEvent) => {
+      const data = JSON.parse(e.data) as JobInfo[];
+      setJobs(data);
+      setConnected(true);
+      backoff = 1000;
+    });
+
+    es.addEventListener("progress", (e: MessageEvent) => {
+      const evt = JSON.parse(e.data) as MapToolEvent;
+      if (!evt.data) return;
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === evt.data!.jobId
+            ? {
+                ...j,
+                stage: evt.data!.stage,
+                stageNum: evt.data!.stageNum,
+                totalStages: evt.data!.totalStages,
+                message: evt.data!.message,
+              }
+            : j,
+        ),
+      );
+    });
+
+    es.addEventListener("status", (e: MessageEvent) => {
+      const evt = JSON.parse(e.data) as MapToolEvent;
+      if (!evt.job) return;
+      setJobs((prev) => {
+        const idx = prev.findIndex((j) => j.id === evt.job!.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = evt.job!;
+          return next;
+        }
+        return [...prev, evt.job!];
+      });
+    });
+
+    es.onerror = () => {
+      setConnected(false);
+      es?.close();
+      es = null;
+      reconnectTimer = setTimeout(() => {
+        backoff = Math.min(backoff * 2, 30000);
+        connect();
+      }, backoff);
+    };
+  }
+
+  connect();
+
+  onCleanup(() => {
+    es?.close();
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+  });
+
+  return { jobs, connected };
+}

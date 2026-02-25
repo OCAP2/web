@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OCAP2/web/internal/maptool"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/yohcop/openid-go"
@@ -40,8 +41,10 @@ type Handler struct {
 	repoAmmo          *RepoAmmo
 	setting           Setting
 	jwt               *JWTManager
-	conversionTrigger ConversionTrigger // optional, nil if conversion disabled
-	staticFS          fs.FS             // optional, nil disables static file serving
+	conversionTrigger ConversionTrigger  // optional, nil if conversion disabled
+	staticFS          fs.FS              // optional, nil disables static file serving
+	maptoolMgr        *maptool.JobManager // optional, nil if maptool disabled
+	maptoolCfg        *maptoolConfig      // optional, nil if maptool disabled
 	openIDVerifier    openIDVerifier
 	openIDCache       openid.DiscoveryCache
 	openIDNonceStore  openid.NonceStore
@@ -62,6 +65,14 @@ func WithConversionTrigger(trigger ConversionTrigger) HandlerOption {
 func WithStaticFS(fsys fs.FS) HandlerOption {
 	return func(h *Handler) {
 		h.staticFS = fsys
+	}
+}
+
+// WithMapTool enables the maptool integration
+func WithMapTool(jm *maptool.JobManager, tools maptool.ToolSet, mapsDir string) HandlerOption {
+	return func(h *Handler) {
+		h.maptoolMgr = jm
+		h.maptoolCfg = &maptoolConfig{tools: tools, mapsDir: mapsDir}
 	}
 }
 
@@ -169,6 +180,20 @@ func NewHandler(
 	admin.POST("/api/v1/operations/:id/retry", hdlr.RetryConversion)
 	admin.PUT("/api/v1/operations/:id/marker-blacklist/:playerId", hdlr.AddMarkerBlacklist)
 	admin.DELETE("/api/v1/operations/:id/marker-blacklist/:playerId", hdlr.RemoveMarkerBlacklist)
+
+	// MapTool routes (require admin JWT; SSE endpoint handles its own auth via query param)
+	if hdlr.maptoolMgr != nil {
+		mt := admin.Group("/api/v1/maptool")
+		mt.GET("/tools", hdlr.getMapToolTools)
+		mt.GET("/maps", hdlr.getMapToolMaps)
+		mt.DELETE("/maps/:name", hdlr.deleteMapToolMap)
+		mt.POST("/maps/import", hdlr.importMapToolZip, middleware.BodyLimit(setting.MapTool.BodyLimit))
+		mt.POST("/maps/restyle", hdlr.restyleMapToolAll)
+		mt.GET("/jobs", hdlr.getMapToolJobs)
+		mt.POST("/jobs/:id/cancel", hdlr.cancelMapToolJob)
+		// SSE endpoint — registered on the prefix group (not admin) so it can do its own auth via query token
+		g.GET("/api/v1/maptool/events", hdlr.mapToolEventStream)
+	}
 
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing

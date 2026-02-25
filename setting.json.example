@@ -36,5 +36,9 @@
 		"sessionTTL": "24h",
 		"allowedSteamIds": [],
 		"steamApiKey": ""
+	},
+	"maptool": {
+		"enabled": false,
+		"bodyLimit": "2G"
 	}
 }

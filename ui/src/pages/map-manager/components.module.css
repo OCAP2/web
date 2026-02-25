@@ -1,0 +1,134 @@
+/* ─── ToolStatus ─── */
+
+.toolGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.toolItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-interactive);
+  font-size: 0.8rem;
+  color: var(--accent-success);
+}
+
+.toolMissing {
+  color: var(--text-dim);
+}
+
+.toolIcon {
+  display: flex;
+  align-items: center;
+}
+
+.toolName {
+  font-family: var(--font-mono);
+}
+
+.toolRequired {
+  font-size: 0.7rem;
+  color: var(--accent-danger);
+  text-transform: uppercase;
+}
+
+.toolOptional {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+/* ─── PipelineProgress ─── */
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.pipelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pipelineWorld {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.pipelineStatus {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.progressBar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-interactive);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.pipelineDetail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.pipelineError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.8rem;
+  color: var(--accent-danger);
+}
+
+/* ─── JobHistory ─── */
+
+.jobList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.jobItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--bg-interactive);
+}
+
+.cancelBtn {
+  padding: 4px 12px;
+  border: 1px solid var(--accent-danger);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent-danger);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 74, 74, 0.1);
+}

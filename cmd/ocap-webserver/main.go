@@ -16,6 +16,7 @@ import (
 
 	"github.com/OCAP2/web/internal/conversion"
 	"github.com/OCAP2/web/internal/frontend"
+	"github.com/OCAP2/web/internal/maptool"
 	"github.com/OCAP2/web/internal/server"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -119,6 +120,22 @@ func app() error {
 
 		// Start background worker for retries and batch processing
 		go worker.Start(ctx)
+	}
+
+	if setting.MapTool.Enabled {
+		tools := maptool.DetectTools()
+		slog.Info("maptool: tools detected")
+		for _, t := range tools {
+			found := "not found"
+			if t.Found {
+				found = t.Path
+			}
+			slog.Info("maptool", "tool", t.Name, "status", found, "required", t.Required)
+		}
+		newPipeline := func() *maptool.Pipeline { return maptool.BuildGradMehPipeline(tools) }
+		jm := maptool.NewJobManager(setting.Maps, newPipeline)
+		go jm.Start(ctx)
+		handlerOpts = append(handlerOpts, server.WithMapTool(jm, tools, setting.Maps))
 	}
 
 	server.NewHandler(e, operation, marker, ammo, setting, handlerOpts...)

@@ -65,6 +65,9 @@ type Job struct {
 	// When true, PMTiles go to OutputDir/tiles/ and styles go to OutputDir/styles/.
 	SubDirs bool `json:"-"`
 
+	// cancelFunc cancels this job's context (set by JobManager).
+	cancelFunc context.CancelFunc
+
 	// customRun, if set, is used instead of the pipeline for job processing.
 	customRun func(ctx context.Context, job *Job) error
 }

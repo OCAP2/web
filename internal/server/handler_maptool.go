@@ -1,12 +1,10 @@
-package main
+package server
 
 import (
 	"context"
-	"embed"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,58 +16,35 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-//go:embed static
-var staticFiles embed.FS
-
-type handler struct {
+// maptoolConfig holds the maptool-specific configuration for the handler.
+type maptoolConfig struct {
 	tools   maptool.ToolSet
-	jm      *maptool.JobManager
 	mapsDir string
 }
 
-func newHandler(e *echo.Echo, tools maptool.ToolSet, jm *maptool.JobManager, mapsDir string) {
-	h := &handler{tools: tools, jm: jm, mapsDir: mapsDir}
-
-	// API routes
-	api := e.Group("/api")
-	api.GET("/tools", h.getTools)
-	api.GET("/maps", h.getMaps)
-	api.DELETE("/maps/:name", h.deleteMap)
-	api.POST("/maps/import", h.importZip)
-	api.POST("/maps/restyle", h.restyleAll)
-	api.GET("/jobs", h.getJobs)
-	api.GET("/jobs/:id", h.getJob)
-	api.GET("/jobs/:id/sse", h.jobSSE)
-
-	// Serve map files (previews, etc.) from the maps directory
-	e.Static("/maps", mapsDir)
-
-	// Static files (embedded) — strip "static/" prefix so files are served from root
-	staticSub, _ := fs.Sub(staticFiles, "static")
-	fileServer := http.FileServer(http.FS(staticSub))
-	e.GET("/*", echo.WrapHandler(fileServer))
+// getMapToolTools returns detected tool availability.
+func (h *Handler) getMapToolTools(c echo.Context) error {
+	return c.JSON(http.StatusOK, h.maptoolCfg.tools)
 }
 
-func (h *handler) getTools(c echo.Context) error {
-	return c.JSON(http.StatusOK, h.tools)
-}
-
-func (h *handler) getMaps(c echo.Context) error {
-	maps, err := maptool.ScanMaps(h.mapsDir)
+// getMapToolMaps returns the list of installed maps.
+func (h *Handler) getMapToolMaps(c echo.Context) error {
+	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, maps)
 }
 
-func (h *handler) deleteMap(c echo.Context) error {
+// deleteMapToolMap removes a map directory.
+func (h *Handler) deleteMapToolMap(c echo.Context) error {
 	name := c.Param("name")
 	if name == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
 	}
-	dir := filepath.Join(h.mapsDir, filepath.Clean(name))
+	dir := filepath.Join(h.maptoolCfg.mapsDir, filepath.Clean(name))
 	absDir, _ := filepath.Abs(dir)
-	absMaps, _ := filepath.Abs(h.mapsDir)
+	absMaps, _ := filepath.Abs(h.maptoolCfg.mapsDir)
 	if !strings.HasPrefix(absDir, absMaps+string(filepath.Separator)) {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
 	}
@@ -79,7 +54,8 @@ func (h *handler) deleteMap(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *handler) importZip(c echo.Context) error {
+// importMapToolZip handles ZIP upload, extraction, and pipeline submission.
+func (h *Handler) importMapToolZip(c echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "file field is required"})
@@ -88,7 +64,6 @@ func (h *handler) importZip(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "only .zip files are accepted"})
 	}
 
-	// Save uploaded file to temp
 	src, err := file.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to read upload"})
@@ -108,7 +83,6 @@ func (h *handler) importZip(c echo.Context) error {
 	}
 	tmpFile.Close()
 
-	// Extract ZIP to a per-upload directory
 	extractDir, err := os.MkdirTemp("", "ocap-maptool-uploads-")
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create extraction dir"})
@@ -121,7 +95,6 @@ func (h *handler) importZip(c echo.Context) error {
 		})
 	}
 
-	// Locate grad_meh directory — could be at root or one level deep
 	gradMehDir, err := maptool.FindGradMehDir(extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
@@ -131,7 +104,7 @@ func (h *handler) importZip(c echo.Context) error {
 	}
 
 	worldName := maptool.WorldNameFromDir(gradMehDir)
-	snap, err := h.jm.Submit(gradMehDir, worldName)
+	snap, err := h.maptoolMgr.Submit(gradMehDir, worldName)
 	if err != nil {
 		os.RemoveAll(extractDir)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -140,8 +113,9 @@ func (h *handler) importZip(c echo.Context) error {
 	return c.JSON(http.StatusAccepted, snap)
 }
 
-func (h *handler) restyleAll(c echo.Context) error {
-	maps, err := maptool.ScanMaps(h.mapsDir)
+// restyleMapToolAll restyles all existing maps.
+func (h *Handler) restyleMapToolAll(c echo.Context) error {
+	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -150,14 +124,14 @@ func (h *handler) restyleAll(c echo.Context) error {
 	}
 
 	id := fmt.Sprintf("restyle-%d", time.Now().UnixMilli())
-	snap, err := h.jm.SubmitFunc(id, "restyle-all", func(ctx context.Context, job *maptool.Job) error {
+	snap, err := h.maptoolMgr.SubmitFunc(id, "restyle-all", func(ctx context.Context, job *maptool.Job) error {
 		var errs []error
 		for i, m := range maps {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
 			job.SetProgress(m.Name, i+1, len(maps))
-			if err := maptool.RestyleWorld(h.mapsDir, m.Name); err != nil {
+			if err := maptool.RestyleWorld(h.maptoolCfg.mapsDir, m.Name); err != nil {
 				log.Printf("restyle %s: %v", m.Name, err)
 				errs = append(errs, fmt.Errorf("%s: %w", m.Name, err))
 				continue
@@ -165,7 +139,7 @@ func (h *handler) restyleAll(c echo.Context) error {
 			log.Printf("restyled: %s", m.Name)
 		}
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to restyle %d map(s):\n%w", len(errs), errors.Join(errs...))
+			return fmt.Errorf("failed to restyle %d map(s)", len(errs))
 		}
 		return nil
 	})
@@ -176,32 +150,57 @@ func (h *handler) restyleAll(c echo.Context) error {
 	return c.JSON(http.StatusAccepted, snap)
 }
 
-func (h *handler) getJobs(c echo.Context) error {
-	return c.JSON(http.StatusOK, h.jm.ListJobs())
+// getMapToolJobs returns all job snapshots.
+func (h *Handler) getMapToolJobs(c echo.Context) error {
+	return c.JSON(http.StatusOK, h.maptoolMgr.ListJobs())
 }
 
-func (h *handler) getJob(c echo.Context) error {
-	job := h.jm.GetJob(c.Param("id"))
-	if job == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "job not found"})
+// cancelMapToolJob cancels a running job.
+func (h *Handler) cancelMapToolJob(c echo.Context) error {
+	id := c.Param("id")
+	if err := h.maptoolMgr.CancelJob(id); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, job)
+	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *handler) jobSSE(c echo.Context) error {
-	jobID := c.Param("id")
-	snap := h.jm.GetJob(jobID)
-	if snap == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "job not found"})
+// mapToolEventStream is an SSE endpoint that streams all job events.
+func (h *Handler) mapToolEventStream(c echo.Context) error {
+	// Auth: EventSource cannot set headers, so accept token via query param
+	token := bearerToken(c)
+	if token == "" {
+		token = c.QueryParam("token")
+	}
+	if token == "" || h.jwt.Validate(token) != nil {
+		return echo.ErrUnauthorized
 	}
 
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
 
-	fmt.Fprintf(c.Response(), "data: {\"status\":%q,\"error\":%q}\n\n", snap.Status, snap.Error)
+	// Send initial snapshot of all jobs
+	jobs := h.maptoolMgr.ListJobs()
+	snapData, _ := json.Marshal(jobs)
+	fmt.Fprintf(c.Response(), "event: snapshot\ndata: %s\n\n", snapData)
 	c.Response().Flush()
 
-	log.Printf("SSE connection for job %s (status: %s)", jobID, snap.Status)
-	return nil
+	// Subscribe to live events
+	subID, events := h.maptoolMgr.Subscribe()
+	defer h.maptoolMgr.Unsubscribe(subID)
+
+	ctx := c.Request().Context()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case evt, ok := <-events:
+			if !ok {
+				return nil
+			}
+			data, _ := json.Marshal(evt)
+			fmt.Fprintf(c.Response(), "event: %s\ndata: %s\n\n", evt.Type, data)
+			c.Response().Flush()
+		}
+	}
 }

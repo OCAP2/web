@@ -17,10 +17,23 @@ ARG build_commit
 RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -o app ./cmd/ocap-webserver
 
 FROM alpine:3.23
+ARG VARIANT=slim
 WORKDIR /usr/local/ocap
 RUN adduser -D -h /home/container container && \
     mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
     echo '{}' > /etc/ocap/setting.json
+
+# Full variant: install maptool dependencies (GDAL, tippecanoe, pmtiles)
+RUN if [ "$VARIANT" = "full" ]; then \
+      apk add --no-cache gdal-tools py3-gdal cmake make g++ git sqlite-dev zlib-dev && \
+      git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe && \
+      cd /tmp/tippecanoe && make -j$(nproc) && make install && \
+      rm -rf /tmp/tippecanoe && \
+      apk del cmake make g++ git && \
+      wget -qO /usr/local/bin/pmtiles https://github.com/protomaps/go-pmtiles/releases/latest/download/pmtiles_linux_amd64 && \
+      chmod +x /usr/local/bin/pmtiles && \
+      echo '{"maptool":{"enabled":true}}' > /etc/ocap/setting.json; \
+    fi
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \
     OCAP_DATA=/var/lib/ocap/data \

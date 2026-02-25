@@ -9,6 +9,57 @@ import (
 	"time"
 )
 
+// Event is broadcast to all SSE subscribers.
+type Event struct {
+	Type     string   `json:"type"`              // "progress" | "status"
+	Progress *Progress `json:"data,omitempty"`    // for progress events
+	Job      *JobInfo  `json:"job,omitempty"`     // for status events (done/failed/cancelled)
+}
+
+// eventHub manages SSE subscribers.
+type eventHub struct {
+	mu          sync.RWMutex
+	subscribers map[uint64]chan Event
+	nextID      uint64
+}
+
+func newEventHub() *eventHub {
+	return &eventHub{
+		subscribers: make(map[uint64]chan Event),
+	}
+}
+
+func (h *eventHub) subscribe() (uint64, <-chan Event) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	id := h.nextID
+	h.nextID++
+	ch := make(chan Event, 64)
+	h.subscribers[id] = ch
+	return id, ch
+}
+
+func (h *eventHub) unsubscribe(id uint64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if ch, ok := h.subscribers[id]; ok {
+		close(ch)
+		delete(h.subscribers, id)
+	}
+}
+
+func (h *eventHub) broadcast(evt Event) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, ch := range h.subscribers {
+		select {
+		case ch <- evt:
+		default:
+			// subscriber too slow, drop event
+		}
+	}
+}
+
 // JobManager manages import jobs — one active, rest queued.
 type JobManager struct {
 	mapsDir     string
@@ -18,6 +69,7 @@ type JobManager struct {
 	queue       chan *Job
 	cancel      context.CancelFunc
 	onProgress  func(Progress)
+	hub         *eventHub
 }
 
 // NewJobManager creates a job manager.
@@ -27,14 +79,25 @@ func NewJobManager(mapsDir string, newPipeline func() *Pipeline) *JobManager {
 		newPipeline: newPipeline,
 		jobs:        make(map[string]*Job),
 		queue:       make(chan *Job, 100),
+		hub:         newEventHub(),
 	}
 }
 
-// OnProgress sets a callback for job progress updates.
+// OnProgress sets a callback for job progress updates (used by standalone CLI).
 func (jm *JobManager) OnProgress(fn func(Progress)) {
 	jm.mu.Lock()
 	defer jm.mu.Unlock()
 	jm.onProgress = fn
+}
+
+// Subscribe registers an SSE subscriber and returns its ID and event channel.
+func (jm *JobManager) Subscribe() (uint64, <-chan Event) {
+	return jm.hub.subscribe()
+}
+
+// Unsubscribe removes an SSE subscriber.
+func (jm *JobManager) Unsubscribe(id uint64) {
+	jm.hub.unsubscribe(id)
 }
 
 // Start begins processing queued jobs. Blocks until context is cancelled.
@@ -129,23 +192,62 @@ func (jm *JobManager) ListJobs() []JobInfo {
 	return result
 }
 
+// CancelJob cancels a running job by ID.
+func (jm *JobManager) CancelJob(id string) error {
+	jm.mu.RLock()
+	job := jm.jobs[id]
+	jm.mu.RUnlock()
+	if job == nil {
+		return fmt.Errorf("job %q not found", id)
+	}
+
+	job.mu.RLock()
+	cancelFn := job.cancelFunc
+	status := job.Status
+	job.mu.RUnlock()
+
+	if status != StatusRunning && status != StatusPending {
+		return fmt.Errorf("job %q is not running (status: %s)", id, status)
+	}
+	if cancelFn != nil {
+		cancelFn()
+	}
+	return nil
+}
+
 func (jm *JobManager) processJob(ctx context.Context, job *Job) {
+	// Create per-job context for cancellation
+	jobCtx, jobCancel := context.WithCancel(ctx)
+	job.mu.Lock()
+	job.cancelFunc = jobCancel
+	job.mu.Unlock()
+	defer jobCancel()
+
 	if job.customRun != nil {
 		job.Start()
-		if err := job.customRun(ctx, job); err != nil {
-			job.setStatus(StatusFailed, err.Error())
+		if err := job.customRun(jobCtx, job); err != nil {
+			if jobCtx.Err() != nil {
+				job.setStatus(StatusCancelled, "")
+				jm.broadcastStatus(job)
+			} else {
+				job.setStatus(StatusFailed, err.Error())
+				jm.broadcastStatus(job)
+			}
 			return
 		}
 		job.setStatus(StatusDone, "")
+		jm.broadcastStatus(job)
 		return
 	}
 
 	if err := os.MkdirAll(job.OutputDir, 0755); err != nil {
 		job.setStatus(StatusFailed, err.Error())
+		jm.broadcastStatus(job)
 		return
 	}
 	if err := os.MkdirAll(job.TempDir, 0755); err != nil {
 		job.setStatus(StatusFailed, err.Error())
+		jm.broadcastStatus(job)
 		return
 	}
 
@@ -153,16 +255,36 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 
 	pipeline := jm.newPipeline()
 
+	// Wire progress to both the callback (standalone CLI) and broadcast hub
 	jm.mu.RLock()
 	onProgress := jm.onProgress
 	jm.mu.RUnlock()
-	pipeline.OnProgress = onProgress
+	pipeline.OnProgress = func(p Progress) {
+		if onProgress != nil {
+			onProgress(p)
+		}
+		jm.hub.broadcast(Event{
+			Type:     "progress",
+			Progress: &p,
+		})
+	}
 
-	if err := pipeline.Run(ctx, job); err != nil {
+	if err := pipeline.Run(jobCtx, job); err != nil {
+		jm.broadcastStatus(job)
 		return
 	}
+
+	jm.broadcastStatus(job)
 
 	// Clean up temp directory and uploaded files on success
 	os.RemoveAll(job.TempDir)
 	os.RemoveAll(filepath.Dir(job.InputPath))
+}
+
+func (jm *JobManager) broadcastStatus(job *Job) {
+	snap := job.Snapshot()
+	jm.hub.broadcast(Event{
+		Type: "status",
+		Job:  &snap,
+	})
 }

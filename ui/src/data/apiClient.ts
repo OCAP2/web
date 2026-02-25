@@ -1,4 +1,5 @@
 import type { Recording, WorldConfig } from "./types";
+import type { ToolSet, MapInfo, JobInfo } from "../pages/map-manager/types";
 
 // ─── Response types for endpoints not covered in types.ts ───
 
@@ -453,7 +454,120 @@ export class ApiClient {
     }
   }
 
+  // ─── MapTool methods ───
+
+  async getMapToolTools(): Promise<ToolSet> {
+    return this.fetchJsonAuth<ToolSet>(`${this.baseUrl}/api/v1/maptool/tools`);
+  }
+
+  async getMapToolMaps(): Promise<MapInfo[]> {
+    return this.fetchJsonAuth<MapInfo[]>(`${this.baseUrl}/api/v1/maptool/maps`);
+  }
+
+  async deleteMapToolMap(name: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/maptool/maps/${encodeURIComponent(name)}`,
+      { method: "DELETE", headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Delete map failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
+  async importMapToolZip(
+    file: File,
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<JobInfo> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${this.baseUrl}/api/v1/maptool/maps/import`);
+
+      const token = getAuthToken();
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(e.loaded, e.total);
+        };
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText) as JobInfo);
+        } else {
+          reject(
+            new ApiError(
+              `Upload failed: ${xhr.status} ${xhr.statusText}`,
+              xhr.status,
+              xhr.statusText,
+            ),
+          );
+        }
+      };
+
+      xhr.onerror = () =>
+        reject(new ApiError("Upload network error", 0, "Network Error"));
+
+      const formData = new FormData();
+      formData.append("file", file);
+      xhr.send(formData);
+    });
+  }
+
+  async restyleMapToolAll(): Promise<JobInfo> {
+    return this.fetchJsonAuth<JobInfo>(
+      `${this.baseUrl}/api/v1/maptool/maps/restyle`,
+      "POST",
+    );
+  }
+
+  async getMapToolJobs(): Promise<JobInfo[]> {
+    return this.fetchJsonAuth<JobInfo[]>(`${this.baseUrl}/api/v1/maptool/jobs`);
+  }
+
+  async cancelMapToolJob(id: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/maptool/jobs/${encodeURIComponent(id)}/cancel`,
+      { method: "POST", headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Cancel job failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
+  getMapToolEventsUrl(): string {
+    const token = getAuthToken();
+    return `${this.baseUrl}/api/v1/maptool/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  }
+
   // ─── Internal fetch helpers ───
+
+  private async fetchJsonAuth<T>(
+    url: string,
+    method: string = "GET",
+  ): Promise<T> {
+    const response = await fetch(url, {
+      method,
+      headers: authHeaders(),
+      cache: "no-cache",
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        `${method} ${url} failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+    return response.json() as Promise<T>;
+  }
 
   private async fetchJson<T>(url: string): Promise<T> {
     const response = await fetch(url, { cache: "no-cache" });
