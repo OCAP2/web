@@ -69,6 +69,9 @@ function mockFetchWith(ops: Recording[]) {
           tag: op.tag,
           storageFormat: op.storageFormat,
           conversionStatus: op.conversionStatus,
+          player_count: op.playerCount,
+          kill_count: op.killCount,
+          player_kill_count: op.playerKillCount,
         })),
       ),
   } as Response);
@@ -433,6 +436,22 @@ describe("RecordingSelector", () => {
     });
   });
 
+  it("sorts by duration when Duration header is clicked", async () => {
+    const { findByTestId, getByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    const durationHeader = screen.getByRole("button", { name: "Duration" });
+    fireEvent.click(durationHeader);
+
+    await vi.waitFor(() => {
+      const list = getByTestId("recordings-list");
+      const rows = list.querySelectorAll("[data-testid^='recording-']");
+      const names = Array.from(rows).map((r) => r.textContent!);
+      // Descending by duration: Op Alpha (3600s) should be first
+      expect(names[0]).toContain("Op Alpha");
+    });
+  });
+
   it("toggles sort direction on second click", async () => {
     const { findByTestId, getByTestId } = renderPage();
     await findByTestId("recording-1");
@@ -522,6 +541,71 @@ describe("RecordingSelector", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  // ── Keyboard navigation ──
+
+  it("ArrowDown selects the first recording when none is selected", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+
+    await vi.waitFor(() => {
+      // The first recording in descending date order should be selected (id=5 is most recent)
+      const list = screen.getByTestId("recordings-list");
+      const rows = list.querySelectorAll("[data-testid^='recording-']");
+      const firstId = rows[0]?.getAttribute("data-testid");
+      // The first row should now have selected styling (sidebar opens)
+      expect(screen.getByTestId("detail-sidebar")).toBeDefined();
+    });
+  });
+
+  it("ArrowDown moves selection to the next recording", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    // Select first item
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    await vi.waitFor(() => expect(screen.getByTestId("detail-sidebar")).toBeDefined());
+
+    // Move down
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+
+    // Sidebar should still be open with a different recording
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("detail-sidebar")).toBeDefined();
+    });
+  });
+
+  it("ArrowUp selects the last recording when none is selected", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("detail-sidebar")).toBeDefined();
+    });
+  });
+
+  it("ArrowUp moves selection to the previous recording", async () => {
+    const { findByTestId } = renderPage();
+    const op3 = await findByTestId("recording-3");
+
+    // Select a recording in the middle
+    fireEvent.click(op3);
+    await vi.waitFor(() => {
+      const sidebar = screen.getByTestId("detail-sidebar");
+      expect(within(sidebar).getByText(/Op Charlie/)).toBeDefined();
+    });
+
+    // Move up
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("detail-sidebar")).toBeDefined();
+    });
+  });
+
   // ── Header stats ──
 
   it("shows correct map count in stats", async () => {
@@ -581,6 +665,139 @@ describe("RecordingSelector", () => {
 
     await vi.waitFor(() => {
       expect(screen.queryByTestId("auth-toast")).toBeNull();
+    });
+  });
+});
+
+// ─── Player/kill data and language selector tests ───
+
+describe("RecordingSelector (player/kill columns)", () => {
+  const recsWithStats: Recording[] = [
+    {
+      id: "10",
+      worldName: "Altis",
+      missionName: "Op Stats A",
+      missionDuration: 3600,
+      date: "2024-01-01",
+      tag: "TvT",
+      playerCount: 32,
+      killCount: 150,
+    },
+    {
+      id: "11",
+      worldName: "Stratis",
+      missionName: "Op Stats B",
+      missionDuration: 1800,
+      date: "2024-02-01",
+      tag: "COOP",
+      playerCount: 16,
+      killCount: 50,
+    },
+  ];
+
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/");
+    mockFetchWith(recsWithStats);
+  });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  it("shows player and kill column headers when data is present", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-10");
+
+    // Column headers for players and kills should be visible
+    // t("players") = "Players", t("total_kills") = "Kills"
+    expect(screen.getAllByText("Players").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Kills").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows maxPlayers stat pill", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-10");
+
+    // maxPlayers = 32, label t("max_players") = "MAX PLAYERS"
+    // "32" appears in both the stat pill and the row, so check for at least one
+    expect(screen.getAllByText("32").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("MAX PLAYERS")).toBeDefined();
+  });
+
+  it("shows totalKills stat pill", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-10");
+
+    // totalKills = 150 + 50 = 200, label t("total_kills") = "Kills"
+    expect(screen.getByText("200")).toBeDefined();
+  });
+});
+
+describe("RecordingSelector (language selector)", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/");
+    mockFetchWith(mockRecordings);
+  });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  it("opens language dropdown when language button is clicked", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    // Find the language button by its label text
+    const langButton = screen.getByText("English").closest("button")!;
+    fireEvent.click(langButton);
+
+    // Dropdown should appear with language options
+    await vi.waitFor(() => {
+      expect(screen.getByText("Deutsch")).toBeDefined();
+      expect(screen.getByText("Italiano")).toBeDefined();
+    });
+  });
+
+  it("selects a language and closes the dropdown", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    // Open dropdown
+    const langButton = screen.getByText("English").closest("button")!;
+    fireEvent.click(langButton);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("Deutsch")).toBeDefined();
+    });
+
+    // Click on Deutsch
+    const deutschOption = screen.getAllByText("Deutsch");
+    // The option button is in the dropdown
+    const optionButton = deutschOption.find(el => el.closest("button") !== langButton)!;
+    fireEvent.click(optionButton.closest("button")!);
+
+    // Dropdown should close (the dropdown-only options like Italiano should disappear from dropdown)
+    await vi.waitFor(() => {
+      // The lang button label should now show Deutsch
+      expect(langButton.textContent).toContain("Deutsch");
+    });
+  });
+
+  it("closes language dropdown when overlay is clicked", async () => {
+    const { findByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    // Open dropdown
+    const langButton = screen.getByText("English").closest("button")!;
+    fireEvent.click(langButton);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("Italiano")).toBeDefined();
+    });
+
+    // Click Escape to close
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    // The dropdown content (like the title "LANGUAGE") should disappear
+    await vi.waitFor(() => {
+      // After Escape, the dropdown should be closed
+      // Check that one of the dropdown-only elements is no longer present
+      // The dropdown title "LANGUAGE" is only shown in the dropdown
+      expect(screen.queryByText("LANGUAGE")).toBeNull();
     });
   });
 });

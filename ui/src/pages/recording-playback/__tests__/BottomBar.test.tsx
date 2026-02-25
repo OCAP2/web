@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { BottomBar } from "../components/BottomBar";
+import type { Manifest } from "../../../data/types";
 import {
   createTestEngine,
   TestProviders,
@@ -116,5 +117,286 @@ describe("BottomBar", () => {
     fireEvent.click(option5x);
 
     expect(engine.playbackSpeed()).toBe(5);
+  });
+});
+
+/** Render BottomBar with a custom manifest for testing time modes. */
+function renderBottomBarWithManifest(manifest: Manifest) {
+  const { engine, renderer } = createTestEngine();
+  engine.loadRecording(manifest);
+
+  const [panelOpen, setPanelOpen] = createSignal(true);
+  const onTogglePanel = vi.fn(() => setPanelOpen((v) => !v));
+
+  const result = render(() => (
+    <TestProviders engine={engine} renderer={renderer}>
+      <BottomBar panelOpen={panelOpen} onTogglePanel={onTogglePanel} />
+    </TestProviders>
+  ));
+
+  return { engine, renderer, onTogglePanel, ...result };
+}
+
+describe("BottomBar - time mode dropdown", () => {
+  it("opens and closes the time mode dropdown", () => {
+    renderBottomBar();
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+
+    // Dropdown should be closed initially — no "In-Game World Time" option visible
+    expect(screen.queryByText("In-Game World Time")).toBeNull();
+
+    // Open the dropdown
+    fireEvent.click(timeModeButton);
+
+    // All three time mode options should be visible (button text + dropdown option for "elapsed")
+    expect(screen.getAllByText("Recording Time Elapsed").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("In-Game World Time")).toBeTruthy();
+    expect(screen.getByText("Server Time UTC")).toBeTruthy();
+
+    // Close by clicking the button again
+    fireEvent.click(timeModeButton);
+
+    // The dropdown options disappear (only the button text remains)
+    // "In-Game World Time" only appears in the dropdown, not the button
+    expect(screen.queryByText("In-Game World Time")).toBeNull();
+  });
+
+  it("selects a time mode and closes dropdown", () => {
+    // Create manifest with mission date so "mission" mode is available
+    const manifest = makeManifest([], [], 200);
+    manifest.times = [
+      {
+        frameNum: 0,
+        systemTimeUtc: "2024-01-15T12:00:00",
+        date: "2035-06-10T05:30:00",
+        timeMultiplier: 1,
+      },
+    ];
+    renderBottomBarWithManifest(manifest);
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+
+    // Open dropdown
+    fireEvent.click(timeModeButton);
+
+    // Click "In-Game World Time"
+    const missionOption = screen.getAllByText("In-Game World Time").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(missionOption);
+
+    // Dropdown should close
+    expect(screen.queryByText("Server Time UTC")).toBeNull();
+
+    // The button text should now show "In-Game World Time"
+    expect(screen.getByText("In-Game World Time")).toBeTruthy();
+  });
+
+  it("disables 'system' time mode when no times array", () => {
+    // Default manifest has empty times array
+    renderBottomBar();
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    // Find the "Server Time UTC" button in the dropdown
+    const systemOption = screen.getAllByText("Server Time UTC").find(
+      (el) => el.tagName === "BUTTON",
+    )! as HTMLButtonElement;
+
+    expect(systemOption.disabled).toBe(true);
+  });
+
+  it("disables 'mission' time mode when no missionDate", () => {
+    // Default manifest has no times entries => no missionDate
+    renderBottomBar();
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    const missionOption = screen.getAllByText("In-Game World Time").find(
+      (el) => el.tagName === "BUTTON",
+    )! as HTMLButtonElement;
+
+    expect(missionOption.disabled).toBe(true);
+  });
+
+  it("enables 'system' time mode when times array is populated", () => {
+    const manifest = makeManifest([], [], 200);
+    manifest.times = [
+      { frameNum: 0, systemTimeUtc: "2024-01-15T12:00:00" },
+      { frameNum: 100, systemTimeUtc: "2024-01-15T12:01:40" },
+    ];
+    renderBottomBarWithManifest(manifest);
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    const systemOption = screen.getAllByText("Server Time UTC").find(
+      (el) => el.tagName === "BUTTON",
+    )! as HTMLButtonElement;
+
+    expect(systemOption.disabled).toBe(false);
+  });
+
+  it("enables 'mission' time mode when missionDate is present", () => {
+    const manifest = makeManifest([], [], 200);
+    manifest.times = [
+      {
+        frameNum: 0,
+        systemTimeUtc: "2024-01-15T12:00:00",
+        date: "2035-06-10T05:30:00",
+        timeMultiplier: 1,
+      },
+    ];
+    renderBottomBarWithManifest(manifest);
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    const missionOption = screen.getAllByText("In-Game World Time").find(
+      (el) => el.tagName === "BUTTON",
+    )! as HTMLButtonElement;
+
+    expect(missionOption.disabled).toBe(false);
+  });
+
+  it("'elapsed' mode is always available", () => {
+    renderBottomBar();
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    const elapsedOption = screen.getAllByText("Recording Time Elapsed").find(
+      (el) => el.tagName === "BUTTON" && el !== timeModeButton,
+    )! as HTMLButtonElement;
+
+    expect(elapsedOption.disabled).toBe(false);
+  });
+
+  it("displays total time from endFrame", () => {
+    // frameCount=200, endFrame=199, captureDelayMs=1000: 199*1000=199000ms = 0:03:19
+    renderBottomBar(200);
+
+    // The time display shows "current / total" — total is based on endFrame
+    expect(screen.getByText("0:03:19")).toBeTruthy();
+  });
+
+  it("closes time mode dropdown when clicking outside", () => {
+    const { container } = renderBottomBar();
+
+    const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
+    fireEvent.click(timeModeButton);
+
+    // Dropdown is open
+    expect(screen.getByText("In-Game World Time")).toBeTruthy();
+
+    // Click outside (on the container itself)
+    fireEvent(document, new MouseEvent("pointerdown", { bubbles: true }));
+
+    // Dropdown should close
+    expect(screen.queryByText("In-Game World Time")).toBeNull();
+  });
+});
+
+describe("BottomBar - names dropdown", () => {
+  it("opens and closes the names dropdown", () => {
+    renderBottomBar();
+
+    const namesButton = screen.getByText("All Names").closest("button")!;
+
+    // Dropdown is closed
+    expect(screen.queryByText("Players Only")).toBeNull();
+
+    // Open
+    fireEvent.click(namesButton);
+
+    // All name modes visible (button text + dropdown option for "all")
+    expect(screen.getAllByText("All Names").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Players Only")).toBeTruthy();
+    expect(screen.getByText("Hide All")).toBeTruthy();
+
+    // Close by clicking again
+    fireEvent.click(namesButton);
+    expect(screen.queryByText("Players Only")).toBeNull();
+  });
+
+  it("selects 'Players Only' mode and calls renderer.setNameDisplayMode", () => {
+    const { renderer } = renderBottomBar();
+    const spy = vi.spyOn(renderer, "setNameDisplayMode");
+
+    const namesButton = screen.getByText("All Names").closest("button")!;
+    fireEvent.click(namesButton);
+
+    const playersOption = screen.getAllByText("Players Only").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(playersOption);
+
+    expect(spy).toHaveBeenCalledWith("players");
+
+    // Dropdown should close
+    expect(screen.queryByText("Hide All")).toBeNull();
+
+    // Button should now show "Players Only"
+    expect(screen.getByText("Players Only")).toBeTruthy();
+  });
+
+  it("selects 'Hide All' mode and calls renderer.setNameDisplayMode", () => {
+    const { renderer } = renderBottomBar();
+    const spy = vi.spyOn(renderer, "setNameDisplayMode");
+
+    const namesButton = screen.getByText("All Names").closest("button")!;
+    fireEvent.click(namesButton);
+
+    const hideAllOption = screen.getAllByText("Hide All").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(hideAllOption);
+
+    expect(spy).toHaveBeenCalledWith("none");
+
+    // Button should now show "Hide All"
+    expect(screen.getByText("Hide All")).toBeTruthy();
+  });
+
+  it("selects 'All Names' mode and calls renderer.setNameDisplayMode", () => {
+    const { renderer } = renderBottomBar();
+    const spy = vi.spyOn(renderer, "setNameDisplayMode");
+
+    // First switch to "Players Only" to be able to switch back to "All Names"
+    const namesButton = screen.getByText("All Names").closest("button")!;
+    fireEvent.click(namesButton);
+    const playersOption = screen.getAllByText("Players Only").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(playersOption);
+
+    // Now switch back to "All Names"
+    const namesButton2 = screen.getByText("Players Only").closest("button")!;
+    fireEvent.click(namesButton2);
+    const allOption = screen.getAllByText("All Names").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(allOption);
+
+    expect(spy).toHaveBeenCalledWith("all");
+  });
+
+  it("closes names dropdown when clicking outside", () => {
+    renderBottomBar();
+
+    const namesButton = screen.getByText("All Names").closest("button")!;
+    fireEvent.click(namesButton);
+
+    // Dropdown is open
+    expect(screen.getByText("Players Only")).toBeTruthy();
+
+    // Click outside
+    fireEvent(document, new MouseEvent("pointerdown", { bubbles: true }));
+
+    // Dropdown should close
+    expect(screen.queryByText("Players Only")).toBeNull();
   });
 });

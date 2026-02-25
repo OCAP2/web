@@ -103,4 +103,5 @@ describe("SidePanel", () => {
     // UnitsTab side tabs should no longer be rendered
     expect(screen.queryByText("BLUFOR")).toBeNull();
   });
+
 });

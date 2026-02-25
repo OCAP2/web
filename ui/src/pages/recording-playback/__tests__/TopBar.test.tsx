@@ -154,4 +154,240 @@ describe("TopBar", () => {
     expect(screen.getByText("Projectiles")).toBeTruthy();
     expect(screen.getByText("Coordinate grid")).toBeTruthy();
   });
+
+  it("toggling a layer calls renderer.setLayerVisible", () => {
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+    const spy = vi.spyOn(renderer, "setLayerVisible");
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    // Open layer dropdown
+    fireEvent.click(screen.getByTitle("Layers"));
+
+    // Click "Units & vehicles" to toggle it off (default is on)
+    fireEvent.click(screen.getByText("Units & vehicles"));
+    expect(spy).toHaveBeenCalledWith("entities", false);
+
+    // Click again to toggle it back on
+    fireEvent.click(screen.getByText("Units & vehicles"));
+    expect(spy).toHaveBeenCalledWith("entities", true);
+  });
+
+  it("shows MapLibre-specific layers when worldConfig has maplibre", () => {
+    const [worldConfig] = createSignal<WorldConfig | undefined>({
+      worldName: "Altis",
+      worldSize: 30720,
+      imageSize: 30720,
+      maplibre: true,
+    });
+    const { engine, renderer, props } = renderTopBar({ worldConfig });
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByTitle("Layers"));
+
+    // MapLibre-specific layers should appear
+    expect(screen.getByText("Map icons")).toBeTruthy();
+    expect(screen.getByText("3D Buildings")).toBeTruthy();
+  });
+
+  it("share button copies URL to clipboard and shows toast", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: writeTextMock },
+    });
+
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    const shareBtn = screen.getByTitle("Share");
+    fireEvent.click(shareBtn);
+
+    // clipboard.writeText should have been called with a URL containing the recording ID
+    expect(writeTextMock).toHaveBeenCalledOnce();
+    const copiedUrl = writeTextMock.mock.calls[0][0] as string;
+    expect(copiedUrl).toContain("/recording/op-123/test-op");
+
+    // Wait for the promise to resolve so the toast appears
+    await vi.waitFor(() => {
+      expect(screen.getByText("Link copied!")).toBeTruthy();
+    });
+  });
+
+  it("share button does nothing when recordingId is null", () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: writeTextMock },
+    });
+
+    const [recordingId] = createSignal<string | null>(null);
+    const { engine, renderer, props } = renderTopBar({ recordingId });
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    // Share button should not be rendered when recordingId is null
+    expect(screen.queryByTitle("Share")).toBeNull();
+  });
+
+  it("download link has correct href", () => {
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    const downloadLink = screen.getByTitle("Download") as HTMLAnchorElement;
+    expect(downloadLink.tagName).toBe("A");
+    expect(downloadLink.getAttribute("href")).toContain("data/test-op.json.gz");
+    expect(downloadLink.hasAttribute("download")).toBe(true);
+  });
+
+  it("download link falls back to recordingId when filename is null", () => {
+    const [recordingFilename] = createSignal<string | null>(null);
+    const { engine, renderer, props } = renderTopBar({ recordingFilename });
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    const downloadLink = screen.getByTitle("Download") as HTMLAnchorElement;
+    expect(downloadLink.getAttribute("href")).toContain("data/op-123.json.gz");
+  });
+
+  it("shows custom branding logo without URL", async () => {
+    // Mock fetch to return customize config with a logo but no URL
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ websiteLogo: "/custom-logo.png" }),
+        });
+      }
+      return originalFetch(url);
+    });
+
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    // Wait for customize config to load
+    await vi.waitFor(() => {
+      const img = document.querySelector("img[src='/custom-logo.png']") as HTMLImageElement;
+      expect(img).toBeTruthy();
+    });
+
+    // Logo should be rendered as a plain img (no link wrapper since no websiteURL)
+    const img = document.querySelector("img[src='/custom-logo.png']") as HTMLImageElement;
+    expect(img.parentElement?.tagName).not.toBe("A");
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it("shows custom branding logo linked to websiteURL", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              websiteLogo: "/custom-logo.png",
+              websiteURL: "https://example.com",
+            }),
+        });
+      }
+      return originalFetch(url);
+    });
+
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    await vi.waitFor(() => {
+      const img = document.querySelector("img[src='/custom-logo.png']") as HTMLImageElement;
+      expect(img).toBeTruthy();
+    });
+
+    // Logo should be wrapped in an anchor pointing to websiteURL
+    const img = document.querySelector("img[src='/custom-logo.png']") as HTMLImageElement;
+    const link = img.closest("a") as HTMLAnchorElement;
+    expect(link).toBeTruthy();
+    expect(link.href).toBe("https://example.com/");
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it("shows custom header title and subtitle", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              headerTitle: "My Server",
+              headerSubtitle: "Best Arma Group",
+            }),
+        });
+      }
+      return originalFetch(url);
+    });
+
+    const { engine, renderer, props } = renderTopBar();
+    engine.loadRecording(makeManifest([]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <TopBar {...props} />
+      </TestProviders>
+    ));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("My Server")).toBeTruthy();
+    });
+    expect(screen.getByText("Best Arma Group")).toBeTruthy();
+
+    globalThis.fetch = originalFetch;
+  });
 });

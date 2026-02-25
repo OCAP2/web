@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { formatDuration, getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { formatDuration, formatDate, relativeDate, getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
 
 describe("formatDuration", () => {
   it("returns zero for non-positive values", () => {
@@ -92,5 +92,53 @@ describe("hashColor", () => {
   it("palette has no duplicate entries", () => {
     const unique = new Set(FALLBACK_PALETTE);
     expect(unique.size).toBe(FALLBACK_PALETTE.length);
+  });
+});
+
+describe("formatDate", () => {
+  it("returns the original string for an invalid date", () => {
+    expect(formatDate("not-a-date")).toBe("not-a-date");
+  });
+
+  it("formats a valid date string", () => {
+    const result = formatDate("2024-06-15", "en");
+    expect(result).toContain("2024");
+    expect(result).toContain("15");
+  });
+});
+
+describe("relativeDate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Fix "now" to 2024-06-15T12:00:00Z
+    vi.setSystemTime(new Date("2024-06-15T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns empty string for an invalid date", () => {
+    expect(relativeDate("not-a-date")).toBe("");
+  });
+
+  it("returns 'today' for today's date", () => {
+    const result = relativeDate("2024-06-15T10:00:00Z");
+    expect(result.toLowerCase()).toContain("today");
+  });
+
+  it("returns a string with 'days' for a date 3 days ago", () => {
+    const result = relativeDate("2024-06-12T12:00:00Z");
+    expect(result.toLowerCase()).toContain("day");
+  });
+
+  it("returns a string with 'weeks' for a date 14 days ago", () => {
+    const result = relativeDate("2024-06-01T12:00:00Z");
+    expect(result.toLowerCase()).toContain("week");
+  });
+
+  it("returns a string with 'months' for a date 60 days ago", () => {
+    const result = relativeDate("2024-04-16T12:00:00Z");
+    expect(result.toLowerCase()).toContain("month");
   });
 });

@@ -161,4 +161,64 @@ describe("TimelineScrubber", () => {
     // Should still not be playing
     expect(engine.isPlaying()).toBe(false);
   });
+
+  it("pointer move during drag calls engine.seekTo", () => {
+    const { engine } = renderScrubber([unitDef({ endFrame: 99 })], [], 100);
+    const spy = vi.spyOn(engine, "seekTo");
+
+    const track = screen.getByTestId("scrubber-track");
+    track.setPointerCapture = vi.fn();
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // Start drag
+    fireEvent.pointerDown(track, { clientX: 50, pointerId: 1 });
+    spy.mockClear();
+
+    // Move while dragging
+    fireEvent.pointerMove(track, { clientX: 150 });
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("pointer move without drag does not call seekTo", () => {
+    const { engine } = renderScrubber([unitDef({ endFrame: 99 })], [], 100);
+    const spy = vi.spyOn(engine, "seekTo");
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("hover tooltip appears on pointer move and disappears on leave", () => {
+    renderScrubber([unitDef({ endFrame: 99 })], [], 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // No tooltip initially
+    expect(track.querySelector('[class*="hoverTooltip"]')).toBeNull();
+
+    // Move triggers tooltip
+    fireEvent.pointerMove(track, { clientX: 100 });
+    expect(track.querySelector('[class*="hoverTooltip"]')).not.toBeNull();
+
+    // Leave clears tooltip
+    fireEvent.pointerLeave(track);
+    expect(track.querySelector('[class*="hoverTooltip"]')).toBeNull();
+  });
 });

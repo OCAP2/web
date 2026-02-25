@@ -6,7 +6,9 @@ import {
   TestProviders,
   unitDef,
   makeManifest,
+  killedEvent,
 } from "./testHelpers";
+import { activeSide, setActiveSide } from "../shortcuts";
 
 afterEach(() => {
   cleanup();
@@ -193,5 +195,84 @@ describe("UnitsTab", () => {
 
     // CIV should NOT be rendered (no CIV units)
     expect(screen.queryByText("CIV")).toBeNull();
+  });
+
+  it("auto-selects first populated side when activeSide is not populated", () => {
+    // Set activeSide to something that won't have units
+    setActiveSide("GUER");
+
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "CSAT Soldier", side: "EAST", groupName: "Bravo", role: "Trooper" }),
+      ]),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // The effect should auto-select EAST since GUER has no units
+    expect(activeSide()).toBe("EAST");
+  });
+
+  it("collapses and expands a group when clicking its header", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({ id: 1, name: "Soldier A", side: "WEST", groupName: "Alpha", role: "AT" }),
+        unitDef({ id: 2, name: "Soldier B", side: "WEST", groupName: "Alpha", role: "AAR" }),
+      ]),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // Units visible initially (groups auto-expand)
+    expect(screen.getByText("Soldier A")).toBeTruthy();
+    expect(screen.getByText("Soldier B")).toBeTruthy();
+
+    // Click group header to collapse
+    fireEvent.click(screen.getByText("Alpha"));
+
+    // Units should now be hidden
+    expect(screen.queryByText("Soldier A")).toBeNull();
+    expect(screen.queryByText("Soldier B")).toBeNull();
+
+    // Click group header again to expand
+    fireEvent.click(screen.getByText("Alpha"));
+
+    // Units should be visible again
+    expect(screen.getByText("Soldier A")).toBeTruthy();
+    expect(screen.getByText("Soldier B")).toBeTruthy();
+  });
+
+  it("shows kill count badge for units with kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Killer", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+      unitDef({ id: 2, name: "Victim", side: "EAST", groupName: "Bravo", role: "Trooper" }),
+    ];
+    const events = [killedEvent(5, 2, 1, "M4A1", 100)];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10); // Past the event so kills are counted
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // The "Killer" unit (id 1) should have a kill count badge showing "1"
+    // Find the unit row containing "Killer" and check for the kill count
+    const killerRow = screen.getByText("Killer").closest("button");
+    expect(killerRow).toBeTruthy();
+    // The kill badge renders the count inside a span after the crosshair icon
+    expect(killerRow!.textContent).toContain("1");
   });
 });

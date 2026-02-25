@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { EventsTab } from "../components/EventsTab";
+import type { EventDef } from "../../../data/types";
 import {
   createTestEngine,
   TestProviders,
@@ -11,6 +12,29 @@ import {
   connectEvent,
   endMissionEvent,
 } from "./testHelpers";
+
+/** Create a generalEvent definition. */
+function generalEvent(frameNum: number, message: string): EventDef {
+  return { type: "generalEvent", frameNum, message } as EventDef;
+}
+
+/** Create a captured event definition. */
+function capturedEvent(
+  frameNum: number,
+  unitName: string,
+  objectType: string,
+): EventDef {
+  return { type: "captured", frameNum, unitName, objectType } as EventDef;
+}
+
+/** Create a terminalHack event definition. */
+function terminalHackEvent(
+  frameNum: number,
+  type: "terminalHackStarted" | "terminalHackCanceled",
+  unitName: string,
+): EventDef {
+  return { type, frameNum, unitName } as EventDef;
+}
 
 afterEach(() => {
   cleanup();
@@ -282,5 +306,225 @@ describe("EventsTab", () => {
     // Now the event should be visible
     expect(screen.getByText("LateVictim")).toBeTruthy();
     expect(screen.queryByText("No events to display")).toBeNull();
+  });
+
+  it("renders EndMissionEvent with side and message", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [endMissionEvent(0, "WEST", "BLUFOR wins")];
+    engine.loadRecording(makeManifest(entities, events));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("WEST")).toBeTruthy();
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+  });
+
+  it("renders EndMissionEvent with GUER and CIV sides using correct colors", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [
+      endMissionEvent(0, "GUER", "IND wins"),
+      endMissionEvent(1, "CIV", "Civilians saved"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const guerSide = screen.getByText("GUER");
+    expect(guerSide.getAttribute("style")).toContain("var(--side-ind)");
+
+    const civSide = screen.getByText("CIV");
+    expect(civSide.getAttribute("style")).toContain("var(--side-civ)");
+  });
+
+  it("renders GeneralMissionEvent with message text", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [generalEvent(0, "Objective Alpha completed")];
+    engine.loadRecording(makeManifest(entities, events));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("Objective Alpha completed")).toBeTruthy();
+  });
+
+  it("renders CapturedEvent with unit name and object type", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [capturedEvent(0, "CapGuy", "flag")];
+    engine.loadRecording(makeManifest(entities, events));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/CapGuy/)).toBeTruthy();
+    expect(screen.getByText(/flag/)).toBeTruthy();
+  });
+
+  it("renders TerminalHackEvent with started message", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [terminalHackEvent(0, "terminalHackStarted", "HackerGuy")];
+    engine.loadRecording(makeManifest(entities, events));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/HackerGuy/)).toBeTruthy();
+    expect(screen.getByText(/started hacking/)).toBeTruthy();
+  });
+
+  it("renders TerminalHackEvent with canceled message", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [terminalHackEvent(0, "terminalHackCanceled", "CancelGuy")];
+    engine.loadRecording(makeManifest(entities, events));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/CancelGuy/)).toBeTruthy();
+    expect(screen.getByText(/canceled hack/)).toBeTruthy();
+  });
+
+  it("text search filters EndMissionEvent by message", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [
+      endMissionEvent(0, "WEST", "BLUFOR wins"),
+      endMissionEvent(1, "EAST", "OPFOR defeated"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const input = screen.getByPlaceholderText("Search events...");
+    fireEvent.input(input, { target: { value: "BLUFOR" } });
+
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+    expect(screen.queryByText("OPFOR defeated")).toBeNull();
+  });
+
+  it("text search filters GeneralMissionEvent by message", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [
+      generalEvent(0, "Alpha objective done"),
+      generalEvent(1, "Bravo objective done"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const input = screen.getByPlaceholderText("Search events...");
+    fireEvent.input(input, { target: { value: "Alpha" } });
+
+    expect(screen.getByText("Alpha objective done")).toBeTruthy();
+    expect(screen.queryByText("Bravo objective done")).toBeNull();
+  });
+
+  it("text search filters CapturedEvent by unit name", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [
+      capturedEvent(0, "AlphaCaptor", "flag"),
+      capturedEvent(1, "BravoCaptor", "terminal"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const input = screen.getByPlaceholderText("Search events...");
+    fireEvent.input(input, { target: { value: "AlphaCaptor" } });
+
+    expect(screen.getByText(/AlphaCaptor/)).toBeTruthy();
+    expect(screen.queryByText(/BravoCaptor/)).toBeNull();
+  });
+
+  it("text search filters TerminalHackEvent by unit name", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [
+      terminalHackEvent(0, "terminalHackStarted", "AlphaHacker"),
+      terminalHackEvent(1, "terminalHackStarted", "BravoHacker"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const input = screen.getByPlaceholderText("Search events...");
+    fireEvent.input(input, { target: { value: "AlphaHacker" } });
+
+    expect(screen.getByText(/AlphaHacker/)).toBeTruthy();
+    expect(screen.queryByText(/BravoHacker/)).toBeNull();
+  });
+
+  it("text search filters ConnectEvent by unit name", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Player1" })];
+    const events = [
+      connectEvent(0, "connected", "AlphaPlayer"),
+      connectEvent(1, "connected", "BravoPlayer"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(5);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Enable connection events
+    fireEvent.click(screen.getByText("Conn"));
+
+    const input = screen.getByPlaceholderText("Search events...");
+    fireEvent.input(input, { target: { value: "AlphaPlayer" } });
+
+    expect(screen.getByText(/AlphaPlayer/)).toBeTruthy();
+    expect(screen.queryByText(/BravoPlayer/)).toBeNull();
   });
 });

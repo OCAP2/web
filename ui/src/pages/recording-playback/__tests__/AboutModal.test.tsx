@@ -100,4 +100,47 @@ describe("AboutModal", () => {
     // Since no server is running, the API call fails and serverVersion falls back to "unknown"
     expect(screen.getByText("unknown")).toBeTruthy();
   });
+
+  it("shows BuildVersion from API when available", async () => {
+    const { ApiClient } = await import("../../../data/apiClient");
+    vi.spyOn(ApiClient.prototype, "getVersion").mockResolvedValue({
+      BuildVersion: "2.5.0",
+      BuildCommit: "abc1234",
+      BuildDate: "2025-01-01",
+    });
+
+    renderAboutModal();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("2.5.0")).toBeTruthy();
+    });
+  });
+
+  it("falls back to BuildCommit when BuildVersion is empty", async () => {
+    const { ApiClient } = await import("../../../data/apiClient");
+    vi.spyOn(ApiClient.prototype, "getVersion").mockResolvedValue({
+      BuildVersion: "",
+      BuildCommit: "abc1234",
+      BuildDate: "2025-01-01",
+    });
+
+    renderAboutModal();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("abc1234")).toBeTruthy();
+    });
+  });
+
+  it("shows addon version when provided", () => {
+    renderAboutModal({ addonVersion: "3.0.1" });
+
+    expect(screen.getByText("3.0.1")).toBeTruthy();
+  });
+
+  it("hides addon version row when not provided", () => {
+    renderAboutModal();
+
+    // The addon version label should NOT appear
+    expect(screen.queryByText(/Addon version/)).toBeNull();
+  });
 });
