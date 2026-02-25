@@ -3,6 +3,7 @@ import { render, screen, cleanup } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
+import { AuthProvider } from "../../../hooks/useAuth";
 import { MockRenderer } from "../../../renderers/mockRenderer";
 import type { LoadResult } from "../loadRecording";
 
@@ -73,7 +74,9 @@ function renderPlayback(opts?: { initialPath?: string }) {
     <Router
       root={(p) => (
         <I18nProvider locale="en">
-          <CustomizeProvider>{p.children}</CustomizeProvider>
+          <CustomizeProvider>
+            <AuthProvider>{p.children}</AuthProvider>
+          </CustomizeProvider>
         </I18nProvider>
       )}
     >
@@ -90,7 +93,9 @@ function renderPlaybackWithState(state: Record<string, unknown>) {
     <Router
       root={(p) => (
         <I18nProvider locale="en">
-          <CustomizeProvider>{p.children}</CustomizeProvider>
+          <CustomizeProvider>
+            <AuthProvider>{p.children}</AuthProvider>
+          </CustomizeProvider>
         </I18nProvider>
       )}
     >

@@ -1,6 +1,7 @@
 import { createSignal, createMemo, onCleanup, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "../../../components/Icons";
+import { AuthBadge } from "../../../components/AuthBadge";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
 import { useCustomize } from "../../../hooks/useCustomize";
@@ -200,6 +201,11 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
       {/* ── Right: actions ── */}
       <div class={styles.right}>
+        {/* Auth badge */}
+        <AuthBadge />
+
+        <div class={styles.divider} />
+
         {/* Layer toggle */}
         <div ref={layerRef} style={{ position: "relative" }}>
           <button

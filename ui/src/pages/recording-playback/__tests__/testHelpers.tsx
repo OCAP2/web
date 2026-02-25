@@ -8,6 +8,7 @@ import { EngineProvider } from "../../../hooks/useEngine";
 import { RendererProvider } from "../../../hooks/useRenderer";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
+import { AuthProvider } from "../../../hooks/useAuth";
 import type { Manifest, EntityDef, EventDef } from "../../../data/types";
 
 /** Create a PlaybackEngine backed by a MockRenderer. */
@@ -26,11 +27,13 @@ export function TestProviders(props: {
   return (
     <I18nProvider locale="en">
       <CustomizeProvider>
-        <EngineProvider engine={props.engine}>
-          <RendererProvider renderer={props.renderer}>
-            {props.children}
-          </RendererProvider>
-        </EngineProvider>
+        <AuthProvider>
+          <EngineProvider engine={props.engine}>
+            <RendererProvider renderer={props.renderer}>
+              {props.children}
+            </RendererProvider>
+          </EngineProvider>
+        </AuthProvider>
       </CustomizeProvider>
     </I18nProvider>
   );
