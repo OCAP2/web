@@ -49,8 +49,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
       const returnTo = hadToken ? api.popReturnTo() : null;
       if (returnTo && returnTo !== "/") {
         // replaceState + popstate triggers the SolidJS router to re-evaluate
-        const qs = params.toString();
-        window.history.replaceState({}, "", returnTo + (qs ? "?" + qs : ""));
+        window.history.replaceState({}, "", returnTo);
         window.dispatchEvent(new PopStateEvent("popstate"));
       } else {
         const qs = params.toString();

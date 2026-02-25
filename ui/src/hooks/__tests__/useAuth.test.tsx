@@ -128,6 +128,30 @@ describe("useAuth", () => {
     expect(mockGetSteamLoginUrl).toHaveBeenCalledWith("/recording/42/my-mission");
   });
 
+  it("restores saved path after successful auth callback", async () => {
+    mockConsumeAuthToken.mockReturnValue(true);
+    mockPopReturnTo.mockReturnValue("/recording/42/my-mission");
+
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
+    const dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
+
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_token=jwt123", href: window.location.origin + "/?auth_token=jwt123", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    const { findByTestId } = renderAuth();
+    await findByTestId("authenticated");
+
+    expect(mockPopReturnTo).toHaveBeenCalled();
+    expect(replaceStateSpy).toHaveBeenCalledWith({}, "", "/recording/42/my-mission");
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(PopStateEvent));
+
+    replaceStateSpy.mockRestore();
+    dispatchEventSpy.mockRestore();
+  });
+
   it("reads auth_error from URL and sets authError signal", async () => {
     Object.defineProperty(window, "location", {
       value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
