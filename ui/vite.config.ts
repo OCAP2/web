@@ -5,6 +5,13 @@ export default defineConfig({
   plugins: [solidPlugin()],
   server: {
     proxy: {
+      "/api/v1/maptool/events": {
+        target: "http://localhost:5000",
+        // SSE needs no timeout and no buffering
+        timeout: 0,
+        proxyTimeout: 0,
+        headers: { "X-Forwarded-Host": "localhost:5173" },
+      },
       "/api": {
         target: "http://localhost:5000",
         // Pass the browser's Host so Steam callback URLs point back here

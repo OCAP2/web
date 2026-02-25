@@ -178,6 +178,7 @@ func (h *Handler) mapToolEventStream(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
+	c.Response().Header().Set("X-Accel-Buffering", "no") // disable nginx buffering
 
 	// Send initial snapshot of all jobs
 	jobs := h.maptoolMgr.ListJobs()
@@ -189,11 +190,19 @@ func (h *Handler) mapToolEventStream(c echo.Context) error {
 	subID, events := h.maptoolMgr.Subscribe()
 	defer h.maptoolMgr.Unsubscribe(subID)
 
+	// Heartbeat keeps the connection alive through proxies that buffer responses
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
 	ctx := c.Request().Context()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-heartbeat.C:
+			// SSE comment line — ignored by EventSource, flushes proxy buffers
+			fmt.Fprintf(c.Response(), ": keepalive\n\n")
+			c.Response().Flush()
 		case evt, ok := <-events:
 			if !ok {
 				return nil

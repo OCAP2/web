@@ -1,5 +1,8 @@
-import { createSignal, onCleanup } from "solid-js";
+import { createSignal, createEffect, onCleanup } from "solid-js";
 import type { JobInfo, MapToolEvent } from "./types";
+
+/** Heartbeat timeout — reconnect if no data received within this window. */
+const HEARTBEAT_TIMEOUT = 45_000; // 45s (server sends keepalive every 15s)
 
 export function useMapToolEvents(eventsUrl: () => string) {
   const [jobs, setJobs] = createSignal<JobInfo[]>([]);
@@ -7,13 +10,40 @@ export function useMapToolEvents(eventsUrl: () => string) {
 
   let es: EventSource | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   let backoff = 1000;
 
-  function connect() {
+  function resetHeartbeat() {
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    heartbeatTimer = setTimeout(() => {
+      // No data received for HEARTBEAT_TIMEOUT — connection is stale
+      if (es) {
+        es.close();
+        es = null;
+      }
+      setConnected(false);
+      backoff = 1000;
+      connect();
+    }, HEARTBEAT_TIMEOUT);
+  }
+
+  function cleanup() {
     if (es) {
       es.close();
       es = null;
     }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (heartbeatTimer) {
+      clearTimeout(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  }
+
+  function connect() {
+    cleanup();
 
     const url = eventsUrl();
     if (!url) return;
@@ -21,6 +51,7 @@ export function useMapToolEvents(eventsUrl: () => string) {
     es = new EventSource(url);
 
     es.addEventListener("snapshot", (e: MessageEvent) => {
+      resetHeartbeat();
       const data = JSON.parse(e.data) as JobInfo[];
       setJobs(data);
       setConnected(true);
@@ -28,6 +59,7 @@ export function useMapToolEvents(eventsUrl: () => string) {
     });
 
     es.addEventListener("progress", (e: MessageEvent) => {
+      resetHeartbeat();
       const evt = JSON.parse(e.data) as MapToolEvent;
       if (!evt.data) return;
       setJobs((prev) => {
@@ -65,6 +97,7 @@ export function useMapToolEvents(eventsUrl: () => string) {
     });
 
     es.addEventListener("status", (e: MessageEvent) => {
+      resetHeartbeat();
       const evt = JSON.parse(e.data) as MapToolEvent;
       if (!evt.job) return;
       setJobs((prev) => {
@@ -80,21 +113,32 @@ export function useMapToolEvents(eventsUrl: () => string) {
 
     es.onerror = () => {
       setConnected(false);
-      es?.close();
-      es = null;
+      if (es) {
+        es.close();
+        es = null;
+      }
+      if (heartbeatTimer) {
+        clearTimeout(heartbeatTimer);
+        heartbeatTimer = null;
+      }
       reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
         backoff = Math.min(backoff * 2, 30000);
         connect();
       }, backoff);
     };
+
+    // Start heartbeat monitoring after connection opens
+    resetHeartbeat();
   }
 
-  connect();
-
-  onCleanup(() => {
-    es?.close();
-    if (reconnectTimer) clearTimeout(reconnectTimer);
+  // createEffect tracks eventsUrl() reactively — reconnects if URL changes
+  // (e.g., auth token becomes available after initial mount)
+  createEffect(() => {
+    connect();
   });
+
+  onCleanup(cleanup);
 
   return { jobs, connected };
 }
