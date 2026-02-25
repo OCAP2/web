@@ -6,6 +6,8 @@ import {
   UploadIcon,
   AlertTriangleIcon,
   TrashIcon,
+  CheckIcon,
+  FilePlusIcon,
 } from "../../components/Icons";
 import styles from "./dialogs.module.css";
 
@@ -19,91 +21,160 @@ export function ImportDialog(props: {
 }): JSX.Element {
   const [file, setFile] = createSignal<File | null>(null);
   const [dragOver, setDragOver] = createSignal(false);
+  let fileInput!: HTMLInputElement;
+
+  const handleFile = (f: File | undefined) => {
+    if (f && f.name.toLowerCase().endsWith(".zip")) setFile(f);
+  };
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer?.files[0];
-    if (f && f.name.toLowerCase().endsWith(".zip")) setFile(f);
+    handleFile(e.dataTransfer?.files[0]);
   };
 
   const handleFileInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    if (input.files?.[0]) setFile(input.files[0]);
+    handleFile(input.files?.[0]);
   };
 
   return (
     <div class={styles.overlay} onClick={props.onClose}>
       <div class={styles.dialog} onClick={(e) => e.stopPropagation()}>
         <div class={styles.dialogHeader}>
-          <h3>Import Map</h3>
+          <div class={styles.dialogTitleGroup}>
+            <span class={styles.dialogTitleIcon}><FilePlusIcon size={16} /></span>
+            <span>Import Map</span>
+          </div>
           <button class={styles.closeBtn} onClick={props.onClose}>
             <XIcon size={18} />
           </button>
         </div>
 
         <div class={styles.dialogBody}>
+          <p class={styles.importHint}>
+            Import an Arma 3 map from a{" "}
+            <a
+              href="https://github.com/gruppe-adler/grad_meh"
+              target="_blank"
+              rel="noopener noreferrer"
+              class={styles.link}
+              onClick={(e) => e.stopPropagation()}
+            >
+              grad_meh
+            </a>{" "}
+            export. Package the output directory as a .zip file.
+          </p>
+
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".zip"
+            onChange={handleFileInput}
+            hidden
+          />
+
           <div
             class={styles.dropZone}
-            classList={{ [styles.dropZoneActive]: dragOver() }}
+            classList={{
+              [styles.dropZoneActive]: dragOver(),
+              [styles.dropZoneHasFile]: !!file(),
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
+            onClick={() => fileInput.click()}
           >
             <Show
               when={file()}
               fallback={
                 <>
-                  <UploadIcon size={32} />
-                  <p>Drop a grad_meh .zip file here</p>
-                  <label class={styles.browseBtn}>
-                    Browse
-                    <input
-                      type="file"
-                      accept=".zip"
-                      onChange={handleFileInput}
-                      hidden
-                    />
-                  </label>
+                  <FilePlusIcon size={28} />
+                  <p class={styles.dropLabel}>
+                    Drop <span class={styles.dropHighlight}>.zip</span> here or{" "}
+                    <span class={styles.dropBrowse}>browse</span>
+                  </p>
+                  <span class={styles.dropLimit}>Max 2 GB</span>
                 </>
               }
             >
-              <p class={styles.fileName}>{file()!.name}</p>
-              <p class={styles.fileSize}>
-                {(file()!.size / 1_048_576).toFixed(1)} MB
-              </p>
+              <div class={styles.fileRow}>
+                <span class={styles.fileCheckIcon}><CheckIcon size={14} /></span>
+                <div class={styles.fileInfo}>
+                  <span class={styles.fileName}>{file()!.name}</span>
+                  <span class={styles.fileSize}>
+                    {(file()!.size / 1_048_576).toFixed(1)} MB
+                  </span>
+                </div>
+                <button
+                  class={styles.fileClearBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFile(null);
+                  }}
+                >
+                  <XIcon size={14} />
+                </button>
+              </div>
             </Show>
           </div>
 
-          <Show when={props.uploading}>
-            <div class={styles.uploadProgress}>
-              <div class={styles.uploadBar}>
-                <div
-                  class={styles.uploadFill}
-                  style={{ width: `${props.uploadProgress}%` }}
-                />
-              </div>
-              <span class={styles.uploadPct}>
-                {Math.round(props.uploadProgress)}%
-              </span>
+          <div class={styles.structureHint}>
+            <div class={styles.structureTitle}>EXPECTED ZIP STRUCTURE</div>
+            <div class={styles.structureList}>
+              <span class={styles.structureRequired}>meta.json</span> — world metadata (required)<br />
+              <span class={styles.structureRequired}>sat/</span> — satellite tiles as X/Y.png (required)<br />
+              <span class={styles.structureOptional}>dem.asc.gz</span> — elevation data (optional)<br />
+              <span class={styles.structureOptional}>geojson/</span> — vector feature layers (optional)<br />
+              <span class={styles.structureOptional}>preview.png</span> — preview image (optional)
             </div>
-          </Show>
+          </div>
         </div>
 
         <div class={styles.dialogFooter}>
-          <button class={styles.btnSecondary} onClick={props.onClose}>
-            Cancel
-          </button>
-          <button
-            class={styles.btnPrimary}
-            disabled={!file() || props.uploading}
-            onClick={() => file() && props.onImport(file()!)}
+          <Show
+            when={props.uploading}
+            fallback={
+              <div class={styles.footerRow}>
+                <span class={styles.footerStatus} classList={{ [styles.footerStatusReady]: !!file() }}>
+                  {file() ? "Ready to import" : "Select a .zip file"}
+                </span>
+                <div class={styles.footerActions}>
+                  <button class={styles.btnSecondary} onClick={props.onClose}>
+                    Cancel
+                  </button>
+                  <button
+                    class={styles.btnPrimary}
+                    disabled={!file()}
+                    onClick={() => file() && props.onImport(file()!)}
+                  >
+                    <FilePlusIcon size={14} /> Import
+                  </button>
+                </div>
+              </div>
+            }
           >
-            {props.uploading ? "Uploading..." : "Import"}
-          </button>
+            <div class={styles.footerUpload}>
+              <div class={styles.uploadHeader}>
+                <span class={styles.uploadLabel}>
+                  <UploadIcon size={14} /> Uploading...
+                </span>
+                <span class={styles.uploadPct}>
+                  {Math.min(100, Math.round(props.uploadProgress))}%
+                </span>
+              </div>
+              <div class={styles.uploadBar}>
+                <div
+                  class={styles.uploadFill}
+                  classList={{ [styles.uploadFillDone]: props.uploadProgress >= 100 }}
+                  style={{ width: `${Math.min(100, props.uploadProgress)}%` }}
+                />
+              </div>
+            </div>
+          </Show>
         </div>
       </div>
     </div>
