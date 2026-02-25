@@ -9,11 +9,19 @@ export interface ToolInfo {
 
 export type ToolSet = ToolInfo[];
 
+export interface MapElevation {
+  min: number;
+  max: number;
+  avg: number;
+  stddev: number;
+}
+
 export interface MapInfo {
   name: string;
   worldSize?: number;
   status: "none" | "incomplete" | "complete";
   hasPreview?: boolean;
+  elevation?: MapElevation;
   featureLayers?: string[];
   files?: Record<string, number>;
 }

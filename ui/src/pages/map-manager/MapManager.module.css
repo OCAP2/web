@@ -386,7 +386,7 @@
 
 .listHeader {
   display: grid;
-  grid-template-columns: 1fr 100px 70px 60px 70px;
+  grid-template-columns: 1fr 100px 70px 80px 80px;
   padding: 6px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -406,7 +406,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 100px 70px 60px 70px;
+  grid-template-columns: 1fr 100px 70px 80px 80px;
   align-items: center;
   padding: 8px 16px;
   border: none;

@@ -1,5 +1,4 @@
 import type { JSX } from "solid-js";
-import { Show } from "solid-js";
 import type { MapInfo } from "./types";
 import { MAP_STATUS_COLORS } from "./constants";
 import { formatWorldSize, formatFileSize, totalDiskMB, statusLabel } from "./helpers";
@@ -19,11 +18,9 @@ export function MapRow(props: {
       onClick={props.onSelect}
     >
       <span class={styles.rowName}>{props.map.name}</span>
-      <Show when={props.map.worldSize}>
-        <span class={styles.rowSize}>
-          {formatWorldSize(props.map.worldSize!)}
-        </span>
-      </Show>
+      <span class={styles.rowSize}>
+        {props.map.worldSize ? formatWorldSize(props.map.worldSize) : "—"}
+      </span>
       <span class={styles.rowLayers}>
         {props.map.featureLayers?.length ?? 0}
       </span>

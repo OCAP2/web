@@ -78,6 +78,51 @@ export function MapDetail(props: {
           </Show>
         </div>
 
+        {/* Elevation */}
+        <Show when={props.map.elevation}>
+          <div class={styles.section}>
+            <h4 class={styles.sectionTitle}>Elevation</h4>
+            <div class={styles.elevRow}>
+              <For
+                each={[
+                  { l: "MIN", v: `${props.map.elevation!.min.toFixed(0)}m`, c: "var(--accent-primary)" },
+                  { l: "AVG", v: `${props.map.elevation!.avg.toFixed(0)}m`, c: "var(--text-muted)" },
+                  { l: "MAX", v: `${props.map.elevation!.max.toFixed(0)}m`, c: "var(--accent-warning)" },
+                  { l: "\u03C3", v: `${props.map.elevation!.stddev.toFixed(0)}m`, c: "var(--text-dim)" },
+                ]}
+              >
+                {(e) => (
+                  <div class={styles.elevCell}>
+                    <div class={styles.elevLabel}>{e.l}</div>
+                    <div class={styles.elevValue} style={{ color: e.c }}>
+                      {e.v}
+                    </div>
+                  </div>
+                )}
+              </For>
+            </div>
+            {(() => {
+              const e = props.map.elevation!;
+              const range = e.max - e.min;
+              const avgPct = range > 0 ? ((e.avg - e.min) / range) * 100 : 50;
+              return (
+                <div class={styles.elevBarWrap}>
+                  <div class={styles.elevBar}>
+                    <div
+                      class={styles.elevBarAvg}
+                      style={{ left: `${avgPct}%` }}
+                    />
+                  </div>
+                  <div class={styles.elevBarLabels}>
+                    <span>{e.min.toFixed(0)}m</span>
+                    <span>{e.max.toFixed(0)}m</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </Show>
+
         {/* Feature layers */}
         <Show when={props.map.featureLayers?.length}>
           <div class={styles.section}>

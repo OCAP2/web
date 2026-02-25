@@ -18,9 +18,10 @@ export const OUTPUT_FILES = [
   { name: "satellite.pmtiles", label: "Satellite" },
   { name: "heightmap.pmtiles", label: "Heightmap" },
   { name: "hillshade.pmtiles", label: "Hillshade" },
-  { name: "bathymetry.pmtiles", label: "Bathymetry" },
   { name: "color-relief.pmtiles", label: "Color Relief" },
   { name: "features.pmtiles", label: "Vector Features" },
+  { name: "color-relief.json", label: "Style" },
+  { name: "map.json", label: "Metadata" },
 ];
 
 export const STYLE_VARIANTS = [

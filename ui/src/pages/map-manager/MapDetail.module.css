@@ -119,6 +119,68 @@
   font-weight: 500;
 }
 
+/* ─── Elevation ─── */
+
+.elevRow {
+  display: flex;
+  gap: 4px;
+}
+
+.elevCell {
+  flex: 1;
+  text-align: center;
+  padding: 5px 2px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.elevLabel {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-dimmest);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.elevValue {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.elevBarWrap {
+  margin-top: 6px;
+}
+
+.elevBar {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2b6cb0, #48bb78, #ecc94b, #e53e3e);
+  opacity: 0.6;
+}
+
+.elevBarAvg {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--text-primary);
+  transform: translateX(-50%);
+}
+
+.elevBarLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-dimmest);
+}
+
 /* ─── Sections ─── */
 
 .section {
