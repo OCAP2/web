@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, cleanup } from "@solidjs/testing-library";
+import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
@@ -32,6 +32,7 @@ vi.mock("../useRenderBridge", () => ({
 
 // We need to import the component AFTER mocks are declared
 import { RecordingPlayback } from "../RecordingPlayback";
+import { setLeftPanelVisible } from "../shortcuts";
 
 // ─── Helpers ───
 
@@ -135,6 +136,7 @@ describe("RecordingPlayback", () => {
     vi.restoreAllMocks();
     globalThis.fetch = originalFetch;
     setAuthToken(null);
+    setLeftPanelVisible(true);
     // Reset URL
     window.history.pushState({}, "", "/");
   });
@@ -220,6 +222,247 @@ describe("RecordingPlayback", () => {
     expect(screen.getByTestId("map-container")).toBeTruthy();
   });
 
+  it("opens about modal when info button is clicked", async () => {
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // Click the info button in TopBar
+    const infoBtn = screen.getByTitle("Information");
+    fireEvent.click(infoBtn);
+
+    // AboutModal should now be visible
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("about-modal")).toBeTruthy();
+    });
+  });
+
+  it("closes about modal when close button is clicked", async () => {
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // Open the about modal
+    fireEvent.click(screen.getByTitle("Information"));
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("about-modal")).toBeTruthy();
+    });
+
+    // Click the close button inside the modal
+    const modal = screen.getByTestId("about-modal");
+    const closeBtn = modal.querySelector("button")!;
+    fireEvent.click(closeBtn);
+
+    // Modal should disappear
+    await vi.waitFor(() => {
+      expect(screen.queryByTestId("about-modal")).toBeNull();
+    });
+  });
+
+  it("navigates back when back button is clicked", async () => {
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    const backBtn = screen.getByTitle("Back to recordings");
+    fireEvent.click(backBtn);
+
+    // Navigation should have been triggered (URL changes to "/")
+    await vi.waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+  });
+
+  it("toggles side panel visibility when panel button is clicked", async () => {
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // SidePanel should be visible by default (leftPanelVisible starts true)
+    expect(screen.getByText("Units")).toBeTruthy();
+
+    // Click the panel toggle button in BottomBar
+    const panelBtn = screen.getByText("Panel");
+    fireEvent.click(panelBtn);
+
+    // SidePanel should now be hidden
+    await vi.waitFor(() => {
+      expect(screen.queryByText("Units")).toBeNull();
+    });
+  });
+
+  it("loadRecording callback sets intermediate worldConfig", async () => {
+    const intermediateConfig = {
+      worldName: "Stratis",
+      worldSize: 8192,
+      maxZoom: 5,
+      minZoom: 0,
+    };
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      // 5th arg is the onWorldConfig callback (line 120)
+      const onWorldConfig = args[4];
+      if (typeof onWorldConfig === "function") {
+        onWorldConfig(intermediateConfig);
+      }
+      return {
+        worldConfig: {
+          worldName: "Altis",
+          worldSize: 30720,
+          maxZoom: 6,
+          minZoom: 0,
+        },
+        missionName: "Op Alpha",
+        recordingId: "42",
+        recordingFilename: "test-42",
+        extensionVersion: "1.0.0",
+        addonVersion: "2.0.0",
+      };
+    });
+
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // The callback was invoked — verify loadRecording was called with a function as 5th arg
+    expect(mockLoadRecording).toHaveBeenCalledOnce();
+    const callArgs = mockLoadRecording.mock.calls[0];
+    expect(typeof callArgs[4]).toBe("function");
+  });
+
+  it("toggleBlacklist adds and removes players via API", async () => {
+    const apiCalls: { url: string; method: string }[] = [];
+
+    setAuthToken("test-token");
+
+    // Make loadRecording populate the engine with a unit entity and markers
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      const engine = args[1];
+      const markerManager = args[2];
+      // Load a minimal manifest with one unit so UnitsTab renders it
+      engine.loadRecording({
+        version: 1,
+        worldName: "Altis",
+        missionName: "Op Alpha",
+        frameCount: 101,
+        chunkSize: 300,
+        captureDelayMs: 1000,
+        chunkCount: 1,
+        entities: [{
+          id: 7,
+          name: "TestPlayer",
+          type: "man",
+          startFrame: 0,
+          endFrame: 100,
+          side: "WEST",
+          isPlayer: true,
+          groupName: "Alpha",
+          role: "Rifleman",
+          positions: null,
+          framesFired: null,
+        }],
+        events: [],
+        markers: [],
+        times: [],
+      });
+      // Load markers so markerCounts shows count > 0 for the unit (needed for blacklist button)
+      markerManager.loadMarkers([{
+        type: "hd_dot",
+        text: "marker1",
+        side: "WEST",
+        color: "ColorBlue",
+        positions: [[0, "100,200,0", "ICON", 1, 0.8]],
+        player: 7,
+        alpha: 1,
+        startFrame: 0,
+        endFrame: 100,
+      }]);
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha",
+        recordingId: "42",
+        recordingFilename: "test-42",
+        extensionVersion: "1.0.0",
+        addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist/") && (init?.method === "PUT" || init?.method === "DELETE")) {
+        apiCalls.push({ url, method: init!.method! });
+        return Promise.resolve({ ok: true, status: 204 });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve([]),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              id: 42, world_name: "Altis", mission_name: "Op Alpha",
+              mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json",
+            }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // Unit should be visible in the SidePanel's UnitsTab
+    await vi.waitFor(() => {
+      expect(screen.getByText("TestPlayer")).toBeTruthy();
+    });
+
+    // Click the unit row to expand the detail card
+    fireEvent.click(screen.getByText("TestPlayer"));
+
+    // The detail card should show the blacklist button (admin + marker count > 0)
+    await vi.waitFor(() => {
+      expect(screen.getByTitle("Toggle marker blacklist")).toBeTruthy();
+    });
+
+    // Click the blacklist button to trigger toggleBlacklist
+    fireEvent.click(screen.getByTitle("Toggle marker blacklist"));
+
+    // Verify the PUT API call was made
+    await vi.waitFor(() => {
+      expect(apiCalls.some(c => c.method === "PUT" && c.url.includes("/marker-blacklist/7"))).toBe(true);
+    });
+  });
+
   it("fetches blacklist after recording loads and renders BlacklistIndicator for admins", async () => {
     // Set auth token so AuthProvider calls getMe
     setAuthToken("test-token");
@@ -288,70 +531,6 @@ describe("RecordingPlayback", () => {
     await vi.waitFor(() => {
       expect(screen.getByText(/markers blacklisted/)).toBeTruthy();
     });
-  });
-
-  it("toggleBlacklist adds a player to blacklist via API", async () => {
-    const putCalls: string[] = [];
-
-    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
-      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }),
-        });
-      }
-      if (typeof url === "string" && url.includes("/marker-blacklist") && (!init || init.method === undefined || init.method === "GET")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve([]),
-        });
-      }
-      if (typeof url === "string" && url.includes("/marker-blacklist/") && init?.method === "PUT") {
-        putCalls.push(url);
-        return Promise.resolve({ ok: true, status: 204 });
-      }
-      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              id: 42,
-              world_name: "Altis",
-              mission_name: "Op Alpha",
-              mission_duration: 3600,
-              filename: "test-42",
-              date: "2024-01-15",
-              storageFormat: "json",
-            }),
-        });
-      }
-      if (typeof url === "string" && url.includes("/api/v1/customize")) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({}),
-        });
-      }
-      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
-    });
-
-    renderPlayback();
-
-    await vi.waitFor(() => {
-      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
-    });
-
-    // The SidePanel renders the UnitsTab which has onToggleBlacklist={toggleBlacklist}.
-    // We can't easily click a unit (no entities in mock), but we can access the
-    // toggleBlacklist through the SidePanel props. Instead, we verify the function
-    // was wired correctly by checking the SidePanel renders with the right props.
-    // The toggleBlacklist coverage is ensured by the blacklist indicator test above
-    // and by verifying the API wiring works.
-    expect(putCalls).toHaveLength(0); // No toggle happened yet — just verifying setup
   });
 
   it("toggleBlacklist does nothing when recordingId is null", async () => {

@@ -209,4 +209,24 @@ func TestBlacklist_BadID(t *testing.T) {
 
 	err = hdlr.AddMarkerBlacklist(c)
 	assert.Equal(t, echo.ErrBadRequest, err)
+
+	// Bad operation ID for DELETE
+	req = httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
+	c.SetParamNames("id", "playerId")
+	c.SetParamValues("abc", "1")
+
+	err = hdlr.RemoveMarkerBlacklist(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
+
+	// Bad player ID for DELETE
+	req = httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
+	c.SetParamNames("id", "playerId")
+	c.SetParamValues("1", "xyz")
+
+	err = hdlr.RemoveMarkerBlacklist(c)
+	assert.Equal(t, echo.ErrBadRequest, err)
 }
