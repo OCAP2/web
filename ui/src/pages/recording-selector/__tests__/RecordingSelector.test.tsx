@@ -777,7 +777,7 @@ describe("RecordingSelector (language selector)", () => {
     });
   });
 
-  it("closes language dropdown when overlay is clicked", async () => {
+  it("closes language dropdown on Escape key", async () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
