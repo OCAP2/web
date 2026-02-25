@@ -121,6 +121,16 @@
             "user_editable": true,
             "rules": ["nullable", "string"],
             "sort": 9
+        },
+        {
+            "name": "CSS Overrides",
+            "description": "JSON object of CSS variable overrides for UI theming. Example: {\"--accent-primary\":\"#fcb00d\",\"--bg-dark\":\"#1a2a1a\",\"--text-on-accent\":\"#1a2a1a\"}",
+            "env_variable": "OCAP_CUSTOMIZE_CSSOVERRIDES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": ["nullable", "string"],
+            "sort": 10
         }
     ]
 }

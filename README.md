@@ -187,6 +187,43 @@ The Steam API key is optional. Without it, the admin badge shows the raw Steam64
 | `customize.disableKillCount` | `OCAP_CUSTOMIZE_DISABLEKILLCOUNT` | Hide kill counts in the UI | `false` |
 | `customize.headerTitle` | `OCAP_CUSTOMIZE_HEADERTITLE` | Custom header title | `""` |
 | `customize.headerSubtitle` | `OCAP_CUSTOMIZE_HEADERSUBTITLE` | Custom header subtitle | `""` |
+| `customize.cssOverrides` | `OCAP_CUSTOMIZE_CSSOVERRIDES` | CSS variable overrides (JSON object, see below) | `{}` |
+
+#### CSS Overrides
+
+Override any CSS custom property to theme the UI without rebuilding. In `setting.json`:
+
+```json
+"cssOverrides": {
+  "--accent-primary": "#fcb00d",
+  "--bg-dark": "#1a2a1a",
+  "--text-on-accent": "#1a2a1a"
+}
+```
+
+Via environment variable (for Docker), pass a JSON string:
+
+```bash
+OCAP_CUSTOMIZE_CSSOVERRIDES='{"--accent-primary":"#fcb00d","--bg-dark":"#1a2a1a","--text-on-accent":"#1a2a1a"}'
+```
+
+Common variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `--accent-primary` | Primary accent color (buttons, links, highlights) | `#4A9EFF` |
+| `--accent-primary-dark` | Darker variant for gradients | `#3585dd` |
+| `--accent-danger` | Danger/error color | `#FF4A4A` |
+| `--accent-success` | Success color | `#2DD4A0` |
+| `--accent-warning` | Warning color | `#FFB84A` |
+| `--text-on-accent` | Text color on accent-colored buttons | `#fff` |
+| `--bg-dark` | Main background | `#0a0f14` |
+| `--bg-surface` | Card/panel background | `#151e2b` |
+| `--text-primary` | Primary text color | `#e5ebf1` |
+| `--side-blufor` | BLUFOR faction color (map markers) | `#00a8ff` |
+| `--side-opfor` | OPFOR faction color | `#ff0000` |
+| `--side-ind` | Independent faction color | `#00cc00` |
+| `--side-civ` | Civilian faction color | `#c900ff` |
 
 ### Conversion
 
