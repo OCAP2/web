@@ -24,14 +24,9 @@ func (h *Handler) GetMarkerBlacklist(c echo.Context) error {
 
 // AddMarkerBlacklist adds a player entity ID to the marker blacklist.
 func (h *Handler) AddMarkerBlacklist(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, playerID, err := parseBlacklistIDs(c)
 	if err != nil {
-		return echo.ErrBadRequest
-	}
-
-	playerID, err := strconv.Atoi(c.Param("playerId"))
-	if err != nil {
-		return echo.ErrBadRequest
+		return err
 	}
 
 	if err := h.repoOperation.AddBlacklist(c.Request().Context(), id, playerID); err != nil {
@@ -43,14 +38,9 @@ func (h *Handler) AddMarkerBlacklist(c echo.Context) error {
 
 // RemoveMarkerBlacklist removes a player entity ID from the marker blacklist.
 func (h *Handler) RemoveMarkerBlacklist(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, playerID, err := parseBlacklistIDs(c)
 	if err != nil {
-		return echo.ErrBadRequest
-	}
-
-	playerID, err := strconv.Atoi(c.Param("playerId"))
-	if err != nil {
-		return echo.ErrBadRequest
+		return err
 	}
 
 	if err := h.repoOperation.RemoveBlacklist(c.Request().Context(), id, playerID); err != nil {
@@ -58,4 +48,18 @@ func (h *Handler) RemoveMarkerBlacklist(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func parseBlacklistIDs(c echo.Context) (int64, int, error) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return 0, 0, echo.ErrBadRequest
+	}
+
+	playerID, err := strconv.Atoi(c.Param("playerId"))
+	if err != nil {
+		return 0, 0, echo.ErrBadRequest
+	}
+
+	return id, playerID, nil
 }

@@ -421,36 +421,32 @@ export class ApiClient {
     operationId: string,
     playerEntityId: number,
   ): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/api/v1/operations/${encodeURIComponent(operationId)}/marker-blacklist/${playerEntityId}`,
-      {
-        method: "PUT",
-        headers: authHeaders(),
-      },
-    );
-    if (!response.ok) {
-      throw new ApiError(
-        `Add blacklist failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
+    return this.fetchBlacklistUpdate(operationId, playerEntityId, "PUT");
   }
 
   async removeMarkerBlacklist(
     operationId: string,
     playerEntityId: number,
   ): Promise<void> {
+    return this.fetchBlacklistUpdate(operationId, playerEntityId, "DELETE");
+  }
+
+  private async fetchBlacklistUpdate(
+    operationId: string,
+    playerEntityId: number,
+    method: "PUT" | "DELETE",
+  ): Promise<void> {
     const response = await fetch(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(operationId)}/marker-blacklist/${playerEntityId}`,
       {
-        method: "DELETE",
+        method,
         headers: authHeaders(),
       },
     );
     if (!response.ok) {
+      const action = method === "PUT" ? "Add" : "Remove";
       throw new ApiError(
-        `Remove blacklist failed: ${response.status} ${response.statusText}`,
+        `${action} blacklist failed: ${response.status} ${response.statusText}`,
         response.status,
         response.statusText,
       );

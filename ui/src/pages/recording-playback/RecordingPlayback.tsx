@@ -75,21 +75,25 @@ export function RecordingPlayback(): JSX.Element {
   const toggleBlacklist = async (playerEntityId: number) => {
     const rid = recordingId();
     if (!rid) return;
+
     const current = blacklist();
+    const isBlacklisted = current.has(playerEntityId);
+
     try {
-      if (current.has(playerEntityId)) {
+      if (isBlacklisted) {
         await api.removeMarkerBlacklist(rid, playerEntityId);
-        const next = new Set(current);
-        next.delete(playerEntityId);
-        setBlacklist(next);
-        markerManager.setBlacklist(next);
       } else {
         await api.addMarkerBlacklist(rid, playerEntityId);
-        const next = new Set(current);
-        next.add(playerEntityId);
-        setBlacklist(next);
-        markerManager.setBlacklist(next);
       }
+
+      const next = new Set(current);
+      if (isBlacklisted) {
+        next.delete(playerEntityId);
+      } else {
+        next.add(playerEntityId);
+      }
+      setBlacklist(next);
+      markerManager.setBlacklist(next);
     } catch {
       // API call failed — leave state unchanged
     }
