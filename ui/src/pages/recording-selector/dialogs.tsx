@@ -1,7 +1,7 @@
 import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Recording } from "../../data/types";
-import { Icons } from "./icons";
+import { EditIcon, XIcon, CheckIcon, UploadIcon, FilePlusIcon, RefreshCwIcon, AlertTriangleIcon, TrashIcon } from "../../components/Icons";
 import { formatDuration, formatDate, stripRecordingExtension } from "./helpers";
 import { TAG_OPTIONS } from "./constants";
 import ui from "../../components/ui.module.css";
@@ -34,10 +34,10 @@ export function EditModal(props: {
         {/* Header */}
         <div class={ui.dialogHeader}>
           <div class={styles.editModalHeaderLeft}>
-            <span style={{ color: "var(--accent-primary)" }}><Icons.Edit /></span>
+            <span style={{ color: "var(--accent-primary)" }}><EditIcon /></span>
             <span class={ui.dialogTitle}>Edit Recording</span>
           </div>
-          <button class={ui.dialogCloseBtn} onClick={props.onClose}><Icons.X /></button>
+          <button class={ui.dialogCloseBtn} onClick={props.onClose}><XIcon /></button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -116,7 +116,7 @@ export function EditModal(props: {
 
           <div class={ui.dialogFooter}>
             <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
-            <button type="submit" class={ui.btnPrimary}><Icons.Check /> Save Changes</button>
+            <button type="submit" class={ui.btnPrimary}><CheckIcon /> Save Changes</button>
           </div>
         </form>
       </div>
@@ -169,10 +169,10 @@ export function UploadDialog(props: {
         {/* Header */}
         <div class={ui.dialogHeader}>
           <div class={styles.uploadHeaderLeft}>
-            <span class={styles.uploadHeaderIcon}><Icons.Upload /></span>
+            <span class={styles.uploadHeaderIcon}><UploadIcon /></span>
             <span class={ui.dialogTitle}>Upload Recording</span>
           </div>
-          <button class={ui.dialogCloseBtn} data-testid="upload-dialog-close" onClick={props.onCancel}><Icons.X /></button>
+          <button class={ui.dialogCloseBtn} data-testid="upload-dialog-close" onClick={props.onCancel}><XIcon /></button>
         </div>
 
         <div class={ui.dialogBody} style={{ gap: "14px" }}>
@@ -195,7 +195,7 @@ export function UploadDialog(props: {
             />
             <Show when={file()} fallback={
               <>
-                <div class={styles.uploadDropIcon}><Icons.FilePlus /></div>
+                <div class={styles.uploadDropIcon}><FilePlusIcon /></div>
                 <div class={styles.uploadDropText}>
                   Drop <span class={styles.uploadDropHighlight}>.json.gz</span> recording here or <span class={styles.uploadDropBrowse}>browse</span>
                 </div>
@@ -203,13 +203,13 @@ export function UploadDialog(props: {
             }>
               {(f) => (
                 <div class={styles.uploadFileRow}>
-                  <div class={styles.uploadFileIcon}><Icons.Check /></div>
+                  <div class={styles.uploadFileIcon}><CheckIcon /></div>
                   <div class={styles.uploadFileInfo}>
                     <div class={styles.uploadFileName}>{f().name}</div>
                     <div class={styles.uploadFileSize}>{(f().size / 1024).toFixed(0)} KB</div>
                   </div>
                   <button class={styles.uploadFileRemove} data-testid="upload-file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
-                    <Icons.X />
+                    <XIcon />
                   </button>
                 </div>
               )}
@@ -294,8 +294,8 @@ export function UploadDialog(props: {
               disabled={!canSubmit()}
               onClick={handleSubmit}
             >
-              <Show when={props.uploading} fallback={<><Icons.Upload /> Upload Recording</>}>
-                <span style={{ display: "flex", animation: "spin 1s linear infinite" }}><Icons.RefreshCw /></span> Uploading...
+              <Show when={props.uploading} fallback={<><UploadIcon /> Upload Recording</>}>
+                <span style={{ display: "flex", animation: "spin 1s linear infinite" }}><RefreshCwIcon /></span> Uploading...
               </Show>
             </button>
           </div>
@@ -318,7 +318,7 @@ export function DeleteConfirm(props: {
         {/* Body */}
         <div class={styles.deleteBody}>
           <div class={styles.deleteIcon}>
-            <Icons.AlertTriangle />
+            <AlertTriangleIcon />
           </div>
           <div class={styles.deleteTitle}>Delete Recording</div>
           <div class={styles.deleteSubtext}>Are you sure you want to delete</div>
@@ -334,7 +334,7 @@ export function DeleteConfirm(props: {
           <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
           <button type="button" class={ui.btnDanger} onClick={() => props.onConfirm(props.rec.id)}>
             <span style={{ display: "flex", "align-items": "center", gap: "5px" }}>
-              <Icons.Trash /> Delete Recording
+              <TrashIcon /> Delete Recording
             </span>
           </button>
         </div>

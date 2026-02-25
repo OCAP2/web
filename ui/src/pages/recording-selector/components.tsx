@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import { useI18n } from "../../hooks/useLocale";
 import { STATUS_MAP } from "./constants";
 import { getTagColor } from "./helpers";
-import { Icons } from "./icons";
+import { SortAscIcon, SortDescIcon } from "../../components/Icons";
 import styles from "./RecordingSelector.module.css";
 
 export function StatPill(props: { icon: JSX.Element; value: string | number; label: string; class?: string }) {
@@ -71,7 +71,7 @@ export function SortHeader(props: {
     >
       {props.label}
       <Show when={active()}>
-        {props.currentDir === "asc" ? <Icons.SortDesc /> : <Icons.SortAsc />}
+        {props.currentDir === "asc" ? <SortDescIcon /> : <SortAscIcon />}
       </Show>
     </button>
   );

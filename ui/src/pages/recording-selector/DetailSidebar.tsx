@@ -2,7 +2,7 @@ import { Show, For, createSignal, createEffect, on } from "solid-js";
 import type { Recording } from "../../data/types";
 import { useI18n } from "../../hooks/useLocale";
 import { C, SIDE_COLORS, SIDE_HEX } from "./constants";
-import { Icons } from "./icons";
+import { XIcon, CalendarIcon, ClockIcon, UsersIcon, CrosshairIcon, ZapIcon, EditIcon, TrashIcon, RefreshCwIcon, PlayIcon } from "../../components/Icons";
 import { formatDuration, formatDate, getMapColor, getStatusInfo, isRecordingReady } from "./helpers";
 import { StatPill, TagBadge, StatusBadge } from "./components";
 import styles from "./RecordingSelector.module.css";
@@ -60,7 +60,7 @@ export function DetailSidebar(props: {
           {/* <div class={styles.sidebarHeroTerrain}>{props.rec.worldName}</div> */}
         </div>
         <button data-testid="sidebar-close" class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
-          <Icons.X />
+          <XIcon />
         </button>
       </div>
 
@@ -79,9 +79,9 @@ export function DetailSidebar(props: {
 
         {/* Stats Grid */}
         <div class={styles.sidebarStatsGrid}>
-          <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.rec.date, locale())} label={t("data")} />
-          <StatPill icon={<Icons.Clock />} value={formatDuration(props.rec.missionDuration)} label={t("durability")} />
-          <StatPill icon={<Icons.Users />} value={(props.rec.playerCount ?? 0) > 0 ? props.rec.playerCount! : "\u2014"} label={t("players")} />
+          <StatPill class={styles.sidebarStatsGridFull} icon={<CalendarIcon />} value={formatDate(props.rec.date, locale())} label={t("data")} />
+          <StatPill icon={<ClockIcon />} value={formatDuration(props.rec.missionDuration)} label={t("durability")} />
+          <StatPill icon={<UsersIcon />} value={(props.rec.playerCount ?? 0) > 0 ? props.rec.playerCount! : "\u2014"} label={t("players")} />
         </div>
 
         {/* Force Composition — per-side stat cards */}
@@ -158,7 +158,7 @@ export function DetailSidebar(props: {
               <div class={styles.sidebarCombatGrid}>
                 <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-danger) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-danger) 8%, transparent)" }}>
                   <div class={styles.sidebarCombatCellTop}>
-                    <span class={styles.sidebarCombatIcon}><Icons.Crosshair /></span>
+                    <span class={styles.sidebarCombatIcon}><CrosshairIcon /></span>
                     <span class={styles.sidebarCombatCellValue} style={{ color: C.danger }}>{kills().toLocaleString()}</span>
                   </div>
                   <div class={styles.sidebarCombatCellLabel}>{t("total_kills")}</div>
@@ -166,7 +166,7 @@ export function DetailSidebar(props: {
                 <Show when={playerKills() > 0}>
                   <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-primary) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-primary) 8%, transparent)" }}>
                     <div class={styles.sidebarCombatCellTop}>
-                      <span style={{ color: `${C.primary}88` }}><Icons.Users /></span>
+                      <span style={{ color: `${C.primary}88` }}><UsersIcon /></span>
                       <span class={styles.sidebarCombatCellValue} style={{ color: C.primary }}>{playerKills().toLocaleString()}</span>
                     </div>
                     <div class={styles.sidebarCombatCellLabel}>{t("player_kills")}</div>
@@ -174,7 +174,7 @@ export function DetailSidebar(props: {
                 </Show>
                 <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-warning) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-warning) 8%, transparent)" }}>
                   <div class={styles.sidebarCombatCellTop}>
-                    <span class={styles.sidebarCombatIconOrange}><Icons.Zap /></span>
+                    <span class={styles.sidebarCombatIconOrange}><ZapIcon /></span>
                     <span class={styles.sidebarCombatCellValue} style={{ color: C.warning }}>{killsPerMin()}</span>
                   </div>
                   <div class={styles.sidebarCombatCellLabel}>{t("kills_per_min")}</div>
@@ -191,14 +191,14 @@ export function DetailSidebar(props: {
           <div class={styles.sidebarSectionLabel} style={{ "margin-bottom": "2px" }}>ADMIN ACTIONS</div>
           <div class={styles.adminActionButtons}>
             <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.rec)}>
-              <Icons.Edit /> Edit
+              <EditIcon /> Edit
             </button>
             <button class={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`} onClick={() => props.onDelete?.(props.rec)}>
-              <Icons.Trash /> Delete
+              <TrashIcon /> Delete
             </button>
             <Show when={props.rec.conversionStatus === "failed"}>
               <button class={styles.adminActionBtn} onClick={() => props.onRetry?.(props.rec.id)}>
-                <Icons.RefreshCw /> Retry
+                <RefreshCwIcon /> Retry
               </button>
             </Show>
           </div>
@@ -214,7 +214,7 @@ export function DetailSidebar(props: {
           onClick={() => ready() && props.onLaunch(props.rec)}
         >
           <Show when={ready()} fallback={<>{t(status().labelKey)}</>}>
-            <Icons.Play /> {t("open_recording")}
+            <PlayIcon /> {t("open_recording")}
           </Show>
         </button>
       </div>

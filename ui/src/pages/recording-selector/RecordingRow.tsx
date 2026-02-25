@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import type { Recording } from "../../data/types";
 import { useI18n } from "../../hooks/useLocale";
-import { Icons } from "./icons";
+import { GlobeIcon, UsersIcon, CrosshairIcon, PlayIcon } from "../../components/Icons";
 import { formatDuration, formatDate, relativeDate, getMapColor, getStatusInfo, isRecordingReady } from "./helpers";
 import { TagBadge, StatusBadge } from "./components";
 import styles from "./RecordingSelector.module.css";
@@ -38,7 +38,7 @@ export function RecordingRow(props: {
             color: mapColor(),
           }}
         >
-          <Icons.Globe />
+          <GlobeIcon />
         </div>
         <div class={styles.rowMissionInfo}>
           <div class={styles.rowMissionName}>{props.rec.missionName}</div>
@@ -57,14 +57,14 @@ export function RecordingRow(props: {
 
       <Show when={props.showPlayers}>
         <div class={styles.rowPlayers}>
-          <span class={styles.rowPlayersIcon}><Icons.Users /></span>
+          <span class={styles.rowPlayersIcon}><UsersIcon /></span>
           <span class={styles.rowPlayersValue}>{(props.rec.playerCount ?? 0) > 0 ? props.rec.playerCount : "\u2014"}</span>
         </div>
       </Show>
 
       <Show when={props.showKills}>
         <div class={styles.rowKills}>
-          <span class={styles.rowKillsIcon}><Icons.Crosshair /></span>
+          <span class={styles.rowKillsIcon}><CrosshairIcon /></span>
           <span class={styles.rowKillsValue} style={{ color: (props.rec.killCount ?? 0) > 0 ? "var(--text-muted)" : "var(--text-dimmer)" }}>
             {(props.rec.killCount ?? 0) > 0 ? props.rec.killCount : "\u2014"}
           </span>
@@ -88,7 +88,7 @@ export function RecordingRow(props: {
             class={styles.playButton}
             onClick={(e) => { e.stopPropagation(); props.onLaunch(props.rec); }}
           >
-            <Icons.Play />
+            <PlayIcon />
           </button>
         </Show>
       </div>

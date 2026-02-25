@@ -9,7 +9,7 @@ import { useCustomize } from "../../hooks/useCustomize";
 import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
-import { Icons } from "./icons";
+import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, SteamIcon, ShieldIcon, UploadIcon, LogOutIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon } from "../../components/Icons";
 import { getMapColor, isRecordingReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
 import { RecordingRow } from "./RecordingRow";
@@ -271,12 +271,12 @@ export function RecordingSelector(): JSX.Element {
             {/* Right side: stats + language */}
             <div class={styles.statsArea}>
               <div class={styles.statPills}>
-                <StatPill icon={<Icons.Globe />} value={uniqueMaps().length} label={t("maps_label")} />
+                <StatPill icon={<GlobeIcon />} value={uniqueMaps().length} label={t("maps_label")} />
                 <Show when={hasPlayerData()}>
-                  <StatPill icon={<Icons.Users />} value={maxPlayers()} label={t("max_players")} />
+                  <StatPill icon={<UsersIcon />} value={maxPlayers()} label={t("max_players")} />
                 </Show>
                 <Show when={hasKillData()}>
-                  <StatPill icon={<Icons.Crosshair />} value={totalKills()} label={t("total_kills")} />
+                  <StatPill icon={<CrosshairIcon />} value={totalKills()} label={t("total_kills")} />
                 </Show>
               </div>
 
@@ -288,7 +288,7 @@ export function RecordingSelector(): JSX.Element {
                   <span class={styles.langFlag}>{LOCALE_LABELS[locale()]?.flag}</span>
                   <span class={styles.langLabel}>{LOCALE_LABELS[locale()]?.label}</span>
                   <span class={`${styles.langChevron} ${langOpen() ? styles.langChevronOpen : ""}`}>
-                    <Icons.ChevronDown />
+                    <ChevronDownIcon />
                   </span>
                 </button>
                 <Show when={langOpen()}>
@@ -319,7 +319,7 @@ export function RecordingSelector(): JSX.Element {
 
               <Show when={authenticated()} fallback={
                 <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-                  <Icons.Steam /> Sign in
+                  <SteamIcon /> Sign in
                 </button>
               }>
                 <div class={styles.adminArea}>
@@ -331,7 +331,7 @@ export function RecordingSelector(): JSX.Element {
                       <div style={{ "font-size": "11px", color: "#e0e6ed", "font-family": "var(--font-mono)", "font-weight": "600" }}>
                         {steamName() || steamId() || "Admin"}
                       </div>
-                      <div class={styles.adminLabel}><Icons.Shield /> ADMIN</div>
+                      <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
                     </div>
                   </div>
                   <button
@@ -339,10 +339,10 @@ export function RecordingSelector(): JSX.Element {
                     onClick={() => setShowUpload(u => !u)}
                     title="Upload recording"
                   >
-                    <Icons.Upload />
+                    <UploadIcon />
                   </button>
                   <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
-                    <Icons.LogOut />
+                    <LogOutIcon />
                   </button>
                 </div>
               </Show>
@@ -353,7 +353,7 @@ export function RecordingSelector(): JSX.Element {
           <div class={styles.filterBar}>
             {/* Search */}
             <div class={styles.searchWrap}>
-              <span class={styles.searchIcon}><Icons.Search /></span>
+              <span class={styles.searchIcon}><SearchIcon /></span>
               <input
                 ref={searchRef}
                 data-testid="search-input"
@@ -368,7 +368,7 @@ export function RecordingSelector(): JSX.Element {
 
             {/* Tag filters */}
             <div class={styles.tagFilters}>
-              <span class={styles.tagIcon}><Icons.Tag /></span>
+              <span class={styles.tagIcon}><TagIcon /></span>
               <For each={uniqueTags()}>
                 {(tag) => (
                   <TagBadge
@@ -385,7 +385,7 @@ export function RecordingSelector(): JSX.Element {
             {/* Map filters */}
             <Show when={uniqueMaps().length > 1}>
               <div class={styles.mapFilters}>
-                <span class={styles.mapIcon}><Icons.Map /></span>
+                <span class={styles.mapIcon}><MapIcon /></span>
                 <For each={uniqueMaps()}>
                   {(mapName) => {
                     const color = getMapColor(mapName);
@@ -413,7 +413,7 @@ export function RecordingSelector(): JSX.Element {
             {/* Clear */}
             <Show when={hasFilters()}>
               <button class={styles.clearButton} data-testid="clear-filters" onClick={clearFilters}>
-                <Icons.X /> {t("clear")}
+                <XIcon /> {t("clear")}
               </button>
             </Show>
           </div>
@@ -461,7 +461,7 @@ export function RecordingSelector(): JSX.Element {
               </Show>
               <Show when={!loading() && filtered().length === 0}>
                 <div class={styles.emptyState}>
-                  <Icons.Search />
+                  <SearchIcon />
                   <span class={styles.emptyText}>{t("no_recordings_found")}</span>
                   <span class={styles.emptyHint}>{t("adjust_filters")}</span>
                 </div>
@@ -497,9 +497,9 @@ export function RecordingSelector(): JSX.Element {
             <div class={styles.footer}>
               <div class={styles.footerLeft}>
                 <a href="https://github.com/OCAP2/OCAP" target="_blank" rel="noopener noreferrer" class={styles.footerGithub}>
-                  <Icons.GitHub />
+                  <GitHubIcon />
                   <span>OCAP2</span>
-                  <Icons.ExternalLink />
+                  <ExternalLinkIcon />
                 </a>
                 <div class={styles.dividerShort} />
                 <Show when={buildInfo()}>
@@ -519,7 +519,7 @@ export function RecordingSelector(): JSX.Element {
                 </Show>
                 <div class={styles.dividerShort} />
                 <span class={styles.footerMadeWith}>
-                  <span class={styles.footerHeart}><Icons.Heart /></span> {t("made_with_love")}
+                  <span class={styles.footerHeart}><HeartIcon /></span> {t("made_with_love")}
                 </span>
               </div>
               <span class={styles.footerCenter}>
@@ -601,10 +601,10 @@ function Toast(props: { message: string; onDismiss: () => void }): JSX.Element {
 
   return (
     <div class={styles.toast} data-testid="auth-toast">
-      <Icons.AlertTriangle />
+      <AlertTriangleIcon />
       <span>{props.message}</span>
       <button class={styles.toastClose} onClick={() => props.onDismiss()} data-testid="auth-toast-dismiss">
-        <Icons.X />
+        <XIcon />
       </button>
     </div>
   );
