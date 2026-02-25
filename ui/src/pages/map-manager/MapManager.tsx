@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { createSignal, createMemo, onMount, Show, For } from "solid-js";
+import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { ApiClient } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
@@ -43,6 +43,19 @@ export function MapManager(): JSX.Element {
 
   // SSE events
   const { jobs } = useMapToolEvents(() => api.getMapToolEventsUrl());
+
+  // Refresh maps when any job finishes (done/failed) — the map list on
+  // disk has changed but the `maps` signal still holds the stale snapshot.
+  const doneCount = createMemo(() =>
+    jobs().filter((j) => j.status === "done" || j.status === "failed").length,
+  );
+  createEffect(
+    on(doneCount, (cur, prev) => {
+      if (prev !== undefined && cur > prev) {
+        api.getMapToolMaps().then(setMaps).catch(() => {});
+      }
+    }),
+  );
 
   // ─── Derived ───
   const filteredMaps = createMemo(() => {
@@ -93,8 +106,7 @@ export function MapManager(): JSX.Element {
         setUploadProgress((loaded / total) * 100);
       });
       setShowImport(false);
-      const m = await api.getMapToolMaps();
-      setMaps(m);
+      // Maps list will refresh automatically when the job completes via SSE
     } catch (e) {
       console.error("Import failed:", e);
     }
