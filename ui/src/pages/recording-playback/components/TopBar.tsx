@@ -1,6 +1,6 @@
 import { createSignal, createMemo, onCleanup, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
-import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "./Icons";
+import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "../../../components/Icons";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
 import { useCustomize } from "../../../hooks/useCustomize";

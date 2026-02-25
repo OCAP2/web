@@ -1,6 +1,6 @@
 import { Switch, Match, For } from "solid-js";
 import type { Accessor, JSX } from "solid-js";
-import { UsersIcon, ActivityIcon, BarChartIcon } from "./Icons";
+import { UsersIcon, ActivityIcon, BarChartIcon } from "../../../components/Icons";
 import { useI18n } from "../../../hooks/useLocale";
 import { UnitsTab } from "./UnitsTab";
 import { EventsTab } from "./EventsTab";

@@ -12,7 +12,7 @@ import {
   PauseIcon,
   SkipForwardIcon,
   ChevronDownIcon,
-} from "./Icons";
+} from "../../../components/Icons";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { SpeedSelector } from "./SpeedSelector";
 import { useClickOutside } from "../../../hooks/useClickOutside";

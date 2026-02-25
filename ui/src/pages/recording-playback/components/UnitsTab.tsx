@@ -6,7 +6,7 @@ import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
 import { activeSide, setActiveSide } from "../shortcuts";
-import { CrosshairIcon, ChevronRightIcon } from "./Icons";
+import { CrosshairIcon, ChevronRightIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];

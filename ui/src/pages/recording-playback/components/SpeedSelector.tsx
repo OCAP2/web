@@ -1,7 +1,7 @@
 import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
-import { ChevronDownIcon } from "./Icons";
+import { ChevronDownIcon } from "../../../components/Icons";
 import { useClickOutside } from "../../../hooks/useClickOutside";
 import styles from "./BottomBar.module.css";
 

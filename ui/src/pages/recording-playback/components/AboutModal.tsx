@@ -5,7 +5,7 @@ import { useI18n } from "../../../hooks/useLocale";
 import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
 import { LOCALE_LABELS } from "../../recording-selector/constants";
-import { XIcon } from "./Icons";
+import { XIcon } from "../../../components/Icons";
 import ui from "../../../components/ui.module.css";
 import styles from "./AboutModal.module.css";
 
