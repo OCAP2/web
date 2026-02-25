@@ -21,20 +21,22 @@ export function AuthBadge(): JSX.Element {
         </button>
       }
     >
-      <div class={styles.adminBadge}>
-        <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
-          {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" data-testid="admin-avatar" />}
-        </Show>
-        <div>
-          <div class={styles.adminName}>
-            {steamName() || steamId() || "Admin"}
+      <>
+        <div class={styles.adminBadge}>
+          <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
+            {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" data-testid="admin-avatar" />}
+          </Show>
+          <div>
+            <div class={styles.adminName}>
+              {steamName() || steamId() || "Admin"}
+            </div>
+            <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
           </div>
-          <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
         </div>
-      </div>
-      <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
-        <LogOutIcon />
-      </button>
+        <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
+          <LogOutIcon />
+        </button>
+      </>
     </Show>
   );
 }
