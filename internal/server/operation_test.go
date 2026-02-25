@@ -437,7 +437,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 7, version)
+	assert.Equal(t, 8, version)
 }
 
 func TestGetTypesEmpty(t *testing.T) {

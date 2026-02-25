@@ -1,12 +1,12 @@
 import { createSignal, createMemo, createEffect, For, Show } from "solid-js";
-import type { JSX } from "solid-js";
+import type { JSX, Accessor } from "solid-js";
 import type { Side } from "../../../data/types";
 import type { Unit } from "../../../playback/entities/unit";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
 import { activeSide, setActiveSide } from "../shortcuts";
-import { CrosshairIcon, ChevronRightIcon } from "../../../components/Icons";
+import { CrosshairIcon, ChevronRightIcon, EyeOffIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV"];
@@ -23,7 +23,14 @@ interface GroupData {
   units: Unit[];
 }
 
-export function UnitsTab(): JSX.Element {
+interface UnitsTabProps {
+  blacklist?: Accessor<Set<number>>;
+  markerCounts?: Accessor<Map<number, number>>;
+  isAdmin?: Accessor<boolean>;
+  onToggleBlacklist?: (playerEntityId: number) => void;
+}
+
+export function UnitsTab(props: UnitsTabProps): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
   const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
@@ -211,6 +218,20 @@ export function UnitsTab(): JSX.Element {
                               <CrosshairIcon size={10} />
                               {killDeathCounts().kills.get(unit.id)}
                             </span>
+                          </Show>
+                          <Show when={props.isAdmin?.() && (props.markerCounts?.()?.get(unit.id) ?? 0) > 0}>
+                            <button
+                              class={styles.blacklistBtn}
+                              classList={{ [styles.blacklistBtnActive]: props.blacklist?.()?.has(unit.id) ?? false }}
+                              title="Toggle marker blacklist"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                props.onToggleBlacklist?.(unit.id);
+                              }}
+                            >
+                              <EyeOffIcon size={10} />
+                              {props.markerCounts?.()?.get(unit.id)}
+                            </button>
                           </Show>
                         </button>
                       );

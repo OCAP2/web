@@ -223,6 +223,7 @@ export class MarkerManager {
   private markers: TrackedMarker[] = [];
   private renderer: MapRenderer;
   private sideFilter: string | null = null;
+  private blacklistedPlayers: Set<number> = new Set();
 
   constructor(renderer: MapRenderer) {
     this.renderer = renderer;
@@ -250,6 +251,39 @@ export class MarkerManager {
   private matchesSideFilter(markerSide: string): boolean {
     if (this.sideFilter === null) return true;
     return markerSide === this.sideFilter || markerSide === "GLOBAL";
+  }
+
+  /**
+   * Set which players' markers are blacklisted.
+   * Immediately removes any currently-displayed markers for blacklisted players.
+   */
+  setBlacklist(playerIds: Set<number>): void {
+    this.blacklistedPlayers = playerIds;
+
+    for (const tracked of this.markers) {
+      if (tracked.handle && this.isBlacklisted(tracked.def.player)) {
+        this.renderer.removeBriefingMarker(tracked.handle);
+        tracked.handle = null;
+        tracked.lastPosIndex = -1;
+      }
+    }
+  }
+
+  private isBlacklisted(player: number): boolean {
+    if (player === -1) return false; // system markers
+    return this.blacklistedPlayers.has(player);
+  }
+
+  /**
+   * Count markers per player entity ID (excludes system markers with player === -1).
+   */
+  getMarkerCountsByPlayer(): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const tracked of this.markers) {
+      if (tracked.def.player === -1) continue;
+      counts.set(tracked.def.player, (counts.get(tracked.def.player) ?? 0) + 1);
+    }
+    return counts;
   }
 
   /**
@@ -295,6 +329,16 @@ export class MarkerManager {
       );
 
       if (posIndex >= 0) {
+        // Skip blacklisted player markers
+        if (this.isBlacklisted(tracked.def.player)) {
+          if (tracked.handle) {
+            this.renderer.removeBriefingMarker(tracked.handle);
+            tracked.handle = null;
+            tracked.lastPosIndex = -1;
+          }
+          continue;
+        }
+
         // Skip markers that don't match the active side filter
         if (!this.matchesSideFilter(tracked.def.side)) {
           if (tracked.handle) {

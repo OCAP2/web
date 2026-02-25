@@ -1,0 +1,20 @@
+.badge {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accent-danger) 12%, var(--bg-panel));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 20%, transparent);
+  color: var(--accent-danger);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  pointer-events: none;
+}

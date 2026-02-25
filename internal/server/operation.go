@@ -190,6 +190,18 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 8 {
+		if err = r.runMigration(8,
+			`CREATE TABLE IF NOT EXISTS marker_blacklist (
+				operation_id INTEGER NOT NULL,
+				player_entity_id INTEGER NOT NULL,
+				PRIMARY KEY (operation_id, player_entity_id)
+			)`,
+		); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

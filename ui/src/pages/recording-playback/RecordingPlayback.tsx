@@ -1,9 +1,9 @@
-import { onMount, onCleanup, createSignal, createMemo } from "solid-js";
+import { onMount, onCleanup, createSignal, createMemo, Show } from "solid-js";
 import type { JSX } from "solid-js";
-import { Show } from "solid-js";
 import { useParams, useNavigate, useLocation } from "@solidjs/router";
 import type { WorldConfig } from "../../data/types";
 import { ApiClient } from "../../data/apiClient";
+import { useAuth } from "../../hooks/useAuth";
 import { PlaybackEngine } from "../../playback/engine";
 import { MarkerManager } from "../../playback/markerManager";
 import { formatElapsedTime } from "../../playback/time";
@@ -24,6 +24,7 @@ import { AboutModal } from "./components/AboutModal";
 import { CounterDisplay } from "./components/CounterDisplay";
 import { FollowIndicator } from "./components/FollowIndicator";
 import { Hint, showHint, hintMessage, hintVisible } from "./components/Hint";
+import { BlacklistIndicator } from "./components/BlacklistIndicator";
 import {
   registerShortcuts,
   unregisterShortcuts,
@@ -46,6 +47,7 @@ export function RecordingPlayback(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation<LocationState>();
   const { t } = useI18n();
+  const { authenticated } = useAuth();
   const api = new ApiClient();
   const renderer: MapRenderer = new LeafletRenderer();
   const engine = new PlaybackEngine(renderer);
@@ -60,6 +62,8 @@ export function RecordingPlayback(): JSX.Element {
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
   const [addonVersion, setAddonVersion] = createSignal<string | undefined>(undefined);
   const [loading, setLoading] = createSignal(true);
+  const [blacklist, setBlacklist] = createSignal<Set<number>>(new Set());
+  const [markerCounts, setMarkerCounts] = createSignal<Map<number, number>>(new Map());
 
   const locState = () => location.state as LocationState | undefined;
 
@@ -67,6 +71,29 @@ export function RecordingPlayback(): JSX.Element {
   const duration = createMemo(() =>
     formatElapsedTime(engine.endFrame(), engine.captureDelayMs()),
   );
+
+  const toggleBlacklist = async (playerEntityId: number) => {
+    const rid = recordingId();
+    if (!rid) return;
+    const current = blacklist();
+    try {
+      if (current.has(playerEntityId)) {
+        await api.removeMarkerBlacklist(rid, playerEntityId);
+        const next = new Set(current);
+        next.delete(playerEntityId);
+        setBlacklist(next);
+        markerManager.setBlacklist(next);
+      } else {
+        await api.addMarkerBlacklist(rid, playerEntityId);
+        const next = new Set(current);
+        next.add(playerEntityId);
+        setBlacklist(next);
+        markerManager.setBlacklist(next);
+      }
+    } catch {
+      // API call failed — leave state unchanged
+    }
+  };
 
   useRenderBridge(engine, renderer, markerManager);
 
@@ -94,6 +121,17 @@ export function RecordingPlayback(): JSX.Element {
         setRecordingFilename(result.recordingFilename);
         setExtensionVersion(result.extensionVersion);
         setAddonVersion(result.addonVersion);
+
+        // Fetch marker blacklist (non-fatal)
+        try {
+          const ids = await api.getMarkerBlacklist(result.recordingId);
+          const blSet = new Set(ids);
+          setBlacklist(blSet);
+          markerManager.setBlacklist(blSet);
+          setMarkerCounts(markerManager.getMarkerCountsByPlayer());
+        } catch {
+          // Blacklist unavailable — not critical
+        }
       } catch (err) {
         console.error("Failed to load recording:", err);
         showHint(t("load_failed"));
@@ -128,6 +166,10 @@ export function RecordingPlayback(): JSX.Element {
           <SidePanel
             activeTab={activePanelTab}
             onTabChange={setActivePanelTab}
+            blacklist={blacklist}
+            markerCounts={markerCounts}
+            isAdmin={authenticated}
+            onToggleBlacklist={toggleBlacklist}
           />
         </Show>
         <BottomBar
@@ -143,6 +185,12 @@ export function RecordingPlayback(): JSX.Element {
           addonVersion={addonVersion}
         />
         <FollowIndicator />
+        <Show when={authenticated() && blacklist().size > 0}>
+          <BlacklistIndicator
+            blacklist={blacklist}
+            markerCounts={markerCounts}
+          />
+        </Show>
         <Hint message={hintMessage} visible={hintVisible} />
         <div
           class={loadingStyles.loadingScreen}

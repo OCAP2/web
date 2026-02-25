@@ -105,6 +105,10 @@ func NewHandler(
 		"/api/v1/operations/:id",
 		hdlr.GetOperation,
 	)
+	g.GET(
+		"/api/v1/operations/:id/marker-blacklist",
+		hdlr.GetMarkerBlacklist,
+	)
 	g.POST(
 		"/api/v1/operations/add",
 		hdlr.StoreOperation,
@@ -163,6 +167,8 @@ func NewHandler(
 	admin.PATCH("/api/v1/operations/:id", hdlr.EditOperation)
 	admin.DELETE("/api/v1/operations/:id", hdlr.DeleteOperation)
 	admin.POST("/api/v1/operations/:id/retry", hdlr.RetryConversion)
+	admin.PUT("/api/v1/operations/:id/marker-blacklist/:playerId", hdlr.AddMarkerBlacklist)
+	admin.DELETE("/api/v1/operations/:id/marker-blacklist/:playerId", hdlr.RemoveMarkerBlacklist)
 
 	if hdlr.staticFS != nil {
 		// Serve the SPA frontend with fallback to index.html for client-side routing

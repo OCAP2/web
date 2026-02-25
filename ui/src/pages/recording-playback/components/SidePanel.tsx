@@ -10,6 +10,10 @@ import styles from "./SidePanel.module.css";
 export interface SidePanelProps {
   activeTab: Accessor<string>;
   onTabChange: (tab: string) => void;
+  blacklist?: Accessor<Set<number>>;
+  markerCounts?: Accessor<Map<number, number>>;
+  isAdmin?: Accessor<boolean>;
+  onToggleBlacklist?: (playerEntityId: number) => void;
 }
 
 export function SidePanel(props: SidePanelProps): JSX.Element {
@@ -40,7 +44,12 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
 
       <Switch>
         <Match when={props.activeTab() === "units"}>
-          <UnitsTab />
+          <UnitsTab
+            blacklist={props.blacklist}
+            markerCounts={props.markerCounts}
+            isAdmin={props.isAdmin}
+            onToggleBlacklist={props.onToggleBlacklist}
+          />
         </Match>
         <Match when={props.activeTab() === "events"}>
           <EventsTab />

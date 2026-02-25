@@ -275,6 +275,39 @@
   border-radius: 4px;
 }
 
+/* ── Blacklist button ── */
+
+.blacklistBtn {
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dimmest);
+  background: var(--bg-interactive);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.blacklistBtn:hover {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.blacklistBtnActive {
+  color: var(--accent-danger);
+  background: color-mix(in srgb, var(--accent-danger) 12%, transparent);
+}
+
+.blacklistBtnActive:hover {
+  color: var(--accent-danger);
+  background: color-mix(in srgb, var(--accent-danger) 18%, transparent);
+}
+
 /* ── Events tab ── */
 
 .filterBar {
