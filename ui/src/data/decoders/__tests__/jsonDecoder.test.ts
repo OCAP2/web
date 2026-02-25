@@ -521,6 +521,192 @@ describe("JsonDecoder.decodeManifest", () => {
     }
   });
 
+  it("decodes endMission event", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [99, "endMission", ["WEST", "Mission Complete"]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("endMission");
+    if (event.type === "endMission") {
+      expect(event.side).toBe("WEST");
+      expect(event.message).toBe("Mission Complete");
+    }
+  });
+
+  it("decodes endMission with missing data gracefully", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [99, "endMission"],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    if (event.type === "endMission") {
+      expect(event.side).toBe("");
+      expect(event.message).toBe("");
+    }
+  });
+
+  it("decodes generalEvent", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [50, "generalEvent", "Wave 3 started"],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("generalEvent");
+    if (event.type === "generalEvent") {
+      expect(event.message).toBe("Wave 3 started");
+    }
+  });
+
+  it("decodes capturedFlag event", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [40, "capturedFlag", ["PlayerA", "blue"]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("capturedFlag");
+    if (event.type === "capturedFlag") {
+      expect(event.unitName).toBe("PlayerA");
+      expect(event.objectType).toBe("flag");
+    }
+  });
+
+  it("decodes captured event", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [35, "captured", ["PlayerB", "red", "sector", "blue", [100, 200], [110, 210]]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("captured");
+    if (event.type === "captured") {
+      expect(event.unitName).toBe("PlayerB");
+      expect(event.objectType).toBe("sector");
+    }
+  });
+
+  it("decodes terminalHackStarted and terminalHackCanceled events", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [60, "terminalHackStarted", ["Hacker1", "blue", "red", "terminal1"]],
+        [70, "terminalHackCanceled", ["Hacker2", "red", "blue", "terminal2"]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("terminalHackStarted");
+    if (evt0.type === "terminalHackStarted") {
+      expect(evt0.unitName).toBe("Hacker1");
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("terminalHackCanceled");
+    if (evt1.type === "terminalHackCanceled") {
+      expect(evt1.unitName).toBe("Hacker2");
+    }
+  });
+
+  it("filters out unknown event types", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [10, "someUnknownEvent", "data"],
+        [20, "killed", 2, [1, "M4"], 100],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    // Unknown event filtered out, only killed remains
+    expect(manifest.events).toHaveLength(1);
+    expect(manifest.events[0].type).toBe("killed");
+  });
+
+  it("filters out invalid event arrays (too short)", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [10], // only 1 element, should be filtered
+        [20, "killed", 2, [1, "M4"], 100],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    expect(manifest.events[0].type).toBe("killed");
+  });
+
+  it("decodes counterSet event", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [25, "counterSet", [42, 7]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("counterSet");
+    if (event.type === "counterSet") {
+      expect(event.data).toEqual([42, 7]);
+    }
+  });
+
   it("decodes markers", () => {
     const data = {
       worldName: "Altis",
@@ -701,6 +887,28 @@ describe("JsonDecoder.decodeManifest", () => {
       const manifest = decoder.decodeManifest(toBuffer(data));
       expect(manifest.entities[0].side).toBe(side);
     }
+  });
+
+  it("maps unknown side string to CIV", () => {
+    const data = {
+      worldName: "W",
+      missionName: "M",
+      endFrame: 1,
+      captureDelay: 1,
+      entities: [
+        {
+          id: 1,
+          type: "unit",
+          name: "T",
+          side: "UNKNOWN_SIDE",
+          startFrameNum: 0,
+          positions: [[[0, 0], 0, 1, 0, "T", 0]],
+        },
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    expect(manifest.entities[0].side).toBe("CIV");
   });
 
   it("handles missing optional fields gracefully", () => {

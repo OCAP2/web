@@ -972,4 +972,230 @@ describe("PlaybackEngine", () => {
       expect(engine.entitySnapshots()).toBe(snapshotBefore);
     });
   });
+
+  // ─── computeSnapshots with no manifest ───
+
+  describe("computeSnapshots with no manifest", () => {
+    it("returns empty snapshots when seekTo is called before loadRecording", () => {
+      // engine has no manifest yet — seekTo calls computeSnapshots internally
+      // This hits lines 411-413 (early return when manifest is null)
+      engine.seekTo(5);
+
+      const snapshots = engine.entitySnapshots();
+      expect(snapshots.size).toBe(0);
+    });
+  });
+
+  // ─── Vehicle isPlayer from crew in chunk data ───
+
+  describe("vehicle isPlayer derived from crew", () => {
+    it("vehicle snapshot has isPlayer=true when crew contains a player unit", () => {
+      const entityStates = new Map<number, any[]>();
+
+      // Unit states (player)
+      const unitStates: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        unitStates.push({
+          position: [100, 200] as [number, number],
+          direction: 0,
+          alive: 1 as const,
+          isInVehicle: true,
+        });
+      }
+      entityStates.set(1, unitStates);
+
+      // Vehicle states with crew
+      const vehicleStates: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        vehicleStates.push({
+          position: [300, 400] as [number, number],
+          direction: 90,
+          alive: 1 as const,
+          crewIds: [1],
+        });
+      }
+      entityStates.set(2, vehicleStates);
+
+      const chunkData = makeChunkData(entityStates);
+      const cm = makeMockChunkManager(chunkData);
+
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [
+          makeEntityDef({ id: 1, name: "Player1", type: "man", side: "WEST", isPlayer: true, startFrame: 0, endFrame: 99 }),
+          makeEntityDef({ id: 2, name: "HMMWV", type: "car", side: "CIV", isPlayer: false, startFrame: 0, endFrame: 99 }),
+        ],
+      });
+
+      engine.loadRecording(manifest, cm);
+      engine.seekTo(0);
+
+      const vehicleSnap = engine.entitySnapshots().get(2);
+      expect(vehicleSnap).toBeDefined();
+      // Vehicle should derive isPlayer=true from crew member who is a player
+      expect(vehicleSnap!.isPlayer).toBe(true);
+      // Vehicle should derive side from crew
+      expect(vehicleSnap!.side).toBe("WEST");
+    });
+
+    it("vehicle snapshot has isPlayer=false when crew has no player units", () => {
+      const entityStates = new Map<number, any[]>();
+
+      // Unit states (NOT a player)
+      const unitStates: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        unitStates.push({
+          position: [100, 200] as [number, number],
+          direction: 0,
+          alive: 1 as const,
+          isInVehicle: true,
+        });
+      }
+      entityStates.set(1, unitStates);
+
+      // Vehicle states with crew
+      const vehicleStates: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        vehicleStates.push({
+          position: [300, 400] as [number, number],
+          direction: 90,
+          alive: 1 as const,
+          crewIds: [1],
+        });
+      }
+      entityStates.set(2, vehicleStates);
+
+      const chunkData = makeChunkData(entityStates);
+      const cm = makeMockChunkManager(chunkData);
+
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [
+          makeEntityDef({ id: 1, name: "AI1", type: "man", side: "EAST", isPlayer: false, startFrame: 0, endFrame: 99 }),
+          makeEntityDef({ id: 2, name: "T-100", type: "tank", side: "CIV", isPlayer: false, startFrame: 0, endFrame: 99 }),
+        ],
+      });
+
+      engine.loadRecording(manifest, cm);
+      engine.seekTo(0);
+
+      const vehicleSnap = engine.entitySnapshots().get(2);
+      expect(vehicleSnap).toBeDefined();
+      expect(vehicleSnap!.isPlayer).toBe(false);
+      expect(vehicleSnap!.side).toBe("EAST");
+    });
+  });
+
+  // ─── Unit firedOnFrame ───
+
+  describe("unit firedOnFrame in snapshots", () => {
+    it("includes firedTarget in snapshot when unit fired on the current frame", () => {
+      const entityStates = new Map<number, any[]>();
+      const states: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        states.push({
+          position: [100, 200] as [number, number],
+          direction: 0,
+          alive: 1 as const,
+        });
+      }
+      entityStates.set(1, states);
+
+      const chunkData = makeChunkData(entityStates);
+      const cm = makeMockChunkManager(chunkData);
+
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [
+          {
+            ...makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 }),
+            framesFired: [[5, [500, 600] as [number, number]]],
+          },
+        ],
+      });
+
+      engine.loadRecording(manifest, cm);
+      engine.seekTo(5);
+
+      const snap = engine.entitySnapshots().get(1);
+      expect(snap).toBeDefined();
+      expect(snap!.firedTarget).toEqual([500, 600]);
+    });
+
+    it("does not include firedTarget when unit did not fire on current frame", () => {
+      const entityStates = new Map<number, any[]>();
+      const states: any[] = [];
+      for (let i = 0; i < 300; i++) {
+        states.push({
+          position: [100, 200] as [number, number],
+          direction: 0,
+          alive: 1 as const,
+        });
+      }
+      entityStates.set(1, states);
+
+      const chunkData = makeChunkData(entityStates);
+      const cm = makeMockChunkManager(chunkData);
+
+      const manifest = makeManifest({
+        frameCount: 100,
+        entities: [
+          {
+            ...makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 }),
+            framesFired: [[5, [500, 600] as [number, number]]],
+          },
+        ],
+      });
+
+      engine.loadRecording(manifest, cm);
+      engine.seekTo(10); // not frame 5
+
+      const snap = engine.entitySnapshots().get(1);
+      expect(snap).toBeDefined();
+      expect(snap!.firedTarget).toBeUndefined();
+    });
+  });
+
+  // ─── timeConfig ───
+
+  describe("timeConfig", () => {
+    it("returns time config from manifest", () => {
+      const manifest = makeManifest({
+        captureDelayMs: 500,
+        times: [
+          { frameNum: 0, systemTimeUtc: "2024-01-15T12:00:00", date: "2035-06-10", timeMultiplier: 2 },
+        ],
+      });
+      engine.loadRecording(manifest);
+
+      const config = engine.timeConfig;
+      expect(config.captureDelayMs).toBe(500);
+      expect(config.times).toHaveLength(1);
+      expect(config.missionDate).toBe("2035-06-10");
+      expect(config.missionTimeMultiplier).toBe(2);
+    });
+
+    it("returns undefined missionDate when no times", () => {
+      const manifest = makeManifest({ times: [] });
+      engine.loadRecording(manifest);
+
+      const config = engine.timeConfig;
+      expect(config.missionDate).toBeUndefined();
+      expect(config.missionTimeMultiplier).toBeUndefined();
+    });
+  });
+
+  // ─── panToEntity ───
+
+  describe("panToEntity", () => {
+    it("does not call setView when entity has no snapshot", () => {
+      const manifest = makeManifest({ frameCount: 10 });
+      engine.loadRecording(manifest);
+
+      const spy = vi.spyOn(renderer, "setView");
+      engine.panToEntity(999); // non-existent entity
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
 });

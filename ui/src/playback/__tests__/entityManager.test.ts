@@ -252,6 +252,41 @@ describe("Unit", () => {
       expect(snap).not.toBeNull();
       expect(snap!.side).toBe("EAST");
     });
+
+    it("returns null when position entry is undefined (sparse array)", () => {
+      // Sparse positions array — slot 1 is undefined
+      const positions: EntityState[] = [
+        makeState(100, 200, 90, 1),
+      ];
+      positions.length = 3; // creates undefined slots at index 1 and 2
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", false, "G1", "", positions);
+      expect(u.getStateAtFrame(1)).toBeNull();
+    });
+  });
+
+  describe("firedOnFrame", () => {
+    it("returns target position when unit fired on the given frame", () => {
+      const framesFired: Array<[number, [number, number]]> = [
+        [5, [500, 600]],
+        [10, [700, 800]],
+      ];
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
+      expect(u.firedOnFrame(5)).toEqual([500, 600]);
+      expect(u.firedOnFrame(10)).toEqual([700, 800]);
+    });
+
+    it("returns null when unit did not fire on the given frame", () => {
+      const framesFired: Array<[number, [number, number]]> = [
+        [5, [500, 600]],
+      ];
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
+      expect(u.firedOnFrame(6)).toBeNull();
+    });
+
+    it("returns null when framesFired is null", () => {
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", null);
+      expect(u.firedOnFrame(5)).toBeNull();
+    });
   });
 });
 
@@ -344,6 +379,39 @@ describe("Vehicle", () => {
     it("stores the vehicle type", () => {
       const v = new Vehicle(10, "Chinook", "heli", 0, 100, "heli");
       expect(v.vehicleType).toBe("heli");
+    });
+  });
+
+  describe("getStateAtFrame", () => {
+    it("returns snapshot for valid frame", () => {
+      const positions: EntityState[] = [
+        makeState(300, 400, 90, 1),
+      ];
+      const v = new Vehicle(10, "HMMWV", "car", 0, 100, "car", positions);
+      const snap = v.getStateAtFrame(0);
+      expect(snap).not.toBeNull();
+      expect(snap!.id).toBe(10);
+      expect(snap!.position).toEqual([300, 400]);
+      expect(snap!.side).toBeNull();
+      expect(snap!.isPlayer).toBe(false);
+    });
+
+    it("returns null when position entry is undefined (sparse array)", () => {
+      const positions: EntityState[] = [
+        makeState(300, 400, 90, 1),
+      ];
+      positions.length = 3; // creates undefined slots at index 1 and 2
+      const v = new Vehicle(10, "HMMWV", "car", 0, 100, "car", positions);
+      expect(v.getStateAtFrame(1)).toBeNull();
+    });
+
+    it("returns null for out-of-bounds frame", () => {
+      const positions: EntityState[] = [
+        makeState(300, 400, 90, 1),
+      ];
+      const v = new Vehicle(10, "HMMWV", "car", 0, 100, "car", positions);
+      expect(v.getStateAtFrame(5)).toBeNull();
+      expect(v.getStateAtFrame(-1)).toBeNull();
     });
   });
 });

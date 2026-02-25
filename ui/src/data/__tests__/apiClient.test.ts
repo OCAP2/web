@@ -231,6 +231,44 @@ describe("ApiClient", () => {
     });
   });
 
+  // ─── getRecording ───
+
+  describe("getRecording", () => {
+    it("fetches a single recording by ID", async () => {
+      mockFetchJson({
+        id: 42,
+        world_name: "Altis",
+        mission_name: "Op Thunder",
+        mission_duration: 3600.5,
+        filename: "2024_01_01__op_thunder.json",
+        date: "2024-01-01",
+        tag: "coop",
+      });
+
+      const client = new ApiClient("/aar/");
+      const rec = await client.getRecording("42");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations/42",
+        expect.anything(),
+      );
+      expect(rec.id).toBe("42");
+      expect(rec.worldName).toBe("Altis");
+      expect(rec.missionName).toBe("Op Thunder");
+    });
+  });
+
+  // ─── getCustomize error ───
+
+  describe("getCustomize error handling", () => {
+    it("throws ApiError on non-204 non-OK response", async () => {
+      mockFetchError(500, "Internal Server Error");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.getCustomize()).rejects.toThrow(ApiError);
+    });
+  });
+
   // ─── getWorldConfig ───
 
   describe("getWorldConfig", () => {
@@ -251,6 +289,178 @@ describe("ApiClient", () => {
       );
       expect(result.worldName).toBe("altis");
       expect(result.worldSize).toBe(30720);
+    });
+
+    it("falls back to PMTiles CDN when local fetch fails", async () => {
+      const fetchMock = vi.fn()
+        // 1st call: local map.json → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 2nd call: pmtiles CDN → success
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: () => Promise.resolve({ worldSize: 30720, maxZoom: 18, minZoom: 10 }),
+        });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("Altis");
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[1][0]).toBe("https://pmtiles.ocap2.com/altis/map.json");
+      expect(result.worldName).toBe("Altis");
+      expect(result.worldSize).toBe(30720);
+      expect(result.maplibre).toBe(true);
+      expect(result.tileBaseUrl).toBe("https://pmtiles.ocap2.com/altis");
+    });
+
+    it("falls back to raster CDN when local and PMTiles fail", async () => {
+      const fetchMock = vi.fn()
+        // 1st call: local map.json → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 2nd call: pmtiles CDN → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 3rd call: raster CDN → success
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: () => Promise.resolve({ worldSize: 16384, maxZoom: 6, minZoom: 0 }),
+        });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("Stratis");
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock.mock.calls[2][0]).toBe("https://maps.ocap2.com/stratis/map.json");
+      expect(result.worldName).toBe("Stratis");
+      expect(result.worldSize).toBe(16384);
+      expect(result.maplibre).toBeUndefined();
+      expect(result.tileBaseUrl).toBe("https://maps.ocap2.com/stratis");
+    });
+
+    it("returns placeholder when all sources fail", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const fetchMock = vi.fn()
+        // 1st call: local → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 2nd call: pmtiles CDN → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 3rd call: raster CDN → fail
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("UnknownWorld");
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(result.worldSize).toBe(30720);
+      expect(result.imageSize).toBe(30720);
+      expect(result.tileBaseUrl).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("UnknownWorld"),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("falls back to PMTiles CDN when local fetch throws network error", async () => {
+      const fetchMock = vi.fn()
+        // 1st call: local → network error (throws)
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+        // 2nd call: pmtiles CDN → success
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: () => Promise.resolve({ worldSize: 30720 }),
+        });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("Altis");
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result.maplibre).toBe(true);
+    });
+
+    it("returns placeholder when all sources throw network errors", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const fetchMock = vi.fn()
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("Broken");
+
+      expect(result.worldSize).toBe(30720);
+      expect(result.imageSize).toBe(30720);
+      warnSpy.mockRestore();
+    });
+
+    it("skips PMTiles CDN when res.ok is false and tries raster CDN", async () => {
+      const fetchMock = vi.fn()
+        // 1st: local → ApiError (non-ok)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 2nd: pmtiles CDN → 200 but res.ok = false (e.g. redirect gone wrong)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: "Forbidden",
+          json: () => Promise.reject(new Error("no body")),
+        })
+        // 3rd: raster CDN → success
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: () => Promise.resolve({ worldSize: 16384 }),
+        });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getWorldConfig("Tanoa");
+
+      expect(result.worldName).toBe("Tanoa");
+      expect(result.tileBaseUrl).toBe("https://maps.ocap2.com/tanoa");
     });
   });
 

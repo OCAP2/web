@@ -197,6 +197,188 @@ describe("ProtobufDecoder.decodeManifest", () => {
     }
   });
 
+  it("decodes respawnTickets and counterSet events", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 10, type: "respawnTickets", message: "5,3" },
+        { frameNum: 20, type: "counterSet", message: "42" },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("respawnTickets");
+    if (evt0.type === "respawnTickets") {
+      expect(evt0.data).toEqual([5, 3]);
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("counterSet");
+    if (evt1.type === "counterSet") {
+      expect(evt1.data).toEqual([42]);
+    }
+  });
+
+  it("decodes endMission event", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [{ frameNum: 99, type: "endMission", message: "WEST,Mission Complete" }],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("endMission");
+    if (event.type === "endMission") {
+      expect(event.side).toBe("WEST");
+      expect(event.message).toBe("Mission Complete");
+    }
+  });
+
+  it("decodes generalEvent", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [{ frameNum: 50, type: "generalEvent", message: "Wave 3 started" }],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toHaveLength(1);
+    const event = manifest.events[0];
+    expect(event.type).toBe("generalEvent");
+    if (event.type === "generalEvent") {
+      expect(event.message).toBe("Wave 3 started");
+    }
+  });
+
+  it("decodes captured and capturedFlag events", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 30, type: "captured", message: "PlayerA,sector" },
+        { frameNum: 40, type: "capturedFlag", message: "PlayerB,flag" },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("captured");
+    if (evt0.type === "captured") {
+      expect(evt0.unitName).toBe("PlayerA");
+      expect(evt0.objectType).toBe("sector");
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("capturedFlag");
+    if (evt1.type === "capturedFlag") {
+      expect(evt1.unitName).toBe("PlayerB");
+      expect(evt1.objectType).toBe("flag");
+    }
+  });
+
+  it("decodes capturedFlag with no objectType defaults to 'flag'", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 30, type: "capturedFlag", message: "PlayerC" },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    const event = manifest.events[0];
+    expect(event.type).toBe("capturedFlag");
+    if (event.type === "capturedFlag") {
+      expect(event.unitName).toBe("PlayerC");
+      expect(event.objectType).toBe("flag");
+    }
+  });
+
+  it("decodes terminalHackStarted and terminalHackCanceled events", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 60, type: "terminalHackStarted", message: "Hacker1" },
+        { frameNum: 70, type: "terminalHackCanceled", message: "Hacker2" },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toHaveLength(2);
+
+    const evt0 = manifest.events[0];
+    expect(evt0.type).toBe("terminalHackStarted");
+    if (evt0.type === "terminalHackStarted") {
+      expect(evt0.unitName).toBe("Hacker1");
+    }
+
+    const evt1 = manifest.events[1];
+    expect(evt1.type).toBe("terminalHackCanceled");
+    if (evt1.type === "terminalHackCanceled") {
+      expect(evt1.unitName).toBe("Hacker2");
+    }
+  });
+
+  it("filters out unknown event types", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "W",
+      missionName: "M",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 10, type: "someUnknownEvent", message: "data" },
+        { frameNum: 20, type: "killed", sourceId: 1, targetId: 2, distance: 100, weapon: "M4" },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    // Unknown event filtered out, only killed remains
+    expect(manifest.events).toHaveLength(1);
+    expect(manifest.events[0].type).toBe("killed");
+  });
+
   it("decodes time samples", () => {
     const buffer = encodePb(PbManifest, {
       version: 1,
@@ -343,6 +525,46 @@ describe("ProtobufDecoder.decodeManifest", () => {
 
     const manifest = decoder.decodeManifest(buffer);
     expect(manifest.entities[0].type).toBe("heli");
+  });
+
+  it("maps all vehicle classes correctly", () => {
+    const classes: Array<[string, string]> = [
+      ["car", "car"],
+      ["tank", "tank"],
+      ["apc", "apc"],
+      ["truck", "truck"],
+      ["sea", "ship"],
+      ["plane", "plane"],
+      ["parachute", "parachute"],
+      ["static-weapon", "staticWeapon"],
+      ["static-mortar", "staticMortar"],
+      ["somethingElse", "unknown"],
+    ];
+
+    for (const [vehicleClass, expectedType] of classes) {
+      const buffer = encodePb(PbManifest, {
+        version: 1,
+        worldName: "W",
+        missionName: "M",
+        frameCount: 10,
+        chunkSize: 10,
+        captureDelayMs: 1000,
+        chunkCount: 1,
+        entities: [{
+          id: 1,
+          type: PbEntityType.ENTITY_TYPE_VEHICLE,
+          name: "Veh",
+          side: PbSide.SIDE_WEST,
+          groupName: "G",
+          startFrame: 0,
+          endFrame: 10,
+          vehicleClass,
+        }],
+      });
+
+      const manifest = decoder.decodeManifest(buffer);
+      expect(manifest.entities[0].type).toBe(expectedType);
+    }
   });
 
   it("maps side enums correctly", () => {
@@ -606,6 +828,22 @@ describe("ProtobufDecoder.decodeChunk", () => {
 
     expect(states[0].side).toBe("GUER");
     expect(states[1].side).toBe("CIV");
+  });
+
+  it("maps unknown side string to CIV in per-frame side", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 1,
+      frames: [{
+        frameNum: 0,
+        entities: [{ entityId: 1, posX: 0, posY: 0, direction: 0, alive: 1, side: "UNKNOWN_SIDE" }],
+      }],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    const state = chunk.entities.get(1)![0];
+    expect(state.side).toBe("CIV");
   });
 
   it("omits groupName and side when absent in entity state", () => {
