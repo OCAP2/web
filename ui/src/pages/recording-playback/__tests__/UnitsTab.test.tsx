@@ -16,7 +16,7 @@ afterEach(() => {
 describe("UnitsTab", () => {
   it("renders side tabs only for populated sides", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Soldier", side: "WEST", groupName: "Alpha", role: "Trooper" }),
       ]),
@@ -40,7 +40,7 @@ describe("UnitsTab", () => {
 
   it("shows unit names in the list", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Alpha Lead", side: "WEST", groupName: "Alpha", role: "Squad Lead" }),
         unitDef({ id: 2, name: "Alpha Medic", side: "WEST", groupName: "Alpha", role: "Combat Medic" }),
@@ -59,7 +59,7 @@ describe("UnitsTab", () => {
 
   it("groups units by groupName with a group header", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Soldier A", side: "WEST", groupName: "Alpha", role: "AT" }),
         unitDef({ id: 2, name: "Soldier B", side: "WEST", groupName: "Alpha", role: "AAR" }),
@@ -85,7 +85,7 @@ describe("UnitsTab", () => {
 
   it("clicking a unit row follows that entity", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Pointman", side: "WEST", groupName: "Alpha", role: "Point" }),
       ]),
@@ -106,7 +106,7 @@ describe("UnitsTab", () => {
 
   it("clicking an already-followed unit unfollows it (toggle)", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Scout", side: "WEST", groupName: "Alpha", role: "Recon" }),
       ]),
@@ -131,7 +131,7 @@ describe("UnitsTab", () => {
 
   it("shows group header with alive count", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({
           id: 1,
@@ -172,7 +172,7 @@ describe("UnitsTab", () => {
 
   it("only renders populated side tabs when multiple sides have units", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "NATO Soldier", side: "WEST", groupName: "Alpha", role: "Trooper" }),
         unitDef({ id: 2, name: "CSAT Soldier", side: "EAST", groupName: "Bravo", role: "Trooper" }),

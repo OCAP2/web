@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { EditModal, DeleteConfirm } from "../dialogs";
-import type { Operation } from "../../../data/types";
+import type { Recording } from "../../../data/types";
 
-const mockOp: Operation = {
+const mockRec: Recording = {
   id: "42",
   worldName: "Altis",
   missionName: "Op Thunder",
@@ -24,7 +24,7 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
     expect(screen.getByText("Edit Recording")).not.toBeNull();
@@ -38,7 +38,7 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
     fireEvent.click(screen.getByText("Cancel"));
@@ -50,7 +50,7 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
     const nameInput = screen.getByDisplayValue("Op Thunder");
@@ -71,7 +71,7 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal op={mockOp} tags={[]} onClose={onClose} onSave={onSave} />
+      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
     // All tag option buttons should be rendered
@@ -102,7 +102,7 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
     ));
 
     expect(screen.getAllByText("Delete Recording").length).toBeGreaterThanOrEqual(1);
@@ -114,7 +114,7 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
     ));
 
     expect(
@@ -127,7 +127,7 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
     ));
 
     // The delete button contains both an icon and text "Delete Recording";
@@ -145,7 +145,7 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm op={mockOp} onClose={onClose} onConfirm={onConfirm} />
+      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
     ));
 
     fireEvent.click(screen.getByText("Cancel"));

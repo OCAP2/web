@@ -271,7 +271,7 @@ export class PlaybackEngine {
   /**
    * Populate entities and events from a manifest, and wire up the chunk manager.
    */
-  loadOperation(manifest: Manifest, chunkManager?: ChunkManager | null): void {
+  loadRecording(manifest: Manifest, chunkManager?: ChunkManager | null): void {
     // Reset state
     this.clearTimer();
     this._setIsPlaying(false);

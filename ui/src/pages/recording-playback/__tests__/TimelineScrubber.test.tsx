@@ -20,7 +20,7 @@ function renderScrubber(
   frameCount = 100,
 ) {
   const { engine, renderer } = createTestEngine();
-  engine.loadOperation(makeManifest(entities, events, frameCount));
+  engine.loadRecording(makeManifest(entities, events, frameCount));
 
   const result = render(() => (
     <TestProviders engine={engine} renderer={renderer}>

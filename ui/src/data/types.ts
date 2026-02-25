@@ -153,8 +153,8 @@ export interface ChunkData {
   entities: Map<number, EntityState[]>;
 }
 
-/** Summary row returned by the operations list API. */
-export interface Operation {
+/** Summary row returned by the recordings list API. */
+export interface Recording {
   id: string;
   worldName: string;
   missionName: string;

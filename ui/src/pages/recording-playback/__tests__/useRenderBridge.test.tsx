@@ -49,7 +49,7 @@ describe("useRenderBridge", () => {
 
   it("registers a dragstart listener on the renderer", () => {
     const { engine, renderer, markerManager } = createTestSetup();
-    engine.loadOperation(makeManifest([unitDef()]));
+    engine.loadRecording(makeManifest([unitDef()]));
 
     createRoot((dispose) => {
       useRenderBridge(engine, renderer, markerManager);
@@ -60,7 +60,7 @@ describe("useRenderBridge", () => {
 
   it("auto-unfollows entity on dragstart", () => {
     const { engine, renderer, markerManager } = createTestSetup();
-    engine.loadOperation(makeManifest([unitDef({ id: 1 })]));
+    engine.loadRecording(makeManifest([unitDef({ id: 1 })]));
 
     createRoot((dispose) => {
       useRenderBridge(engine, renderer, markerManager);
@@ -85,7 +85,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "Alpha 1" }),
           unitDef({ id: 2, name: "Alpha 2" }),
@@ -117,7 +117,7 @@ describe("useRenderBridge", () => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
       // Entity only exists in frames 0-5
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest(
           [
             unitDef({
@@ -155,7 +155,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(makeManifest([unitDef({ id: 1 })]));
+      engine.loadRecording(makeManifest([unitDef({ id: 1 })]));
     });
 
     await flush();
@@ -181,7 +181,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(makeManifest([unitDef()]));
+      engine.loadRecording(makeManifest([unitDef()]));
     });
 
     await flush();
@@ -207,7 +207,7 @@ describe("useRenderBridge", () => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
       // Entity with framesFired data at frame 0
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({
             id: 1,
@@ -241,7 +241,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({
             id: 1,
@@ -269,7 +269,7 @@ describe("useRenderBridge", () => {
     let dispose!: () => void;
     createRoot((d) => {
       dispose = d;
-      engine.loadOperation(makeManifest([unitDef()]));
+      engine.loadRecording(makeManifest([unitDef()]));
       useRenderBridge(engine, renderer, markerManager);
     });
 
@@ -307,7 +307,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(makeManifest([unitDef({ id: 1 })]));
+      engine.loadRecording(makeManifest([unitDef({ id: 1 })]));
     });
 
     await flush();
@@ -332,7 +332,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "Driver" }),
           unitDef({ id: 2, name: "Gunner" }),
@@ -371,7 +371,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           vehicleDef({
             id: 50,
@@ -404,7 +404,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest(
           [
             unitDef({ id: 1, name: "Driver", startFrame: 0, endFrame: 50 }),
@@ -460,7 +460,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "PlayerDriver", isPlayer: true }),
           unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
@@ -500,7 +500,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "AIDriver", isPlayer: false }),
           unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
@@ -538,7 +538,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "PlayerDriver", isPlayer: true }),
           unitDef({ id: 2, name: "AIGunner", isPlayer: false }),
@@ -573,7 +573,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "AIDriver", isPlayer: false }),
           vehicleDef({
@@ -606,7 +606,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest(
           [
             unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50 }),
@@ -654,7 +654,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest(
           [
             unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50, positions: pos }),
@@ -701,7 +701,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest(
           [
             unitDef({ id: 1, name: "Victim", startFrame: 0, endFrame: 50 }),
@@ -744,7 +744,7 @@ describe("useRenderBridge", () => {
     createRoot((d) => {
       dispose = d;
       useRenderBridge(engine, renderer, markerManager);
-      engine.loadOperation(
+      engine.loadRecording(
         makeManifest([
           unitDef({ id: 1, name: "<script>alert(1)</script>" }),
           vehicleDef({

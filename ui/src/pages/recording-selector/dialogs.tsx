@@ -1,6 +1,6 @@
 import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
-import type { Operation } from "../../data/types";
+import type { Recording } from "../../data/types";
 import { Icons } from "./icons";
 import { formatDuration, formatDate, stripRecordingExtension } from "./helpers";
 import { TAG_OPTIONS } from "./constants";
@@ -10,18 +10,18 @@ import styles from "./dialogs.module.css";
 // ─── Edit Modal ───
 
 export function EditModal(props: {
-  op: Operation;
+  rec: Recording;
   tags: string[];
   onClose: () => void;
   onSave: (id: string, data: { missionName?: string; tag?: string; date?: string }) => void;
 }): JSX.Element {
-  const [name, setName] = createSignal(props.op.missionName);
-  const [tag, setTag] = createSignal(props.op.tag ?? "");
-  const [date, setDate] = createSignal(props.op.date?.slice(0, 10) ?? "");
+  const [name, setName] = createSignal(props.rec.missionName);
+  const [tag, setTag] = createSignal(props.rec.tag ?? "");
+  const [date, setDate] = createSignal(props.rec.date?.slice(0, 10) ?? "");
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
-    props.onSave(props.op.id, {
+    props.onSave(props.rec.id, {
       missionName: name(),
       tag: tag() || undefined,
       date: date() || undefined,
@@ -46,22 +46,22 @@ export function EditModal(props: {
             <div class={styles.editInfoBar}>
               <div class={styles.editInfoItem}>
                 <span class={styles.editInfoKey}>ID:</span>
-                <span class={styles.editInfoValue}>#{props.op.id}</span>
+                <span class={styles.editInfoValue}>#{props.rec.id}</span>
               </div>
               <div class={styles.editInfoItem}>
                 <span class={styles.editInfoKey}>Map:</span>
-                <span class={styles.editInfoValue}>{props.op.worldName}</span>
+                <span class={styles.editInfoValue}>{props.rec.worldName}</span>
               </div>
-              <Show when={props.op.storageFormat}>
+              <Show when={props.rec.storageFormat}>
                 <div class={styles.editInfoItem}>
                   <span class={styles.editInfoKey}>Format:</span>
-                  <span class={styles.editInfoValue}>{props.op.storageFormat}</span>
+                  <span class={styles.editInfoValue}>{props.rec.storageFormat}</span>
                 </div>
               </Show>
-              <Show when={props.op.conversionStatus}>
+              <Show when={props.rec.conversionStatus}>
                 <div class={styles.editInfoItem}>
                   <span class={styles.editInfoKey}>Status:</span>
-                  <span class={styles.editInfoValue}>{props.op.conversionStatus === "completed" ? "Ready" : props.op.conversionStatus}</span>
+                  <span class={styles.editInfoValue}>{props.rec.conversionStatus === "completed" ? "Ready" : props.rec.conversionStatus}</span>
                 </div>
               </Show>
             </div>
@@ -305,7 +305,7 @@ export function UploadDialog(props: {
 // ─── Delete Confirm ───
 
 export function DeleteConfirm(props: {
-  op: Operation;
+  rec: Recording;
   onClose: () => void;
   onConfirm: (id: string) => void;
 }): JSX.Element {
@@ -319,8 +319,8 @@ export function DeleteConfirm(props: {
           </div>
           <div class={styles.deleteTitle}>Delete Recording</div>
           <div class={styles.deleteSubtext}>Are you sure you want to delete</div>
-          <div class={styles.deleteName}>{props.op.missionName}</div>
-          <div class={styles.deleteMeta}>{formatDate(props.op.date, "en")} &middot; {formatDuration(props.op.missionDuration)}</div>
+          <div class={styles.deleteName}>{props.rec.missionName}</div>
+          <div class={styles.deleteMeta}>{formatDate(props.rec.date, "en")} &middot; {formatDuration(props.rec.missionDuration)}</div>
           <div class={styles.deleteWarning}>
             This will remove the database record and all associated files (.json.gz + protobuf chunks). This action cannot be undone.
           </div>
@@ -329,7 +329,7 @@ export function DeleteConfirm(props: {
         {/* Footer */}
         <div class={ui.dialogFooter}>
           <button type="button" class={ui.btnGhost} onClick={props.onClose}>Cancel</button>
-          <button type="button" class={ui.btnDanger} onClick={() => props.onConfirm(props.op.id)}>
+          <button type="button" class={ui.btnDanger} onClick={() => props.onConfirm(props.rec.id)}>
             <span style={{ display: "flex", "align-items": "center", gap: "5px" }}>
               <Icons.Trash /> Delete Recording
             </span>

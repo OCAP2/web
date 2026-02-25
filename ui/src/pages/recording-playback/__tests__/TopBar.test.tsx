@@ -20,8 +20,8 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
   const [missionName] = createSignal("Test Mission");
   const [mapName] = createSignal("Altis");
   const [duration] = createSignal("01:30:00");
-  const [operationId] = createSignal<string | null>("op-123");
-  const [operationFilename] = createSignal<string | null>("test-op");
+  const [recordingId] = createSignal<string | null>("op-123");
+  const [recordingFilename] = createSignal<string | null>("test-op");
   const [worldConfig] = createSignal<WorldConfig | undefined>(undefined);
   const onInfoClick = vi.fn();
   const onBack = vi.fn();
@@ -30,8 +30,8 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
     missionName,
     mapName,
     duration,
-    operationId,
-    operationFilename,
+    recordingId,
+    recordingFilename,
     worldConfig,
     onInfoClick,
     onBack,
@@ -44,7 +44,7 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
 describe("TopBar", () => {
   it("shows mission name", () => {
     const { engine, renderer, props } = renderTopBar();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -57,7 +57,7 @@ describe("TopBar", () => {
 
   it("shows map name", () => {
     const { engine, renderer, props } = renderTopBar();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -70,7 +70,7 @@ describe("TopBar", () => {
 
   it("shows force indicators for sides with entities", () => {
     const { engine, renderer, props } = renderTopBar();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "NATO 1", side: "WEST", positions: [{ position: [100, 200], direction: 0, alive: 1 }] }),
         unitDef({ id: 2, name: "NATO 2", side: "WEST", positions: [{ position: [100, 200], direction: 0, alive: 0 }] }),
@@ -100,7 +100,7 @@ describe("TopBar", () => {
 
   it("info button calls onInfoClick", () => {
     const { engine, renderer, props, onInfoClick } = renderTopBar();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -116,7 +116,7 @@ describe("TopBar", () => {
 
   it("back button calls onBack", () => {
     const { engine, renderer, props, onBack } = renderTopBar();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -124,7 +124,7 @@ describe("TopBar", () => {
       </TestProviders>
     ));
 
-    const backBtn = screen.getByTitle("Back to missions");
+    const backBtn = screen.getByTitle("Back to recordings");
     fireEvent.click(backBtn);
 
     expect(onBack).toHaveBeenCalledOnce();
@@ -132,7 +132,7 @@ describe("TopBar", () => {
 
   it("layer dropdown opens on click", () => {
     const { engine, renderer, props } = renderTopBar();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>

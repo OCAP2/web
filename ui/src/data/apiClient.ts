@@ -1,4 +1,4 @@
-import type { Operation, WorldConfig } from "./types";
+import type { Recording, WorldConfig } from "./types";
 
 // ─── Response types for endpoints not covered in types.ts ───
 
@@ -40,7 +40,7 @@ export class ApiError extends Error {
 
 // ─── Raw server response shape (snake_case from Go JSON tags) ───
 
-interface RawOperation {
+interface RawRecording {
   id: number;
   world_name: string;
   mission_name: string;
@@ -58,7 +58,7 @@ interface RawOperation {
   side_composition?: Record<string, { players: number; units: number; dead: number; kills: number }>;
 }
 
-function mapOperation(raw: RawOperation): Operation {
+function mapRecording(raw: RawRecording): Recording {
   return {
     id: String(raw.id),
     worldName: raw.world_name,
@@ -78,9 +78,9 @@ function mapOperation(raw: RawOperation): Operation {
   };
 }
 
-// ─── Query filter parameters for operations endpoint ───
+// ─── Query filter parameters for recordings endpoint ───
 
-export interface OperationFilters {
+export interface RecordingFilters {
   tag?: string;
   name?: string;
   newer?: string;
@@ -129,10 +129,10 @@ export class ApiClient {
   // ─── Public helpers ───
 
   /**
-   * Fetch the list of operations, optionally filtered.
+   * Fetch the list of recordings, optionally filtered.
    * GET {baseUrl}/api/v1/operations
    */
-  async getOperations(filters?: OperationFilters): Promise<Operation[]> {
+  async getRecordings(filters?: RecordingFilters): Promise<Recording[]> {
     const params = new URLSearchParams();
     if (filters?.tag) params.set("tag", filters.tag);
     if (filters?.name) params.set("name", filters.name);
@@ -141,25 +141,25 @@ export class ApiClient {
 
     const qs = params.toString();
     const url = `${this.baseUrl}/api/v1/operations${qs ? `?${qs}` : ""}`;
-    const data = await this.fetchJson<RawOperation[]>(url);
-    return data.map(mapOperation);
+    const data = await this.fetchJson<RawRecording[]>(url);
+    return data.map(mapRecording);
   }
 
   /**
-   * Fetch a single operation by ID or filename.
+   * Fetch a single recording by ID or filename.
    * GET {baseUrl}/api/v1/operations/{id}
    */
-  async getOperation(id: string): Promise<Operation> {
+  async getRecording(id: string): Promise<Recording> {
     const url = `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`;
-    const data = await this.fetchJson<RawOperation>(url);
-    return mapOperation(data);
+    const data = await this.fetchJson<RawRecording>(url);
+    return mapRecording(data);
   }
 
   /**
-   * Fetch raw mission data (gzipped JSON served as a static file).
+   * Fetch raw recording data (gzipped JSON served as a static file).
    * GET {baseUrl}/data/{filename}.json.gz
    */
-  async getMissionData(filename: string): Promise<ArrayBuffer> {
+  async getRecordingData(filename: string): Promise<ArrayBuffer> {
     const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}.json.gz`;
     return this.fetchBuffer(url);
   }
@@ -320,12 +320,12 @@ export class ApiClient {
     setAuthToken(null);
   }
 
-  // ─── Admin operation methods ───
+  // ─── Admin recording methods ───
 
-  async editOperation(
+  async editRecording(
     id: string,
     data: { missionName?: string; tag?: string; date?: string },
-  ): Promise<Operation> {
+  ): Promise<Recording> {
     const response = await fetch(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
       {
@@ -341,11 +341,11 @@ export class ApiClient {
         response.statusText,
       );
     }
-    const raw = (await response.json()) as RawOperation;
-    return mapOperation(raw);
+    const raw = (await response.json()) as RawRecording;
+    return mapRecording(raw);
   }
 
-  async deleteOperation(id: string): Promise<void> {
+  async deleteRecording(id: string): Promise<void> {
     const response = await fetch(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
       {
@@ -379,7 +379,7 @@ export class ApiClient {
     }
   }
 
-  async uploadOperation(formData: FormData): Promise<void> {
+  async uploadRecording(formData: FormData): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v1/operations/add`, {
       method: "POST",
       headers: authHeaders(),

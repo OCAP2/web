@@ -17,7 +17,7 @@ afterEach(() => {
 describe("SidePanel", () => {
   it("renders three tab buttons (Units, Events, Stats)", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef()]));
+    engine.loadRecording(makeManifest([unitDef()]));
 
     const [activeTab] = createSignal("units");
 
@@ -34,7 +34,7 @@ describe("SidePanel", () => {
 
   it("calls onTabChange when clicking a tab", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef()]));
+    engine.loadRecording(makeManifest([unitDef()]));
 
     const [activeTab, setActiveTab] = createSignal("units");
     const onTabChange = vi.fn((tab: string) => setActiveTab(tab));
@@ -57,7 +57,7 @@ describe("SidePanel", () => {
 
   it("shows UnitsTab content when activeTab is 'units'", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Soldier", side: "WEST", groupName: "Alpha" }),
       ]),
@@ -77,7 +77,7 @@ describe("SidePanel", () => {
 
   it("switches content when activeTab changes", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Soldier", side: "WEST", groupName: "Alpha" }),
       ]),

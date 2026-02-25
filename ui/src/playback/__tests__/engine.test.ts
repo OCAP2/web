@@ -80,9 +80,9 @@ describe("PlaybackEngine", () => {
     vi.useRealTimers();
   });
 
-  // ─── loadOperation ───
+  // ─── loadRecording ───
 
-  describe("loadOperation", () => {
+  describe("loadRecording", () => {
     it("populates entities from manifest", () => {
       const manifest = makeManifest({
         entities: [
@@ -91,7 +91,7 @@ describe("PlaybackEngine", () => {
         ],
       });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       expect(engine.entityManager.getAll()).toHaveLength(2);
       expect(engine.entityManager.getEntity(1)?.name).toBe("Alpha1");
@@ -110,7 +110,7 @@ describe("PlaybackEngine", () => {
         ],
       });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       expect(engine.eventManager.getAll()).toHaveLength(2);
     });
@@ -118,7 +118,7 @@ describe("PlaybackEngine", () => {
     it("sets endFrame from manifest frameCount", () => {
       const manifest = makeManifest({ frameCount: 500 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       expect(engine.endFrame()).toBe(499);
     });
@@ -126,7 +126,7 @@ describe("PlaybackEngine", () => {
     it("sets captureDelayMs from manifest", () => {
       const manifest = makeManifest({ captureDelayMs: 500 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       expect(engine.captureDelayMs()).toBe(500);
     });
@@ -136,12 +136,12 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager();
 
       // Manually set frame first via seekTo after an initial load
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       engine.seekTo(50);
       expect(engine.currentFrame()).toBe(50);
 
       // Load again should reset
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       expect(engine.currentFrame()).toBe(0);
     });
   });
@@ -152,7 +152,7 @@ describe("PlaybackEngine", () => {
     it("sets isPlaying to true", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.play();
       expect(engine.isPlaying()).toBe(true);
@@ -161,7 +161,7 @@ describe("PlaybackEngine", () => {
     it("frame advances on tick", () => {
       const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(1);
       engine.play();
@@ -177,7 +177,7 @@ describe("PlaybackEngine", () => {
     it("does not play when already at endFrame", () => {
       const manifest = makeManifest({ frameCount: 10 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(9); // endFrame = 9
       engine.play();
@@ -189,7 +189,7 @@ describe("PlaybackEngine", () => {
     it("sets isPlaying to false", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.play();
       expect(engine.isPlaying()).toBe(true);
@@ -201,7 +201,7 @@ describe("PlaybackEngine", () => {
     it("stops frame from advancing", () => {
       const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(1);
       engine.play();
@@ -218,7 +218,7 @@ describe("PlaybackEngine", () => {
     it("toggles between play and pause", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.togglePlayPause();
       expect(engine.isPlaying()).toBe(true);
@@ -234,7 +234,7 @@ describe("PlaybackEngine", () => {
     it("sets currentFrame to N", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(42);
       expect(engine.currentFrame()).toBe(42);
@@ -243,7 +243,7 @@ describe("PlaybackEngine", () => {
     it("clamps to 0 when seeking negative", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(-10);
       expect(engine.currentFrame()).toBe(0);
@@ -252,7 +252,7 @@ describe("PlaybackEngine", () => {
     it("clamps to endFrame when seeking past end", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(9999);
       expect(engine.currentFrame()).toBe(99); // endFrame = frameCount - 1
@@ -278,7 +278,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       engine.seekTo(50);
 
       const snapshots = engine.entitySnapshots();
@@ -295,7 +295,7 @@ describe("PlaybackEngine", () => {
     it("changes playbackSpeed signal", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(10);
       expect(engine.playbackSpeed()).toBe(10);
@@ -304,7 +304,7 @@ describe("PlaybackEngine", () => {
     it("clamps speed to range 1-60", () => {
       const manifest = makeManifest({ frameCount: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(0);
       expect(engine.playbackSpeed()).toBe(1);
@@ -316,7 +316,7 @@ describe("PlaybackEngine", () => {
     it("changes timer interval when playing", () => {
       const manifest = makeManifest({ frameCount: 1000, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(1);
       engine.play();
@@ -360,7 +360,7 @@ describe("PlaybackEngine", () => {
     it("auto-pauses when reaching endFrame", () => {
       const manifest = makeManifest({ frameCount: 5, captureDelayMs: 100 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(3); // endFrame = 4
       engine.play();
@@ -405,7 +405,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       // Frame 5: entity should NOT be in snapshots
       engine.seekTo(5);
@@ -436,7 +436,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       // Frame 10: entity should appear
       engine.seekTo(10);
@@ -469,7 +469,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       // Frame 20: entity should be gone (endFrame is 19)
       engine.seekTo(20);
@@ -483,7 +483,7 @@ describe("PlaybackEngine", () => {
     it("stops playback and clears state", () => {
       const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.play();
       // Default speed 10: interval = 1000/10 = 100ms
@@ -523,7 +523,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       engine.followEntity(1);
       engine.setSpeed(1);
 
@@ -560,7 +560,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 2 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       engine.followEntity(1);
       engine.setSpeed(1);
 
@@ -614,7 +614,7 @@ describe("PlaybackEngine", () => {
         ],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
       engine.seekTo(10);
 
       const snapshots = engine.entitySnapshots();
@@ -643,7 +643,7 @@ describe("PlaybackEngine", () => {
         ],
       });
 
-      engine.loadOperation(manifest);
+      engine.loadRecording(manifest);
       engine.seekTo(0);
 
       const snap = engine.entitySnapshots().get(1);
@@ -680,7 +680,7 @@ describe("PlaybackEngine", () => {
         ],
       });
 
-      engine.loadOperation(manifest);
+      engine.loadRecording(manifest);
       engine.seekTo(0);
 
       const snap = engine.entitySnapshots().get(2);
@@ -730,7 +730,7 @@ describe("PlaybackEngine", () => {
         ],
       });
 
-      engine.loadOperation(manifest);
+      engine.loadRecording(manifest);
 
       engine.seekTo(0);
       expect(engine.entitySnapshots().get(3)!.side).toBe("WEST");
@@ -756,7 +756,7 @@ describe("PlaybackEngine", () => {
         ],
       });
 
-      engine.loadOperation(manifest);
+      engine.loadRecording(manifest);
       engine.seekTo(0);
 
       const snap = engine.entitySnapshots().get(1);
@@ -780,7 +780,7 @@ describe("PlaybackEngine", () => {
         ],
       });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(10);
       const events = engine.activeEvents();
@@ -796,7 +796,7 @@ describe("PlaybackEngine", () => {
         ],
       });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.seekTo(5);
       expect(engine.activeEvents()).toHaveLength(0);
@@ -816,7 +816,7 @@ describe("PlaybackEngine", () => {
         ],
       });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       // At frame 5: only the connected event
       engine.seekTo(5);
@@ -846,7 +846,7 @@ describe("PlaybackEngine", () => {
     it("speed 2 halves the interval", () => {
       const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(2);
       engine.play();
@@ -862,7 +862,7 @@ describe("PlaybackEngine", () => {
     it("speed 1 uses full captureDelayMs", () => {
       const manifest = makeManifest({ frameCount: 100, captureDelayMs: 2000 });
       const cm = makeMockChunkManager();
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       engine.setSpeed(1);
       engine.play();
@@ -896,7 +896,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       // Capture the onChunkLoaded callback that the engine registered
       expect(cm.setCallbacks).toHaveBeenCalledTimes(1);
@@ -957,7 +957,7 @@ describe("PlaybackEngine", () => {
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 599 })],
       });
 
-      engine.loadOperation(manifest, cm);
+      engine.loadRecording(manifest, cm);
 
       const callbacks = (cm.setCallbacks as ReturnType<typeof vi.fn>).mock.calls[0][0];
 

@@ -57,7 +57,7 @@ describe("ApiClient", () => {
     it("defaults to empty prefix", async () => {
       mockFetchJson([]);
       const client = new ApiClient();
-      await client.getOperations();
+      await client.getRecordings();
       expect(fetch).toHaveBeenCalledWith(
         "/api/v1/operations",
         expect.anything(),
@@ -67,7 +67,7 @@ describe("ApiClient", () => {
     it("strips trailing slashes from base URL", async () => {
       mockFetchJson([]);
       const client = new ApiClient("/custom///");
-      await client.getOperations();
+      await client.getRecordings();
       expect(fetch).toHaveBeenCalledWith(
         "/custom/api/v1/operations",
         expect.anything(),
@@ -77,7 +77,7 @@ describe("ApiClient", () => {
     it("works with slash prefix", async () => {
       mockFetchJson([]);
       const client = new ApiClient("/");
-      await client.getOperations();
+      await client.getRecordings();
       expect(fetch).toHaveBeenCalledWith(
         "/api/v1/operations",
         expect.anything(),
@@ -85,9 +85,9 @@ describe("ApiClient", () => {
     });
   });
 
-  // ─── getOperations ───
+  // ─── getRecordings ───
 
-  describe("getOperations", () => {
+  describe("getRecordings", () => {
     it("fetches operations and maps snake_case to camelCase", async () => {
       mockFetchJson([
         {
@@ -102,7 +102,7 @@ describe("ApiClient", () => {
       ]);
 
       const client = new ApiClient("/aar/");
-      const ops = await client.getOperations();
+      const ops = await client.getRecordings();
 
       expect(ops).toHaveLength(1);
       expect(ops[0]).toEqual({
@@ -119,7 +119,7 @@ describe("ApiClient", () => {
     it("passes filter parameters as query string", async () => {
       mockFetchJson([]);
       const client = new ApiClient("/aar/");
-      await client.getOperations({
+      await client.getRecordings({
         tag: "tvt",
         name: "thunder",
         newer: "2024-01-01",
@@ -136,7 +136,7 @@ describe("ApiClient", () => {
     it("omits empty filter values from query string", async () => {
       mockFetchJson([]);
       const client = new ApiClient("/aar/");
-      await client.getOperations({ tag: "", name: "test" });
+      await client.getRecordings({ tag: "", name: "test" });
 
       const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
       expect(url).not.toContain("tag=");
@@ -146,20 +146,20 @@ describe("ApiClient", () => {
     it("returns empty array when no operations", async () => {
       mockFetchJson([]);
       const client = new ApiClient();
-      const ops = await client.getOperations();
+      const ops = await client.getRecordings();
       expect(ops).toEqual([]);
     });
   });
 
-  // ─── getMissionData ───
+  // ─── getRecordingData ───
 
-  describe("getMissionData", () => {
+  describe("getRecordingData", () => {
     it("fetches binary data for a mission file", async () => {
       const buf = new Uint8Array([1, 2, 3, 4]).buffer;
       mockFetchBuffer(buf);
 
       const client = new ApiClient("/aar/");
-      const result = await client.getMissionData("my_mission");
+      const result = await client.getRecordingData("my_mission");
 
       expect(fetch).toHaveBeenCalledWith("/aar/data/my_mission.json.gz");
       expect(new Uint8Array(result)).toEqual(new Uint8Array([1, 2, 3, 4]));
@@ -168,7 +168,7 @@ describe("ApiClient", () => {
     it("encodes special characters in filename", async () => {
       mockFetchBuffer(new ArrayBuffer(0));
       const client = new ApiClient("/aar/");
-      await client.getMissionData("mission with spaces");
+      await client.getRecordingData("mission with spaces");
 
       const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
       expect(url).toContain("mission%20with%20spaces.json.gz");
@@ -376,9 +376,9 @@ describe("ApiClient", () => {
     });
   });
 
-  // ─── editOperation ───
+  // ─── editRecording ───
 
-  describe("editOperation", () => {
+  describe("editRecording", () => {
     it("patches operation and returns mapped result", async () => {
       setAuthToken("admin-jwt");
       mockFetchJson({
@@ -392,7 +392,7 @@ describe("ApiClient", () => {
       });
 
       const client = new ApiClient("/aar/");
-      const result = await client.editOperation("42", {
+      const result = await client.editRecording("42", {
         missionName: "Updated",
       });
 
@@ -417,20 +417,20 @@ describe("ApiClient", () => {
 
       const client = new ApiClient("/aar/");
       await expect(
-        client.editOperation("42", { missionName: "X" }),
+        client.editRecording("42", { missionName: "X" }),
       ).rejects.toThrow(ApiError);
     });
   });
 
-  // ─── deleteOperation ───
+  // ─── deleteRecording ───
 
-  describe("deleteOperation", () => {
+  describe("deleteRecording", () => {
     it("sends DELETE request with auth header", async () => {
       setAuthToken("admin-jwt");
       mockFetchJson(null);
 
       const client = new ApiClient("/aar/");
-      await client.deleteOperation("42");
+      await client.deleteRecording("42");
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/42", {
         method: "DELETE",
@@ -442,7 +442,7 @@ describe("ApiClient", () => {
       mockFetchError(404, "Not Found");
 
       const client = new ApiClient("/aar/");
-      await expect(client.deleteOperation("42")).rejects.toThrow(ApiError);
+      await expect(client.deleteRecording("42")).rejects.toThrow(ApiError);
     });
   });
 
@@ -470,9 +470,9 @@ describe("ApiClient", () => {
     });
   });
 
-  // ─── uploadOperation ───
+  // ─── uploadRecording ───
 
-  describe("uploadOperation", () => {
+  describe("uploadRecording", () => {
     it("posts FormData with auth header", async () => {
       setAuthToken("admin-jwt");
       mockFetchJson(null);
@@ -480,7 +480,7 @@ describe("ApiClient", () => {
       const client = new ApiClient("/aar/");
       const formData = new FormData();
       formData.append("file", new Blob(["data"]), "mission.json");
-      await client.uploadOperation(formData);
+      await client.uploadRecording(formData);
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/operations/add", {
         method: "POST",
@@ -494,7 +494,7 @@ describe("ApiClient", () => {
 
       const client = new ApiClient("/aar/");
       const formData = new FormData();
-      await expect(client.uploadOperation(formData)).rejects.toThrow(ApiError);
+      await expect(client.uploadRecording(formData)).rejects.toThrow(ApiError);
     });
   });
 
@@ -505,7 +505,7 @@ describe("ApiClient", () => {
       mockFetchError(404, "Not Found");
 
       const client = new ApiClient("/aar/");
-      await expect(client.getOperations()).rejects.toThrow(ApiError);
+      await expect(client.getRecordings()).rejects.toThrow(ApiError);
     });
 
     it("ApiError contains status code and statusText", async () => {
@@ -528,7 +528,7 @@ describe("ApiClient", () => {
       mockFetchError(403, "Forbidden");
 
       const client = new ApiClient("/aar/");
-      await expect(client.getMissionData("x")).rejects.toThrow(ApiError);
+      await expect(client.getRecordingData("x")).rejects.toThrow(ApiError);
     });
 
     it("propagates network errors as-is", async () => {
@@ -538,7 +538,7 @@ describe("ApiClient", () => {
       );
 
       const client = new ApiClient("/aar/");
-      await expect(client.getOperations()).rejects.toThrow(TypeError);
+      await expect(client.getRecordings()).rejects.toThrow(TypeError);
     });
   });
 });

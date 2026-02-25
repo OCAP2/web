@@ -20,7 +20,7 @@ afterEach(() => {
 describe("EventsTab", () => {
   it("shows 'no events' placeholder when no events exist", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef()]));
+    engine.loadRecording(makeManifest([unitDef()]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -38,7 +38,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "Player2", side: "EAST" }),
     ];
     const events = [killedEvent(0, 1, 2, "AK-47", 150)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -59,7 +59,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "OpforGuy", side: "EAST" }),
     ];
     const events = [killedEvent(0, 1, 2)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -78,7 +78,7 @@ describe("EventsTab", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "SuicideGuy", side: "WEST" })];
     const events = [killedEvent(0, 1, 1, "Grenade", 0)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -97,7 +97,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "Shooter", side: "EAST" }),
     ];
     const events = [hitEvent(0, 1, 2, "M4A1", 50)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -116,7 +116,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "Shooter", side: "EAST" }),
     ];
     const events = [hitEvent(0, 1, 2, "M4A1", 50)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -137,7 +137,7 @@ describe("EventsTab", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "Player1" })];
     const events = [connectEvent(0, "connected", "Player1")];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -153,7 +153,7 @@ describe("EventsTab", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "Player1" })];
     const events = [connectEvent(0, "connected", "JoinedPlayer")];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -181,7 +181,7 @@ describe("EventsTab", () => {
       killedEvent(0, 1, 2, "AK-47", 100),
       killedEvent(0, 3, 2, "M4A1", 200),
     ];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -209,7 +209,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "Killer", side: "EAST" }),
     ];
     const events = [killedEvent(5, 1, 2, "M4A1", 100)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
     engine.seekTo(10); // Seek past the event so it becomes active
 
     const seekSpy = vi.spyOn(engine, "seekTo");
@@ -239,7 +239,7 @@ describe("EventsTab", () => {
       killedEvent(5, 1, 2, "AK-47", 100),
       killedEvent(10, 3, 2, "M4A1", 200),
     ];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
     engine.seekTo(15); // Both events active
 
     const { container } = render(() => (
@@ -271,7 +271,7 @@ describe("EventsTab", () => {
       unitDef({ id: 2, name: "LateKiller", side: "EAST" }),
     ];
     const events = [killedEvent(50, 1, 2, "M4A1", 100)];
-    engine.loadOperation(makeManifest(entities, events));
+    engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>

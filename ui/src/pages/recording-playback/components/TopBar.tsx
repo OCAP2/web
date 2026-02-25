@@ -15,8 +15,8 @@ export interface TopBarProps {
   missionName: Accessor<string>;
   mapName: Accessor<string>;
   duration: Accessor<string>;
-  operationId: Accessor<string | null>;
-  operationFilename: Accessor<string | null>;
+  recordingId: Accessor<string | null>;
+  recordingFilename: Accessor<string | null>;
   worldConfig: Accessor<WorldConfig | undefined>;
   onInfoClick?: () => void;
   onBack?: () => void;
@@ -110,9 +110,9 @@ export function TopBar(props: TopBarProps): JSX.Element {
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   const handleShare = () => {
-    const id = props.operationId();
+    const id = props.recordingId();
     if (!id) return;
-    const name = props.operationFilename?.() ?? id;
+    const name = props.recordingFilename?.() ?? id;
     const url = new URL(window.location.origin);
     url.pathname = `/recording/${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
     void navigator.clipboard.writeText(url.toString()).then(() => {
@@ -127,7 +127,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
   // ── Download ──
 
   const downloadHref = () => {
-    const filename = props.operationFilename?.() ?? props.operationId();
+    const filename = props.recordingFilename?.() ?? props.recordingId();
     if (!filename) return "#";
     return `${import.meta.env.BASE_URL}data/${encodeURIComponent(filename)}.json.gz`;
   };
@@ -136,7 +136,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
     <div class={styles.topBar}>
       {/* ── Left: back + logo + mission info ── */}
       <div class={styles.left}>
-        <button class={styles.backBtn} title={t("back_to_missions")} onClick={() => props.onBack?.()}>
+        <button class={styles.backBtn} title={t("back_to_recordings")} onClick={() => props.onBack?.()}>
           <ArrowLeftIcon size={16} />
         </button>
         <Show when={customize().websiteLogo}>
@@ -249,7 +249,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
         </div>
 
         {/* Download */}
-        <Show when={props.operationId()}>
+        <Show when={props.recordingId()}>
           <a
             class={styles.actionBtn}
             title={t("download")}
@@ -261,7 +261,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
         </Show>
 
         {/* Share */}
-        <Show when={props.operationId()}>
+        <Show when={props.recordingId()}>
           <div style={{ position: "relative" }}>
             <button class={styles.actionBtn} title={t("share")} onClick={handleShare}>
               <ShareIcon size={16} />

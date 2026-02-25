@@ -49,8 +49,8 @@ function makeApi(): ApiClient & {
       async (_id: string, _idx: number) => new Uint8Array([10, 20]).buffer,
     ),
     // Other methods not used by ChunkManager
-    getOperations: vi.fn(),
-    getMissionData: vi.fn(),
+    getRecordings: vi.fn(),
+    getRecordingData: vi.fn(),
     getCustomize: vi.fn(),
     getVersion: vi.fn(),
     getWorldConfig: vi.fn(),

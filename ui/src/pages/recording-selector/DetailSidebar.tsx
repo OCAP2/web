@@ -1,29 +1,29 @@
 import { Show, For, createSignal, createEffect, on } from "solid-js";
-import type { Operation } from "../../data/types";
+import type { Recording } from "../../data/types";
 import { useI18n } from "../../hooks/useLocale";
 import { C, SIDE_COLORS, SIDE_HEX } from "./constants";
 import { Icons } from "./icons";
-import { formatDuration, formatDate, getMapColor, getStatusInfo, isOpReady } from "./helpers";
+import { formatDuration, formatDate, getMapColor, getStatusInfo, isRecordingReady } from "./helpers";
 import { StatPill, TagBadge, StatusBadge } from "./components";
-import styles from "./MissionSelector.module.css";
+import styles from "./RecordingSelector.module.css";
 
 export function DetailSidebar(props: {
-  op: Operation;
-  onLaunch: (op: Operation) => void;
+  rec: Recording;
+  onLaunch: (rec: Recording) => void;
   onClose: () => void;
   isAdmin?: boolean;
-  onEdit?: (op: Operation) => void;
-  onDelete?: (op: Operation) => void;
+  onEdit?: (rec: Recording) => void;
+  onDelete?: (rec: Recording) => void;
   onRetry?: (id: string) => void;
 }) {
   const { t, locale } = useI18n();
-  const mapColor = () => getMapColor(props.op.worldName);
-  const status = () => getStatusInfo(props.op);
-  const ready = () => isOpReady(props.op);
+  const mapColor = () => getMapColor(props.rec.worldName);
+  const status = () => getStatusInfo(props.rec);
+  const ready = () => isRecordingReady(props.rec);
   const [previewFailed, setPreviewFailed] = createSignal(false);
 
   // Reset when switching to a different map
-  createEffect(on(() => props.op.worldName, () => setPreviewFailed(false)));
+  createEffect(on(() => props.rec.worldName, () => setPreviewFailed(false)));
 
   return (
     <div class={styles.sidebar}>
@@ -47,7 +47,7 @@ export function DetailSidebar(props: {
           </>
         }>
           <img
-            src={`${import.meta.env.BASE_URL}images/maps/${encodeURIComponent(props.op.worldName)}/preview_512.png`}
+            src={`${import.meta.env.BASE_URL}images/maps/${encodeURIComponent(props.rec.worldName)}/preview_512.png`}
             alt=""
             class={styles.sidebarHeroImg}
             onError={() => setPreviewFailed(true)}
@@ -55,8 +55,8 @@ export function DetailSidebar(props: {
         </Show>
         <div class={styles.sidebarHeroOverlay} />
         <div style={{ "text-align": "center", "z-index": "1" }}>
-          <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.op.worldName}</div>
-          {/* <div class={styles.sidebarHeroTerrain}>{props.op.worldName}</div> */}
+          <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.rec.worldName}</div>
+          {/* <div class={styles.sidebarHeroTerrain}>{props.rec.worldName}</div> */}
         </div>
         <button data-testid="sidebar-close" class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
           <Icons.X />
@@ -67,10 +67,10 @@ export function DetailSidebar(props: {
       <div class={styles.sidebarContent}>
         {/* Title */}
         <div>
-          <div class={styles.sidebarTitle}>{props.op.missionName}</div>
+          <div class={styles.sidebarTitle}>{props.rec.missionName}</div>
           <div class={styles.sidebarMeta}>
-            <Show when={props.op.tag}>
-              <TagBadge tag={props.op.tag!} />
+            <Show when={props.rec.tag}>
+              <TagBadge tag={props.rec.tag!} />
             </Show>
             <StatusBadge status={status().key} />
           </div>
@@ -78,17 +78,17 @@ export function DetailSidebar(props: {
 
         {/* Stats Grid */}
         <div class={styles.sidebarStatsGrid}>
-          <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.op.date, locale())} label={t("data")} />
-          <StatPill icon={<Icons.Clock />} value={formatDuration(props.op.missionDuration)} label={t("durability")} />
-          <StatPill icon={<Icons.Users />} value={(props.op.playerCount ?? 0) > 0 ? props.op.playerCount! : "\u2014"} label={t("players")} />
+          <StatPill class={styles.sidebarStatsGridFull} icon={<Icons.Calendar />} value={formatDate(props.rec.date, locale())} label={t("data")} />
+          <StatPill icon={<Icons.Clock />} value={formatDuration(props.rec.missionDuration)} label={t("durability")} />
+          <StatPill icon={<Icons.Users />} value={(props.rec.playerCount ?? 0) > 0 ? props.rec.playerCount! : "\u2014"} label={t("players")} />
         </div>
 
         {/* Force Composition — per-side stat cards */}
-        <Show when={props.op.sideComposition && Object.keys(props.op.sideComposition).length > 0}>
+        <Show when={props.rec.sideComposition && Object.keys(props.rec.sideComposition).length > 0}>
           {(_) => {
             const SIDE_ORDER: Record<string, number> = { EAST: 0, WEST: 1, GUER: 2, CIV: 3 };
             const entries = () =>
-              Object.entries(props.op.sideComposition!)
+              Object.entries(props.rec.sideComposition!)
                 .sort(([a], [b]) => (SIDE_ORDER[a] ?? 99) - (SIDE_ORDER[b] ?? 99));
             return (
               <div>
@@ -145,12 +145,12 @@ export function DetailSidebar(props: {
         </Show>
 
         {/* Combat Summary — grid layout */}
-        <Show when={(props.op.killCount ?? 0) > 0}>
+        <Show when={(props.rec.killCount ?? 0) > 0}>
           {(_) => {
-            const kills = () => props.op.killCount!;
-            const playerKills = () => props.op.playerKillCount ?? 0;
+            const kills = () => props.rec.killCount!;
+            const playerKills = () => props.rec.playerKillCount ?? 0;
             const killsPerMin = () => {
-              const dur = props.op.missionDuration;
+              const dur = props.rec.missionDuration;
               return dur > 0 ? (kills() / (dur / 60)).toFixed(1) : "\u2014";
             };
             return (
@@ -189,14 +189,14 @@ export function DetailSidebar(props: {
         <div class={styles.adminActions}>
           <div class={styles.sidebarSectionLabel} style={{ "margin-bottom": "2px" }}>ADMIN ACTIONS</div>
           <div class={styles.adminActionButtons}>
-            <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.op)}>
+            <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.rec)}>
               <Icons.Edit /> Edit
             </button>
-            <button class={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`} onClick={() => props.onDelete?.(props.op)}>
+            <button class={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`} onClick={() => props.onDelete?.(props.rec)}>
               <Icons.Trash /> Delete
             </button>
-            <Show when={props.op.conversionStatus === "failed"}>
-              <button class={styles.adminActionBtn} onClick={() => props.onRetry?.(props.op.id)}>
+            <Show when={props.rec.conversionStatus === "failed"}>
+              <button class={styles.adminActionBtn} onClick={() => props.onRetry?.(props.rec.id)}>
                 <Icons.RefreshCw /> Retry
               </button>
             </Show>
@@ -210,10 +210,10 @@ export function DetailSidebar(props: {
           data-testid="launch-button"
           class={`${styles.launchButton} ${ready() ? styles.launchButtonReady : styles.launchButtonDisabled}`}
           disabled={!ready()}
-          onClick={() => ready() && props.onLaunch(props.op)}
+          onClick={() => ready() && props.onLaunch(props.rec)}
         >
           <Show when={ready()} fallback={<>{t(status().labelKey)}</>}>
-            <Icons.Play /> {t("open_replay")}
+            <Icons.Play /> {t("open_recording")}
           </Show>
         </button>
       </div>

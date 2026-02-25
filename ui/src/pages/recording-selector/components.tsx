@@ -4,7 +4,7 @@ import { useI18n } from "../../hooks/useLocale";
 import { STATUS_MAP } from "./constants";
 import { getTagColor } from "./helpers";
 import { Icons } from "./icons";
-import styles from "./MissionSelector.module.css";
+import styles from "./RecordingSelector.module.css";
 
 export function StatPill(props: { icon: JSX.Element; value: string | number; label: string; class?: string }) {
   return (

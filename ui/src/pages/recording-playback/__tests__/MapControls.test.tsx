@@ -15,7 +15,7 @@ afterEach(() => {
 describe("MapControls", () => {
   it("renders zoom in and zoom out buttons", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -29,7 +29,7 @@ describe("MapControls", () => {
 
   it("zoom in calls renderer.setView with zoom + 1", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     const getZoomSpy = vi.spyOn(renderer, "getZoom").mockReturnValue(5);
     const getCenterSpy = vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
@@ -48,7 +48,7 @@ describe("MapControls", () => {
 
   it("zoom out calls renderer.setView with zoom - 1", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     const getZoomSpy = vi.spyOn(renderer, "getZoom").mockReturnValue(5);
     const getCenterSpy = vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
@@ -67,7 +67,7 @@ describe("MapControls", () => {
 
   it("style switcher hidden when no styles available", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([]));
+    engine.loadRecording(makeManifest([]));
 
     // MockRenderer.getMapStyles() already returns [] by default
     vi.spyOn(renderer, "getMapStyles").mockReturnValue([]);

@@ -5,9 +5,9 @@ import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { DetailSidebar } from "../DetailSidebar";
-import type { Operation } from "../../../data/types";
+import type { Recording } from "../../../data/types";
 
-const baseOp: Operation = {
+const baseRec: Recording = {
   id: "1",
   worldName: "Altis",
   missionName: "Op Alpha",
@@ -16,20 +16,20 @@ const baseOp: Operation = {
   tag: "TvT",
 };
 
-function renderSidebar(initialOp: Operation = baseOp) {
-  const [op, setOp] = createSignal(initialOp);
+function renderSidebar(initial: Recording = baseRec) {
+  const [rec, setRec] = createSignal(initial);
   const onLaunch = vi.fn();
   const onClose = vi.fn();
 
   const result = render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
       <Route path="/" component={() => (
-        <DetailSidebar op={op()} onLaunch={onLaunch} onClose={onClose} />
+        <DetailSidebar rec={rec()} onLaunch={onLaunch} onClose={onClose} />
       )} />
     </Router>
   ));
 
-  return { ...result, setOp, onLaunch, onClose };
+  return { ...result, setRec, onLaunch, onClose };
 }
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -61,7 +61,7 @@ describe("DetailSidebar preview", () => {
   });
 
   it("resets preview when switching to a different map", async () => {
-    const { container, setOp } = renderSidebar();
+    const { container, setRec } = renderSidebar();
     const img = container.querySelector("img");
 
     // Fail the preview for Altis
@@ -71,7 +71,7 @@ describe("DetailSidebar preview", () => {
     });
 
     // Switch to a different map — preview should be attempted again
-    setOp({ ...baseOp, id: "2", worldName: "Stratis" });
+    setRec({ ...baseRec, id: "2", worldName: "Stratis" });
 
     await vi.waitFor(() => {
       const newImg = container.querySelector("img");
@@ -81,14 +81,14 @@ describe("DetailSidebar preview", () => {
   });
 
   it("restores preview when switching back to a map with preview", async () => {
-    const { container, setOp } = renderSidebar();
+    const { container, setRec } = renderSidebar();
 
     // Fail preview for Altis
     fireEvent.error(container.querySelector("img")!);
     await vi.waitFor(() => expect(container.querySelector("img")).toBeNull());
 
     // Switch to Stratis (which also fails)
-    setOp({ ...baseOp, id: "2", worldName: "Stratis" });
+    setRec({ ...baseRec, id: "2", worldName: "Stratis" });
     await vi.waitFor(() => {
       expect(container.querySelector("img")).not.toBeNull();
     });
@@ -96,7 +96,7 @@ describe("DetailSidebar preview", () => {
     await vi.waitFor(() => expect(container.querySelector("img")).toBeNull());
 
     // Switch back to Altis — img should be attempted again (reset)
-    setOp({ ...baseOp, id: "1", worldName: "Altis" });
+    setRec({ ...baseRec, id: "1", worldName: "Altis" });
     await vi.waitFor(() => {
       const img = container.querySelector("img");
       expect(img).not.toBeNull();
@@ -105,11 +105,11 @@ describe("DetailSidebar preview", () => {
   });
 
   it("keeps preview when switching between ops on the same map", async () => {
-    const { container, setOp } = renderSidebar();
+    const { container, setRec } = renderSidebar();
     expect(container.querySelector("img")).not.toBeNull();
 
     // Switch to a different op on the same map
-    setOp({ ...baseOp, id: "2", worldName: "Altis", missionName: "Op Bravo" });
+    setRec({ ...baseRec, id: "2", worldName: "Altis", missionName: "Op Bravo" });
 
     // img should still be present (same worldName, no reset needed)
     await vi.waitFor(() => {

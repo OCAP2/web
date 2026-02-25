@@ -16,7 +16,7 @@ afterEach(() => {
 describe("FollowIndicator", () => {
   it("is hidden when no follow target is set", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef()]));
+    engine.loadRecording(makeManifest([unitDef()]));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -29,7 +29,7 @@ describe("FollowIndicator", () => {
 
   it("shows chip with unit name when following", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef({ id: 1, name: "Rifleman" })]));
+    engine.loadRecording(makeManifest([unitDef({ id: 1, name: "Rifleman" })]));
     engine.followEntity(1);
 
     render(() => (
@@ -44,7 +44,7 @@ describe("FollowIndicator", () => {
 
   it("shows side-colored dot when snapshot has side", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([unitDef({ id: 1, name: "Grenadier", side: "WEST" })]),
     );
     engine.followEntity(1);
@@ -64,7 +64,7 @@ describe("FollowIndicator", () => {
 
   it("close button calls unfollowEntity", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef({ id: 1, name: "Medic" })]));
+    engine.loadRecording(makeManifest([unitDef({ id: 1, name: "Medic" })]));
     engine.followEntity(1);
 
     const unfollowSpy = vi.spyOn(engine, "unfollowEntity");
@@ -83,7 +83,7 @@ describe("FollowIndicator", () => {
 
   it("hides when follow target is cleared", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([unitDef({ id: 1, name: "Sniper" })]));
+    engine.loadRecording(makeManifest([unitDef({ id: 1, name: "Sniper" })]));
     engine.followEntity(1);
 
     render(() => (

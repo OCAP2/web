@@ -1,4 +1,4 @@
-import type { Operation } from "../../data/types";
+import type { Recording } from "../../data/types";
 import { STATUS_MAP } from "./constants";
 
 // Curated palette for unknown maps — perceptually distinct, readable on dark backgrounds.
@@ -75,8 +75,8 @@ export function getTagColor(tag: string): { bg: string; color: string; border: s
   };
 }
 
-export function getStatusInfo(op: Operation): { labelKey: string; color: string; icon: string; key: string } {
-  const status = op.conversionStatus || "completed";
+export function getStatusInfo(rec: Recording): { labelKey: string; color: string; icon: string; key: string } {
+  const status = rec.conversionStatus || "completed";
   if (status === "streaming") return { ...STATUS_MAP.streaming, key: "streaming" };
   if (status === "pending") return { ...STATUS_MAP.pending, key: "pending" };
   if (status === "converting") return { ...STATUS_MAP.converting, key: "converting" };
@@ -84,8 +84,8 @@ export function getStatusInfo(op: Operation): { labelKey: string; color: string;
   return { ...STATUS_MAP.ready, key: "ready" };
 }
 
-export function isOpReady(op: Operation): boolean {
-  return getStatusInfo(op).key === "ready";
+export function isRecordingReady(rec: Recording): boolean {
+  return getStatusInfo(rec).key === "ready";
 }
 
 /** Strip .json.gz / .json / .gz extensions from a recording filename. */

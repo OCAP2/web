@@ -17,7 +17,7 @@ afterEach(() => {
 describe("StatsTab", () => {
   it("shows force cards only for sides with units", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Alpha", side: "WEST" }),
         unitDef({ id: 2, name: "Bravo", side: "WEST" }),
@@ -40,7 +40,7 @@ describe("StatsTab", () => {
     const { engine, renderer } = createTestEngine();
     // Unit 1: alive at frame 0 and 1
     // Unit 2: alive at frame 0, dead at frame 1
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({
           id: 1,
@@ -106,7 +106,7 @@ describe("StatsTab", () => {
     ];
     // Unit 1 kills Unit 2 at frame 5
     const events = [killedEvent(5, 2, 1, "M4A1", 100)];
-    engine.loadOperation(makeManifest(entities, events, 10));
+    engine.loadRecording(makeManifest(entities, events, 10));
     engine.seekTo(5);
 
     render(() => (
@@ -193,7 +193,7 @@ describe("StatsTab", () => {
       killedEvent(6, 4, 1, "M4A1", 120),  // TopKiller kills VictimB
       killedEvent(7, 5, 2, "AK-47", 80),  // SecondKiller kills VictimC
     ];
-    engine.loadOperation(makeManifest(entities, events, 20));
+    engine.loadRecording(makeManifest(entities, events, 20));
     engine.seekTo(10);
 
     render(() => (
@@ -217,7 +217,7 @@ describe("StatsTab", () => {
 
   it("hides leaderboard when no kills or deaths", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "Alpha", side: "WEST" }),
         unitDef({ id: 2, name: "Bravo", side: "EAST" }),
@@ -253,7 +253,7 @@ describe("StatsTab", () => {
       killedEvent(5, 3, 1, "M4A1", 100),  // PlayerKiller kills VictimA
       killedEvent(6, 4, 2, "AK-47", 80),  // AIKiller kills VictimB
     ];
-    engine.loadOperation(makeManifest(entities, events, 20));
+    engine.loadRecording(makeManifest(entities, events, 20));
     engine.seekTo(10);
 
     render(() => (
@@ -280,7 +280,7 @@ describe("StatsTab", () => {
       unitDef({ id: 2, name: "AIVictim", side: "EAST", isPlayer: false, positions, endFrame: 19 }),
     ];
     const events = [killedEvent(5, 2, 1, "AK-47", 50)];
-    engine.loadOperation(makeManifest(entities, events, 20));
+    engine.loadRecording(makeManifest(entities, events, 20));
     engine.seekTo(10);
 
     render(() => (
@@ -308,7 +308,7 @@ describe("StatsTab", () => {
       unitDef({ id: 2, name: "Victim", side: "EAST", isPlayer: true, positions, endFrame: 19 }),
     ];
     const events = [killedEvent(5, 2, 1, "AK-47", 50)];
-    engine.loadOperation(makeManifest(entities, events, 20));
+    engine.loadRecording(makeManifest(entities, events, 20));
     engine.seekTo(10);
 
     const { container } = render(() => (
@@ -327,7 +327,7 @@ describe("StatsTab", () => {
 
   it("shows multiple side cards when multiple sides have units", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(
+    engine.loadRecording(
       makeManifest([
         unitDef({ id: 1, name: "BluforGuy", side: "WEST" }),
         unitDef({ id: 2, name: "OpforGuy", side: "EAST" }),

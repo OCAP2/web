@@ -5,12 +5,12 @@ import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { AuthProvider } from "../../../hooks/useAuth";
 import { setAuthToken } from "../../../data/apiClient";
-import { MissionSelector } from "..";
-import type { Operation } from "../../../data/types";
+import { RecordingSelector } from "..";
+import type { Recording } from "../../../data/types";
 
 // ─── Helpers ───
 
-const mockOperations: Operation[] = [
+const mockRecordings: Recording[] = [
   {
     id: "1",
     worldName: "Altis",
@@ -54,7 +54,7 @@ const mockOperations: Operation[] = [
   },
 ];
 
-function mockFetchWith(ops: Operation[]) {
+function mockFetchWith(ops: Recording[]) {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
     json: () =>
@@ -88,7 +88,7 @@ function RecordingStub() {
 function renderPage() {
   return render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider><AuthProvider>{p.children}</AuthProvider></CustomizeProvider></I18nProvider>}>
-      <Route path="/" component={MissionSelector} />
+      <Route path="/" component={RecordingSelector} />
       <Route path="/recording/:id/:name" component={RecordingStub} />
     </Router>
   ));
@@ -96,11 +96,11 @@ function renderPage() {
 
 // ─── Tests ───
 
-describe("MissionSelector", () => {
+describe("RecordingSelector", () => {
   beforeEach(() => {
     // Reset URL to / so the router starts fresh after tests that navigate away
     window.history.replaceState(null, "", "/");
-    mockFetchWith(mockOperations);
+    mockFetchWith(mockRecordings);
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -108,19 +108,19 @@ describe("MissionSelector", () => {
 
   it("renders mission selector page", async () => {
     const { findByTestId } = renderPage();
-    expect(await findByTestId("mission-selector")).toBeDefined();
+    expect(await findByTestId("recording-selector")).toBeDefined();
   });
 
   it("displays all operations", async () => {
     const { findByTestId } = renderPage();
-    expect(await findByTestId("operation-1")).toBeDefined();
-    expect(await findByTestId("operation-2")).toBeDefined();
-    expect(await findByTestId("operation-3")).toBeDefined();
+    expect(await findByTestId("recording-1")).toBeDefined();
+    expect(await findByTestId("recording-2")).toBeDefined();
+    expect(await findByTestId("recording-3")).toBeDefined();
   });
 
   it("shows operation details in rows", async () => {
     const { findByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
     expect(op1.textContent).toContain("Op Alpha");
     expect(op1.textContent).toContain("Altis");
     expect(op1.textContent).toContain("1h 0m 0s");
@@ -128,82 +128,82 @@ describe("MissionSelector", () => {
 
   it("shows tag badges on operations", async () => {
     const { findByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
     expect(op1.textContent).toContain("TvT");
-    const op2 = await findByTestId("operation-2");
+    const op2 = await findByTestId("recording-2");
     expect(op2.textContent).toContain("COOP");
   });
 
   it("shows status badges on operations", async () => {
     const { findByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
     expect(op1.textContent).toContain("Ready");
-    const op3 = await findByTestId("operation-3");
+    const op3 = await findByTestId("recording-3");
     expect(op3.textContent).toContain("Ready");
-    const op4 = await findByTestId("operation-4");
+    const op4 = await findByTestId("recording-4");
     expect(op4.textContent).toContain("Live");
-    const op5 = await findByTestId("operation-5");
+    const op5 = await findByTestId("recording-5");
     expect(op5.textContent).toContain("Pending");
   });
 
   it("shows footer with mission count", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
-    expect(container.textContent).toContain("5 of 5 missions");
+    await findByTestId("recording-1");
+    expect(container.textContent).toContain("5 of 5 recordings");
   });
 
   // ── Search ──
 
   it("filters operations by mission name", async () => {
     const { findByTestId, getByTestId, queryByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "Bravo" } });
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).toBeNull();
-      expect(queryByTestId("operation-3")).toBeNull();
+      expect(queryByTestId("recording-1")).toBeNull();
+      expect(queryByTestId("recording-3")).toBeNull();
     });
-    expect(queryByTestId("operation-2")).not.toBeNull();
+    expect(queryByTestId("recording-2")).not.toBeNull();
   });
 
   it("filters operations by world name", async () => {
     const { findByTestId, getByTestId, queryByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "Stratis" } });
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).toBeNull();
-      expect(queryByTestId("operation-3")).toBeNull();
+      expect(queryByTestId("recording-1")).toBeNull();
+      expect(queryByTestId("recording-3")).toBeNull();
     });
-    expect(queryByTestId("operation-2")).not.toBeNull();
+    expect(queryByTestId("recording-2")).not.toBeNull();
   });
 
   it("search is case-insensitive", async () => {
     const { findByTestId, getByTestId, queryByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "bravo" } });
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-2")).not.toBeNull();
-      expect(queryByTestId("operation-1")).toBeNull();
+      expect(queryByTestId("recording-2")).not.toBeNull();
+      expect(queryByTestId("recording-1")).toBeNull();
     });
   });
 
   it("shows empty state when search matches nothing", async () => {
     const { findByTestId, getByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "nonexistent" } });
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("No missions found");
+      expect(container.textContent).toContain("No recordings found");
     });
   });
 
@@ -211,47 +211,47 @@ describe("MissionSelector", () => {
 
   it("filters by tag when tag badge is clicked", async () => {
     const { findByTestId, queryByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     // Find the COOP tag filter button in the filter bar
     const tagButtons = container.querySelectorAll("button");
     const coopButton = Array.from(tagButtons).find(
-      (b) => b.textContent === "COOP" && b !== queryByTestId("operation-2")?.querySelector("button"),
+      (b) => b.textContent === "COOP" && b !== queryByTestId("recording-2")?.querySelector("button"),
     );
     expect(coopButton).toBeDefined();
 
     fireEvent.click(coopButton!);
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).toBeNull();
-      expect(queryByTestId("operation-3")).toBeNull();
+      expect(queryByTestId("recording-1")).toBeNull();
+      expect(queryByTestId("recording-3")).toBeNull();
     });
-    expect(queryByTestId("operation-2")).not.toBeNull();
+    expect(queryByTestId("recording-2")).not.toBeNull();
   });
 
   it("toggles tag filter off when clicked again", async () => {
     const { findByTestId, queryByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const tagButtons = container.querySelectorAll("button");
     const coopButton = Array.from(tagButtons).find(
-      (b) => b.textContent === "COOP" && b !== queryByTestId("operation-2")?.querySelector("button"),
+      (b) => b.textContent === "COOP" && b !== queryByTestId("recording-2")?.querySelector("button"),
     );
 
     fireEvent.click(coopButton!);
-    await vi.waitFor(() => expect(queryByTestId("operation-1")).toBeNull());
+    await vi.waitFor(() => expect(queryByTestId("recording-1")).toBeNull());
 
     fireEvent.click(coopButton!);
-    await vi.waitFor(() => expect(queryByTestId("operation-1")).not.toBeNull());
+    await vi.waitFor(() => expect(queryByTestId("recording-1")).not.toBeNull());
   });
 
   it("does not crash when rapidly toggling tag filters", async () => {
     const { findByTestId, queryByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const findTagButton = (tag: string) =>
       Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent === tag && b !== queryByTestId("operation-1")?.querySelector("button"),
+        (b) => b.textContent === tag && b !== queryByTestId("recording-1")?.querySelector("button"),
       );
 
     const tvtButton = findTagButton("TvT")!;
@@ -266,9 +266,9 @@ describe("MissionSelector", () => {
     fireEvent.click(coopButton); // toggle off
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).not.toBeNull();
-      expect(queryByTestId("operation-2")).not.toBeNull();
-      expect(queryByTestId("operation-3")).not.toBeNull();
+      expect(queryByTestId("recording-1")).not.toBeNull();
+      expect(queryByTestId("recording-2")).not.toBeNull();
+      expect(queryByTestId("recording-3")).not.toBeNull();
     });
   });
 
@@ -276,7 +276,7 @@ describe("MissionSelector", () => {
 
   it("filters by map when map button is clicked", async () => {
     const { findByTestId, queryByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const buttons = container.querySelectorAll("button");
     const stratisButton = Array.from(buttons).find(
@@ -287,15 +287,15 @@ describe("MissionSelector", () => {
     fireEvent.click(stratisButton!);
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).toBeNull();
-      expect(queryByTestId("operation-3")).toBeNull();
+      expect(queryByTestId("recording-1")).toBeNull();
+      expect(queryByTestId("recording-3")).toBeNull();
     });
-    expect(queryByTestId("operation-2")).not.toBeNull();
+    expect(queryByTestId("recording-2")).not.toBeNull();
   });
 
   it("does not crash when rapidly toggling map filters", async () => {
     const { findByTestId, queryByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const findMapButton = (name: string) =>
       Array.from(container.querySelectorAll("button")).find(
@@ -316,9 +316,9 @@ describe("MissionSelector", () => {
     fireEvent.click(stratisButton); // toggle off
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).not.toBeNull();
-      expect(queryByTestId("operation-2")).not.toBeNull();
-      expect(queryByTestId("operation-3")).not.toBeNull();
+      expect(queryByTestId("recording-1")).not.toBeNull();
+      expect(queryByTestId("recording-2")).not.toBeNull();
+      expect(queryByTestId("recording-3")).not.toBeNull();
     });
   });
 
@@ -326,13 +326,13 @@ describe("MissionSelector", () => {
 
   it("shows clear button when filter is active and clears on click", async () => {
     const { findByTestId, queryByTestId, container, getByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     // Apply a search filter
     const input = getByTestId("search-input") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "Bravo" } });
 
-    await vi.waitFor(() => expect(queryByTestId("operation-1")).toBeNull());
+    await vi.waitFor(() => expect(queryByTestId("recording-1")).toBeNull());
 
     // Find and click clear button
     const clearButton = Array.from(container.querySelectorAll("button")).find(
@@ -342,9 +342,9 @@ describe("MissionSelector", () => {
     fireEvent.click(clearButton!);
 
     await vi.waitFor(() => {
-      expect(queryByTestId("operation-1")).not.toBeNull();
-      expect(queryByTestId("operation-2")).not.toBeNull();
-      expect(queryByTestId("operation-3")).not.toBeNull();
+      expect(queryByTestId("recording-1")).not.toBeNull();
+      expect(queryByTestId("recording-2")).not.toBeNull();
+      expect(queryByTestId("recording-3")).not.toBeNull();
     });
   });
 
@@ -352,7 +352,7 @@ describe("MissionSelector", () => {
 
   it("opens detail sidebar when a row is clicked", async () => {
     const { findByTestId, container } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
 
@@ -367,7 +367,7 @@ describe("MissionSelector", () => {
 
   it("sidebar shows correct mission details", async () => {
     const { findByTestId, container } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
     await findByTestId("launch-button");
@@ -380,7 +380,7 @@ describe("MissionSelector", () => {
 
   it("closes sidebar when close button is clicked", async () => {
     const { findByTestId, queryByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
     const closeButton = await findByTestId("sidebar-close");
@@ -394,8 +394,8 @@ describe("MissionSelector", () => {
 
   it("switching selection updates sidebar content", async () => {
     const { findByTestId, container } = renderPage();
-    const op1 = await findByTestId("operation-1");
-    const op2 = await findByTestId("operation-2");
+    const op1 = await findByTestId("recording-1");
+    const op2 = await findByTestId("recording-2");
 
     fireEvent.click(op1);
     await findByTestId("launch-button");
@@ -411,7 +411,7 @@ describe("MissionSelector", () => {
 
   it("shows loading screen when launch button is clicked", async () => {
     const { findByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
     const launchButton = await findByTestId("launch-button");
@@ -424,7 +424,7 @@ describe("MissionSelector", () => {
   });
 
   it("launch button is disabled for non-ready operations", async () => {
-    const pendingOps: Operation[] = [
+    const pendingOps: Recording[] = [
       {
         id: "10",
         worldName: "Altis",
@@ -438,7 +438,7 @@ describe("MissionSelector", () => {
     mockFetchWith(pendingOps);
 
     const { findByTestId } = renderPage();
-    const op = await findByTestId("operation-10");
+    const op = await findByTestId("recording-10");
 
     fireEvent.click(op);
     const launchButton = await findByTestId("launch-button");
@@ -449,20 +449,20 @@ describe("MissionSelector", () => {
 
   // ── Sorting ──
 
-  it("sorts by name when MISSION header is clicked", async () => {
+  it("sorts by name when Name header is clicked", async () => {
     const { findByTestId, container, getByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
-    const missionHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.toLowerCase().includes("mission"),
+    const nameHeader = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === "Name",
     );
-    expect(missionHeader).toBeDefined();
+    expect(nameHeader).toBeDefined();
 
-    fireEvent.click(missionHeader!);
+    fireEvent.click(nameHeader!);
 
     await vi.waitFor(() => {
-      const list = getByTestId("operations-list");
-      const rows = list.querySelectorAll("[data-testid^='operation-']");
+      const list = getByTestId("recordings-list");
+      const rows = list.querySelectorAll("[data-testid^='recording-']");
       const names = Array.from(rows).map((r) => r.textContent!);
       // Descending by name: Op Echo, Op Delta, Op Charlie, Op Bravo, Op Alpha
       expect(names[0]).toContain("Op Echo");
@@ -472,20 +472,20 @@ describe("MissionSelector", () => {
 
   it("toggles sort direction on second click", async () => {
     const { findByTestId, container, getByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
-    const missionHeader = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.toLowerCase().includes("mission"),
+    const nameHeader = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === "Name",
     );
 
     // First click: descending
-    fireEvent.click(missionHeader!);
+    fireEvent.click(nameHeader!);
     // Second click: ascending
-    fireEvent.click(missionHeader!);
+    fireEvent.click(nameHeader!);
 
     await vi.waitFor(() => {
-      const list = getByTestId("operations-list");
-      const rows = list.querySelectorAll("[data-testid^='operation-']");
+      const list = getByTestId("recordings-list");
+      const rows = list.querySelectorAll("[data-testid^='recording-']");
       const names = Array.from(rows).map((r) => r.textContent!);
       // Ascending by name: Op Alpha, Op Bravo, Op Charlie, Op Delta, Op Echo
       expect(names[0]).toContain("Op Alpha");
@@ -519,7 +519,7 @@ describe("MissionSelector", () => {
     const { container } = renderPage();
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("No missions found");
+      expect(container.textContent).toContain("No recordings found");
     });
   });
 
@@ -527,7 +527,7 @@ describe("MissionSelector", () => {
 
   it("closes sidebar on Escape", async () => {
     const { findByTestId, queryByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
     await findByTestId("launch-button");
@@ -541,7 +541,7 @@ describe("MissionSelector", () => {
 
   it("launches selected operation on Enter", async () => {
     const { findByTestId } = renderPage();
-    const op1 = await findByTestId("operation-1");
+    const op1 = await findByTestId("recording-1");
 
     fireEvent.click(op1);
     await findByTestId("launch-button");
@@ -553,7 +553,7 @@ describe("MissionSelector", () => {
 
   it("focuses search on / key", async () => {
     const { findByTestId, getByTestId } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const input = getByTestId("search-input");
     fireEvent.keyDown(window, { key: "/" });
@@ -565,7 +565,7 @@ describe("MissionSelector", () => {
 
   it("shows correct map count in stats", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     // 2 unique maps: Altis and Stratis
     expect(container.textContent).toContain("2");
@@ -631,7 +631,7 @@ describe("MissionSelector", () => {
 // ─── Admin tests ───
 
 /** Mock fetch that routes by URL pattern and responds appropriately */
-function mockAdminFetch(ops: Operation[]) {
+function mockAdminFetch(ops: Recording[]) {
   const rawOps = ops.map((op) => ({
     id: Number(op.id),
     world_name: op.worldName,
@@ -705,8 +705,8 @@ function mockAdminFetch(ops: Operation[]) {
   });
 }
 
-describe("MissionSelector (Admin)", () => {
-  const failedOp: Operation = {
+describe("RecordingSelector (Admin)", () => {
+  const failedOp: Recording = {
     id: "6",
     worldName: "Altis",
     missionName: "Op Failed",
@@ -716,7 +716,7 @@ describe("MissionSelector (Admin)", () => {
     conversionStatus: "failed",
   };
 
-  const adminOps: Operation[] = [
+  const adminOps: Recording[] = [
     {
       id: "1",
       worldName: "Altis",
@@ -744,7 +744,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("shows admin badge with Steam profile when authenticated", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     await vi.waitFor(() => {
       expect(container.textContent).toContain("TestPlayer");
@@ -770,7 +770,7 @@ describe("MissionSelector (Admin)", () => {
     });
 
     const { findByTestId, container } = renderPage();
-    await findByTestId("mission-selector");
+    await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
       expect(container.textContent).toContain("Sign in with Steam");
@@ -779,7 +779,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("logout button clears admin UI", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const logoutBtn = container.querySelector("button[title='Sign out']") as HTMLButtonElement;
     expect(logoutBtn).not.toBeNull();
@@ -809,7 +809,7 @@ describe("MissionSelector (Admin)", () => {
     });
 
     const { findByTestId, container } = renderPage();
-    await findByTestId("mission-selector");
+    await findByTestId("recording-selector");
 
     await vi.waitFor(() => {
       expect(container.textContent).toContain("Sign in with Steam");
@@ -825,7 +825,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("edit flow: sidebar Edit → modal → save", async () => {
     const { findByTestId, container } = renderPage();
-    const row = await findByTestId("operation-1");
+    const row = await findByTestId("recording-1");
 
     // Select operation to open sidebar
     fireEvent.click(row);
@@ -858,7 +858,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("delete flow: sidebar Delete → confirm dialog → confirm", async () => {
     const { findByTestId, container } = renderPage();
-    const row = await findByTestId("operation-1");
+    const row = await findByTestId("recording-1");
 
     fireEvent.click(row);
     await findByTestId("launch-button");
@@ -890,7 +890,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("retry button appears for failed operations and calls API", async () => {
     const { findByTestId, container } = renderPage();
-    const row = await findByTestId("operation-6");
+    const row = await findByTestId("recording-6");
 
     fireEvent.click(row);
     await findByTestId("launch-button");
@@ -918,7 +918,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("toggle upload zone and upload a file via input", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     // Click upload button
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
@@ -964,7 +964,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("drag over adds visual state", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     // Open upload zone
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
@@ -986,7 +986,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("upload dialog closes on Cancel button", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1007,7 +1007,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("upload dialog closes on X button", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1037,7 +1037,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("upload submit is disabled without file", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1059,7 +1059,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("upload submit is disabled when name is cleared after file select", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1094,7 +1094,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("auto-fills mission name from filename stripping extensions", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1116,7 +1116,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("file remove button clears file and re-shows drop zone", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1155,7 +1155,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("upload sends form data with all fields", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
@@ -1214,7 +1214,7 @@ describe("MissionSelector (Admin)", () => {
 
   it("footer hint updates based on form state", async () => {
     const { findByTestId, container } = renderPage();
-    await findByTestId("operation-1");
+    await findByTestId("recording-1");
 
     const uploadBtn = container.querySelector("button[title='Upload recording']") as HTMLButtonElement;
     fireEvent.click(uploadBtn);

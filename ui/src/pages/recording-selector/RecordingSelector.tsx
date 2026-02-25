@@ -2,7 +2,7 @@ import { createSignal, createMemo, Show, For, onMount, onCleanup, batch } from "
 import type { JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import type { Operation } from "../../data/types";
+import type { Recording } from "../../data/types";
 import { ApiClient, type BuildInfo } from "../../data/apiClient";
 import { useI18n } from "../../hooks/useLocale";
 import { useCustomize } from "../../hooks/useCustomize";
@@ -10,16 +10,16 @@ import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { Icons } from "./icons";
-import { getMapColor, isOpReady, stripRecordingExtension } from "./helpers";
+import { getMapColor, isRecordingReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
-import { MissionRow } from "./MissionRow";
+import { RecordingRow } from "./RecordingRow";
 import { DetailSidebar } from "./DetailSidebar";
 import { EditModal, DeleteConfirm, UploadDialog } from "./dialogs";
-import styles from "./MissionSelector.module.css";
+import styles from "./RecordingSelector.module.css";
 
 // ─── Main Component ───
 
-export function MissionSelector(): JSX.Element {
+export function RecordingSelector(): JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const api = new ApiClient();
@@ -28,7 +28,7 @@ export function MissionSelector(): JSX.Element {
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
-  const [operations, setOperations] = createSignal<Operation[]>([]);
+  const [recordings, setRecordings] = createSignal<Recording[]>([]);
   const [loading, setLoading] = createSignal(false);
   const [search, setSearch] = createSignal("");
   const [tagFilter, setTagFilter] = createSignal<string | null>(null);
@@ -38,25 +38,25 @@ export function MissionSelector(): JSX.Element {
   const [sortDir, setSortDir] = createSignal("desc");
   const [langOpen, setLangOpen] = createSignal(false);
   const [buildInfo, setBuildInfo] = createSignal<BuildInfo | null>(null);
-  const [editingOp, setEditingOp] = createSignal<Operation | null>(null);
-  const [deletingOp, setDeletingOp] = createSignal<Operation | null>(null);
+  const [editingRec, setEditingRec] = createSignal<Recording | null>(null);
+  const [deletingRec, setDeletingRec] = createSignal<Recording | null>(null);
   const [uploading, setUploading] = createSignal(false);
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
 
-  // Fetch operations
+  // Fetch recordings
   onMount(async () => {
     setLoading(true);
     try {
-      const [ops, info] = await Promise.all([
-        api.getOperations(),
+      const [recs, info] = await Promise.all([
+        api.getRecordings(),
         api.getVersion().catch(() => null),
       ]);
-      setOperations(ops.reverse());
+      setRecordings(recs.reverse());
       if (info) setBuildInfo(info);
     } catch {
-      setOperations([]);
+      setRecordings([]);
     } finally {
       setLoading(false);
     }
@@ -71,13 +71,13 @@ export function MissionSelector(): JSX.Element {
     if (e.key === "Escape") {
       setSelectedId(null);
       setLangOpen(false);
-      setEditingOp(null);
-      setDeletingOp(null);
+      setEditingRec(null);
+      setDeletingRec(null);
       searchRef?.blur();
     }
     if (e.key === "Enter" && selectedId()) {
-      const op = operations().find((o) => o.id === selectedId());
-      if (op && isOpReady(op)) handleLaunch(op);
+      const rec = recordings().find((o) => o.id === selectedId());
+      if (rec && isRecordingReady(rec)) handleLaunch(rec);
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -109,13 +109,13 @@ export function MissionSelector(): JSX.Element {
   };
 
   // Derived data
-  const uniqueMaps = createMemo(() => [...new Set(operations().map((o) => o.worldName))]);
-  const uniqueTags = createMemo(() => [...new Set(operations().map((o) => o.tag).filter(Boolean))] as string[]);
+  const uniqueMaps = createMemo(() => [...new Set(recordings().map((o) => o.worldName))]);
+  const uniqueTags = createMemo(() => [...new Set(recordings().map((o) => o.tag).filter(Boolean))] as string[]);
 
-  const hasPlayerData = createMemo(() => operations().some(op => (op.playerCount ?? 0) > 0));
-  const hasKillData = createMemo(() => operations().some(op => (op.killCount ?? 0) > 0));
-  const maxPlayers = createMemo(() => Math.max(0, ...operations().map(op => op.playerCount ?? 0)));
-  const totalKills = createMemo(() => operations().reduce((s, op) => s + (op.killCount ?? 0), 0));
+  const hasPlayerData = createMemo(() => recordings().some(r => (r.playerCount ?? 0) > 0));
+  const hasKillData = createMemo(() => recordings().some(r => (r.killCount ?? 0) > 0));
+  const maxPlayers = createMemo(() => Math.max(0, ...recordings().map(r => r.playerCount ?? 0)));
+  const totalKills = createMemo(() => recordings().reduce((s, r) => s + (r.killCount ?? 0), 0));
 
   const gridColumns = createMemo(() => {
     let cols = "1fr 130px 100px";
@@ -126,18 +126,18 @@ export function MissionSelector(): JSX.Element {
   });
 
   const filtered = createMemo(() => {
-    let result = [...operations()];
+    let result = [...recordings()];
     const s = search().toLowerCase();
     if (s) {
-      result = result.filter((op) =>
-        op.missionName.toLowerCase().includes(s) ||
-        op.worldName.toLowerCase().includes(s)
+      result = result.filter((r) =>
+        r.missionName.toLowerCase().includes(s) ||
+        r.worldName.toLowerCase().includes(s)
       );
     }
     const tf = tagFilter();
-    if (tf) result = result.filter((op) => op.tag === tf);
+    if (tf) result = result.filter((r) => r.tag === tf);
     const mf = mapFilter();
-    if (mf) result = result.filter((op) => op.worldName === mf);
+    if (mf) result = result.filter((r) => r.worldName === mf);
 
     const sb = sortBy();
     const sd = sortDir();
@@ -162,9 +162,9 @@ export function MissionSelector(): JSX.Element {
     initialRect: { width: 0, height: 800 },
   });
 
-  const selectedOp = createMemo(() => {
+  const selectedRec = createMemo(() => {
     const id = selectedId();
-    return id ? operations().find((o) => o.id === id) ?? null : null;
+    return id ? recordings().find((o) => o.id === id) ?? null : null;
   });
 
   const hasFilters = () => search() || tagFilter() || mapFilter();
@@ -176,41 +176,41 @@ export function MissionSelector(): JSX.Element {
   };
 
   // Launch handler
-  const handleLaunch = (op: Operation) => {
-    const name = op.filename ?? op.id;
-    navigate(`/recording/${encodeURIComponent(op.id)}/${encodeURIComponent(name)}`, {
+  const handleLaunch = (rec: Recording) => {
+    const name = rec.filename ?? rec.id;
+    navigate(`/recording/${encodeURIComponent(rec.id)}/${encodeURIComponent(name)}`, {
       state: {
-        missionName: op.missionName,
-        worldName: op.worldName,
-        missionDuration: op.missionDuration,
+        missionName: rec.missionName,
+        worldName: rec.worldName,
+        missionDuration: rec.missionDuration,
       },
     });
   };
 
   // Admin handlers
-  const refreshOperations = async () => {
-    const ops = await api.getOperations();
-    setOperations(ops.reverse());
+  const refreshRecordings = async () => {
+    const recs = await api.getRecordings();
+    setRecordings(recs.reverse());
   };
 
   const handleEditSave = async (id: string, data: { missionName?: string; tag?: string; date?: string }) => {
-    await api.editOperation(id, data);
-    setEditingOp(null);
-    await refreshOperations();
+    await api.editRecording(id, data);
+    setEditingRec(null);
+    await refreshRecordings();
   };
 
   const handleDeleteConfirm = async (id: string) => {
-    await api.deleteOperation(id);
+    await api.deleteRecording(id);
     batch(() => {
-      setDeletingOp(null);
+      setDeletingRec(null);
       setSelectedId(null);
     });
-    await refreshOperations();
+    await refreshRecordings();
   };
 
   const handleRetry = async (id: string) => {
     await api.retryConversion(id);
-    await refreshOperations();
+    await refreshRecordings();
   };
 
   const handleUpload = async (data: { file: File; name: string; map: string; tag: string; date: string }) => {
@@ -227,16 +227,16 @@ export function MissionSelector(): JSX.Element {
       if (data.tag) formData.append("tag", data.tag);
       if (data.date) formData.append("date", data.date);
 
-      await api.uploadOperation(formData);
+      await api.uploadRecording(formData);
       setShowUpload(false);
-      await refreshOperations();
+      await refreshRecordings();
     } finally {
       setUploading(false);
     }
   };
 
   return (
-      <div data-testid="mission-selector" class={styles.page}>
+      <div data-testid="recording-selector" class={styles.page}>
         {/* ── Auth error toast ── */}
         <Show when={authError()}>
           {(msg) => <Toast message={msg()} onDismiss={() => dismissAuthError()} />}
@@ -263,7 +263,7 @@ export function MissionSelector(): JSX.Element {
                   </Show>
                 </div>
                 <div class={styles.subtitle}>
-                  {customize().headerSubtitle || <>Operation Capture and Playback &middot; {operations().length} {t("recordings")}</>}
+                  {customize().headerSubtitle || <>Operation Capture and Playback &middot; {recordings().length} {t("recordings")}</>}
                 </div>
               </div>
             </div>
@@ -432,7 +432,7 @@ export function MissionSelector(): JSX.Element {
           <div class={styles.tableArea}>
             {/* Column Headers */}
             <div class={styles.tableHeader} style={{ "grid-template-columns": gridColumns() }}>
-              <SortHeader label={t("mission")} sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              <SortHeader label={t("recording")} sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label={t("data")} sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label={t("durability")} sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <Show when={hasPlayerData()}>
@@ -447,7 +447,7 @@ export function MissionSelector(): JSX.Element {
             </div>
 
             {/* Rows */}
-            <div ref={scrollRef} class={styles.tableBody} data-testid="operations-list">
+            <div ref={scrollRef} class={styles.tableBody} data-testid="recordings-list">
               <Show when={loading()}>
                 <div data-testid="loading-indicator" style={{
                   display: "flex", "align-items": "center", "justify-content": "center",
@@ -460,20 +460,20 @@ export function MissionSelector(): JSX.Element {
               <Show when={!loading() && filtered().length === 0}>
                 <div class={styles.emptyState}>
                   <Icons.Search />
-                  <span class={styles.emptyText}>{t("no_missions_found")}</span>
+                  <span class={styles.emptyText}>{t("no_recordings_found")}</span>
                   <span class={styles.emptyHint}>{t("adjust_filters")}</span>
                 </div>
               </Show>
               <div class={styles.virtualContainer} style={{ height: `${virtualizer.getTotalSize()}px` }}>
                 <For each={virtualizer.getVirtualItems()}>
                   {(vItem) => {
-                    const op = () => filtered()[vItem.index];
+                    const rec = () => filtered()[vItem.index];
                     return (
-                      <Show when={op()}>
+                      <Show when={rec()}>
                         {(o) => (
                           <div class={styles.virtualRow} style={{ height: `${vItem.size}px`, transform: `translateY(${vItem.start}px)` }}>
-                            <MissionRow
-                              op={o()}
+                            <RecordingRow
+                              rec={o()}
                               selected={selectedId() === o().id}
                               onSelect={setSelectedId}
                               onLaunch={handleLaunch}
@@ -521,7 +521,7 @@ export function MissionSelector(): JSX.Element {
                 </span>
               </div>
               <span class={styles.footerCenter}>
-                {filtered().length} {t("of")} {operations().length} {t("missions")}
+                {filtered().length} {t("of")} {recordings().length} {t("recordings")}
               </span>
               <div class={styles.footerRight}>
                 <div class={styles.footerShortcut}>
@@ -545,15 +545,15 @@ export function MissionSelector(): JSX.Element {
           </div>
 
           {/* ── Detail Sidebar ── */}
-          <Show when={selectedOp()}>
-            {(op) => (
+          <Show when={selectedRec()}>
+            {(rec) => (
               <DetailSidebar
-                op={op()}
+                rec={rec()}
                 onLaunch={handleLaunch}
                 onClose={() => setSelectedId(null)}
                 isAdmin={authenticated()}
-                onEdit={setEditingOp}
-                onDelete={setDeletingOp}
+                onEdit={setEditingRec}
+                onDelete={setDeletingRec}
                 onRetry={handleRetry}
               />
             )}
@@ -561,23 +561,23 @@ export function MissionSelector(): JSX.Element {
         </div>
 
         {/* ── Edit Modal ── */}
-        <Show when={editingOp()}>
-          {(op) => (
+        <Show when={editingRec()}>
+          {(rec) => (
             <EditModal
-              op={op()}
+              rec={rec()}
               tags={uniqueTags()}
-              onClose={() => setEditingOp(null)}
+              onClose={() => setEditingRec(null)}
               onSave={handleEditSave}
             />
           )}
         </Show>
 
         {/* ── Delete Confirm ── */}
-        <Show when={deletingOp()}>
-          {(op) => (
+        <Show when={deletingRec()}>
+          {(rec) => (
             <DeleteConfirm
-              op={op()}
-              onClose={() => setDeletingOp(null)}
+              rec={rec()}
+              onClose={() => setDeletingRec(null)}
               onConfirm={handleDeleteConfirm}
             />
           )}

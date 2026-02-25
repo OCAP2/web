@@ -12,8 +12,8 @@ import type { MapRenderer } from "../../renderers/renderer.interface";
 import { EngineProvider } from "../../hooks/useEngine";
 import { RendererProvider } from "../../hooks/useRenderer";
 import { useI18n } from "../../hooks/useLocale";
-import { OcapLogoSvg } from "../mission-selector/OcapLogoSvg";
-import { formatDuration } from "../mission-selector/helpers";
+import { OcapLogoSvg } from "../recording-selector/OcapLogoSvg";
+import { formatDuration } from "../recording-selector/helpers";
 import loadingStyles from "../LoadingTransition.module.css";
 import { MapContainer } from "./components/MapContainer";
 import { TopBar } from "./components/TopBar";
@@ -32,7 +32,7 @@ import {
   setActivePanelTab,
   setLeftPanelVisible,
 } from "./shortcuts";
-import { loadOperation } from "./loadOperation";
+import { loadRecording } from "./loadRecording";
 import { useRenderBridge } from "./useRenderBridge";
 
 interface LocationState {
@@ -54,8 +54,8 @@ export function RecordingPlayback(): JSX.Element {
     undefined,
   );
   const [missionName, setMissionName] = createSignal("");
-  const [operationId, setOperationId] = createSignal<string | null>(null);
-  const [operationFilename, setOperationFilename] = createSignal<string | null>(null);
+  const [recordingId, setRecordingId] = createSignal<string | null>(null);
+  const [recordingFilename, setRecordingFilename] = createSignal<string | null>(null);
   const [aboutOpen, setAboutOpen] = createSignal(false);
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>(undefined);
   const [addonVersion, setAddonVersion] = createSignal<string | undefined>(undefined);
@@ -77,25 +77,25 @@ export function RecordingPlayback(): JSX.Element {
     void (async () => {
       let op;
       try {
-        op = await api.getOperation(id);
+        op = await api.getRecording(id);
       } catch {
-        showHint(t("operation_not_found"));
+        showHint(t("recording_not_found"));
         setLoading(false);
         return;
       }
       try {
-        const result = await loadOperation(
+        const result = await loadRecording(
           api, engine, markerManager, op,
           (world) => setWorldConfig(world),
         );
         setWorldConfig(result.worldConfig);
         setMissionName(result.missionName);
-        setOperationId(result.operationId);
-        setOperationFilename(result.operationFilename);
+        setRecordingId(result.recordingId);
+        setRecordingFilename(result.recordingFilename);
         setExtensionVersion(result.extensionVersion);
         setAddonVersion(result.addonVersion);
       } catch (err) {
-        console.error("Failed to load operation:", err);
+        console.error("Failed to load recording:", err);
         showHint(t("load_failed"));
       } finally {
         setLoading(false);
@@ -118,8 +118,8 @@ export function RecordingPlayback(): JSX.Element {
           missionName={missionName}
           mapName={mapName}
           duration={duration}
-          operationId={operationId}
-          operationFilename={operationFilename}
+          recordingId={recordingId}
+          recordingFilename={recordingFilename}
           worldConfig={worldConfig}
           onInfoClick={() => setAboutOpen(true)}
           onBack={() => navigate("/")}

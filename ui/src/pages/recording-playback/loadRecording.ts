@@ -1,4 +1,4 @@
-import type { Operation, WorldConfig } from "../../data/types";
+import type { Recording, WorldConfig } from "../../data/types";
 import type { ApiClient } from "../../data/apiClient";
 import { JsonDecoder } from "../../data/decoders/jsonDecoder";
 import { ProtobufDecoder } from "../../data/decoders/protobufDecoder";
@@ -10,40 +10,40 @@ import type { MarkerManager } from "../../playback/markerManager";
 export interface LoadResult {
   worldConfig: WorldConfig;
   missionName: string;
-  operationId: string;
-  operationFilename: string;
+  recordingId: string;
+  recordingFilename: string;
   extensionVersion?: string;
   addonVersion?: string;
 }
 
-export async function loadOperation(
+export async function loadRecording(
   api: ApiClient,
   engine: PlaybackEngine,
   markerManager: MarkerManager,
-  op: Operation,
+  rec: Recording,
   onWorldResolved?: (world: WorldConfig) => void,
 ): Promise<LoadResult> {
-  const world = await api.getWorldConfig(op.worldName);
+  const world = await api.getWorldConfig(rec.worldName);
 
   // Notify caller so the renderer can be initialized before
-  // engine.loadOperation triggers snapshot effects.
+  // engine.loadRecording triggers snapshot effects.
   onWorldResolved?.(world);
 
-  const filename = op.filename ?? String(op.id);
+  const filename = rec.filename ?? String(rec.id);
   let decoder: DecoderStrategy;
   let manifest;
 
-  if (op.storageFormat === "protobuf") {
+  if (rec.storageFormat === "protobuf") {
     decoder = new ProtobufDecoder();
     const chunkMgr = new ChunkManager(decoder, api);
     manifest = await chunkMgr.loadManifest(filename);
     await chunkMgr.loadChunk(0);
-    engine.loadOperation(manifest, chunkMgr);
+    engine.loadRecording(manifest, chunkMgr);
   } else {
     decoder = new JsonDecoder();
-    const buffer = await api.getMissionData(filename);
+    const buffer = await api.getRecordingData(filename);
     manifest = decoder.decodeManifest(buffer);
-    engine.loadOperation(manifest);
+    engine.loadRecording(manifest);
   }
 
   markerManager.loadMarkers(manifest.markers, (id) => {
@@ -53,9 +53,9 @@ export async function loadOperation(
 
   return {
     worldConfig: world,
-    missionName: op.missionName,
-    operationId: op.id,
-    operationFilename: filename,
+    missionName: rec.missionName,
+    recordingId: rec.id,
+    recordingFilename: filename,
     extensionVersion: manifest.extensionVersion,
     addonVersion: manifest.addonVersion,
   };

@@ -4,7 +4,7 @@ import { ApiClient, type BuildInfo } from "../../../data/apiClient";
 import { useI18n } from "../../../hooks/useLocale";
 import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
-import { LOCALE_LABELS } from "../../mission-selector/constants";
+import { LOCALE_LABELS } from "../../recording-selector/constants";
 import { XIcon } from "./Icons";
 import ui from "../../../components/ui.module.css";
 import styles from "./AboutModal.module.css";

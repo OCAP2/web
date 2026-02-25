@@ -154,7 +154,7 @@ describe("Integration: Full stack playback", () => {
     const cm = makeMockChunkManager(chunkData);
 
     // Load operation
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     // Verify entities populated
     expect(engine.entityManager.getAll()).toHaveLength(3);
@@ -183,7 +183,7 @@ describe("Integration: Full stack playback", () => {
       entities: [makeEntityDef({ id: 1, endFrame: 49 })],
     });
 
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
     engine.setSpeed(1);
 
     // Start playback
@@ -222,7 +222,7 @@ describe("Integration: Full stack playback", () => {
       entities: [makeEntityDef({ id: 1 })],
     });
 
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     // Seek to frame 42
     engine.seekTo(42);
@@ -249,7 +249,7 @@ describe("Integration: Full stack playback", () => {
       entities: [makeEntityDef({ id: 1 })],
     });
 
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
     engine.setSpeed(1);
 
     // Play for 3 ticks
@@ -280,7 +280,7 @@ describe("Integration: Full stack playback", () => {
       entities: [makeEntityDef({ id: 1, endFrame: 9 })],
     });
 
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
     engine.setSpeed(1);
     expect(engine.currentFrame()).toBe(0);
     expect(engine.endFrame()).toBe(9);
@@ -370,7 +370,7 @@ describe("Integration: Entity type verification", () => {
     });
 
     const cm = makeMockChunkManager();
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     // Verify units
     const units = engine.entityManager.getUnits();
@@ -435,7 +435,7 @@ describe("Integration: Event resolution", () => {
     });
 
     const cm = makeMockChunkManager();
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     // Get the resolved event
     const events = engine.eventManager.getAll();
@@ -488,7 +488,7 @@ describe("Integration: Event resolution", () => {
     });
 
     const cm = makeMockChunkManager();
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     const events = engine.eventManager.getAll();
     expect(events).toHaveLength(3);
@@ -548,7 +548,7 @@ describe("Integration: Event resolution", () => {
     });
 
     const cm = makeMockChunkManager();
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     const event = engine.eventManager.getAll()[0] as HitKilledEvent;
     expect(event.victimName).toBe("Soldier");
@@ -588,7 +588,7 @@ describe("Integration: Event resolution", () => {
     });
 
     const cm = makeMockChunkManager();
-    engine.loadOperation(manifest, cm);
+    engine.loadRecording(manifest, cm);
 
     // Two events at frame 5 (cumulative: 2)
     engine.seekTo(5);

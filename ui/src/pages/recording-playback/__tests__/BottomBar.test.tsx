@@ -15,7 +15,7 @@ afterEach(() => {
 
 function renderBottomBar(frameCount = 200) {
   const { engine, renderer } = createTestEngine();
-  engine.loadOperation(makeManifest([], [], frameCount));
+  engine.loadRecording(makeManifest([], [], frameCount));
 
   const [panelOpen, setPanelOpen] = createSignal(true);
   const onTogglePanel = vi.fn(() => setPanelOpen((v) => !v));

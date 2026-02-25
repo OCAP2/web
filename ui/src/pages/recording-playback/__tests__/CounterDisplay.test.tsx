@@ -15,7 +15,7 @@ afterEach(() => {
 describe("CounterDisplay", () => {
   it("is hidden when no counter state", () => {
     const { engine, renderer } = createTestEngine();
-    engine.loadOperation(makeManifest([], [], 100));
+    engine.loadRecording(makeManifest([], [], 100));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -31,7 +31,7 @@ describe("CounterDisplay", () => {
     const events = [
       { type: "counterInit", frameNum: 0, data: [100, 80] } as any,
     ];
-    engine.loadOperation(makeManifest([], events, 100));
+    engine.loadRecording(makeManifest([], events, 100));
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -49,7 +49,7 @@ describe("CounterDisplay", () => {
     const events = [
       { type: "counterInit", frameNum: 0, data: [100, 80] } as any,
     ];
-    engine.loadOperation(makeManifest([], events, 100));
+    engine.loadRecording(makeManifest([], events, 100));
     engine.seekTo(0);
 
     render(() => (
@@ -73,7 +73,7 @@ describe("CounterDisplay", () => {
       { type: "counterInit", frameNum: 0, data: [100, 80] } as any,
       { type: "counterSet", frameNum: 50, data: [90, 70] } as any,
     ];
-    engine.loadOperation(makeManifest([], events, 100));
+    engine.loadRecording(makeManifest([], events, 100));
     engine.seekTo(0);
 
     render(() => (
@@ -98,7 +98,7 @@ describe("CounterDisplay", () => {
     const events = [
       { type: "counterInit", frameNum: 0, data: [100, 80] } as any,
     ];
-    engine.loadOperation(makeManifest([], events, 100));
+    engine.loadRecording(makeManifest([], events, 100));
     engine.seekTo(0);
 
     render(() => (
