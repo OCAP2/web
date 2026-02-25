@@ -708,3 +708,64 @@ describe("MarkerManager.getMarkerCountsByPlayer", () => {
     expect(mgr.getMarkerCountsByPlayer().size).toBe(0);
   });
 });
+
+// ─── MarkerManager.clear ───
+
+describe("MarkerManager.clear", () => {
+  it("removes all marker handles and resets state", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", { side: "WEST" }),
+      makeDef("mil_dot", { side: "EAST" }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    mgr.clear();
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // After clear, updateFrame should not create or remove anything
+    (renderer.createBriefingMarker as ReturnType<typeof vi.fn>).mockClear();
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).not.toHaveBeenCalled();
+  });
+
+  it("handles clear when no markers have handles", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([makeDef("mil_dot")]);
+
+    // Clear without ever calling updateFrame — no handles to remove
+    mgr.clear();
+    expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
+  });
+});
+
+// ─── MarkerManager updateFrame side-filter removal ───
+
+describe("MarkerManager updateFrame guard branches", () => {
+  it("removes handle during updateFrame when side filter changes between frames", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", {
+        side: "WEST",
+        positions: [[0, 100, 200, 0, 0, 1], [5, 110, 210, 0, 0, 1]],
+      }),
+    ]);
+
+    // Show with no filter
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Change side filter to EAST — setSideFilter eagerly removes
+    mgr.setSideFilter("EAST");
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // updateFrame with filter still EAST — marker stays hidden
+    mgr.updateFrame(5);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1); // no new creates
+  });
+});
