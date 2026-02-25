@@ -10,6 +10,7 @@ import { MapCard } from "./MapCard";
 import { MapRow } from "./MapRow";
 import { MapDetail } from "./MapDetail";
 import { ImportDialog, DeleteConfirm } from "./dialogs";
+import { totalDiskMB } from "./helpers";
 import {
   ArrowLeftIcon,
   SearchIcon,
@@ -73,6 +74,7 @@ export function MapManager(): JSX.Element {
     result = [...result].sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name);
       if (sort === "size") return (b.worldSize ?? 0) - (a.worldSize ?? 0);
+      if (sort === "disk") return totalDiskMB(b.files) - totalDiskMB(a.files);
       return 0;
     });
     return result;
@@ -212,7 +214,7 @@ export function MapManager(): JSX.Element {
             {/* Sort */}
             <div class={styles.sortGroup}>
               <span class={styles.sortLabel}>Sort</span>
-              <For each={[{ id: "name", label: "Name" }, { id: "size", label: "Size" }]}>
+              <For each={[{ id: "name", label: "Name" }, { id: "size", label: "Size" }, { id: "disk", label: "Disk" }]}>
                 {(s) => (
                   <button
                     class={styles.sortBtn}
