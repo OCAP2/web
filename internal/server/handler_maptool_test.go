@@ -1,13 +1,16 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/labstack/echo/v4"
@@ -242,6 +245,127 @@ func TestCancelMapToolJob_NotFound(t *testing.T) {
 	var body map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	assert.Contains(t, body["error"], "not found")
+}
+
+func TestImportMapToolZip_NotZip(t *testing.T) {
+	hdlr, _ := setupMaptoolTest(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("not a zip"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.importMapToolZip(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var respBody map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
+	assert.Contains(t, respBody["error"], ".zip")
+}
+
+func TestImportMapToolZip_MissingFile(t *testing.T) {
+	hdlr, _ := setupMaptoolTest(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	// Write some other field, not "file"
+	require.NoError(t, writer.WriteField("other", "value"))
+	require.NoError(t, writer.Close())
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.importMapToolZip(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var respBody map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
+	assert.Contains(t, respBody["error"], "file field is required")
+}
+
+func TestRestyleMapToolAll_NoMaps(t *testing.T) {
+	hdlr, _ := setupMaptoolTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.restyleMapToolAll(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var respBody map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
+	assert.Contains(t, respBody["error"], "no maps found")
+}
+
+func TestRestyleMapToolAll_WithMaps(t *testing.T) {
+	hdlr, mapsDir := setupMaptoolTest(t)
+
+	// Create map directories with minimal files so ScanMaps finds them
+	altisDir := filepath.Join(mapsDir, "altis")
+	require.NoError(t, os.MkdirAll(altisDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(altisDir, "map.json"), []byte("{}"), 0644))
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.restyleMapToolAll(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusAccepted, rec.Code)
+
+	var snap maptool.JobInfo
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &snap))
+	assert.Equal(t, "restyle-all", snap.WorldName)
+	assert.Equal(t, "pending", snap.Status)
+}
+
+func TestCancelMapToolJob_RunningJob(t *testing.T) {
+	hdlr, _ := setupMaptoolTest(t)
+
+	// Submit a long-running job via SubmitFunc
+	started := make(chan struct{})
+	snap, err := hdlr.maptoolMgr.SubmitFunc("cancel-test", "testworld", func(ctx context.Context, job *maptool.Job) error {
+		close(started)
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	require.NoError(t, err)
+
+	// Wait for the job to actually start running
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for job to start")
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(snap.ID)
+
+	err = hdlr.cancelMapToolJob(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
 }
 
 // jsonTrimmed returns the recorder body with trailing whitespace removed.
