@@ -8,16 +8,6 @@ import { basePath } from "./data/basePath";
 // Strip trailing slash for Router base prop (Router expects no trailing slash).
 const routerBase = basePath.replace(/\/+$/, "");
 
-// Backwards compat: redirect ?op=<id> to /recording/<id>/<id>
-const params = new URLSearchParams(window.location.search);
-const op = params.get("op");
-if (op) {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("op");
-  url.pathname = `${routerBase}/recording/${encodeURIComponent(op)}/${encodeURIComponent(op)}`;
-  window.history.replaceState(null, "", url.toString());
-}
-
 const root = document.getElementById("root");
 if (root) {
   render(
