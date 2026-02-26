@@ -1,6 +1,7 @@
 import L from "leaflet";
 import type { Side, AliveState } from "../../data/types";
 import { SIDE_CLASS, SIDE_COLORS_DARK } from "../../config/sideColors";
+import { basePath } from "../../data/basePath";
 
 // --------------- Side → CSS class / colour mapping ---------------
 
@@ -34,7 +35,7 @@ const ICON_SIZES: Record<string, [number, number]> = {
 };
 
 /** Image path directory per entity type (anchored to app base URL). */
-const base = import.meta.env.BASE_URL;
+const base = basePath;
 const ICON_PATHS: Record<string, string> = {
   man: `${base}images/markers/man/`,
   ship: `${base}images/markers/ship/`,

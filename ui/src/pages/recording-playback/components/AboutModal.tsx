@@ -6,6 +6,7 @@ import { LOCALES } from "../../../i18n/i18n";
 import type { Locale } from "../../../i18n/i18n";
 import { LOCALE_LABELS } from "../../recording-selector/constants";
 import { XIcon } from "../../../components/Icons";
+import { basePath } from "../../../data/basePath";
 import ui from "../../../components/ui.module.css";
 import styles from "./AboutModal.module.css";
 
@@ -52,7 +53,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
 
           {/* Body */}
           <div class={styles.body}>
-            <img src={`${import.meta.env.BASE_URL}ocap-logo.png`} height="48" alt="OCAP" />
+            <img src={`${basePath}ocap-logo.png`} height="48" alt="OCAP" />
             <span class={styles.appName}>Operation Capture And Playback</span>
             <a class={styles.link} href="https://github.com/OCAP2/OCAP" target="_blank">
               github.com/OCAP2/OCAP

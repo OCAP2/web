@@ -121,9 +121,12 @@ export class ApiClient {
    * @param baseUrl - Base URL prefix for all API calls (default: "").
    *   Matches the Go server's prefixURL setting. A trailing slash is normalised internally.
    */
-  constructor(baseUrl = "") {
+  constructor(baseUrl?: string) {
+    // Default to the server-injected base path (set in index.html by the Go backend).
+    // Falls back to empty string when not behind a prefix or in tests.
+    const raw = baseUrl ?? ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
     // Ensure no trailing slash so we can append /api/... cleanly
-    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.baseUrl = raw.replace(/\/+$/, "");
   }
 
   // ─── Public helpers ───
