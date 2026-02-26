@@ -43,6 +43,7 @@ export function RecordingSelector(): JSX.Element {
   const [editingRec, setEditingRec] = createSignal<Recording | null>(null);
   const [deletingRec, setDeletingRec] = createSignal<Recording | null>(null);
   const [uploading, setUploading] = createSignal(false);
+  const [mapToolEnabled, setMapToolEnabled] = createSignal(false);
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
@@ -62,6 +63,7 @@ export function RecordingSelector(): JSX.Element {
     } finally {
       setLoading(false);
     }
+    api.getMapToolTools().then(() => setMapToolEnabled(true)).catch(() => {});
   });
 
   // Keyboard shortcuts
@@ -322,6 +324,15 @@ export function RecordingSelector(): JSX.Element {
               <div class={styles.adminArea}>
                 <AuthBadge />
                 <Show when={authenticated()}>
+                  <Show when={mapToolEnabled()}>
+                    <button
+                      class={styles.adminIconButton}
+                      onClick={() => navigate("/map-manager")}
+                      title="Map Manager"
+                    >
+                      <GlobeIcon />
+                    </button>
+                  </Show>
                   <button
                     class={`${styles.adminIconButton} ${showUpload() ? styles.adminIconButtonActive : ""}`}
                     onClick={() => setShowUpload(u => !u)}
