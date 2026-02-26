@@ -109,7 +109,10 @@ func NewSetting() (setting Setting, err error) {
 	}
 
 	if err = viper.ReadInConfig(); err != nil {
-		return
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return
+		}
+		err = nil
 	}
 
 	if err = viper.Unmarshal(&setting); err != nil {
