@@ -21,9 +21,11 @@ import {
   GlobeIcon,
   FilePlusIcon,
 } from "../../components/Icons";
+import { basePath } from "../../data/basePath";
 import styles from "./MapManager.module.css";
 
 const api = new ApiClient();
+const imageBase = basePath.replace(/\/+$/, "");
 
 export function MapManager(): JSX.Element {
   const navigate = useNavigate();
@@ -294,7 +296,7 @@ export function MapManager(): JSX.Element {
                     <MapCard
                       map={m}
                       selected={selected() === m.name}
-                      baseUrl=""
+                      baseUrl={imageBase}
                       onSelect={() =>
                         setSelected(selected() === m.name ? null : m.name)
                       }
@@ -329,7 +331,7 @@ export function MapManager(): JSX.Element {
             {(m) => (
               <MapDetail
                 map={m()}
-                baseUrl=""
+                baseUrl={imageBase}
                 onClose={() => setSelected(null)}
                 onDelete={() => setShowDelete(true)}
               />
