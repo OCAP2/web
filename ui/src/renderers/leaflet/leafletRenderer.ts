@@ -22,6 +22,7 @@ import type {
 } from "../renderer.types";
 import { entityIcon, hitIcon } from "./leafletIcons";
 import { createScaleControl } from "./leafletControls";
+import { basePath } from "../../data/basePath";
 import type { StyleCandidate } from "./leafletControls";
 import { createGridLayer } from "./leafletGrid";
 import {
@@ -275,9 +276,9 @@ export class LeafletRenderer implements MapRenderer {
         // "images/maps/altis/tiles/features.pmtiles" that must resolve
         // against the app base, not the current page route (e.g. /recording/:id).
         const absBase = new URL(
-          import.meta.env.BASE_URL,
+          basePath,
           window.location.origin,
-        ).href; // e.g. "http://localhost:5173/"
+        ).href; // e.g. "http://localhost:5173/" or "http://host/sub/"
 
         // 1. Register PMTiles protocol with URL rewriting (idempotent)
         if (!(window as any)._pmtilesRegistered) {
@@ -319,10 +320,7 @@ export class LeafletRenderer implements MapRenderer {
         const raw = world.tileBaseUrl ?? "";
         const tileBase = raw.startsWith("http")
           ? raw
-          : new URL(
-              import.meta.env.BASE_URL + raw.replace(/^\//, ""),
-              window.location.origin,
-            ).href;
+          : new URL(raw, window.location.origin).href;
         const styleBase = tileBase + "/styles/";
         const styleCandidates: StyleCandidate[] = [
           { label: "Topographic", url: styleBase + "topo.json" },
@@ -484,7 +482,7 @@ export class LeafletRenderer implements MapRenderer {
 
     // Build tile layers based on available styles in map.json
     const rawTile = world.tileBaseUrl ?? "";
-    const tileUrl = rawTile.startsWith("http") ? rawTile : import.meta.env.BASE_URL + rawTile.replace(/^\//, "");
+    const tileUrl = rawTile;
     const baseLayers: L.TileLayer[] = [];
     const tileOpts: L.TileLayerOptions = {
       maxNativeZoom: world.maxZoom,
@@ -849,7 +847,7 @@ export class LeafletRenderer implements MapRenderer {
     } else {
       // ICON shape — load actual marker image from server
       const isMagIcon = def.type.indexOf("magIcons") > -1;
-      const b = import.meta.env.BASE_URL;
+      const b = basePath;
       let iconUrl: string;
       if (isMagIcon) {
         iconUrl = `${b}images/markers/${def.type.toLowerCase()}.png`;

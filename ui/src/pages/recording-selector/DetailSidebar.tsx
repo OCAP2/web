@@ -5,6 +5,7 @@ import { C, SIDE_COLORS, SIDE_HEX } from "./constants";
 import { XIcon, CalendarIcon, ClockIcon, UsersIcon, CrosshairIcon, ZapIcon, EditIcon, TrashIcon, RefreshCwIcon, PlayIcon } from "../../components/Icons";
 import { formatDuration, formatDate, getMapColor, getStatusInfo, isRecordingReady } from "./helpers";
 import { StatPill, TagBadge, StatusBadge } from "./components";
+import { basePath } from "../../data/basePath";
 import styles from "./RecordingSelector.module.css";
 
 export function DetailSidebar(props: {
@@ -48,7 +49,7 @@ export function DetailSidebar(props: {
         }>
           <img
             data-testid="map-preview"
-            src={`${import.meta.env.BASE_URL}images/maps/${encodeURIComponent(props.rec.worldName)}/preview_512.png`}
+            src={`${basePath}images/maps/${encodeURIComponent(props.rec.worldName)}/preview_512.png`}
             alt=""
             class={styles.sidebarHeroImg}
             onError={() => setPreviewFailed(true)}

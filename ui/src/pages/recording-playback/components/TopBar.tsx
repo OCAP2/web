@@ -10,6 +10,7 @@ import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import type { Side, WorldConfig } from "../../../data/types";
 import type { RenderLayer } from "../../../renderers/renderer.types";
 import { useClickOutside } from "../../../hooks/useClickOutside";
+import { basePath } from "../../../data/basePath";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
@@ -130,7 +131,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
   const downloadHref = () => {
     const filename = props.recordingFilename?.() ?? props.recordingId();
     if (!filename) return "#";
-    return `${import.meta.env.BASE_URL}data/${encodeURIComponent(filename)}.json.gz`;
+    return `${basePath}data/${encodeURIComponent(filename)}.json.gz`;
   };
 
   return (

@@ -16,6 +16,7 @@ import { StatPill, TagBadge, SortHeader } from "./components";
 import { RecordingRow } from "./RecordingRow";
 import { DetailSidebar } from "./DetailSidebar";
 import { EditModal, DeleteConfirm, UploadDialog } from "./dialogs";
+import { basePath } from "../../data/basePath";
 import styles from "./RecordingSelector.module.css";
 
 // ─── Main Component ───
@@ -247,7 +248,7 @@ export function RecordingSelector(): JSX.Element {
         <header class={styles.header}>
           <div class={styles.headerRow}>
             <div class={styles.logoArea}>
-              <img src={`${import.meta.env.BASE_URL}ocap-logo.png`} height="60" alt="OCAP" />
+              <img src={`${basePath}ocap-logo.png`} height="60" alt="OCAP" />
               <Show when={customize().websiteLogo}>
                 {(logo) => {
                   const img = <img src={logo()} height="60" alt="" />;

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -462,8 +463,30 @@ func (h *Handler) GetMapTitle(c echo.Context) error {
 
 // spaFileServer returns an http.Handler that serves static files from fsys,
 // falling back to index.html for paths that don't match a file (SPA routing).
+// The prefix is injected into index.html as window.__BASE_PATH__ so the
+// frontend SPA can discover its base URL at runtime.
 func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 	handler := http.StripPrefix(prefix, http.FileServer(http.FS(fsys)))
+
+	// Pre-read index.html and inject the base path script tag once at startup.
+	var indexContent []byte
+	var indexModTime time.Time
+	if f, err := fsys.Open("index.html"); err == nil {
+		defer f.Close()
+		if stat, err := f.Stat(); err == nil {
+			indexModTime = stat.ModTime()
+		}
+		if raw, err := io.ReadAll(f); err == nil {
+			base := prefix + "/"
+			if base == "/" {
+				base = "./"
+			}
+			inject := fmt.Sprintf(`<base href=%q /><script>window.__BASE_PATH__=%q;</script>`, base, prefix)
+			// Inject right after <head> so <base> is parsed before any relative URLs
+			indexContent = bytes.Replace(raw, []byte("<head>"), []byte("<head>"+inject), 1)
+		}
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Strip the prefix so the FS lookup starts at the root
 		p := strings.TrimPrefix(r.URL.Path, prefix)
@@ -477,22 +500,12 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 			}
 		}
 
-		// Fallback: serve index.html for SPA client-side routing.
-		// Read directly to avoid http.FileServer's redirect of /index.html → /
-		f, err := fsys.Open("index.html")
-		if err != nil {
+		// Fallback: serve index.html (with injected base path) for SPA routing.
+		if indexContent == nil {
 			http.NotFound(w, r)
 			return
 		}
-		defer f.Close()
-
-		stat, err := f.Stat()
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-
-		http.ServeContent(w, r, "index.html", stat.ModTime(), f.(io.ReadSeeker))
+		http.ServeContent(w, r, "index.html", indexModTime, bytes.NewReader(indexContent))
 	})
 }
 

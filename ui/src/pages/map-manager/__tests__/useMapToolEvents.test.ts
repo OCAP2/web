@@ -65,7 +65,7 @@ function runHook(url: string) {
 }
 
 async function flush() {
-  await new Promise((r) => queueMicrotask(r));
+  await new Promise<void>((r) => queueMicrotask(r));
 }
 
 describe("useMapToolEvents", () => {
