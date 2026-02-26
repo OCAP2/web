@@ -64,7 +64,7 @@ jobs:
         run: go build -o ocap-webserver ./cmd/ocap-webserver
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: code-coverage
           path: cover.out
@@ -90,7 +90,7 @@ jobs:
           diff-base-breakdown-file-name: ${{ steps.download-main-breakdown.outputs.found_artifact == 'true' && 'main.breakdown' || '' }}
 
       - name: Upload artifact (main.breakdown)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: github.ref_name == 'main'
         with:
           name: main.breakdown
