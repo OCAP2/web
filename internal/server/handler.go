@@ -447,6 +447,7 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 	var indexContent []byte
 	var indexModTime time.Time
 	if f, err := fsys.Open("index.html"); err == nil {
+		defer f.Close()
 		if stat, err := f.Stat(); err == nil {
 			indexModTime = stat.ModTime()
 		}
@@ -459,7 +460,6 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 			// Inject right after <head> so <base> is parsed before any relative URLs
 			indexContent = bytes.Replace(raw, []byte("<head>"), []byte("<head>"+inject), 1)
 		}
-		f.Close()
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
