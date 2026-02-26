@@ -49,8 +49,8 @@ grad_meh exports runways as **polygons**, not lines. Style type must be `fill`, 
 ### Known Layer Types
 `knownLayerStyles` map covers: fills (sea, forest, rocks, house), roads (trail/track/road/main_road with outline+fill pairs), bridges (fill-extrusion), infrastructure (railway, runway, powerline), contours (legacy single-layer + 4-interval GDAL), object icons (20+ types), location labels (7 types), vegetation (4 types).
 
-## Web Server (cmd/ocap-maptool)
+## Integrated Map Manager (internal/server/handler_maptool.go)
 
-- `handler.go`: Echo routes. Upload endpoint `POST /api/maps/import` accepts multipart ZIP, extracts with zip-slip protection, finds grad_meh dir (root or one level deep), submits to JobManager.
-- `static/`: Embedded SPA (index.html + app.js + style.css). No build step.
+- Upload endpoint `POST /api/maps/import` accepts multipart ZIP, extracts with zip-slip protection, finds grad_meh dir (root or one level deep), submits to JobManager.
+- Map Manager UI is part of the SolidJS frontend (`ui/src/pages/map-manager/`).
 - ZIP extraction cleanup: JobManager's `processJob` calls `os.RemoveAll(filepath.Dir(job.InputPath))` which removes the per-upload extraction directory.
