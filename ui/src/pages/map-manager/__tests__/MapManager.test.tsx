@@ -43,6 +43,17 @@ vi.mock("../../../data/apiClient", async () => {
   };
 });
 
+// ─── Mock useMapToolEvents ───
+
+const mockJobsRef = vi.hoisted(() => ({ current: [] as any[] }));
+
+vi.mock("../useMapToolEvents", () => ({
+  useMapToolEvents: () => ({
+    jobs: () => mockJobsRef.current,
+    connected: () => true,
+  }),
+}));
+
 // ─── Mock auth ───
 
 vi.mock("../../../hooks/useAuth", () => ({
@@ -107,6 +118,7 @@ async function flush() {
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
+  mockJobsRef.current = [];
   mockGetMapToolTools.mockResolvedValue(tools);
   mockGetMapToolMaps.mockResolvedValue(maps);
   mockDeleteMapToolMap.mockResolvedValue(undefined);
@@ -391,15 +403,12 @@ describe("MapManager", () => {
     expect(deleteBtn).toBeDefined();
     fireEvent.click(deleteBtn!);
 
-    // Confirm deletion
-    const confirmBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Delete") && b.className.includes("danger"),
-    );
-    if (confirmBtn) {
-      fireEvent.click(confirmBtn);
-      await flush();
-      expect(mockDeleteMapToolMap).toHaveBeenCalledWith("Altis");
-    }
+    // Confirm deletion — find the danger-styled delete button in the confirm dialog
+    const confirmBtn = container.querySelector("[class*='btnDelete']") as HTMLElement;
+    expect(confirmBtn).not.toBeNull();
+    fireEvent.click(confirmBtn);
+    await flush();
+    expect(mockDeleteMapToolMap).toHaveBeenCalledWith("Altis");
   });
 
   it("handles delete error gracefully", async () => {
@@ -418,17 +427,13 @@ describe("MapManager", () => {
     const deleteBtn = Array.from(container.querySelectorAll("button")).find(
       (b) => b.textContent?.includes("Delete") && !b.textContent?.includes("Confirm"),
     );
-    if (deleteBtn) {
-      fireEvent.click(deleteBtn);
-      const confirmBtn = Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent?.includes("Delete") && b.className.includes("danger"),
-      );
-      if (confirmBtn) {
-        fireEvent.click(confirmBtn);
-        await flush();
-        expect(spy).toHaveBeenCalledWith("Delete failed:", expect.any(Error));
-      }
-    }
+    expect(deleteBtn).toBeDefined();
+    fireEvent.click(deleteBtn!);
+    const confirmBtn = container.querySelector("[class*='btnDelete']") as HTMLElement;
+    expect(confirmBtn).not.toBeNull();
+    fireEvent.click(confirmBtn);
+    await flush();
+    expect(spy).toHaveBeenCalledWith("Delete failed:", expect.any(Error));
     spy.mockRestore();
   });
 
@@ -469,5 +474,181 @@ describe("MapManager", () => {
     // Click again to deselect
     fireEvent.click(altisCard);
     // Detail sidebar should close - worldSize detail no longer visible
+  });
+
+  it("closes import dialog via Cancel button", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Open import dialog
+    fireEvent.click(
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.includes("Import Map"),
+      )!,
+    );
+    expect(container.textContent).toContain(".zip");
+
+    // Click Cancel button inside dialog footer
+    const cancelBtn = container.querySelector("[class*='btnCancel']") as HTMLElement;
+    expect(cancelBtn).not.toBeNull();
+    fireEvent.click(cancelBtn);
+
+    // Dialog should be closed — drop zone text gone
+    expect(container.textContent).not.toContain("Max 2 GB");
+  });
+
+  it("navigates to recordings on back button click", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    const backBtn = container.querySelector("button[title='Back to recordings']") as HTMLElement;
+    expect(backBtn).not.toBeNull();
+    fireEvent.click(backBtn);
+  });
+
+  it("switches between grid and list view", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    const viewBtns = container.querySelectorAll("[class*='viewBtn']");
+    expect(viewBtns.length).toBeGreaterThanOrEqual(2);
+
+    // Switch to list view
+    fireEvent.click(viewBtns[1]);
+    expect(container.textContent).toContain("SIZE");
+    expect(container.textContent).toContain("LAYERS");
+
+    // Switch back to grid view
+    fireEvent.click(viewBtns[0]);
+    // Grid cards should be visible again
+    expect(container.textContent).toContain("Altis");
+  });
+
+  it("selects a map row in list view", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Switch to list view
+    const viewBtns = container.querySelectorAll("[class*='viewBtn']");
+    fireEvent.click(viewBtns[1]);
+
+    // Click a row
+    const rows = container.querySelectorAll("[class*='row']");
+    const altisRow = Array.from(rows).find((r) => r.textContent?.includes("Altis")) as HTMLElement;
+    if (altisRow) {
+      fireEvent.click(altisRow);
+      // Detail sidebar should show
+      expect(container.textContent).toContain("30.7 km");
+    }
+  });
+
+  it("shows import button in empty state and opens dialog", async () => {
+    mockGetMapToolMaps.mockResolvedValue([]);
+    const { container } = renderPage();
+    await flush();
+
+    expect(container.textContent).toContain("No maps imported yet");
+
+    // Find the import button in the empty state
+    const emptyImportBtn = container.querySelector("[class*='emptyImportBtn']") as HTMLElement;
+    expect(emptyImportBtn).not.toBeNull();
+    fireEvent.click(emptyImportBtn);
+
+    // Import dialog should be open
+    expect(container.textContent).toContain("Max 2 GB");
+  });
+
+  it("closes detail sidebar via close button", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Select Altis to open detail sidebar
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    fireEvent.click(altisCard);
+    expect(container.textContent).toContain("30.7 km");
+
+    // Click the close button in the detail sidebar hero
+    const closeBtn = container.querySelector("[class*='heroClose']") as HTMLElement;
+    expect(closeBtn).not.toBeNull();
+    fireEvent.click(closeBtn);
+  });
+
+  it("cancels delete confirmation via Cancel button", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Select Altis, open delete confirm
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    fireEvent.click(altisCard);
+
+    const deleteBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete") && !b.textContent?.includes("Confirm"),
+    )!;
+    fireEvent.click(deleteBtn);
+
+    // Click Cancel in the delete confirm dialog
+    const cancelBtn = container.querySelector("[class*='btnCancel']") as HTMLElement;
+    expect(cancelBtn).not.toBeNull();
+    fireEvent.click(cancelBtn);
+
+    // Dialog should be closed — "cannot be undone" text gone
+    expect(container.textContent).not.toContain("cannot be undone");
+  });
+
+  it("invokes upload progress callback during import", async () => {
+    mockImportMapToolZip.mockImplementation((_file: any, onProgress: any) => {
+      if (onProgress) onProgress(50, 100);
+      return Promise.resolve({ id: "j1", status: "pending" });
+    });
+    const { container } = renderPage();
+    await flush();
+
+    // Open import dialog
+    fireEvent.click(
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.includes("Import Map"),
+      )!,
+    );
+
+    // Select file
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["zip"], "test.zip", { type: "application/zip" });
+    Object.defineProperty(fileInput, "files", { value: [file] });
+    fireEvent.change(fileInput);
+
+    // Click Import
+    const importBtn = container.querySelector("[class*='btnImport']") as HTMLElement;
+    fireEvent.click(importBtn);
+    await flush();
+
+    expect(mockImportMapToolZip).toHaveBeenCalledWith(file, expect.any(Function));
+  });
+
+  it("cancels a running job via StatusStrip", async () => {
+    mockJobsRef.current = [
+      {
+        id: "job-1",
+        worldName: "Altis",
+        status: "running",
+        stage: "satellite",
+        stageNum: 2,
+        totalStages: 7,
+        startedAt: new Date().toISOString(),
+      },
+    ];
+    const { container } = renderPage();
+    await flush();
+
+    // Find cancel button in the status strip (title="Cancel import")
+    const cancelBtn = container.querySelector("button[title='Cancel import']") as HTMLElement;
+    expect(cancelBtn).not.toBeNull();
+    fireEvent.click(cancelBtn);
+    await flush();
+
+    expect(mockCancelMapToolJob).toHaveBeenCalledWith("job-1");
   });
 });
