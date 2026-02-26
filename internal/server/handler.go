@@ -451,8 +451,12 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 			indexModTime = stat.ModTime()
 		}
 		if raw, err := io.ReadAll(f); err == nil {
-			script := fmt.Sprintf(`<script>window.__BASE_PATH__=%q;</script>`, prefix)
-			indexContent = bytes.Replace(raw, []byte("</head>"), []byte(script+"</head>"), 1)
+			base := prefix + "/"
+			if base == "/" {
+				base = "./"
+			}
+			inject := fmt.Sprintf(`<base href=%q /><script>window.__BASE_PATH__=%q;</script>`, base, prefix)
+			indexContent = bytes.Replace(raw, []byte("</head>"), []byte(inject+"</head>"), 1)
 		}
 		f.Close()
 	}
