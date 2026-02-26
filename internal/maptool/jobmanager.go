@@ -154,6 +154,32 @@ func (jm *JobManager) Submit(inputPath, worldName string) (JobInfo, error) {
 	return snap, nil
 }
 
+// SubmitWithCleanup is like Submit but sets CleanupDir for safe post-job cleanup.
+func (jm *JobManager) SubmitWithCleanup(inputPath, worldName, cleanupDir string) (JobInfo, error) {
+	id := fmt.Sprintf("%s-%d", worldName, time.Now().UnixMilli())
+	outputDir := filepath.Join(jm.mapsDir, worldName)
+	tempDir := filepath.Join(os.TempDir(), "ocap-maptool", id)
+
+	job := &Job{
+		ID:         id,
+		WorldName:  worldName,
+		InputPath:  inputPath,
+		OutputDir:  outputDir,
+		TempDir:    tempDir,
+		Status:     StatusPending,
+		CleanupDir: cleanupDir,
+	}
+
+	jm.mu.Lock()
+	jm.jobs[job.ID] = job
+	jm.mu.Unlock()
+
+	snap := job.Snapshot()
+	jm.broadcastStatus(job)
+	jm.queue <- job
+	return snap, nil
+}
+
 // SubmitFunc adds a custom job to the queue that runs fn instead of the pipeline.
 func (jm *JobManager) SubmitFunc(id, worldName string, fn func(ctx context.Context, job *Job) error) (JobInfo, error) {
 	job := &Job{
@@ -283,9 +309,11 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 
 	jm.broadcastStatus(job)
 
-	// Clean up temp directory and uploaded files on success
+	// Clean up temp directory and uploaded extraction directory on success
 	os.RemoveAll(job.TempDir)
-	os.RemoveAll(filepath.Dir(job.InputPath))
+	if job.CleanupDir != "" {
+		os.RemoveAll(job.CleanupDir)
+	}
 }
 
 func (jm *JobManager) broadcastStatus(job *Job) {

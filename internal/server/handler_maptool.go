@@ -81,7 +81,9 @@ func (h *Handler) importMapToolZip(c echo.Context) error {
 		tmpFile.Close()
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save upload"})
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save upload"})
+	}
 
 	extractDir, err := os.MkdirTemp("", "ocap-maptool-uploads-")
 	if err != nil {
@@ -104,7 +106,7 @@ func (h *Handler) importMapToolZip(c echo.Context) error {
 	}
 
 	worldName := maptool.WorldNameFromDir(gradMehDir)
-	snap, err := h.maptoolMgr.Submit(gradMehDir, worldName)
+	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

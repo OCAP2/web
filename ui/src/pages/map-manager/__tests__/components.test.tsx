@@ -167,4 +167,87 @@ describe("StatusStrip", () => {
     expect(container.textContent).toContain("required");
     expect(container.textContent).toContain("optional");
   });
+
+  it("shows pending jobs in QUEUED section of jobs dropdown", () => {
+    const jobs: JobInfo[] = [
+      makeJob({ id: "p1", status: "pending", worldName: "Livonia" }),
+      makeJob({ id: "p2", status: "pending", worldName: "Tanoa" }),
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={jobs} onCancel={() => {}} />
+    ));
+    const buttons = container.querySelectorAll("button");
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(container.textContent).toContain("QUEUED");
+    expect(container.textContent).toContain("Livonia");
+    expect(container.textContent).toContain("Tanoa");
+    expect(container.textContent).toContain("PENDING");
+  });
+
+  it("shows elapsed time for finished jobs", () => {
+    const jobs: JobInfo[] = [
+      makeJob({
+        id: "j1",
+        status: "done",
+        startedAt: "2024-01-01T00:00:00Z",
+        finishedAt: "2024-01-01T00:05:00Z",
+      }),
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={jobs} onCancel={() => {}} />
+    ));
+    const buttons = container.querySelectorAll("button");
+    fireEvent.click(buttons[buttons.length - 1]);
+    // Should show elapsed time (5 minutes)
+    expect(container.textContent).toContain("5m");
+  });
+
+  it("calls onCancel when cancel button clicked for active job", () => {
+    const onCancel = vi.fn();
+    const jobs: JobInfo[] = [makeJob({ id: "active-1", status: "running" })];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={jobs} onCancel={onCancel} />
+    ));
+    // Cancel button should be visible for running job
+    const cancelBtn = container.querySelector("[title='Cancel import']") as HTMLElement;
+    expect(cancelBtn).not.toBeNull();
+    fireEvent.click(cancelBtn);
+    expect(onCancel).toHaveBeenCalledWith("active-1");
+  });
+
+  it("shows mixed pending and past jobs in dropdown", () => {
+    const jobs: JobInfo[] = [
+      makeJob({ id: "p1", status: "pending", worldName: "Livonia" }),
+      makeJob({ id: "h1", status: "done", worldName: "Altis" }),
+      makeJob({ id: "h2", status: "failed", worldName: "Stratis", error: "boom" }),
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={jobs} onCancel={() => {}} />
+    ));
+    const buttons = container.querySelectorAll("button");
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(container.textContent).toContain("QUEUED");
+    expect(container.textContent).toContain("HISTORY");
+    expect(container.textContent).toContain("Livonia");
+    expect(container.textContent).toContain("DONE");
+    expect(container.textContent).toContain("FAILED");
+  });
+
+  it("closes dropdown on outside click", () => {
+    const { container } = render(() => (
+      <div>
+        <div data-testid="outside">outside</div>
+        <StatusStrip tools={makeTools()} jobs={[]} onCancel={() => {}} />
+      </div>
+    ));
+    // Open tools dropdown
+    const toolsBtn = container.querySelectorAll("button")[0];
+    fireEvent.click(toolsBtn);
+    expect(container.textContent).toContain("CLI TOOLS");
+
+    // Click outside
+    const outside = container.querySelector("[data-testid='outside']")!;
+    fireEvent.mouseDown(outside);
+    expect(container.textContent).not.toContain("CLI TOOLS");
+  });
 });

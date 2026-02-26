@@ -275,4 +275,65 @@ describe("useMapToolEvents", () => {
     dispose();
     expect(es.closed).toBe(true);
   });
+
+  it("reconnects when heartbeat times out", async () => {
+    vi.useFakeTimers();
+    const { dispose } = runHook("http://localhost/events");
+    await flush();
+
+    expect(MockEventSource.instances.length).toBe(1);
+    const es1 = MockEventSource.instances[0];
+    expect(es1.closed).toBe(false);
+
+    // Advance past heartbeat timeout (45s)
+    vi.advanceTimersByTime(45_000);
+    await flush();
+
+    // Original ES should be closed and a new one created
+    expect(es1.closed).toBe(true);
+    expect(MockEventSource.instances.length).toBe(2);
+
+    dispose();
+  });
+
+  it("resets heartbeat on snapshot event", async () => {
+    vi.useFakeTimers();
+    const { dispose } = runHook("http://localhost/events");
+    await flush();
+
+    // Advance 40s (close to timeout)
+    vi.advanceTimersByTime(40_000);
+    await flush();
+
+    // Send a snapshot — should reset the timer
+    MockEventSource.instances[0].emit("snapshot", []);
+    await flush();
+
+    // Advance another 40s — should NOT have timed out
+    vi.advanceTimersByTime(40_000);
+    await flush();
+
+    // Still only 1 ES instance (no reconnect triggered)
+    expect(MockEventSource.instances.length).toBe(1);
+    expect(MockEventSource.instances[0].closed).toBe(false);
+
+    dispose();
+  });
+
+  it("clears reconnect timer on cleanup", async () => {
+    vi.useFakeTimers();
+    const { dispose } = runHook("http://localhost/events");
+    await flush();
+
+    // Trigger error to start reconnect timer
+    MockEventSource.instances[0].triggerError();
+
+    // Dispose before reconnect fires — should clean up the timer
+    dispose();
+
+    // Advance past backoff — should NOT create a new ES
+    vi.advanceTimersByTime(5000);
+    await flush();
+    expect(MockEventSource.instances.length).toBe(1);
+  });
 });

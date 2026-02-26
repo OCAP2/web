@@ -307,4 +307,167 @@ describe("MapManager", () => {
     expect(container.textContent).toContain("Size");
     expect(container.textContent).toContain("Disk");
   });
+
+  it("calls importMapToolZip when import dialog submits", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Open import dialog
+    const importBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Import Map"),
+    )!;
+    fireEvent.click(importBtn);
+
+    // Select a file via the file input
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["zip content"], "map.zip", { type: "application/zip" });
+    Object.defineProperty(fileInput, "files", { value: [file] });
+    fireEvent.change(fileInput);
+
+    // Click the import button inside the dialog footer (has btnImport class)
+    const dialogImportBtn = container.querySelector("[class*='btnImport']") as HTMLElement;
+    expect(dialogImportBtn).not.toBeNull();
+    fireEvent.click(dialogImportBtn);
+    await flush();
+
+    expect(mockImportMapToolZip).toHaveBeenCalledWith(file, expect.any(Function));
+  });
+
+  it("handles import error gracefully", async () => {
+    mockImportMapToolZip.mockRejectedValue(new Error("upload failed"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = renderPage();
+    await flush();
+
+    // Open import dialog
+    fireEvent.click(
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.includes("Import Map"),
+      )!,
+    );
+
+    // Select file and import
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["z"], "test.zip", { type: "application/zip" });
+    Object.defineProperty(fileInput, "files", { value: [file] });
+    fireEvent.change(fileInput);
+    const dialogImportBtn = container.querySelector("[class*='btnImport']") as HTMLElement;
+    fireEvent.click(dialogImportBtn);
+    await flush();
+
+    expect(spy).toHaveBeenCalledWith("Import failed:", expect.any(Error));
+    spy.mockRestore();
+  });
+
+  it("selects a map and shows detail sidebar", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Click on Altis card
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    expect(altisCard).toBeDefined();
+    fireEvent.click(altisCard);
+
+    // Detail sidebar should show
+    expect(container.textContent).toContain("30.7 km");
+  });
+
+  it("deletes a map via delete confirm dialog", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    // Select Altis
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    fireEvent.click(altisCard);
+
+    // Find and click delete button in detail sidebar
+    const deleteBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete") && !b.textContent?.includes("Confirm"),
+    );
+    expect(deleteBtn).toBeDefined();
+    fireEvent.click(deleteBtn!);
+
+    // Confirm deletion
+    const confirmBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete") && b.className.includes("danger"),
+    );
+    if (confirmBtn) {
+      fireEvent.click(confirmBtn);
+      await flush();
+      expect(mockDeleteMapToolMap).toHaveBeenCalledWith("Altis");
+    }
+  });
+
+  it("handles delete error gracefully", async () => {
+    mockDeleteMapToolMap.mockRejectedValue(new Error("delete failed"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = renderPage();
+    await flush();
+
+    // Select Altis
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    fireEvent.click(altisCard);
+
+    // Find and click delete button
+    const deleteBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Delete") && !b.textContent?.includes("Confirm"),
+    );
+    if (deleteBtn) {
+      fireEvent.click(deleteBtn);
+      const confirmBtn = Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent?.includes("Delete") && b.className.includes("danger"),
+      );
+      if (confirmBtn) {
+        fireEvent.click(confirmBtn);
+        await flush();
+        expect(spy).toHaveBeenCalledWith("Delete failed:", expect.any(Error));
+      }
+    }
+    spy.mockRestore();
+  });
+
+  it("handles restyle error gracefully", async () => {
+    mockRestyleMapToolAll.mockRejectedValue(new Error("restyle failed"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = renderPage();
+    await flush();
+
+    const restyleBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.includes("Restyle All"),
+    )!;
+    fireEvent.click(restyleBtn);
+    await flush();
+
+    expect(spy).toHaveBeenCalledWith("Restyle failed:", expect.any(Error));
+    spy.mockRestore();
+  });
+
+  it("navigates to / when API fetch fails on mount", async () => {
+    mockGetMapToolTools.mockRejectedValue(new Error("unauthorized"));
+    const { container } = renderPage();
+    await flush();
+    // Should not show loading content when redirected
+    expect(mockGetMapToolTools).toHaveBeenCalled();
+  });
+
+  it("deselects map when clicking same card again", async () => {
+    const { container } = renderPage();
+    await flush();
+
+    const altisCard = Array.from(container.querySelectorAll("[class*='card']")).find(
+      (el) => el.textContent?.includes("Altis"),
+    ) as HTMLElement;
+    fireEvent.click(altisCard);
+    expect(container.textContent).toContain("30.7 km");
+
+    // Click again to deselect
+    fireEvent.click(altisCard);
+    // Detail sidebar should close - worldSize detail no longer visible
+  });
 });

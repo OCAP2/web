@@ -24,15 +24,16 @@ RUN adduser -D -h /home/container container && \
     echo '{}' > /etc/ocap/setting.json
 
 # Full variant: install maptool dependencies (GDAL, tippecanoe, pmtiles)
+ARG TIPPECANOE_VERSION=2.75.0
+ARG PMTILES_VERSION=1.22.3
 RUN if [ "$VARIANT" = "full" ]; then \
       apk add --no-cache gdal-tools py3-gdal cmake make g++ git sqlite-dev zlib-dev && \
-      git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe && \
+      git clone --depth 1 --branch ${TIPPECANOE_VERSION} https://github.com/felt/tippecanoe.git /tmp/tippecanoe && \
       cd /tmp/tippecanoe && make -j$(nproc) && make install && \
       rm -rf /tmp/tippecanoe && \
       apk del cmake make g++ git && \
-      wget -qO /usr/local/bin/pmtiles https://github.com/protomaps/go-pmtiles/releases/latest/download/pmtiles_linux_amd64 && \
-      chmod +x /usr/local/bin/pmtiles && \
-      echo '{"maptool":{"enabled":true}}' > /etc/ocap/setting.json; \
+      wget -qO /usr/local/bin/pmtiles https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/pmtiles_linux_amd64 && \
+      chmod +x /usr/local/bin/pmtiles; \
     fi
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \

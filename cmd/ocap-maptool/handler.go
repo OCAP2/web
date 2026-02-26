@@ -131,7 +131,7 @@ func (h *handler) importZip(c echo.Context) error {
 	}
 
 	worldName := maptool.WorldNameFromDir(gradMehDir)
-	snap, err := h.jm.Submit(gradMehDir, worldName)
+	snap, err := h.jm.SubmitWithCleanup(gradMehDir, worldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
