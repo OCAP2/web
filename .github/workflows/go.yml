@@ -71,7 +71,7 @@ jobs:
 
       - name: Download artifact (main.breakdown)
         id: download-main-breakdown
-        uses: dawidd6/action-download-artifact@v15
+        uses: dawidd6/action-download-artifact@v16
         if: github.event_name == 'pull_request'
         with:
           branch: main
