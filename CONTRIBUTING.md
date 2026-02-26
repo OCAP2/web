@@ -52,7 +52,6 @@ The frontend is embedded into the binary via `//go:embed`, so you only need to r
 ```
 cmd/
   ocap-webserver/       # Server entry point and CLI commands
-  ocap-maptool/         # Map processing tool
 internal/
   server/               # HTTP handlers, repositories, configuration
   frontend/             # Embedded SPA (go:embed)

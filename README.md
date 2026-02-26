@@ -77,40 +77,6 @@ docker run --name ocap-web -d \
 | `/var/lib/ocap/maps` | Map tiles ([download here](https://drive.google.com/drive/folders/1qtT0Fr4Dfwd48ihZNc8YN-xgxHchKoiu)) |
 | `/var/lib/ocap/db` | SQLite database |
 
-### Standalone Map Tool
-
-A standalone map tool image is also available for running the map processing pipeline separately from the web server.
-
-```bash
-docker pull ghcr.io/ocap2/maptool:latest
-```
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OCAP_MAPTOOL_LISTEN` | Server address | `0.0.0.0:5001` |
-| `OCAP_MAPS` | Maps output directory | `/var/lib/ocap/maps` |
-
-```bash
-# Web UI alongside the webserver
-docker run --name ocap-maptool -d \
-  -p 5001:5001/tcp \
-  -v ocap-maps:/var/lib/ocap/maps \
-  ghcr.io/ocap2/maptool:latest
-
-# CLI: import a grad_meh export
-docker run --rm \
-  -v ocap-maps:/var/lib/ocap/maps \
-  -v /path/to/exports:/input:ro \
-  ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool import -maps /var/lib/ocap/maps /input/altis
-
-# CLI: restyle all existing maps
-docker run --rm \
-  -v ocap-maps:/var/lib/ocap/maps \
-  ghcr.io/ocap2/maptool:latest \
-  ./ocap-maptool restyle -maps /var/lib/ocap/maps
-```
-
 ## Pelican Panel
 
 A [Pelican Panel](https://pelican.dev/) egg is provided for deploying OCAP2 Web as a managed server instance. Import `egg-ocap2-web.json` in the Pelican admin panel under **Eggs → Import Egg**.
