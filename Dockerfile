@@ -18,10 +18,10 @@ RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$bui
 
 FROM alpine:3.23
 ARG VARIANT=slim
+ARG TARGETARCH
 WORKDIR /usr/local/ocap
 RUN adduser -D -h /home/container container && \
-    mkdir -p /etc/ocap /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data && \
-    echo '{}' > /etc/ocap/setting.json
+    mkdir -p /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data
 
 # Full variant: install maptool dependencies (GDAL, tippecanoe, pmtiles)
 ARG TIPPECANOE_VERSION=2.75.0
@@ -32,7 +32,7 @@ RUN if [ "$VARIANT" = "full" ]; then \
       cd /tmp/tippecanoe && make -j$(nproc) && make install && \
       rm -rf /tmp/tippecanoe && \
       apk del cmake make g++ git && \
-      wget -qO /usr/local/bin/pmtiles https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/pmtiles_linux_amd64 && \
+      wget -qO /usr/local/bin/pmtiles "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/pmtiles_linux_${TARGETARCH}" && \
       chmod +x /usr/local/bin/pmtiles; \
     fi
 

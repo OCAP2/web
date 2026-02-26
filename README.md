@@ -38,9 +38,17 @@ For development setup and workflow details, see [CONTRIBUTING.md](CONTRIBUTING.m
 
 ## Docker
 
-Docker images are available for `linux/amd64` and `linux/arm64` architectures.
+Docker images are available for `linux/amd64` and `linux/arm64` architectures in two variants:
+
+| Variant | Tag | Description |
+|---------|-----|-------------|
+| **Slim** (default) | `latest`, `v1.2.3` | Web server only |
+| **Full** | `full`, `v1.2.3-full` | Web server + integrated Map Manager (GDAL, tippecanoe, pmtiles) |
+
+The **full** variant includes all tools needed for the Map Manager — an admin page that processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles directly from the web UI. The server auto-detects the available tools at startup; no extra configuration is needed.
 
 ```bash
+# Slim — just the web server
 docker run --name ocap-web -d \
   -p 5000:5000/tcp \
   -e OCAP_SECRET="same-secret" \
@@ -49,6 +57,16 @@ docker run --name ocap-web -d \
   -v ocap-maps:/var/lib/ocap/maps \
   -v ocap-database:/var/lib/ocap/db \
   ghcr.io/ocap2/web:latest
+
+# Full — web server with integrated Map Manager
+docker run --name ocap-web -d \
+  -p 5000:5000/tcp \
+  -e OCAP_SECRET="same-secret" \
+  -e OCAP_CONVERSION_ENABLED="true" \
+  -v ocap-records:/var/lib/ocap/data \
+  -v ocap-maps:/var/lib/ocap/maps \
+  -v ocap-database:/var/lib/ocap/db \
+  ghcr.io/ocap2/web:full
 ```
 
 ### Volumes
@@ -59,47 +77,34 @@ docker run --name ocap-web -d \
 | `/var/lib/ocap/maps` | Map tiles ([download here](https://drive.google.com/drive/folders/1qtT0Fr4Dfwd48ihZNc8YN-xgxHchKoiu)) |
 | `/var/lib/ocap/db` | SQLite database |
 
-### Map Tool
+### Standalone Map Tool
 
-The map tool processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles. It provides a web UI for uploading and managing maps, and CLI commands for scripted workflows.
-
-The image bundles all required tools (gdal2tiles, pmtiles, tippecanoe).
+A standalone map tool image is also available for running the map processing pipeline separately from the web server.
 
 ```bash
 docker pull ghcr.io/ocap2/maptool:latest
 ```
-
-**Environment Variables:**
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OCAP_MAPTOOL_LISTEN` | Server address | `0.0.0.0:5001` |
 | `OCAP_MAPS` | Maps output directory | `/var/lib/ocap/maps` |
 
-**Start the maptool web UI alongside the webserver:**
-
 ```bash
+# Web UI alongside the webserver
 docker run --name ocap-maptool -d \
   -p 5001:5001/tcp \
   -v ocap-maps:/var/lib/ocap/maps \
   ghcr.io/ocap2/maptool:latest
-```
 
-The shared `ocap-maps` volume lets the maptool write processed map tiles that the webserver serves directly.
-
-**CLI usage (import a grad_meh export):**
-
-```bash
+# CLI: import a grad_meh export
 docker run --rm \
   -v ocap-maps:/var/lib/ocap/maps \
   -v /path/to/exports:/input:ro \
   ghcr.io/ocap2/maptool:latest \
   ./ocap-maptool import -maps /var/lib/ocap/maps /input/altis
-```
 
-**Restyle all existing maps:**
-
-```bash
+# CLI: restyle all existing maps
 docker run --rm \
   -v ocap-maps:/var/lib/ocap/maps \
   ghcr.io/ocap2/maptool:latest \
