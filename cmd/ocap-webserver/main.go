@@ -122,9 +122,15 @@ func app() error {
 		go worker.Start(ctx)
 	}
 
-	if setting.MapTool.Enabled {
-		tools := maptool.DetectTools()
-		slog.Info("maptool: tools detected")
+	// Auto-detect maptool: enable if all required tools are available.
+	tools := maptool.DetectTools()
+	if missing := tools.MissingRequired(); len(missing) > 0 {
+		names := make([]string, len(missing))
+		for i, t := range missing {
+			names[i] = t.Name
+		}
+		slog.Warn("maptool: disabled (missing required tools)", "missing", names)
+	} else {
 		for _, t := range tools {
 			found := "not found"
 			if t.Found {

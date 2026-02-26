@@ -188,7 +188,7 @@ func NewHandler(
 		mt.GET("/tools", hdlr.getMapToolTools)
 		mt.GET("/maps", hdlr.getMapToolMaps)
 		mt.DELETE("/maps/:name", hdlr.deleteMapToolMap)
-		mt.POST("/maps/import", hdlr.importMapToolZip, middleware.BodyLimit(setting.MapTool.BodyLimit))
+		mt.POST("/maps/import", hdlr.importMapToolZip, middleware.BodyLimit("2G"))
 		mt.POST("/maps/restyle", hdlr.restyleMapToolAll)
 		mt.GET("/jobs", hdlr.getMapToolJobs)
 		mt.POST("/jobs/:id/cancel", hdlr.cancelMapToolJob)

@@ -26,7 +26,6 @@ type Setting struct {
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
 	Streaming  Streaming  `json:"streaming" yaml:"streaming"`
 	Admin      Admin      `json:"admin" yaml:"admin"`
-	MapTool    MapTool    `json:"maptool" yaml:"maptool"`
 }
 
 type Conversion struct {
@@ -58,11 +57,6 @@ type Streaming struct {
 	Enabled      bool          `json:"enabled" yaml:"enabled"`
 	PingInterval time.Duration `json:"pingInterval" yaml:"pingInterval"`
 	PingTimeout  time.Duration `json:"pingTimeout" yaml:"pingTimeout"`
-}
-
-type MapTool struct {
-	Enabled   bool   `json:"enabled" yaml:"enabled"`
-	BodyLimit string `json:"bodyLimit" yaml:"bodyLimit"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -103,11 +97,10 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("admin.sessionTTL", "24h")
 	viper.SetDefault("admin.allowedSteamIds", []string{})
 	viper.SetDefault("admin.steamApiKey", "")
-	viper.SetDefault("maptool.enabled", false)
-	viper.SetDefault("maptool.bodyLimit", "2G")
+
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds", "admin.steamApiKey", "maptool.enabled", "maptool.bodyLimit"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds", "admin.steamApiKey"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
