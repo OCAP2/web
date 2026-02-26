@@ -1238,7 +1238,7 @@ export class LeafletRenderer implements MapRenderer {
           zoom,
           interactive: false,
           attributionControl: false,
-          preserveDrawingBuffer: true,
+          canvasContextAttributes: { preserveDrawingBuffer: true },
         };
         if (transformRequest) {
           mapOpts.transformRequest = transformRequest;
