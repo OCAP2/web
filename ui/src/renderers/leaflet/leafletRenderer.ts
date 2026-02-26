@@ -320,10 +320,7 @@ export class LeafletRenderer implements MapRenderer {
         const raw = world.tileBaseUrl ?? "";
         const tileBase = raw.startsWith("http")
           ? raw
-          : new URL(
-              basePath + raw.replace(/^\//, ""),
-              window.location.origin,
-            ).href;
+          : new URL(raw, window.location.origin).href;
         const styleBase = tileBase + "/styles/";
         const styleCandidates: StyleCandidate[] = [
           { label: "Topographic", url: styleBase + "topo.json" },
@@ -485,7 +482,7 @@ export class LeafletRenderer implements MapRenderer {
 
     // Build tile layers based on available styles in map.json
     const rawTile = world.tileBaseUrl ?? "";
-    const tileUrl = rawTile.startsWith("http") ? rawTile : basePath + rawTile.replace(/^\//, "");
+    const tileUrl = rawTile;
     const baseLayers: L.TileLayer[] = [];
     const tileOpts: L.TileLayerOptions = {
       maxNativeZoom: world.maxZoom,
