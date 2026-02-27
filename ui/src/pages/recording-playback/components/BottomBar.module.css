@@ -31,7 +31,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 200px;
+  flex: 1;
+  min-width: 0;
 }
 
 .controlsCenter {
@@ -44,7 +45,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 200px;
+  flex: 1;
+  min-width: 0;
   justify-content: flex-end;
 }
 
