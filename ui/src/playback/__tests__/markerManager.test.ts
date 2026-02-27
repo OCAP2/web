@@ -427,13 +427,23 @@ describe("MarkerManager.setSideFilter", () => {
 // ─── MarkerManager layer classification ───
 
 describe("MarkerManager layer classification", () => {
-  it("assigns system markers (player=-1) to systemMarkers layer", () => {
+  it("assigns known system marker types (player=-1) to systemMarkers layer", () => {
     const renderer = makeStubRenderer();
     const mgr = new MarkerManager(renderer);
-    mgr.loadMarkers([makeDef("mil_dot", { player: -1, side: "GLOBAL" })]);
+    mgr.loadMarkers([makeDef("ObjectMarker", { player: -1, side: "GLOBAL" })]);
     mgr.updateFrame(0);
     expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
       expect.objectContaining({ layer: "systemMarkers" }),
+    );
+  });
+
+  it("assigns unknown marker types with player=-1 to briefingMarkers layer", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([makeDef("loc_Tree", { player: -1, side: "GLOBAL" })]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ layer: "briefingMarkers" }),
     );
   });
 

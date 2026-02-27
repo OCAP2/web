@@ -150,7 +150,6 @@ describe("TopBar", () => {
     // Dropdown should now show layer items
     expect(screen.getByText("Units & vehicles")).toBeTruthy();
     expect(screen.getByText("Side markers")).toBeTruthy();
-    expect(screen.getByText("Briefing markers")).toBeTruthy();
     expect(screen.getByText("Projectiles")).toBeTruthy();
     expect(screen.getByText("Coordinate grid")).toBeTruthy();
   });

@@ -167,7 +167,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: var(--bg-panel);
+  background: var(--bg-interactive);
   border: var(--border-subtle);
   color: var(--text-muted);
   display: flex;

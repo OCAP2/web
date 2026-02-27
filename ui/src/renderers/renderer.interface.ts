@@ -51,6 +51,7 @@ export interface MapRenderer {
 
   // Layer visibility
   setLayerVisible(layer: RenderLayer, visible: boolean): void;
+  setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void;
 
   // Map styles
   getMapStyles(): MapStyleInfo[];

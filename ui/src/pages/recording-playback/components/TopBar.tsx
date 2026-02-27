@@ -72,7 +72,6 @@ export function TopBar(props: TopBarProps): JSX.Element {
   const [layers, setLayers] = createSignal<Record<string, boolean>>({
     entities: true,
     systemMarkers: true,
-    briefingMarkers: true,
     projectileMarkers: true,
     grid: false,
     mapIcons: true,
@@ -95,7 +94,6 @@ export function TopBar(props: TopBarProps): JSX.Element {
     const items: Array<{ key: string; label: string }> = [
       { key: "entities", label: t("layer_entities") },
       { key: "systemMarkers", label: t("layer_side_markers") },
-      { key: "briefingMarkers", label: t("layer_briefing_markers") },
       { key: "projectileMarkers", label: t("layer_projectiles") },
       { key: "grid", label: t("grid") },
     ];

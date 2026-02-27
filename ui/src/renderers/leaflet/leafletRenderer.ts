@@ -145,6 +145,7 @@ export class LeafletRenderer implements MapRenderer {
 
   private nameDisplayMode: "players" | "all" | "none" = "players";
   private hideMarkerPopups = false;
+  private markerDisplayMode: "all" | "noLabels" | "none" = "all";
 
   private layers: Record<LayerGroupKey, L.LayerGroup> = {
     entities: L.layerGroup(),
@@ -881,7 +882,7 @@ export class LeafletRenderer implements MapRenderer {
     layer.addTo(this.layers[layerKey]);
 
     // Open popup after adding to map so the DOM element exists
-    if (def.text && layer instanceof L.Marker) {
+    if (def.text && layer instanceof L.Marker && this.markerDisplayMode === "all") {
       layer.openPopup();
     }
     return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts });
@@ -1140,6 +1141,10 @@ export class LeafletRenderer implements MapRenderer {
     if (visible) {
       if (!this.map.hasLayer(group)) {
         group.addTo(this.map);
+        // Reopen briefing marker popups that Leaflet closed on removeLayer
+        if (layer !== "entities") {
+          this.reopenBriefingMarkerPopups(group);
+        }
       }
     } else {
       if (this.map.hasLayer(group)) {
@@ -1195,6 +1200,46 @@ export class LeafletRenderer implements MapRenderer {
         display = "none";
       }
       popupEl.style.display = display;
+    });
+  }
+
+  // ==================== Briefing marker display mode ====================
+
+  setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void {
+    this.markerDisplayMode = mode;
+    const group = this.layers.briefingMarkers;
+
+    if (mode === "none") {
+      if (this.map.hasLayer(group)) {
+        this.map.removeLayer(group);
+      }
+    } else {
+      if (!this.map.hasLayer(group)) {
+        group.addTo(this.map);
+      }
+      // Toggle popups on ICON markers
+      group.eachLayer((layer) => {
+        if (!(layer instanceof L.Marker)) return;
+        if (!layer.getPopup()) return;
+        if (mode === "all") {
+          layer.openPopup();
+        } else {
+          layer.closePopup();
+        }
+      });
+    }
+  }
+
+  /**
+   * Reopen popups on briefing-type markers after a layer group is re-added
+   * to the map. Leaflet closes popups when layers are removed.
+   */
+  private reopenBriefingMarkerPopups(group: L.LayerGroup): void {
+    if (group === this.layers.briefingMarkers && this.markerDisplayMode !== "all") return;
+    group.eachLayer((layer) => {
+      if (layer instanceof L.Marker && layer.getPopup()) {
+        layer.openPopup();
+      }
     });
   }
 

@@ -109,6 +109,10 @@ export class MockRenderer implements MapRenderer {
     // no-op
   }
 
+  setMarkerDisplayMode(_mode: "all" | "noLabels" | "none"): void {
+    // no-op
+  }
+
   getMapStyles(): import("./renderer.types").MapStyleInfo[] {
     return [];
   }

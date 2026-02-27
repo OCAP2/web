@@ -31,6 +31,14 @@ const NAME_MODE_KEYS: Record<NameMode, string> = {
   none: "names_none",
 };
 
+type MarkerMode = "all" | "noLabels" | "none";
+const MARKER_MODES: MarkerMode[] = ["all", "noLabels", "none"];
+const MARKER_MODE_KEYS: Record<MarkerMode, string> = {
+  all: "markers_all",
+  noLabels: "markers_no_labels",
+  none: "markers_none",
+};
+
 const TIME_MODES: TimeMode[] = ["elapsed", "mission", "system"];
 const TIME_MODE_KEYS: Record<TimeMode, string> = {
   elapsed: "time_elapsed",
@@ -73,8 +81,14 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
   const [nameMode, setNameMode] = createSignal<NameMode>("all");
   let namesRef: HTMLDivElement | undefined;
 
+  // ── Markers dropdown ──
+  const [markersOpen, setMarkersOpen] = createSignal(false);
+  const [markerMode, setMarkerMode] = createSignal<MarkerMode>("all");
+  let markersRef: HTMLDivElement | undefined;
+
   useClickOutside(() => timeModeRef, setTimeModeOpen);
   useClickOutside(() => namesRef, setNamesOpen);
+  useClickOutside(() => markersRef, setMarkersOpen);
 
   return (
     <div class={styles.bottomBar}>
@@ -199,6 +213,37 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
                       }}
                     >
                       {t(NAME_MODE_KEYS[mode])}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
+
+          <div ref={markersRef} style={{ position: "relative" }}>
+            <button
+              class={`${styles.speedBtn} ${styles.dropdownWide}`}
+              onClick={() => setMarkersOpen((v) => !v)}
+            >
+              {t(MARKER_MODE_KEYS[markerMode()])}
+              <ChevronDownIcon />
+            </button>
+            <Show when={markersOpen()}>
+              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
+                <For each={MARKER_MODES}>
+                  {(mode) => (
+                    <button
+                      class={styles.speedOption}
+                      classList={{
+                        [styles.speedOptionActive]: markerMode() === mode,
+                      }}
+                      onClick={() => {
+                        setMarkerMode(mode);
+                        renderer.setMarkerDisplayMode(mode);
+                        setMarkersOpen(false);
+                      }}
+                    >
+                      {t(MARKER_MODE_KEYS[mode])}
                     </button>
                   )}
                 </For>

@@ -156,8 +156,9 @@ function classifyMarkerLayer(
 ): "briefingMarkers" | "systemMarkers" | "projectileMarkers" {
   if (def.shape !== "ICON") return "briefingMarkers";
 
-  // No player — system marker
-  if (def.player === -1) return "systemMarkers";
+  // Known system marker types (game-engine markers, not player-placed)
+  if (def.player === -1 && SYSTEM_MARKER_TYPES.includes(def.type))
+    return "systemMarkers";
 
   // Projectiles on GLOBAL side
   if (
