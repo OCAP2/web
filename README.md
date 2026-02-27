@@ -149,6 +149,8 @@ The Steam API key is optional. Without it, the admin badge shows the raw Steam64
 
 ### Customization
 
+For a full theming guide with example themes and an AI prompt to generate your own, see [Customization Docs](docs/customization.md).
+
 | Setting | Env Var | Description | Default |
 |---------|---------|-------------|---------|
 | `customize.enabled` | `OCAP_CUSTOMIZE_ENABLED` | Enable the customize endpoint | `false` |
