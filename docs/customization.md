@@ -30,8 +30,8 @@ All fields except `enabled` are optional. Set `enabled: true` to activate custom
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Enable the customization system |
-| `headerTitle` | string | `"OCAP"` | Title shown in the header bar |
-| `headerSubtitle` | string | `"Operation Capture and Playback · N recordings"` | Subtitle below the title |
+| `headerTitle` | string | `""` | Title shown in the header bar. If empty, the UI defaults to "OCAP". |
+| `headerSubtitle` | string | `""` | Subtitle below the title. If empty, the UI defaults to "Operation Capture and Playback · N recordings". |
 | `websiteLogo` | string | — | URL or path to a logo image |
 | `websiteURL` | string | — | Clicking the logo opens this URL |
 | `websiteLogoSize` | string | `"32px"` | CSS height for the logo |
@@ -120,8 +120,8 @@ The `cssOverrides` object lets you override any CSS custom property defined in [
       "--text-dimmer": "#6b7e55",
       "--text-dimmest": "#556b45",
       "--bg-dark": "#1a2a1a",
-      "--bg-panel": "rgba(30, 40, 30, 0.88)",
-      "--bg-panel-header": "rgba(30, 40, 30, 0.6)",
+      "--bg-panel": "rgba(26, 42, 26, 0.88)",
+      "--bg-panel-header": "rgba(26, 42, 26, 0.6)",
       "--bg-surface": "#2e3b2e",
       "--bg-surface-hover": "#3a4a3a",
       "--bg-interactive": "rgba(255, 255, 255, 0.04)",
@@ -154,8 +154,8 @@ The `cssOverrides` object lets you override any CSS custom property defined in [
       "--text-dimmer": "#55524D",
       "--text-dimmest": "#403E3A",
       "--bg-dark": "#121214",
-      "--bg-panel": "rgba(28, 28, 32, 0.92)",
-      "--bg-panel-header": "rgba(35, 35, 40, 0.7)",
+      "--bg-panel": "rgba(18, 18, 20, 0.88)",
+      "--bg-panel-header": "rgba(18, 18, 20, 0.6)",
       "--bg-surface": "#1E1E22",
       "--bg-surface-hover": "#2A2A2F",
       "--bg-interactive": "rgba(212, 106, 46, 0.06)",
