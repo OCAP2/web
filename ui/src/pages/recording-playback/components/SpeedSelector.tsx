@@ -1,50 +1,19 @@
-import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
-import { ChevronDownIcon } from "../../../components/Icons";
-import { useClickOutside } from "../../../hooks/useClickOutside";
-import styles from "./BottomBar.module.css";
+import { SelectDropdown } from "../../../components/SelectDropdown";
 
 const SPEEDS = [1, 2, 5, 10, 20, 30, 60];
+const SPEED_OPTIONS = SPEEDS.map(String);
 
 export function SpeedSelector(): JSX.Element {
   const engine = useEngine();
 
-  const [open, setOpen] = createSignal(false);
-  let wrapperRef: HTMLDivElement | undefined;
-  useClickOutside(() => wrapperRef, setOpen);
-
   return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <button
-        class={styles.speedBtn}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        {engine.playbackSpeed()}x
-        <ChevronDownIcon />
-      </button>
-
-      <Show when={open()}>
-        <div class={styles.speedPopup}>
-          <For each={SPEEDS}>
-            {(s) => (
-              <button
-                class={styles.speedOption}
-                classList={{
-                  [styles.speedOptionActive]:
-                    engine.playbackSpeed() === s,
-                }}
-                onClick={() => {
-                  engine.setSpeed(s);
-                  setOpen(false);
-                }}
-              >
-                {s}x
-              </button>
-            )}
-          </For>
-        </div>
-      </Show>
-    </div>
+    <SelectDropdown
+      value={() => String(engine.playbackSpeed())}
+      options={SPEED_OPTIONS}
+      getLabel={(s) => `${s}x`}
+      onSelect={(s) => engine.setSpeed(Number(s))}
+    />
   );
 }

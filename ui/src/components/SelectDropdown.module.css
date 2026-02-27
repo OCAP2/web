@@ -1,0 +1,64 @@
+/* ─── SelectDropdown ─── */
+
+.trigger {
+  background: rgba(255, 255, 255, 0.06);
+  border: var(--border-subtle);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.triggerWide {
+  min-width: 100px;
+  justify-content: space-between;
+}
+
+.popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: var(--shadow-dropdown);
+  z-index: 100;
+}
+
+.popupWide {
+  min-width: 140px;
+}
+
+.option {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 16px;
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.optionActive {
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.optionDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

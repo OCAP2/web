@@ -1,4 +1,4 @@
-import { createSignal, Show, For } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { useRenderer } from "../../../hooks/useRenderer";
@@ -11,11 +11,10 @@ import {
   PlayIcon,
   PauseIcon,
   SkipForwardIcon,
-  ChevronDownIcon,
 } from "../../../components/Icons";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { SpeedSelector } from "./SpeedSelector";
-import { useClickOutside } from "../../../hooks/useClickOutside";
+import { SelectDropdown } from "../../../components/SelectDropdown";
 import styles from "./BottomBar.module.css";
 
 export interface BottomBarProps {
@@ -72,23 +71,9 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
     return false;
   };
 
-  // ── Time mode dropdown ──
-  const [timeModeOpen, setTimeModeOpen] = createSignal(false);
-  let timeModeRef: HTMLDivElement | undefined;
-
-  // ── Names dropdown ──
-  const [namesOpen, setNamesOpen] = createSignal(false);
+  // ── Names / Markers state ──
   const [nameMode, setNameMode] = createSignal<NameMode>("all");
-  let namesRef: HTMLDivElement | undefined;
-
-  // ── Markers dropdown ──
-  const [markersOpen, setMarkersOpen] = createSignal(false);
   const [markerMode, setMarkerMode] = createSignal<MarkerMode>("all");
-  let markersRef: HTMLDivElement | undefined;
-
-  useClickOutside(() => timeModeRef, setTimeModeOpen);
-  useClickOutside(() => namesRef, setNamesOpen);
-  useClickOutside(() => markersRef, setMarkersOpen);
 
   return (
     <div class={styles.bottomBar}>
@@ -150,106 +135,40 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           </button>
         </div>
 
-        {/* Right: Speed, time mode, names */}
+        {/* Right: Speed, time mode, names, markers */}
         <div class={styles.controlsRight}>
           <SpeedSelector />
 
-          <div ref={timeModeRef} style={{ position: "relative" }}>
-            <button
-              class={`${styles.speedBtn} ${styles.dropdownWide}`}
-              onClick={() => setTimeModeOpen((v) => !v)}
-            >
-              {t(TIME_MODE_KEYS[timeMode()])}
-              <ChevronDownIcon />
-            </button>
-            <Show when={timeModeOpen()}>
-              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
-                <For each={TIME_MODES}>
-                  {(mode) => {
-                    const available = () => isTimeModeAvailable(mode);
-                    return (
-                      <button
-                        class={styles.speedOption}
-                        classList={{
-                          [styles.speedOptionActive]: timeMode() === mode,
-                          [styles.speedOptionDisabled]: !available(),
-                        }}
-                        disabled={!available()}
-                        onClick={() => {
-                          setTimeMode(mode);
-                          setTimeModeOpen(false);
-                        }}
-                      >
-                        {t(TIME_MODE_KEYS[mode])}
-                      </button>
-                    );
-                  }}
-                </For>
-              </div>
-            </Show>
-          </div>
+          <SelectDropdown
+            value={timeMode}
+            options={TIME_MODES}
+            getLabel={(m) => t(TIME_MODE_KEYS[m])}
+            onSelect={(m) => setTimeMode(m as TimeMode)}
+            isDisabled={(m) => !isTimeModeAvailable(m as TimeMode)}
+            wide
+          />
 
-          <div ref={namesRef} style={{ position: "relative" }}>
-            <button
-              class={`${styles.speedBtn} ${styles.dropdownWide}`}
-              onClick={() => setNamesOpen((v) => !v)}
-            >
-              {t(NAME_MODE_KEYS[nameMode()])}
-              <ChevronDownIcon />
-            </button>
-            <Show when={namesOpen()}>
-              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
-                <For each={NAME_MODES}>
-                  {(mode) => (
-                    <button
-                      class={styles.speedOption}
-                      classList={{
-                        [styles.speedOptionActive]: nameMode() === mode,
-                      }}
-                      onClick={() => {
-                        setNameMode(mode);
-                        renderer.setNameDisplayMode(mode);
-                        setNamesOpen(false);
-                      }}
-                    >
-                      {t(NAME_MODE_KEYS[mode])}
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </div>
+          <SelectDropdown
+            value={nameMode}
+            options={NAME_MODES}
+            getLabel={(m) => t(NAME_MODE_KEYS[m])}
+            onSelect={(m) => {
+              setNameMode(m as NameMode);
+              renderer.setNameDisplayMode(m);
+            }}
+            wide
+          />
 
-          <div ref={markersRef} style={{ position: "relative" }}>
-            <button
-              class={`${styles.speedBtn} ${styles.dropdownWide}`}
-              onClick={() => setMarkersOpen((v) => !v)}
-            >
-              {t(MARKER_MODE_KEYS[markerMode()])}
-              <ChevronDownIcon />
-            </button>
-            <Show when={markersOpen()}>
-              <div class={`${styles.speedPopup} ${styles.dropdownPopupWide}`}>
-                <For each={MARKER_MODES}>
-                  {(mode) => (
-                    <button
-                      class={styles.speedOption}
-                      classList={{
-                        [styles.speedOptionActive]: markerMode() === mode,
-                      }}
-                      onClick={() => {
-                        setMarkerMode(mode);
-                        renderer.setMarkerDisplayMode(mode);
-                        setMarkersOpen(false);
-                      }}
-                    >
-                      {t(MARKER_MODE_KEYS[mode])}
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </div>
+          <SelectDropdown
+            value={markerMode}
+            options={MARKER_MODES}
+            getLabel={(m) => t(MARKER_MODE_KEYS[m])}
+            onSelect={(m) => {
+              setMarkerMode(m as MarkerMode);
+              renderer.setMarkerDisplayMode(m);
+            }}
+            wide
+          />
         </div>
       </div>
     </div>
