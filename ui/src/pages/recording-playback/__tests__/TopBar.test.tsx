@@ -182,6 +182,8 @@ describe("TopBar", () => {
       worldName: "Altis",
       worldSize: 30720,
       imageSize: 30720,
+      maxZoom: 18,
+      minZoom: 10,
       maplibre: true,
     });
     const { engine, renderer, props } = renderTopBar({ worldConfig });

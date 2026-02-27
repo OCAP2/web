@@ -34,9 +34,9 @@ function renderSidebar(initial: Recording = baseRec) {
 
 interface AdminOpts {
   isAdmin?: boolean;
-  onEdit?: ReturnType<typeof vi.fn>;
-  onDelete?: ReturnType<typeof vi.fn>;
-  onRetry?: ReturnType<typeof vi.fn>;
+  onEdit?: (rec: Recording) => void;
+  onDelete?: (rec: Recording) => void;
+  onRetry?: (id: string) => void;
 }
 
 function renderSidebarWithAdmin(initial: Recording = baseRec, admin: AdminOpts = {}) {

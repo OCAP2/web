@@ -25,6 +25,8 @@ describe("MapContainer", () => {
       worldName: "Altis",
       worldSize: 30720,
       imageSize: 30720,
+      maxZoom: 18,
+      minZoom: 10,
     };
 
     render(() => <MapContainer renderer={renderer} worldConfig={worldConfig} />);
