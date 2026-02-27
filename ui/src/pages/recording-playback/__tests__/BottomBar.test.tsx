@@ -400,3 +400,71 @@ describe("BottomBar - names dropdown", () => {
     expect(screen.queryByText("Players Only")).toBeNull();
   });
 });
+
+describe("BottomBar - markers dropdown", () => {
+  it("opens and closes the markers dropdown", () => {
+    renderBottomBar();
+
+    const markersButton = screen.getByText("All Markers").closest("button")!;
+
+    // Dropdown is closed
+    expect(screen.queryByText("Markers Only")).toBeNull();
+
+    // Open
+    fireEvent.click(markersButton);
+
+    expect(screen.getAllByText("All Markers").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Markers Only")).toBeTruthy();
+    expect(screen.getByText("Hide Markers")).toBeTruthy();
+
+    // Close by clicking again
+    fireEvent.click(markersButton);
+    expect(screen.queryByText("Markers Only")).toBeNull();
+  });
+
+  it("selects 'Markers Only' and calls renderer.setMarkerDisplayMode", () => {
+    const { renderer } = renderBottomBar();
+    const spy = vi.spyOn(renderer, "setMarkerDisplayMode");
+
+    const markersButton = screen.getByText("All Markers").closest("button")!;
+    fireEvent.click(markersButton);
+
+    const option = screen.getAllByText("Markers Only").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(option);
+
+    expect(spy).toHaveBeenCalledWith("noLabels");
+    expect(screen.queryByText("Hide Markers")).toBeNull();
+    expect(screen.getByText("Markers Only")).toBeTruthy();
+  });
+
+  it("selects 'Hide Markers' and calls renderer.setMarkerDisplayMode", () => {
+    const { renderer } = renderBottomBar();
+    const spy = vi.spyOn(renderer, "setMarkerDisplayMode");
+
+    const markersButton = screen.getByText("All Markers").closest("button")!;
+    fireEvent.click(markersButton);
+
+    const option = screen.getAllByText("Hide Markers").find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    fireEvent.click(option);
+
+    expect(spy).toHaveBeenCalledWith("none");
+    expect(screen.getByText("Hide Markers")).toBeTruthy();
+  });
+
+  it("closes markers dropdown when clicking outside", () => {
+    renderBottomBar();
+
+    const markersButton = screen.getByText("All Markers").closest("button")!;
+    fireEvent.click(markersButton);
+
+    expect(screen.getByText("Markers Only")).toBeTruthy();
+
+    fireEvent(document, new MouseEvent("pointerdown", { bubbles: true }));
+
+    expect(screen.queryByText("Markers Only")).toBeNull();
+  });
+});
