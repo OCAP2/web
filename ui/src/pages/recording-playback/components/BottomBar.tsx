@@ -145,32 +145,32 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
             onSelect={(s) => engine.setSpeed(Number(s))}
           />
 
-          <SelectDropdown
+          <SelectDropdown<TimeMode>
             value={timeMode}
             options={TIME_MODES}
             getLabel={(m) => t(TIME_MODE_KEYS[m])}
-            onSelect={(m) => setTimeMode(m as TimeMode)}
-            isDisabled={(m) => !isTimeModeAvailable(m as TimeMode)}
+            onSelect={setTimeMode}
+            isDisabled={(m) => !isTimeModeAvailable(m)}
             wide
           />
 
-          <SelectDropdown
+          <SelectDropdown<NameMode>
             value={nameMode}
             options={NAME_MODES}
             getLabel={(m) => t(NAME_MODE_KEYS[m])}
             onSelect={(m) => {
-              setNameMode(m as NameMode);
+              setNameMode(m);
               renderer.setNameDisplayMode(m);
             }}
             wide
           />
 
-          <SelectDropdown
+          <SelectDropdown<MarkerMode>
             value={markerMode}
             options={MARKER_MODES}
             getLabel={(m) => t(MARKER_MODE_KEYS[m])}
             onSelect={(m) => {
-              setMarkerMode(m as MarkerMode);
+              setMarkerMode(m);
               renderer.setMarkerDisplayMode(m);
             }}
             wide

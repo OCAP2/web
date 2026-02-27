@@ -36,7 +36,7 @@ export function SelectDropdown<T extends string>(
           class={styles.popup}
           classList={{ [styles.popupWide]: !!props.wide }}
         >
-          <For each={props.options as unknown as T[]}>
+          <For each={[...props.options]}>
             {(option) => {
               const disabled = () => props.isDisabled?.(option) ?? false;
               return (
