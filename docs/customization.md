@@ -258,7 +258,22 @@ https://github.com/OCAP2/web/blob/main/ui/src/styles/variables.css
 
 ## Output Format
 
-Return ONLY a JSON code block with the cssOverrides object. No explanation needed.
+Return TWO code blocks:
+
+1. A JSON object for use in `setting.json` under `"cssOverrides"`:
+```json
+{
+  "--accent-primary": "#...",
+  ...
+}
+```
+
+2. A single-line environment variable for Docker deployments:
+```bash
+OCAP_CUSTOMIZE_CSSOVERRIDES='{"--accent-primary":"#...","--bg-dark":"#..."}'
+```
+
+No explanation needed, just the two code blocks.
 
 ## My Theme Request
 
