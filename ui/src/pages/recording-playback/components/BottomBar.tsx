@@ -13,7 +13,6 @@ import {
   SkipForwardIcon,
 } from "../../../components/Icons";
 import { TimelineScrubber } from "./TimelineScrubber";
-import { SpeedSelector } from "./SpeedSelector";
 import { SelectDropdown } from "../../../components/SelectDropdown";
 import styles from "./BottomBar.module.css";
 
@@ -21,6 +20,8 @@ export interface BottomBarProps {
   panelOpen: Accessor<boolean>;
   onTogglePanel: () => void;
 }
+
+const SPEEDS = ["1", "2", "5", "10", "20", "30", "60"];
 
 type NameMode = "all" | "players" | "none";
 const NAME_MODES: NameMode[] = ["all", "players", "none"];
@@ -137,7 +138,12 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
 
         {/* Right: Speed, time mode, names, markers */}
         <div class={styles.controlsRight}>
-          <SpeedSelector />
+          <SelectDropdown
+            value={() => String(engine.playbackSpeed())}
+            options={SPEEDS}
+            getLabel={(s) => `${s}x`}
+            onSelect={(s) => engine.setSpeed(Number(s))}
+          />
 
           <SelectDropdown
             value={timeMode}
