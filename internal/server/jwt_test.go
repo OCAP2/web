@@ -34,8 +34,9 @@ func TestJWT_Tampered(t *testing.T) {
 	token, err := mgr.Create("")
 	require.NoError(t, err)
 
-	// Flip a character in the signature portion
-	tampered := token[:len(token)-1] + "X"
+	// Replace several characters to ensure actual signature bytes change
+	// (flipping only the last char can land on base64 padding bits)
+	tampered := token[:len(token)-4] + "XXXX"
 	assert.Error(t, mgr.Validate(tampered))
 }
 
