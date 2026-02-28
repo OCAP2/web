@@ -43,5 +43,8 @@ export default [
         ...globals.node,
       },
     },
+    rules: {
+      "solid/reactivity": "off",
+    },
   },
 ];

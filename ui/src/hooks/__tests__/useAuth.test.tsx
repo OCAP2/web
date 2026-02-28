@@ -30,7 +30,6 @@ vi.mock("../../data/apiClient", async () => {
 
 function TestConsumer(props: { onAuth: (auth: Auth) => void }) {
   const auth = useAuth();
-  // eslint-disable-next-line solid/reactivity -- test helper capturing value
   props.onAuth(auth);
   return <div data-testid="authenticated">{String(auth.authenticated())}</div>;
 }
