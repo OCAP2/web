@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, type Accessor, type Setter } from "solid-js";
 import type { ArmaCoord } from "../utils/coordinates";
 import type { WorldConfig } from "../data/types";
 import type { MapRenderer } from "./renderer.interface";
@@ -34,16 +34,16 @@ export class MockRenderer implements MapRenderer {
   private listeners = new Map<RendererEvent, Set<(...args: any[]) => void>>();
 
   // Signal-backed state
-  private _nameDisplayMode;
-  private _setNameDisplayMode;
-  private _markerDisplayMode;
-  private _setMarkerDisplayMode;
-  private _mapStyles;
-  private _setMapStyles;
-  private _activeStyleIndex;
-  private _setActiveStyleIndex;
-  private _layerVisibility;
-  private _setLayerVisibility;
+  private readonly _nameDisplayMode: Accessor<"players" | "all" | "none">;
+  private readonly _setNameDisplayMode: Setter<"players" | "all" | "none">;
+  private readonly _markerDisplayMode: Accessor<"all" | "noLabels" | "none">;
+  private readonly _setMarkerDisplayMode: Setter<"all" | "noLabels" | "none">;
+  private readonly _mapStyles: Accessor<MapStyleInfo[]>;
+  private readonly _setMapStyles: Setter<MapStyleInfo[]>;
+  private readonly _activeStyleIndex: Accessor<number>;
+  private readonly _setActiveStyleIndex: Setter<number>;
+  private readonly _layerVisibility: Accessor<Record<string, boolean>>;
+  private readonly _setLayerVisibility: Setter<Record<string, boolean>>;
 
   constructor() {
     const [ndm, setNdm] = createSignal<"players" | "all" | "none">("players");

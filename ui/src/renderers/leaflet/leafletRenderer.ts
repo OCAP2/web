@@ -1,6 +1,6 @@
 import L from "leaflet";
 import "leaflet-rotatedmarker";
-import { createSignal } from "solid-js";
+import { createSignal, type Accessor, type Setter } from "solid-js";
 import type { ArmaCoord } from "../../utils/coordinates";
 import { METERS_PER_DEGREE } from "../../utils/coordinates";
 import { closestEquivalentAngle } from "../../utils/math";
@@ -145,16 +145,16 @@ export class LeafletRenderer implements MapRenderer {
   private useMapLibreMode = false;
 
   // Signal-backed display mode state
-  private _nameDisplayMode;
-  private _setNameDisplayMode;
-  private _markerDisplayMode;
-  private _setMarkerDisplayMode;
-  private _mapStylesSig;
-  private _setMapStylesSig;
-  private _activeStyleIndexSig;
-  private _setActiveStyleIndexSig;
-  private _layerVisibility;
-  private _setLayerVisibility;
+  private readonly _nameDisplayMode: Accessor<"players" | "all" | "none">;
+  private readonly _setNameDisplayMode: Setter<"players" | "all" | "none">;
+  private readonly _markerDisplayMode: Accessor<"all" | "noLabels" | "none">;
+  private readonly _setMarkerDisplayMode: Setter<"all" | "noLabels" | "none">;
+  private readonly _mapStylesSig: Accessor<import("../renderer.types").MapStyleInfo[]>;
+  private readonly _setMapStylesSig: Setter<import("../renderer.types").MapStyleInfo[]>;
+  private readonly _activeStyleIndexSig: Accessor<number>;
+  private readonly _setActiveStyleIndexSig: Setter<number>;
+  private readonly _layerVisibility: Accessor<Record<string, boolean>>;
+  private readonly _setLayerVisibility: Setter<Record<string, boolean>>;
   private hideMarkerPopups = false;
 
   private layers: Record<LayerGroupKey, L.LayerGroup> = {
