@@ -1,5 +1,6 @@
 import L from "leaflet";
 import "leaflet-rotatedmarker";
+import { createSignal } from "solid-js";
 import type { ArmaCoord } from "../../utils/coordinates";
 import { METERS_PER_DEGREE } from "../../utils/coordinates";
 import { closestEquivalentAngle } from "../../utils/math";
@@ -143,9 +144,18 @@ export class LeafletRenderer implements MapRenderer {
   private world!: WorldConfig;
   private useMapLibreMode = false;
 
-  private nameDisplayMode: "players" | "all" | "none" = "players";
+  // Signal-backed display mode state
+  private _nameDisplayMode;
+  private _setNameDisplayMode;
+  private _markerDisplayMode;
+  private _setMarkerDisplayMode;
+  private _mapStylesSig;
+  private _setMapStylesSig;
+  private _activeStyleIndexSig;
+  private _setActiveStyleIndexSig;
+  private _layerVisibility;
+  private _setLayerVisibility;
   private hideMarkerPopups = false;
-  private markerDisplayMode: "all" | "noLabels" | "none" = "all";
 
   private layers: Record<LayerGroupKey, L.LayerGroup> = {
     entities: L.layerGroup(),
@@ -173,14 +183,41 @@ export class LeafletRenderer implements MapRenderer {
   private buildings3DLayer: L.LayerGroup | null = null;
 
   // Map style state
-  private _mapStyles: import("../renderer.types").MapStyleInfo[] = [];
-  private _activeStyleIndex = 0;
   private _styleSwitchFn: ((index: number) => void) | null = null;
 
   // Legacy-mode state
   private imageSize = 0;
   private multiplier = 1;
   private maxNativeZoom = 0;
+
+  constructor() {
+    const [ndm, setNdm] = createSignal<"players" | "all" | "none">("players");
+    this._nameDisplayMode = ndm;
+    this._setNameDisplayMode = setNdm;
+
+    const [mdm, setMdm] = createSignal<"all" | "noLabels" | "none">("all");
+    this._markerDisplayMode = mdm;
+    this._setMarkerDisplayMode = setMdm;
+
+    const [ms, setMs] = createSignal<import("../renderer.types").MapStyleInfo[]>([]);
+    this._mapStylesSig = ms;
+    this._setMapStylesSig = setMs;
+
+    const [asi, setAsi] = createSignal(0);
+    this._activeStyleIndexSig = asi;
+    this._setActiveStyleIndexSig = setAsi;
+
+    const [lv, setLv] = createSignal<Record<string, boolean>>({
+      entities: true,
+      systemMarkers: true,
+      projectileMarkers: true,
+      grid: false,
+      mapIcons: true,
+      buildings3D: true,
+    });
+    this._layerVisibility = lv;
+    this._setLayerVisibility = setLv;
+  }
 
   // ==================== Lifecycle ====================
 
@@ -386,22 +423,26 @@ export class LeafletRenderer implements MapRenderer {
             .catch(() => ({ index: i, ok: false }));
         });
         const activeIdx = savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0;
-        this._activeStyleIndex = activeIdx;
-        this._mapStyles = styleCandidates.map((c, i) => ({
+        this._setActiveStyleIndexSig(activeIdx);
+        this._setMapStylesSig(styleCandidates.map((c, i) => ({
           label: styleLabels[i] ?? c.label,
           available: false, // updated after probes
-        }));
+        })));
         this._styleSwitchFn = (index: number) => {
           const glMap2 = mlLayer.getMaplibreMap?.();
           if (!glMap2 || index < 0 || index >= styleCandidates.length) return;
           glMap2.setStyle(styleCandidates[index].url);
-          this._activeStyleIndex = index;
+          this._setActiveStyleIndexSig(index);
           try { localStorage.setItem("ocap-maplibre-style", String(index)); } catch { /* noop */ }
         };
         Promise.all(probes).then((results) => {
-          for (const r of results) {
-            this._mapStyles[r.index] = { ...this._mapStyles[r.index], available: r.ok };
-          }
+          this._setMapStylesSig((prev) => {
+            const updated = [...prev];
+            for (const r of results) {
+              updated[r.index] = { ...updated[r.index], available: r.ok };
+            }
+            return updated;
+          });
           // Generate preview thumbnails
           for (const r of results) {
             if (!r.ok) continue;
@@ -412,7 +453,11 @@ export class LeafletRenderer implements MapRenderer {
               transformRequest,
               (dataUrl) => {
                 if (dataUrl) {
-                  this._mapStyles[r.index] = { ...this._mapStyles[r.index], previewUrl: dataUrl };
+                  this._setMapStylesSig((prev) => {
+                    const updated = [...prev];
+                    updated[r.index] = { ...updated[r.index], previewUrl: dataUrl };
+                    return updated;
+                  });
                 }
               },
             );
@@ -556,29 +601,33 @@ export class LeafletRenderer implements MapRenderer {
       !!world.hasTopoRelief,
       !!world.hasColorRelief,
     ];
-    this._mapStyles = styleLabels.map((label, i) => ({
-      label,
-      available: styleFlags[i] && baseLayers.length > 0,
-    }));
+    {
+      const initialStyles: import("../renderer.types").MapStyleInfo[] = styleLabels.map((label, i) => ({
+        label,
+        available: styleFlags[i] && baseLayers.length > 0,
+      }));
 
-    // Generate preview thumbnails from tile URLs
-    if (baseLayers.length > 0) {
-      const tileZ = 4;
-      const tileX = 2;
-      const tileY = 6;
-      let layerIdx = 0;
-      for (let i = 0; i < styleFlags.length; i++) {
-        if (!styleFlags[i]) continue;
-        if (layerIdx >= baseLayers.length) break;
-        const layer = baseLayers[layerIdx];
-        const url = L.Util.template((layer as any)._url, {
-          s: (layer as any)._getSubdomain?.({ x: tileX, y: tileY }) ?? "",
-          x: tileX, y: tileY, z: tileZ,
-          ...layer.options,
-        });
-        this._mapStyles[i] = { ...this._mapStyles[i], previewUrl: url };
-        layerIdx++;
+      // Generate preview thumbnails from tile URLs
+      if (baseLayers.length > 0) {
+        const tileZ = 4;
+        const tileX = 2;
+        const tileY = 6;
+        let layerIdx = 0;
+        for (let i = 0; i < styleFlags.length; i++) {
+          if (!styleFlags[i]) continue;
+          if (layerIdx >= baseLayers.length) break;
+          const layer = baseLayers[layerIdx];
+          const url = L.Util.template((layer as any)._url, {
+            s: (layer as any)._getSubdomain?.({ x: tileX, y: tileY }) ?? "",
+            x: tileX, y: tileY, z: tileZ,
+            ...layer.options,
+          });
+          initialStyles[i] = { ...initialStyles[i], previewUrl: url };
+          layerIdx++;
+        }
       }
+
+      this._setMapStylesSig(initialStyles);
     }
 
     // Add first layer and set up switching
@@ -586,7 +635,7 @@ export class LeafletRenderer implements MapRenderer {
     if (baseLayers.length > 0) {
       baseLayers[0].addTo(this.map);
       activeLayer = baseLayers[0];
-      this._activeStyleIndex = 0;
+      this._setActiveStyleIndexSig(0);
     }
 
     // Map style indices (0=Topo, 1=Dark, 2=Relief, 3=Sat) to baseLayers array indices
@@ -608,7 +657,7 @@ export class LeafletRenderer implements MapRenderer {
       layer.addTo(this.map);
       layer.bringToBack();
       activeLayer = layer;
-      this._activeStyleIndex = index;
+      this._setActiveStyleIndexSig(index);
     };
 
     // Fit to tile bounds
@@ -779,9 +828,9 @@ export class LeafletRenderer implements MapRenderer {
           display = "none";
         } else if (this.hideMarkerPopups) {
           display = "none";
-        } else if (this.nameDisplayMode === "none") {
+        } else if (this._nameDisplayMode() === "none") {
           display = "none";
-        } else if (this.nameDisplayMode === "players" && !state.isPlayer) {
+        } else if (this._nameDisplayMode() === "players" && !state.isPlayer) {
           display = "none";
         }
         popupEl.style.display = display;
@@ -882,7 +931,7 @@ export class LeafletRenderer implements MapRenderer {
     layer.addTo(this.layers[layerKey]);
 
     // Open popup after adding to map so the DOM element exists
-    if (def.text && layer instanceof L.Marker && this.markerDisplayMode === "all") {
+    if (def.text && layer instanceof L.Marker && this._markerDisplayMode() === "all") {
       layer.openPopup();
     }
     return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts });
@@ -1092,7 +1141,16 @@ export class LeafletRenderer implements MapRenderer {
 
   // ==================== Layer visibility ====================
 
+  // Signal accessors exposed to UI components
+  get layerVisibility() { return this._layerVisibility; }
+  get nameDisplayMode() { return this._nameDisplayMode; }
+  get markerDisplayMode() { return this._markerDisplayMode; }
+  get mapStyles() { return this._mapStylesSig; }
+  get activeStyleIndex() { return this._activeStyleIndexSig; }
+
   setLayerVisible(layer: RenderLayer, visible: boolean): void {
+    this._setLayerVisibility((prev) => ({ ...prev, [layer]: visible }));
+
     if (layer === "grid") {
       if (!this.gridLayer) return;
       if (visible) {
@@ -1172,7 +1230,7 @@ export class LeafletRenderer implements MapRenderer {
   }
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
-    this.nameDisplayMode = mode;
+    this._setNameDisplayMode(mode);
     this.refreshPopupVisibility();
   }
 
@@ -1194,9 +1252,9 @@ export class LeafletRenderer implements MapRenderer {
         display = "none";
       } else if (this.hideMarkerPopups) {
         display = "none";
-      } else if (this.nameDisplayMode === "none") {
+      } else if (this._nameDisplayMode() === "none") {
         display = "none";
-      } else if (this.nameDisplayMode === "players" && internal && !internal.isPlayer) {
+      } else if (this._nameDisplayMode() === "players" && internal && !internal.isPlayer) {
         display = "none";
       }
       popupEl.style.display = display;
@@ -1206,7 +1264,7 @@ export class LeafletRenderer implements MapRenderer {
   // ==================== Briefing marker display mode ====================
 
   setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void {
-    this.markerDisplayMode = mode;
+    this._setMarkerDisplayMode(mode);
     const group = this.layers.briefingMarkers;
 
     if (mode === "none") {
@@ -1235,7 +1293,7 @@ export class LeafletRenderer implements MapRenderer {
    * to the map. Leaflet closes popups when layers are removed.
    */
   private reopenBriefingMarkerPopups(group: L.LayerGroup): void {
-    if (group === this.layers.briefingMarkers && this.markerDisplayMode !== "all") return;
+    if (group === this.layers.briefingMarkers && this._markerDisplayMode() !== "all") return;
     group.eachLayer((layer) => {
       if (layer instanceof L.Marker && layer.getPopup()) {
         layer.openPopup();
@@ -1244,14 +1302,6 @@ export class LeafletRenderer implements MapRenderer {
   }
 
   // ==================== Map styles ====================
-
-  getMapStyles(): import("../renderer.types").MapStyleInfo[] {
-    return this._mapStyles;
-  }
-
-  getActiveStyleIndex(): number {
-    return this._activeStyleIndex;
-  }
 
   setMapStyle(index: number): void {
     if (this._styleSwitchFn) {

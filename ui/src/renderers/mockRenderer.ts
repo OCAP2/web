@@ -1,3 +1,4 @@
+import { createSignal } from "solid-js";
 import type { ArmaCoord } from "../utils/coordinates";
 import type { WorldConfig } from "../data/types";
 import type { MapRenderer } from "./renderer.interface";
@@ -13,6 +14,7 @@ import type {
   PulseHandle,
   PulseOpts,
   RenderLayer,
+  MapStyleInfo,
   RendererEvent,
   RendererControls,
 } from "./renderer.types";
@@ -30,6 +32,47 @@ function makeHandle<T>(): T {
  */
 export class MockRenderer implements MapRenderer {
   private listeners = new Map<RendererEvent, Set<(...args: any[]) => void>>();
+
+  // Signal-backed state
+  private _nameDisplayMode;
+  private _setNameDisplayMode;
+  private _markerDisplayMode;
+  private _setMarkerDisplayMode;
+  private _mapStyles;
+  private _setMapStyles;
+  private _activeStyleIndex;
+  private _setActiveStyleIndex;
+  private _layerVisibility;
+  private _setLayerVisibility;
+
+  constructor() {
+    const [ndm, setNdm] = createSignal<"players" | "all" | "none">("players");
+    this._nameDisplayMode = ndm;
+    this._setNameDisplayMode = setNdm;
+
+    const [mdm, setMdm] = createSignal<"all" | "noLabels" | "none">("all");
+    this._markerDisplayMode = mdm;
+    this._setMarkerDisplayMode = setMdm;
+
+    const [ms, setMs] = createSignal<MapStyleInfo[]>([]);
+    this._mapStyles = ms;
+    this._setMapStyles = setMs;
+
+    const [asi, setAsi] = createSignal(0);
+    this._activeStyleIndex = asi;
+    this._setActiveStyleIndex = setAsi;
+
+    const [lv, setLv] = createSignal<Record<string, boolean>>({
+      entities: true,
+      systemMarkers: true,
+      projectileMarkers: true,
+      grid: false,
+      mapIcons: true,
+      buildings3D: true,
+    });
+    this._layerVisibility = lv;
+    this._setLayerVisibility = setLv;
+  }
 
   init(_container: HTMLElement, _world: WorldConfig): void {
     // no-op
@@ -105,32 +148,31 @@ export class MockRenderer implements MapRenderer {
     // no-op
   }
 
-  setLayerVisible(_layer: RenderLayer, _visible: boolean): void {
-    // no-op
+  // Signal accessors
+  get layerVisibility() { return this._layerVisibility; }
+  get markerDisplayMode() { return this._markerDisplayMode; }
+  get mapStyles() { return this._mapStyles; }
+  get activeStyleIndex() { return this._activeStyleIndex; }
+  get nameDisplayMode() { return this._nameDisplayMode; }
+
+  setLayerVisible(layer: RenderLayer, visible: boolean): void {
+    this._setLayerVisibility((prev) => ({ ...prev, [layer]: visible }));
   }
 
-  setMarkerDisplayMode(_mode: "all" | "noLabels" | "none"): void {
-    // no-op
-  }
-
-  getMapStyles(): import("./renderer.types").MapStyleInfo[] {
-    return [];
-  }
-
-  getActiveStyleIndex(): number {
-    return 0;
+  setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void {
+    this._setMarkerDisplayMode(mode);
   }
 
   setMapStyle(_index: number): void {
-    // no-op
+    this._setActiveStyleIndex(_index);
   }
 
   setSmoothingEnabled(_enabled: boolean): void {
     // no-op
   }
 
-  setNameDisplayMode(_mode: "players" | "all" | "none"): void {
-    // no-op
+  setNameDisplayMode(mode: "players" | "all" | "none"): void {
+    this._setNameDisplayMode(mode);
   }
 
   on(event: RendererEvent, cb: (...args: any[]) => void): void {
@@ -153,5 +195,15 @@ export class MockRenderer implements MapRenderer {
   /** Test helper: returns number of listeners for a given event. */
   listenerCount(event: RendererEvent): number {
     return this.listeners.get(event)?.size ?? 0;
+  }
+
+  /** Test helper: set map styles for testing. */
+  setMapStylesForTest(styles: MapStyleInfo[]): void {
+    this._setMapStyles(styles);
+  }
+
+  /** Test helper: set active style index for testing. */
+  setActiveStyleIndexForTest(index: number): void {
+    this._setActiveStyleIndex(index);
   }
 }

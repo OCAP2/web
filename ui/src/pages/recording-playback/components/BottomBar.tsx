@@ -72,9 +72,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
     return false;
   };
 
-  // ── Names / Markers state ──
-  const [nameMode, setNameMode] = createSignal<NameMode>("all");
-  const [markerMode, setMarkerMode] = createSignal<MarkerMode>("all");
+  // ── Names / Markers — read directly from renderer signals ──
 
   return (
     <div class={styles.bottomBar}>
@@ -155,24 +153,18 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           />
 
           <SelectDropdown<NameMode>
-            value={nameMode}
+            value={renderer.nameDisplayMode}
             options={NAME_MODES}
             getLabel={(m) => t(NAME_MODE_KEYS[m])}
-            onSelect={(m) => {
-              setNameMode(m);
-              renderer.setNameDisplayMode(m);
-            }}
+            onSelect={(m) => renderer.setNameDisplayMode(m)}
             wide
           />
 
           <SelectDropdown<MarkerMode>
-            value={markerMode}
+            value={renderer.markerDisplayMode}
             options={MARKER_MODES}
             getLabel={(m) => t(MARKER_MODE_KEYS[m])}
-            onSelect={(m) => {
-              setMarkerMode(m);
-              renderer.setMarkerDisplayMode(m);
-            }}
+            onSelect={(m) => renderer.setMarkerDisplayMode(m)}
             wide
           />
         </div>

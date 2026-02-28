@@ -1,4 +1,4 @@
-import { createSignal, createMemo, createEffect, Show, For } from "solid-js";
+import { createSignal, createMemo, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import { useRenderer } from "../../../hooks/useRenderer";
 import { useI18n } from "../../../hooks/useLocale";
@@ -10,29 +10,7 @@ import styles from "./MapControls.module.css";
 export function MapControls(): JSX.Element {
   const renderer = useRenderer();
   const { t } = useI18n();
-  const [activeStyle, setActiveStyle] = createSignal(0);
   const [hoveredPreview, setHoveredPreview] = createSignal<string | null>(null);
-
-  // Poll styles from renderer (they populate asynchronously after probing)
-  const [styleList, setStyleList] = createSignal(renderer.getMapStyles());
-  createEffect(() => {
-    // Re-read styles periodically until all previews are loaded
-    const id = setInterval(() => {
-      const current = renderer.getMapStyles();
-      setStyleList([...current]);
-      // Stop polling once all available styles have previews (or after 15s)
-      const allLoaded = current
-        .filter((s) => s.available)
-        .every((s) => s.previewUrl);
-      if (allLoaded && current.length > 0) clearInterval(id);
-    }, 500);
-    setTimeout(() => clearInterval(id), 15_000);
-  });
-
-  // Sync active index from renderer
-  createEffect(() => {
-    setActiveStyle(renderer.getActiveStyleIndex());
-  });
 
   const handleZoomIn = () => {
     const zoom = renderer.getZoom();
@@ -44,13 +22,8 @@ export function MapControls(): JSX.Element {
     renderer.setView(renderer.getCenter(), zoom - 1);
   };
 
-  const handleStyleClick = (index: number) => {
-    renderer.setMapStyle(index);
-    setActiveStyle(index);
-  };
-
   const availableStyles = createMemo(() =>
-    styleList()
+    renderer.mapStyles()
       .map((s, i) => ({ ...s, index: i }))
       .filter((s) => s.available),
   );
@@ -75,11 +48,11 @@ export function MapControls(): JSX.Element {
             {(opt) => (
               <button
                 class={`${styles.styleBtn} ${
-                  activeStyle() === opt.index
+                  renderer.activeStyleIndex() === opt.index
                     ? styles.styleBtnActive
                     : styles.styleBtnDefault
                 }`}
-                onClick={() => handleStyleClick(opt.index)}
+                onClick={() => renderer.setMapStyle(opt.index)}
                 title={opt.label}
                 onMouseEnter={() => setHoveredPreview(opt.previewUrl ?? null)}
                 onMouseLeave={() => setHoveredPreview(null)}

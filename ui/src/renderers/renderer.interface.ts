@@ -49,17 +49,22 @@ export interface MapRenderer {
   addPulse(pos: ArmaCoord, opts: PulseOpts): PulseHandle;
   removePulse(handle: PulseHandle): void;
 
-  // Layer visibility
+  // Layer visibility (signal accessors)
+  layerVisibility: () => Record<string, boolean>;
   setLayerVisible(layer: RenderLayer, visible: boolean): void;
+
+  // Marker display mode (signal accessor)
+  markerDisplayMode: () => "all" | "noLabels" | "none";
   setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void;
 
-  // Map styles
-  getMapStyles(): MapStyleInfo[];
-  getActiveStyleIndex(): number;
+  // Map styles (signal accessors)
+  mapStyles: () => MapStyleInfo[];
+  activeStyleIndex: () => number;
   setMapStyle(index: number): void;
 
   // Settings
   setSmoothingEnabled(enabled: boolean): void;
+  nameDisplayMode: () => "players" | "all" | "none";
   setNameDisplayMode(mode: "players" | "all" | "none"): void;
 
   // Events

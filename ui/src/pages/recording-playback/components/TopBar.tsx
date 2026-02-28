@@ -69,23 +69,12 @@ export function TopBar(props: TopBarProps): JSX.Element {
   // ── Layer control ──
 
   const [layersOpen, setLayersOpen] = createSignal(false);
-  const [layers, setLayers] = createSignal<Record<string, boolean>>({
-    entities: true,
-    systemMarkers: true,
-    projectileMarkers: true,
-    grid: false,
-    mapIcons: true,
-    buildings3D: true,
-  });
 
   let layerRef: HTMLDivElement | undefined;
   useClickOutside(() => layerRef, setLayersOpen);
 
   const toggleLayer = (key: string) => {
-    const current = layers();
-    const newValue = !current[key];
-    setLayers({ ...current, [key]: newValue });
-    renderer.setLayerVisible(key as RenderLayer, newValue);
+    renderer.setLayerVisible(key as RenderLayer, !renderer.layerVisibility()[key]);
   };
 
   const isMapLibre = () => !!props.worldConfig()?.maplibre;
@@ -219,7 +208,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
               <div class={styles.layerLabel}>{t("layers")}</div>
               <For each={layerItems()}>
                 {(item) => {
-                  const active = () => !!layers()[item.key];
+                  const active = () => !!renderer.layerVisibility()[item.key];
                   return (
                     <button
                       class={styles.layerItem}

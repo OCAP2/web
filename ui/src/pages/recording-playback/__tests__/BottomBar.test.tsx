@@ -304,50 +304,50 @@ describe("BottomBar - names dropdown", () => {
   it("opens and closes the names dropdown", () => {
     renderBottomBar();
 
-    const namesButton = screen.getByText("All Names").closest("button")!;
+    const namesButton = screen.getByText("Players Only").closest("button")!;
 
     // Dropdown is closed
-    expect(screen.queryByText("Players Only")).toBeNull();
+    expect(screen.queryByText("All Names")).toBeNull();
 
     // Open
     fireEvent.click(namesButton);
 
-    // All name modes visible (button text + dropdown option for "all")
-    expect(screen.getAllByText("All Names").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Players Only")).toBeTruthy();
+    // All name modes visible (button text + dropdown option for "players")
+    expect(screen.getAllByText("Players Only").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("All Names")).toBeTruthy();
     expect(screen.getByText("Hide All")).toBeTruthy();
 
     // Close by clicking again
     fireEvent.click(namesButton);
-    expect(screen.queryByText("Players Only")).toBeNull();
+    expect(screen.queryByText("All Names")).toBeNull();
   });
 
-  it("selects 'Players Only' mode and calls renderer.setNameDisplayMode", () => {
+  it("selects 'All Names' mode and calls renderer.setNameDisplayMode", () => {
     const { renderer } = renderBottomBar();
     const spy = vi.spyOn(renderer, "setNameDisplayMode");
 
-    const namesButton = screen.getByText("All Names").closest("button")!;
+    const namesButton = screen.getByText("Players Only").closest("button")!;
     fireEvent.click(namesButton);
 
-    const playersOption = screen.getAllByText("Players Only").find(
+    const allOption = screen.getAllByText("All Names").find(
       (el) => el.tagName === "BUTTON",
     )!;
-    fireEvent.click(playersOption);
+    fireEvent.click(allOption);
 
-    expect(spy).toHaveBeenCalledWith("players");
+    expect(spy).toHaveBeenCalledWith("all");
 
     // Dropdown should close
     expect(screen.queryByText("Hide All")).toBeNull();
 
-    // Button should now show "Players Only"
-    expect(screen.getByText("Players Only")).toBeTruthy();
+    // Button should now show "All Names"
+    expect(screen.getByText("All Names")).toBeTruthy();
   });
 
   it("selects 'Hide All' mode and calls renderer.setNameDisplayMode", () => {
     const { renderer } = renderBottomBar();
     const spy = vi.spyOn(renderer, "setNameDisplayMode");
 
-    const namesButton = screen.getByText("All Names").closest("button")!;
+    const namesButton = screen.getByText("Players Only").closest("button")!;
     fireEvent.click(namesButton);
 
     const hideAllOption = screen.getAllByText("Hide All").find(
@@ -361,43 +361,37 @@ describe("BottomBar - names dropdown", () => {
     expect(screen.getByText("Hide All")).toBeTruthy();
   });
 
-  it("selects 'All Names' mode and calls renderer.setNameDisplayMode", () => {
+  it("selects 'All Names' mode from default 'Players Only'", () => {
     const { renderer } = renderBottomBar();
     const spy = vi.spyOn(renderer, "setNameDisplayMode");
 
-    // First switch to "Players Only" to be able to switch back to "All Names"
-    const namesButton = screen.getByText("All Names").closest("button")!;
+    const namesButton = screen.getByText("Players Only").closest("button")!;
     fireEvent.click(namesButton);
-    const playersOption = screen.getAllByText("Players Only").find(
-      (el) => el.tagName === "BUTTON",
-    )!;
-    fireEvent.click(playersOption);
-
-    // Now switch back to "All Names"
-    const namesButton2 = screen.getByText("Players Only").closest("button")!;
-    fireEvent.click(namesButton2);
     const allOption = screen.getAllByText("All Names").find(
       (el) => el.tagName === "BUTTON",
     )!;
     fireEvent.click(allOption);
 
     expect(spy).toHaveBeenCalledWith("all");
+
+    // Button should now show "All Names"
+    expect(screen.getByText("All Names")).toBeTruthy();
   });
 
   it("closes names dropdown when clicking outside", () => {
     renderBottomBar();
 
-    const namesButton = screen.getByText("All Names").closest("button")!;
+    const namesButton = screen.getByText("Players Only").closest("button")!;
     fireEvent.click(namesButton);
 
     // Dropdown is open
-    expect(screen.getByText("Players Only")).toBeTruthy();
+    expect(screen.getByText("All Names")).toBeTruthy();
 
     // Click outside
     fireEvent(document, new MouseEvent("pointerdown", { bubbles: true }));
 
     // Dropdown should close
-    expect(screen.queryByText("Players Only")).toBeNull();
+    expect(screen.queryByText("All Names")).toBeNull();
   });
 });
 
