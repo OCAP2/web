@@ -1,9 +1,9 @@
 import { createContext, useContext } from "solid-js";
-import type { JSX } from "solid-js";
+import type { Accessor, JSX } from "solid-js";
 import { createI18n } from "../i18n/i18n";
 import type { I18n, Locale } from "../i18n/i18n";
 
-const I18nContext = createContext<I18n>();
+const I18nContext = createContext<Accessor<I18n>>();
 
 /**
  * Provider component that wraps the app with i18n context.
@@ -12,10 +12,11 @@ export function I18nProvider(props: {
   locale?: Locale;
   children: JSX.Element;
 }): JSX.Element {
-  // eslint-disable-next-line solid/reactivity -- createI18n takes a static initial value, not reactive
-  const i18n = createI18n(props.locale);
+  const locale = () => props.locale;
+  const i18n = createI18n(locale());
+  const accessor = () => i18n;
   return (
-    <I18nContext.Provider value={i18n}>
+    <I18nContext.Provider value={accessor}>
       {props.children}
     </I18nContext.Provider>
   );
@@ -34,5 +35,6 @@ export function useI18n(): {
   if (!ctx) {
     throw new Error("useI18n must be used within an I18nProvider");
   }
-  return { t: ctx.t, locale: ctx.locale, setLocale: ctx.setLocale };
+  const i18n = ctx();
+  return { t: i18n.t, locale: i18n.locale, setLocale: i18n.setLocale };
 }
