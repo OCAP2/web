@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatDuration, formatDate, relativeDate, getMapColor, hashColor, FALLBACK_PALETTE } from "../helpers";
+import { formatDuration, formatDate, relativeDate, getMapColor, hashColor, FALLBACK_PALETTE, isoToLocalInput, localInputToIso } from "../helpers";
 
 describe("formatDuration", () => {
   it("returns zero for non-positive values", () => {
@@ -140,5 +140,43 @@ describe("relativeDate", () => {
   it("returns a string with 'months' for a date 60 days ago", () => {
     const result = relativeDate("2024-04-16T12:00:00Z");
     expect(result.toLowerCase()).toContain("month");
+  });
+});
+
+describe("isoToLocalInput", () => {
+  it("returns empty string for undefined", () => {
+    expect(isoToLocalInput(undefined)).toBe("");
+  });
+
+  it("returns empty string for invalid date", () => {
+    expect(isoToLocalInput("not-a-date")).toBe("");
+  });
+
+  it("returns a valid datetime-local string", () => {
+    const result = isoToLocalInput("2024-06-15T12:00:00Z");
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+  });
+
+  it("round-trips with localInputToIso to preserve the same instant", () => {
+    const original = "2000-01-01T01:01:01.000+09:00";
+    const expectedUtc = new Date(original).toISOString();
+    const local = isoToLocalInput(original);
+    const result = localInputToIso(local);
+    expect(result).toBe(expectedUtc);
+  });
+});
+
+describe("localInputToIso", () => {
+  it("returns undefined for empty string", () => {
+    expect(localInputToIso("")).toBeUndefined();
+  });
+
+  it("returns undefined for invalid date", () => {
+    expect(localInputToIso("not-a-date")).toBeUndefined();
+  });
+
+  it("returns a UTC ISO string", () => {
+    const result = localInputToIso("2024-06-15T12:00:00");
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/);
   });
 });
