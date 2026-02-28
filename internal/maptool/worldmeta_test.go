@@ -1,6 +1,7 @@
 package maptool
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,4 +104,39 @@ func TestReadGradMehMeta_MissingFile(t *testing.T) {
 	_, err := ReadGradMehMeta(t.TempDir())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "read meta.json")
+}
+
+func TestNewParseGradMehStage_Valid(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "meta.json"), []byte(`{"worldName":"Altis","worldSize":30720,"displayName":"Altis","author":"BIS"}`), 0644)
+	os.MkdirAll(filepath.Join(dir, "sat"), 0755)
+
+	stage := NewParseGradMehStage()
+	job := &Job{InputPath: dir}
+	err := stage.Run(context.Background(), job)
+	require.NoError(t, err)
+	assert.Equal(t, "altis", job.WorldName)
+	assert.Equal(t, 30720, job.WorldSize)
+	assert.NotNil(t, job.GradMehMeta)
+}
+
+func TestNewParseGradMehStage_InvalidDir(t *testing.T) {
+	stage := NewParseGradMehStage()
+	job := &Job{InputPath: t.TempDir()}
+	err := stage.Run(context.Background(), job)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "validate grad_meh dir")
+}
+
+func TestNewParseGradMehStage_InvalidMeta(t *testing.T) {
+	// Directory passes validation (meta.json + sat/ exist) but meta.json is invalid
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "meta.json"), []byte(`{invalid json}`), 0644)
+	os.MkdirAll(filepath.Join(dir, "sat"), 0755)
+
+	stage := NewParseGradMehStage()
+	job := &Job{InputPath: dir}
+	err := stage.Run(context.Background(), job)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parse meta.json")
 }

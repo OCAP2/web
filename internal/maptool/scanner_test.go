@@ -90,6 +90,18 @@ func TestScanMaps_NonExistent(t *testing.T) {
 	assert.Nil(t, maps)
 }
 
+func TestScanMaps_NotADirectory(t *testing.T) {
+	// A regular file instead of a directory — ReadDir should fail
+	f, err := os.CreateTemp("", "not-a-dir")
+	require.NoError(t, err)
+	f.Close()
+	defer os.Remove(f.Name())
+
+	_, err = ScanMaps(f.Name())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read maps dir")
+}
+
 func TestScanMaps_MetaJSON(t *testing.T) {
 	dir := t.TempDir()
 
@@ -152,6 +164,19 @@ func TestScanMaps_Preview(t *testing.T) {
 	require.Len(t, maps, 1)
 
 	assert.True(t, maps[0].HasPreview)
+}
+
+func TestScanMaps_SkipsFiles(t *testing.T) {
+	dir := t.TempDir()
+	// Regular file in maps dir (not a directory) — should be skipped
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("hi"), 0644))
+	// Also add a real map directory
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "altis"), 0755))
+
+	maps, err := ScanMaps(dir)
+	require.NoError(t, err)
+	require.Len(t, maps, 1, "should skip non-directory entries")
+	assert.Equal(t, "altis", maps[0].Name)
 }
 
 func TestScanMaps_ExtraFiles(t *testing.T) {

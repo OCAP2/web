@@ -86,6 +86,11 @@ func TestWriteSpriteFiles(t *testing.T) {
 	}
 }
 
+func TestWriteSpriteFiles_InvalidDir(t *testing.T) {
+	err := WriteSpriteFiles("/nonexistent/dir/that/does/not/exist")
+	require.Error(t, err)
+}
+
 func TestSpriteIconNamesMatchStyles(t *testing.T) {
 	// Collect all icon-image values referenced across all style maps
 	styleIcons := make(map[string]bool)

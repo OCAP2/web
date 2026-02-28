@@ -147,6 +147,20 @@ func TestFindGradMehDir_NoValidDir(t *testing.T) {
 	assert.Contains(t, err.Error(), "no directory with meta.json and sat/ found")
 }
 
+func TestFindGradMehDir_SkipsFiles(t *testing.T) {
+	dir := t.TempDir()
+	// Regular file at top level — should be skipped
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("hi"), 0644))
+	// Valid grad_meh dir one level deep
+	subDir := filepath.Join(dir, "export")
+	require.NoError(t, os.MkdirAll(subDir, 0755))
+	setupGradMehDir(t, subDir)
+
+	found, err := FindGradMehDir(dir)
+	require.NoError(t, err)
+	assert.Equal(t, subDir, found)
+}
+
 func TestFindGradMehDir_NonexistentDirectory(t *testing.T) {
 	_, err := FindGradMehDir("/nonexistent/path/that/does/not/exist")
 	require.Error(t, err)

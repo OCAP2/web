@@ -41,6 +41,32 @@ func TestJobManager_ListJobs(t *testing.T) {
 	assert.Empty(t, jobs)
 }
 
+func TestJobManager_ListJobs_WithItems(t *testing.T) {
+	jm := NewJobManager(t.TempDir(), func() *Pipeline { return noopPipeline() })
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	jm.SubmitFunc("job-1", "world1", func(ctx context.Context, job *Job) error { return nil })
+	jm.SubmitFunc("job-2", "world2", func(ctx context.Context, job *Job) error { return nil })
+
+	require.Eventually(t, func() bool {
+		jobs := jm.ListJobs()
+		if len(jobs) != 2 {
+			return false
+		}
+		doneCount := 0
+		for _, j := range jobs {
+			if j.Status == StatusDone {
+				doneCount++
+			}
+		}
+		return doneCount == 2
+	}, 2*time.Second, 50*time.Millisecond)
+
+	jobs := jm.ListJobs()
+	assert.Len(t, jobs, 2)
+}
+
 func TestJobManager_SubmitFunc(t *testing.T) {
 	jm := NewJobManager(t.TempDir(), func() *Pipeline { return noopPipeline() })
 	go jm.Start(context.Background())
@@ -134,6 +160,75 @@ func TestJobManager_CancelJob_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestJobManager_CancelJob_AlreadyDone(t *testing.T) {
+	jm := NewJobManager(t.TempDir(), func() *Pipeline { return noopPipeline() })
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.SubmitFunc("done-1", "world", func(ctx context.Context, job *Job) error {
+		return nil
+	})
+	require.NoError(t, err)
+
+	// Wait for job to complete
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusDone
+	}, 2*time.Second, 50*time.Millisecond)
+
+	// Cancelling a done job should fail
+	err = jm.CancelJob(snap.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestJobManager_PipelineError(t *testing.T) {
+	failPipeline := func() *Pipeline {
+		return NewPipeline([]Stage{
+			{Name: "fail", Run: func(ctx context.Context, job *Job) error {
+				return fmt.Errorf("pipeline error")
+			}},
+		})
+	}
+
+	jm := NewJobManager(t.TempDir(), failPipeline)
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusFailed
+	}, 2*time.Second, 50*time.Millisecond)
+
+	got := jm.GetJob(snap.ID)
+	assert.Equal(t, StatusFailed, got.Status)
+	assert.Contains(t, got.Error, "pipeline error")
+}
+
+func TestJobManager_OnProgressWithPipeline(t *testing.T) {
+	jm := NewJobManager(t.TempDir(), func() *Pipeline { return noopPipeline() })
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	var received []Progress
+	jm.OnProgress(func(p Progress) {
+		received = append(received, p)
+	})
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusDone
+	}, 2*time.Second, 50*time.Millisecond)
+
+	assert.NotEmpty(t, received, "should have received progress callbacks")
+}
+
 func TestJobManager_GetJob_NotFound(t *testing.T) {
 	jm := NewJobManager(t.TempDir(), func() *Pipeline { return noopPipeline() })
 	got := jm.GetJob("nonexistent")
@@ -147,6 +242,27 @@ func TestJobManager_OnProgress(t *testing.T) {
 	// OnProgress is only used when pipeline.Run is invoked, which triggers
 	// the callback. We just verify it can be set without panic.
 	assert.False(t, called)
+}
+
+func TestJobManager_Submit_OutputDirFails(t *testing.T) {
+	// Use a file as mapsDir so MkdirAll(outputDir) fails
+	tmpFile := filepath.Join(t.TempDir(), "not-a-dir")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("blocker"), 0644))
+
+	jm := NewJobManager(tmpFile, func() *Pipeline { return noopPipeline() })
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusFailed
+	}, 2*time.Second, 50*time.Millisecond)
+
+	got := jm.GetJob(snap.ID)
+	assert.Equal(t, StatusFailed, got.Status)
 }
 
 // ─── EventHub tests ───

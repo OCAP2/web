@@ -100,3 +100,122 @@ func TestChainSegments_ConnectedSegments(t *testing.T) {
 	require.Len(t, result, 1)
 	assert.Len(t, result[0], 4)
 }
+
+func TestChainSegments_BackwardExtension(t *testing.T) {
+	// Segments provided in reverse order to exercise backward extension
+	// Chain: (30,30)→(20,20) then (10,10)→(20,20) — second segment connects at start
+	segs := [][2][2]float64{
+		{{20, 20}, {30, 30}},
+		{{10, 10}, {20, 20}},
+	}
+	result := chainSegments(segs)
+	require.Len(t, result, 1)
+	assert.Len(t, result[0], 3)
+}
+
+func TestChainSegments_DisjointSegments(t *testing.T) {
+	// Two segments that don't share endpoints → two polylines
+	segs := [][2][2]float64{
+		{{0, 0}, {10, 10}},
+		{{100, 100}, {200, 200}},
+	}
+	result := chainSegments(segs)
+	assert.Len(t, result, 2)
+}
+
+func TestMarchingSquares_SaddleCase5_AvgAbove(t *testing.T) {
+	// Case 5: bl and tr above level (bits 0+2). Average >= level → specific segment pair.
+	// Cell corners: bl=20, br=0, tr=20, tl=0. avg=(20+0+20+0)/4=10 >= 10
+	grid := []float32{
+		20, 0, // row 0 (south): bl=20, br=0
+		0, 20, // row 1 (north): tl=0, tr=20
+	}
+	lines := marchingSquares(grid, 2, 2, 10.0, 0, 0, 10)
+	assert.NotEmpty(t, lines, "saddle case 5 avg>=level should produce segments")
+}
+
+func TestMarchingSquares_SaddleCase5_AvgBelow(t *testing.T) {
+	// Case 5: bl and tr above level, but avg < level → else branch.
+	// Cell corners: bl=11, br=0, tr=11, tl=0. avg=(11+0+11+0)/4=5.5 < 10
+	grid := []float32{
+		11, 0, // row 0 (south): bl=11, br=0
+		0, 11, // row 1 (north): tl=0, tr=11
+	}
+	lines := marchingSquares(grid, 2, 2, 10.0, 0, 0, 10)
+	assert.NotEmpty(t, lines, "saddle case 5 avg<level should produce segments")
+}
+
+func TestMarchingSquares_SaddleCase10_AvgAbove(t *testing.T) {
+	// Case 10: br and tl above level (bits 1+3). Average >= level.
+	// Cell corners: bl=0, br=20, tr=0, tl=20. avg=(0+20+0+20)/4=10 >= 10
+	grid := []float32{
+		0, 20, // row 0 (south): bl=0, br=20
+		20, 0, // row 1 (north): tl=20, tr=0
+	}
+	lines := marchingSquares(grid, 2, 2, 10.0, 0, 0, 10)
+	assert.NotEmpty(t, lines, "saddle case 10 avg>=level should produce segments")
+}
+
+func TestMarchingSquares_SaddleCase10_AvgBelow(t *testing.T) {
+	// Case 10: br and tl above level, but avg < level → else branch.
+	// Cell corners: bl=0, br=11, tr=0, tl=11. avg=(0+11+0+11)/4=5.5 < 10
+	grid := []float32{
+		0, 11, // row 0 (south): bl=0, br=11
+		11, 0, // row 1 (north): tl=11, tr=0
+	}
+	lines := marchingSquares(grid, 2, 2, 10.0, 0, 0, 10)
+	assert.NotEmpty(t, lines, "saddle case 10 avg<level should produce segments")
+}
+
+func TestMarchingSquares_AllCases(t *testing.T) {
+	// Large grid with enough variation to hit all 14 non-trivial cases
+	grid := []float32{
+		0, 20, 20, 0, 20, // row 0 (south)
+		20, 0, 20, 20, 0, // row 1
+		20, 20, 0, 0, 20, // row 2
+		0, 20, 0, 20, 0,  // row 3
+		20, 0, 20, 0, 20, // row 4 (north)
+	}
+	lines := marchingSquares(grid, 5, 5, 10.0, 0, 0, 10)
+	assert.NotEmpty(t, lines, "diverse grid should produce contour segments")
+	// Should produce multiple polylines
+	totalPoints := 0
+	for _, line := range lines {
+		totalPoints += len(line)
+	}
+	assert.Greater(t, totalPoints, 4, "should have many contour points")
+}
+
+func TestGenerateContours_ShortLines(t *testing.T) {
+	// Test that very small grids can produce single-point "lines" that get filtered
+	// GenerateContours skips lines with len < 2
+	grid := []float32{
+		0, 0, 0,
+		0, 100, 0,
+		0, 0, 0,
+	}
+	features := GenerateContours(grid, 3, 3, 10.0, 0, 0, 50, 10)
+	// All features should have at least 2 coordinates
+	for _, f := range features {
+		coords := f.Geometry.Coordinates.([][2]float64)
+		assert.GreaterOrEqual(t, len(coords), 2)
+	}
+}
+
+func TestGenerateContours_WithOriginOffset(t *testing.T) {
+	grid := []float32{
+		0, 0, 0,
+		0, 100, 0,
+		0, 0, 0,
+	}
+	features := GenerateContours(grid, 3, 3, 10.0, 100, 200, 50, 10)
+	require.NotEmpty(t, features)
+	// Coordinates should be offset by origin / metersPerDegree
+	for _, f := range features {
+		coords := f.Geometry.Coordinates.([][2]float64)
+		for _, c := range coords {
+			assert.Greater(t, c[0], 0.0, "x should be positive with origin offset")
+			assert.Greater(t, c[1], 0.0, "y should be positive with origin offset")
+		}
+	}
+}

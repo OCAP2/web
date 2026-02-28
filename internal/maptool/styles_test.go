@@ -325,6 +325,211 @@ func TestGenerateStyleDocument_SourcesPerVariant(t *testing.T) {
 	}
 }
 
+func TestTopoLabelMinZoom(t *testing.T) {
+	// Known labels should have configured min zoom
+	assert.Equal(t, 10, topoLabelMinZoom("namecitycapital"))
+	assert.Equal(t, 12, topoLabelMinZoom("namecity"))
+	assert.Equal(t, 14, topoLabelMinZoom("namevillage"))
+	assert.Equal(t, 14, topoLabelMinZoom("namelocal"))
+	assert.Equal(t, 14, topoLabelMinZoom("citycenter"))
+
+	// Unknown label returns 0
+	assert.Equal(t, 0, topoLabelMinZoom("unknown_layer"))
+	assert.Equal(t, 0, topoLabelMinZoom("hill"))
+}
+
+func TestTopoTextLayoutZoomed_Known(t *testing.T) {
+	layout := topoTextLayoutZoomed("namecity")
+	assert.NotNil(t, layout["text-field"])
+	assert.NotNil(t, layout["text-size"])
+	// text-size should be an interpolation expression (array)
+	textSize, ok := layout["text-size"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "interpolate", textSize[0])
+}
+
+func TestTopoTextLayoutZoomed_Unknown(t *testing.T) {
+	layout := topoTextLayoutZoomed("unknown_layer")
+	// Should fall back to topoTextLayout (non-zoomed)
+	assert.NotNil(t, layout["text-field"])
+}
+
+func TestIsLayerVisible_Runway(t *testing.T) {
+	vis := layerVisibility{roads: true}
+	assert.True(t, isLayerVisible("runway", vis))
+
+	vis2 := layerVisibility{roads: false}
+	assert.False(t, isLayerVisible("runway", vis2))
+}
+
+func TestIsLayerVisible_Railway(t *testing.T) {
+	vis := layerVisibility{railway: true}
+	assert.True(t, isLayerVisible("railway", vis))
+	vis2 := layerVisibility{railway: false}
+	assert.False(t, isLayerVisible("railway", vis2))
+}
+
+func TestIsLayerVisible_Powerline(t *testing.T) {
+	vis := layerVisibility{powerline: true}
+	assert.True(t, isLayerVisible("powerline", vis))
+	vis2 := layerVisibility{powerline: false}
+	assert.False(t, isLayerVisible("powerline", vis2))
+}
+
+func TestIsLayerVisible_Contours(t *testing.T) {
+	vis := layerVisibility{contours: true}
+	assert.True(t, isLayerVisible("contours", vis))
+	assert.True(t, isLayerVisible("contours05", vis))
+	assert.True(t, isLayerVisible("contours50", vis))
+	vis2 := layerVisibility{contours: false}
+	assert.False(t, isLayerVisible("contours", vis2))
+}
+
+func TestIsLayerVisible_Rocks(t *testing.T) {
+	vis := layerVisibility{rocks: true}
+	assert.True(t, isLayerVisible("rocks", vis))
+	vis2 := layerVisibility{rocks: false}
+	assert.False(t, isLayerVisible("rocks", vis2))
+}
+
+func TestIsLayerVisible_Vegetation(t *testing.T) {
+	vis := layerVisibility{vegetation: true}
+	assert.True(t, isLayerVisible("tree", vis))
+	vis2 := layerVisibility{vegetation: false}
+	assert.False(t, isLayerVisible("tree", vis2))
+}
+
+func TestIsLayerVisible_Icons(t *testing.T) {
+	vis := layerVisibility{icons: true}
+	assert.True(t, isLayerVisible("church", vis))
+	vis2 := layerVisibility{icons: false}
+	assert.False(t, isLayerVisible("church", vis2))
+}
+
+func TestIsLayerVisible_Labels(t *testing.T) {
+	vis := layerVisibility{labels: true}
+	assert.True(t, isLayerVisible("namecity", vis))
+	vis2 := layerVisibility{labels: false}
+	assert.False(t, isLayerVisible("namecity", vis2))
+}
+
+func TestIsLayerVisible_Buildings(t *testing.T) {
+	vis := layerVisibility{buildings: true}
+	assert.True(t, isLayerVisible("house", vis))
+	vis2 := layerVisibility{buildings: false}
+	assert.False(t, isLayerVisible("house", vis2))
+}
+
+func TestBuildVectorFeatureLayers_SeaOpacity(t *testing.T) {
+	layers := []string{"sea"}
+	vis := layerVisibility{seaLand: true, seaWater: true, seaOpacity: 0.5}
+	result := buildVectorFeatureLayers(layers, vis)
+
+	// Find the "sea" layer and check paint opacity
+	for _, l := range result {
+		m := l.(map[string]interface{})
+		if m["id"] == "sea" {
+			paint := m["paint"].(map[string]interface{})
+			assert.Equal(t, 0.5, paint["fill-opacity"])
+		}
+	}
+}
+
+func TestBuildVectorFeatureLayers_SeaLandHidden(t *testing.T) {
+	layers := []string{"sea"}
+	vis := layerVisibility{seaLand: false, seaWater: true}
+	result := buildVectorFeatureLayers(layers, vis)
+
+	var ids []string
+	for _, l := range result {
+		m := l.(map[string]interface{})
+		ids = append(ids, m["id"].(string))
+	}
+	assert.Equal(t, -1, indexOf(ids, "land"), "land should be filtered when seaLand=false")
+	assert.NotEqual(t, -1, indexOf(ids, "sea"), "sea should still be present")
+}
+
+func TestBuildVectorFeatureLayers_SeaWaterHidden(t *testing.T) {
+	layers := []string{"sea"}
+	vis := layerVisibility{seaLand: true, seaWater: false}
+	result := buildVectorFeatureLayers(layers, vis)
+
+	var ids []string
+	for _, l := range result {
+		m := l.(map[string]interface{})
+		ids = append(ids, m["id"].(string))
+	}
+	assert.NotEqual(t, -1, indexOf(ids, "land"), "land should be present")
+	assert.Equal(t, -1, indexOf(ids, "sea"), "sea should be filtered when seaWater=false")
+}
+
+func TestGetLayerStyles_BridgeLayer(t *testing.T) {
+	styles := GetLayerStyles("road-bridge")
+	require.NotEmpty(t, styles)
+	assert.Equal(t, "bridges", categorizeLayer("road-bridge"))
+}
+
+func TestGetLayerStyles_ContourIntervals(t *testing.T) {
+	// contours05 should get contour-specific styles
+	styles := GetLayerStyles("contours05")
+	require.NotEmpty(t, styles)
+}
+
+func TestIsLayerVisible_Bridges(t *testing.T) {
+	vis := layerVisibility{bridges: true}
+	assert.True(t, isLayerVisible("road-bridge", vis))
+	vis2 := layerVisibility{bridges: false}
+	assert.False(t, isLayerVisible("road-bridge", vis2))
+}
+
+func TestBuildVectorFeatureLayers_FallbackLayer(t *testing.T) {
+	// "custom_unknown" categorizes as "other" which is not in topoRenderOrder
+	// so it hits the fallback code path
+	layers := []string{"sea", "custom_unknown"}
+	result := buildVectorFeatureLayers(layers, layerVisStandard)
+
+	var ids []string
+	for _, l := range result {
+		m := l.(map[string]interface{})
+		ids = append(ids, m["id"].(string))
+	}
+	// "custom_unknown" should be present via fallback with a circle style
+	assert.NotEqual(t, -1, indexOf(ids, "custom_unknown"), "unknown layer should be included via fallback")
+}
+
+func TestBuildTopoVectorFeatureLayers_Fallback(t *testing.T) {
+	// "hill" is a valid known layer but NOT in topoLayerOrder → hits fallback
+	layers := []string{"sea", "hill"}
+	result := buildTopoVectorFeatureLayers(layers)
+
+	var ids []string
+	for _, l := range result {
+		m := l.(map[string]interface{})
+		ids = append(ids, m["id"].(string))
+	}
+	assert.NotEqual(t, -1, indexOf(ids, "hill"), "hill should be present via fallback in topo layer order")
+}
+
+func TestLayerStyleToMap_WithFilter(t *testing.T) {
+	style := LayerStyle{
+		ID:          "test",
+		Type:        "fill",
+		SourceLayer: "test-src",
+		MinZoom:     10,
+		MaxZoom:     16,
+		Filter:      []interface{}{"==", "type", "major"},
+		Paint:       map[string]interface{}{"fill-color": "#000"},
+		Layout:      map[string]interface{}{"visibility": "visible"},
+	}
+	m := layerStyleToMap(style)
+	assert.Equal(t, "test", m["id"])
+	assert.Equal(t, 10, m["minzoom"])
+	assert.Equal(t, 16, m["maxzoom"])
+	assert.NotNil(t, m["filter"])
+	assert.NotNil(t, m["paint"])
+	assert.NotNil(t, m["layout"])
+}
+
 func indexOf(slice []string, val string) int {
 	for i, s := range slice {
 		if s == val {
