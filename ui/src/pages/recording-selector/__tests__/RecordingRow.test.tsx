@@ -167,10 +167,7 @@ describe("RecordingRow kills column", () => {
   it("does not render kills column when showKills is false", () => {
     const rec: Recording = { ...baseRec, killCount: 25 };
     const { container } = renderRow(rec, { showKills: false });
-    // Crosshair icon should not be present
-    container.querySelectorAll('svg circle[r="10"]');
-    // The Globe icon also has circles but the Crosshair one is specific
-    // Just verify 25 is not in text (it's not part of other fields)
+    // Verify kill count is not rendered (it's not part of other fields like duration or date)
     // Duration is 3600 = "1h 0m 0s", date is "1 Jan 2024" or similar
     expect(container.textContent).not.toContain("25");
   });

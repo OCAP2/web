@@ -553,7 +553,7 @@ describe("RecordingSelector", () => {
       // The first recording in descending date order should be selected (id=5 is most recent)
       const list = screen.getByTestId("recordings-list");
       const rows = list.querySelectorAll("[data-testid^='recording-']");
-      rows[0]?.getAttribute("data-testid");
+      expect(rows[0]?.getAttribute("data-testid")).toBe("recording-5");
       // The first row should now have selected styling (sidebar opens)
       expect(screen.getByTestId("detail-sidebar")).toBeDefined();
     });
