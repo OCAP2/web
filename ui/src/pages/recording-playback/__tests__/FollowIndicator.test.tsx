@@ -49,7 +49,7 @@ describe("FollowIndicator", () => {
     );
     engine.followEntity(1);
 
-    const { container } = render(() => (
+    render(() => (
       <TestProviders engine={engine} renderer={renderer}>
         <FollowIndicator />
       </TestProviders>

@@ -21,6 +21,7 @@ vi.mock("../../data/apiClient", async () => {
 
 function TestConsumer(props: { onConfig: (config: CustomizeConfig) => void }) {
   const config = useCustomize();
+  // eslint-disable-next-line solid/reactivity -- test helper capturing value
   props.onConfig(config());
   return <div data-testid="config">{JSON.stringify(config())}</div>;
 }

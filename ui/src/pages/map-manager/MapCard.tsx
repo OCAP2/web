@@ -20,7 +20,7 @@ export function MapCard(props: {
     <div
       class={styles.card}
       classList={{ [styles.cardSelected]: props.selected }}
-      onClick={props.onSelect}
+      onClick={() => props.onSelect()}
     >
       <div
         class={styles.cardPreview}

@@ -284,7 +284,7 @@ describe("BottomBar - time mode dropdown", () => {
   });
 
   it("closes time mode dropdown when clicking outside", () => {
-    const { container } = renderBottomBar();
+    renderBottomBar();
 
     const timeModeButton = screen.getByText("Recording Time Elapsed").closest("button")!;
     fireEvent.click(timeModeButton);

@@ -1,6 +1,6 @@
 import { createSignal, type Accessor } from "solid-js";
 
-import type { Manifest, EntityDef, EventDef } from "../data/types";
+import type { Manifest, EventDef } from "../data/types";
 import type { TimeConfig } from "./time";
 import type { ChunkManager } from "../data/chunkManager";
 import type { MapRenderer } from "../renderers/renderer.interface";

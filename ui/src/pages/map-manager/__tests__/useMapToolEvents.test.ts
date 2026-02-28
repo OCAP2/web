@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createRoot, createSignal } from "solid-js";
+import { createRoot } from "solid-js";
 import { useMapToolEvents } from "../useMapToolEvents";
 import type { JobInfo } from "../types";
 

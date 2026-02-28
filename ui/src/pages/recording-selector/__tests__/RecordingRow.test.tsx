@@ -99,7 +99,7 @@ describe("RecordingRow basic rendering", () => {
     const { container } = renderRow(baseRec, { selected: false });
     // The row itself has buttons (TagBadge is a button), but no play button
     // The play button is inside .rowPlay and only rendered when selected+ready
-    const row = screen.getByTestId("recording-rec-1");
+    screen.getByTestId("recording-rec-1");
     // The play button svg has a specific path, check for absence of the Play icon container
     const buttons = container.querySelectorAll("button");
     const playBtns = Array.from(buttons).filter((b) => {
@@ -168,7 +168,7 @@ describe("RecordingRow kills column", () => {
     const rec: Recording = { ...baseRec, killCount: 25 };
     const { container } = renderRow(rec, { showKills: false });
     // Crosshair icon should not be present
-    const crosshairCircles = container.querySelectorAll('svg circle[r="10"]');
+    container.querySelectorAll('svg circle[r="10"]');
     // The Globe icon also has circles but the Crosshair one is specific
     // Just verify 25 is not in text (it's not part of other fields)
     // Duration is 3600 = "1h 0m 0s", date is "1 Jan 2024" or similar

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
-import { Hint, showHint, hintVisible, hintMessage } from "../components/Hint";
+import { Hint, showHint } from "../components/Hint";
 
 beforeEach(() => {
   vi.useFakeTimers();

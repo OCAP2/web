@@ -90,7 +90,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
             classList={{
               [styles.panelToggleActive]: props.panelOpen(),
             }}
-            onClick={props.onTogglePanel}
+            onClick={() => props.onTogglePanel()}
           >
             <MapIcon size={12} />
             {t("panel")}

@@ -10,7 +10,6 @@ import { CapturedEvent } from "../../../playback/events/capturedEvent";
 import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
-import type { Side } from "../../../data/types";
 import { formatElapsedTime } from "../../../playback/time";
 import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";

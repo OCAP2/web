@@ -4,7 +4,7 @@ import { Unit } from "../entities/unit";
 import { Vehicle } from "../entities/vehicle";
 import { Group } from "../entities/group";
 import { EntityManager } from "../entityManager";
-import type { EntityDef, EntityState, Side } from "../../data/types";
+import type { EntityDef, EntityState } from "../../data/types";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -32,8 +32,8 @@ describe("MapControls", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(makeManifest([]));
 
-    const getZoomSpy = vi.spyOn(renderer, "getZoom").mockReturnValue(5);
-    const getCenterSpy = vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
+    vi.spyOn(renderer, "getZoom").mockReturnValue(5);
+    vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
     const setViewSpy = vi.spyOn(renderer, "setView");
 
     render(() => (
@@ -51,8 +51,8 @@ describe("MapControls", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(makeManifest([]));
 
-    const getZoomSpy = vi.spyOn(renderer, "getZoom").mockReturnValue(5);
-    const getCenterSpy = vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
+    vi.spyOn(renderer, "getZoom").mockReturnValue(5);
+    vi.spyOn(renderer, "getCenter").mockReturnValue([100, 200]);
     const setViewSpy = vi.spyOn(renderer, "setView");
 
     render(() => (

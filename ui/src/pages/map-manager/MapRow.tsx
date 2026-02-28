@@ -15,7 +15,7 @@ export function MapRow(props: {
     <div
       class={styles.row}
       classList={{ [styles.rowSelected]: props.selected }}
-      onClick={props.onSelect}
+      onClick={() => props.onSelect()}
     >
       <span class={styles.rowName}>{props.map.name}</span>
       <span class={styles.rowSize}>

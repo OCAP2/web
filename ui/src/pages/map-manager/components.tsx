@@ -20,6 +20,7 @@ export function StatusStrip(props: {
   onCancel: (id: string) => void;
 }): JSX.Element {
   const [openPanel, setOpenPanel] = createSignal<"tools" | "jobs" | null>(null);
+  // eslint-disable-next-line solid/reactivity -- ticker signal, accessor intentionally unused
   const [, setTick] = createSignal(0);
   let stripRef: HTMLDivElement | undefined;
 

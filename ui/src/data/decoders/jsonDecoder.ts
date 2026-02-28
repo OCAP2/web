@@ -64,14 +64,6 @@ interface RawJsonOperation {
 
 // ───────── Side index lookup ─────────
 
-const SIDE_INDEX: Record<number, string> = {
-  "-1": "GLOBAL",
-  0: "EAST",
-  1: "WEST",
-  2: "GUER",
-  3: "CIV",
-};
-
 // Offset used in legacy JSON: arrSide = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"]
 // markerJSON[6] + 1 is the index into arrSide
 const MARKER_SIDE_MAP: string[] = ["GLOBAL", "EAST", "WEST", "GUER", "CIV"];

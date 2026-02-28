@@ -5,7 +5,6 @@ import {
   registerShortcuts,
   unregisterShortcuts,
   leftPanelVisible,
-  activePanelTab,
   setLeftPanelVisible,
   setActivePanelTab,
 } from "../shortcuts";

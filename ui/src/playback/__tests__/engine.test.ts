@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { PlaybackEngine } from "../engine";
 import { MockRenderer } from "../../renderers/mockRenderer";
-import type { Manifest, EntityDef, EventDef, ChunkData } from "../../data/types";
+import type { Manifest, EntityDef, ChunkData } from "../../data/types";
 import type { ChunkManager } from "../../data/chunkManager";
-import { Unit } from "../entities/unit";
 
 // ---------------------------------------------------------------------------
 // Helpers

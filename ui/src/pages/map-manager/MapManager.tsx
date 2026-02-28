@@ -3,7 +3,7 @@ import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "
 import { useNavigate } from "@solidjs/router";
 import { ApiClient } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
-import type { ToolSet, MapInfo, JobInfo } from "./types";
+import type { ToolSet, MapInfo } from "./types";
 import { useMapToolEvents } from "./useMapToolEvents";
 import { StatusStrip } from "./components";
 import { MapCard } from "./MapCard";
@@ -14,7 +14,6 @@ import { totalDiskMB } from "./helpers";
 import {
   ArrowLeftIcon,
   SearchIcon,
-  UploadIcon,
   PaletteIcon,
   GridIcon,
   ListIcon,

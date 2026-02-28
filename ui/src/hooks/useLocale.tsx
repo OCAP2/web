@@ -12,6 +12,7 @@ export function I18nProvider(props: {
   locale?: Locale;
   children: JSX.Element;
 }): JSX.Element {
+  // eslint-disable-next-line solid/reactivity -- capturing initial locale, not reactive
   const i18n = createI18n(props.locale);
   return (
     <I18nContext.Provider value={i18n}>

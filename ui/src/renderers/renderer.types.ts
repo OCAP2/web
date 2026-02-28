@@ -3,6 +3,7 @@ import type { Side, AliveState } from "../data/types";
 
 // --------------- Opaque handle types ---------------
 
+/* eslint-disable @typescript-eslint/no-unused-vars -- brand symbols are used only via typeof */
 declare const markerBrand: unique symbol;
 /** Opaque handle returned by createEntityMarker. */
 export type MarkerHandle = { readonly _brand: typeof markerBrand; _internal: unknown };
@@ -21,6 +22,7 @@ export type LineHandle = { readonly _brand: typeof lineBrand; _internal: unknown
 declare const pulseBrand: unique symbol;
 /** Opaque handle returned by addPulse. */
 export type PulseHandle = { readonly _brand: typeof pulseBrand; _internal: unknown };
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // --------------- Entity markers ---------------
 

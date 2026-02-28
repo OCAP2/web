@@ -39,14 +39,14 @@ export function ImportDialog(props: {
   };
 
   return (
-    <div class={styles.overlay} onClick={props.onClose}>
+    <div class={styles.overlay} onClick={() => props.onClose()}>
       <div class={styles.dialog} onClick={(e) => e.stopPropagation()}>
         <div class={styles.dialogHeader}>
           <div class={styles.dialogTitleGroup}>
             <span class={styles.dialogTitleIcon}><FilePlusIcon size={16} /></span>
             <span class={styles.dialogTitleText}>Import Map</span>
           </div>
-          <button class={styles.closeBtn} onClick={props.onClose}>
+          <button class={styles.closeBtn} onClick={() => props.onClose()}>
             <XIcon size={14} />
           </button>
         </div>
@@ -143,7 +143,7 @@ export function ImportDialog(props: {
                   {file() ? "Ready to import" : "Select a .zip file"}
                 </span>
                 <div class={styles.footerActions}>
-                  <button class={styles.btnCancel} onClick={props.onClose}>
+                  <button class={styles.btnCancel} onClick={() => props.onClose()}>
                     Cancel
                   </button>
                   <button
@@ -189,7 +189,7 @@ export function DeleteConfirm(props: {
   onClose: () => void;
 }): JSX.Element {
   return (
-    <div class={styles.overlay} onClick={props.onClose}>
+    <div class={styles.overlay} onClick={() => props.onClose()}>
       <div class={styles.deleteDialog} onClick={(e) => e.stopPropagation()}>
         <div class={styles.deleteBody}>
           <div class={styles.deleteIconWrap}>
@@ -204,10 +204,10 @@ export function DeleteConfirm(props: {
           </p>
         </div>
         <div class={styles.deleteFooter}>
-          <button class={styles.btnCancel} onClick={props.onClose}>
+          <button class={styles.btnCancel} onClick={() => props.onClose()}>
             Cancel
           </button>
-          <button class={styles.btnDelete} onClick={props.onConfirm}>
+          <button class={styles.btnDelete} onClick={() => props.onConfirm()}>
             <TrashIcon size={12} /> Delete
           </button>
         </div>

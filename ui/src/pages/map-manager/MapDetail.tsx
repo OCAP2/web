@@ -7,7 +7,6 @@ import {
   XIcon,
   TrashIcon,
   CheckIcon,
-  HardDriveIcon,
 } from "../../components/Icons";
 import styles from "./MapDetail.module.css";
 
@@ -44,7 +43,7 @@ export function MapDetail(props: {
             </div>
           </Show>
         </div>
-        <button class={styles.heroClose} onClick={props.onClose}>
+        <button class={styles.heroClose} onClick={() => props.onClose()}>
           <XIcon size={14} />
         </button>
       </div>
@@ -197,7 +196,7 @@ export function MapDetail(props: {
 
       {/* Actions */}
       <div class={styles.actions}>
-        <button class={styles.deleteBtn} onClick={props.onDelete}>
+        <button class={styles.deleteBtn} onClick={() => props.onDelete()}>
           <TrashIcon size={12} /> Delete Map
         </button>
       </div>

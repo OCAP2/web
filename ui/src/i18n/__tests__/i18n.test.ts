@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { createRoot } from "solid-js";
 import { detectLocale, createI18n } from "../i18n";
 import type { Locale } from "../i18n";

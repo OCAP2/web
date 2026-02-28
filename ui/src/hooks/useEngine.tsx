@@ -12,6 +12,7 @@ export function EngineProvider(props: {
   children: JSX.Element;
 }): JSX.Element {
   return (
+    // eslint-disable-next-line solid/reactivity -- stable ref, not reactive
     <EngineContext.Provider value={props.engine}>
       {props.children}
     </EngineContext.Provider>

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
 import { MapManager } from "../MapManager";
-import type { ToolSet, MapInfo, JobInfo } from "../types";
+import type { ToolSet, MapInfo } from "../types";
 
 // ─── Mock API ───
 
@@ -277,7 +277,7 @@ describe("MapManager", () => {
     // Switch to list view
     const buttons = Array.from(container.querySelectorAll("button"));
     // List icon button is the second view toggle button
-    const listBtn = buttons.find((b) =>
+    const _listBtn = buttons.find((b) =>
       b.querySelector("svg") && b.className.includes("viewBtn") && !b.className.includes("Active"),
     );
     // Alternatively, click based on position in the viewToggle group
@@ -455,7 +455,7 @@ describe("MapManager", () => {
 
   it("navigates to / when API fetch fails on mount", async () => {
     mockGetMapToolTools.mockRejectedValue(new Error("unauthorized"));
-    const { container } = renderPage();
+    renderPage();
     await flush();
     // Should not show loading content when redirected
     expect(mockGetMapToolTools).toHaveBeenCalled();

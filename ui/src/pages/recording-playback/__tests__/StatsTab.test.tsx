@@ -311,7 +311,7 @@ describe("StatsTab", () => {
     engine.loadRecording(makeManifest(entities, events, 20));
     engine.seekTo(10);
 
-    const { container } = render(() => (
+    render(() => (
       <TestProviders engine={engine} renderer={renderer}>
         <StatsTab />
       </TestProviders>
