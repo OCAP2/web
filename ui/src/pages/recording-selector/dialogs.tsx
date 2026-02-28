@@ -15,12 +15,10 @@ export function EditModal(props: {
   onClose: () => void;
   onSave: (id: string, data: { missionName?: string; tag?: string; date?: string }) => void;
 }): JSX.Element {
-  // eslint-disable-next-line solid/reactivity -- capturing initial form values from stable props
-  const [name, setName] = createSignal(props.rec.missionName);
-  // eslint-disable-next-line solid/reactivity
-  const [tag, setTag] = createSignal(props.rec.tag ?? "");
-  // eslint-disable-next-line solid/reactivity
-  const [date, setDate] = createSignal(props.rec.date?.slice(0, 10) ?? "");
+  const rec = () => props.rec;
+  const [name, setName] = createSignal(rec().missionName);
+  const [tag, setTag] = createSignal(rec().tag ?? "");
+  const [date, setDate] = createSignal(rec().date?.slice(0, 10) ?? "");
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
