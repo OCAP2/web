@@ -1,8 +1,8 @@
 import { createContext, useContext } from "solid-js";
-import type { JSX } from "solid-js";
+import type { Accessor, JSX } from "solid-js";
 import type { PlaybackEngine } from "../playback/engine";
 
-const EngineContext = createContext<PlaybackEngine>();
+const EngineContext = createContext<Accessor<PlaybackEngine>>();
 
 /**
  * Provider component that wraps children with PlaybackEngine context.
@@ -11,9 +11,9 @@ export function EngineProvider(props: {
   engine: PlaybackEngine;
   children: JSX.Element;
 }): JSX.Element {
+  const engine = () => props.engine;
   return (
-    // eslint-disable-next-line solid/reactivity -- stable ref, not reactive
-    <EngineContext.Provider value={props.engine}>
+    <EngineContext.Provider value={engine}>
       {props.children}
     </EngineContext.Provider>
   );
@@ -28,5 +28,5 @@ export function useEngine(): PlaybackEngine {
   if (!ctx) {
     throw new Error("useEngine must be used within an EngineProvider");
   }
-  return ctx;
+  return ctx();
 }

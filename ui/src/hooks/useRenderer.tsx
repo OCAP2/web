@@ -1,8 +1,8 @@
 import { createContext, useContext } from "solid-js";
-import type { JSX } from "solid-js";
+import type { Accessor, JSX } from "solid-js";
 import type { MapRenderer } from "../renderers/renderer.interface";
 
-const RendererContext = createContext<MapRenderer>();
+const RendererContext = createContext<Accessor<MapRenderer>>();
 
 /**
  * Provider component that wraps children with MapRenderer context.
@@ -11,9 +11,9 @@ export function RendererProvider(props: {
   renderer: MapRenderer;
   children: JSX.Element;
 }): JSX.Element {
+  const renderer = () => props.renderer;
   return (
-    // eslint-disable-next-line solid/reactivity -- stable ref, not reactive
-    <RendererContext.Provider value={props.renderer}>
+    <RendererContext.Provider value={renderer}>
       {props.children}
     </RendererContext.Provider>
   );
@@ -28,5 +28,5 @@ export function useRenderer(): MapRenderer {
   if (!ctx) {
     throw new Error("useRenderer must be used within a RendererProvider");
   }
-  return ctx;
+  return ctx();
 }
