@@ -86,7 +86,7 @@ func TestGetOperations(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := t.Context()
 
@@ -288,7 +288,7 @@ func TestStoreOperation(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := Handler{
 		repoOperation: repo,
@@ -303,12 +303,12 @@ func TestStoreOperation(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 
-		writer.WriteField("secret", "test-secret")
-		writer.WriteField("worldName", "altis")
-		writer.WriteField("missionName", "Test Mission")
-		writer.WriteField("missionDuration", "3600")
-		writer.WriteField("filename", "test_upload")
-		writer.WriteField("tag", "coop")
+		require.NoError(t, writer.WriteField("secret", "test-secret"))
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Test Mission"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "test_upload"))
+		require.NoError(t, writer.WriteField("tag", "coop"))
 
 		// Create file part
 		fileWriter, err := writer.CreateFormFile("file", "test_upload.json.gz")
@@ -316,10 +316,11 @@ func TestStoreOperation(t *testing.T) {
 
 		// Write gzipped JSON data
 		gw := gzip.NewWriter(fileWriter)
-		gw.Write([]byte(`{"test": "data"}`))
-		gw.Close()
+		_, err = gw.Write([]byte(`{"test": "data"}`))
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
 
-		writer.Close()
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -339,8 +340,8 @@ func TestStoreOperation(t *testing.T) {
 	t.Run("wrong secret", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		writer.WriteField("secret", "wrong-secret")
-		writer.Close()
+		require.NoError(t, writer.WriteField("secret", "wrong-secret"))
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -355,9 +356,9 @@ func TestStoreOperation(t *testing.T) {
 	t.Run("invalid duration", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		writer.WriteField("secret", "test-secret")
-		writer.WriteField("missionDuration", "not-a-number")
-		writer.Close()
+		require.NoError(t, writer.WriteField("secret", "test-secret"))
+		require.NoError(t, writer.WriteField("missionDuration", "not-a-number"))
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -534,9 +535,13 @@ func TestStaticFileServing(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
-	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
-	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "markers"), 0755))
+	repoMarker, err := NewRepoMarker(filepath.Join(dir, "markers"))
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "ammo"), 0755))
+	repoAmmo, err := NewRepoAmmo(filepath.Join(dir, "ammo"))
+	require.NoError(t, err)
 
 	e := echo.New()
 	NewHandler(e, repo, repoMarker, repoAmmo, Setting{}, WithStaticFS(os.DirFS(staticDir)))
@@ -589,9 +594,13 @@ func TestStaticFileServingWithPrefix(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
-	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
-	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "markers"), 0755))
+	repoMarker, err := NewRepoMarker(filepath.Join(dir, "markers"))
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "ammo"), 0755))
+	repoAmmo, err := NewRepoAmmo(filepath.Join(dir, "ammo"))
+	require.NoError(t, err)
 
 	e := echo.New()
 	NewHandler(e, repo, repoMarker, repoAmmo, Setting{PrefixURL: "/sub/"}, WithStaticFS(os.DirFS(staticDir)))
@@ -827,7 +836,7 @@ func TestStoreOperationWithConversionTrigger(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	trigger := &mockConversionTrigger{}
 
@@ -843,18 +852,20 @@ func TestStoreOperationWithConversionTrigger(t *testing.T) {
 	// Create multipart form
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "test-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "Trigger Test")
-	writer.WriteField("missionDuration", "3600")
-	writer.WriteField("filename", "trigger_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "test-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "Trigger Test"))
+	require.NoError(t, writer.WriteField("missionDuration", "3600"))
+	require.NoError(t, writer.WriteField("filename", "trigger_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 
-	fileWriter, _ := writer.CreateFormFile("file", "trigger_test.json.gz")
+	fileWriter, err := writer.CreateFormFile("file", "trigger_test.json.gz")
+	require.NoError(t, err)
 	gw := gzip.NewWriter(fileWriter)
-	gw.Write([]byte(`{"test": "trigger"}`))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte(`{"test": "trigger"}`))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -892,19 +903,20 @@ func TestStoreOperation_NoConversion_MarksCompleted(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "test-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "No Conversion Mission")
-	writer.WriteField("missionDuration", "3600")
-	writer.WriteField("filename", "no_conversion_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "test-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "No Conversion Mission"))
+	require.NoError(t, writer.WriteField("missionDuration", "3600"))
+	require.NoError(t, writer.WriteField("filename", "no_conversion_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 
 	fileWriter, err := writer.CreateFormFile("file", "no_conversion_test.json.gz")
 	require.NoError(t, err)
 	gw := gzip.NewWriter(fileWriter)
-	gw.Write([]byte(`{"test": "data"}`))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte(`{"test": "data"}`))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -954,19 +966,20 @@ func TestStoreOperation_WithConversion_StaysPending(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "test-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "With Conversion Mission")
-	writer.WriteField("missionDuration", "3600")
-	writer.WriteField("filename", "with_conversion_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "test-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "With Conversion Mission"))
+	require.NoError(t, writer.WriteField("missionDuration", "3600"))
+	require.NoError(t, writer.WriteField("filename", "with_conversion_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 
 	fileWriter, err := writer.CreateFormFile("file", "with_conversion_test.json.gz")
 	require.NoError(t, err)
 	gw := gzip.NewWriter(fileWriter)
-	gw.Write([]byte(`{"test": "data"}`))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte(`{"test": "data"}`))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1010,7 +1023,7 @@ func TestNewHandler(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	repoMarker, err := NewRepoMarker(markerDir)
 	require.NoError(t, err)
@@ -1055,13 +1068,16 @@ func TestNewHandlerWithOptions(t *testing.T) {
 	ammoDir := filepath.Join(dir, "ammo")
 
 	for _, d := range []string{dataDir, markerDir, ammoDir} {
-		os.MkdirAll(d, 0755)
+		require.NoError(t, os.MkdirAll(d, 0755))
 	}
 
-	repo, _ := NewRepoOperation(pathDB)
-	defer repo.db.Close()
-	repoMarker, _ := NewRepoMarker(markerDir)
-	repoAmmo, _ := NewRepoAmmo(ammoDir)
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+	repoMarker, err := NewRepoMarker(markerDir)
+	require.NoError(t, err)
+	repoAmmo, err := NewRepoAmmo(ammoDir)
+	require.NoError(t, err)
 
 	setting := Setting{
 		Data:    dataDir,
@@ -1150,7 +1166,7 @@ func TestStoreOperation_MissingFile(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := Handler{
 		repoOperation: repo,
@@ -1163,14 +1179,14 @@ func TestStoreOperation_MissingFile(t *testing.T) {
 	// Create multipart form without file
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "test-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "No File Test")
-	writer.WriteField("missionDuration", "3600")
-	writer.WriteField("filename", "no_file_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "test-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "No File Test"))
+	require.NoError(t, writer.WriteField("missionDuration", "3600"))
+	require.NoError(t, writer.WriteField("filename", "no_file_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 	// No file field added
-	writer.Close()
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1192,7 +1208,7 @@ func TestStoreOperation_InvalidMissionDuration(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := Handler{
 		repoOperation: repo,
@@ -1205,18 +1221,20 @@ func TestStoreOperation_InvalidMissionDuration(t *testing.T) {
 	// Create multipart form with invalid missionDuration
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "test-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "Invalid Duration Test")
-	writer.WriteField("missionDuration", "not-a-number") // Invalid
-	writer.WriteField("filename", "invalid_duration_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "test-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "Invalid Duration Test"))
+	require.NoError(t, writer.WriteField("missionDuration", "not-a-number")) // Invalid
+	require.NoError(t, writer.WriteField("filename", "invalid_duration_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 
-	fileWriter, _ := writer.CreateFormFile("file", "test.json.gz")
+	fileWriter, err := writer.CreateFormFile("file", "test.json.gz")
+	require.NoError(t, err)
 	gw := gzip.NewWriter(fileWriter)
-	gw.Write([]byte(`{"test": "data"}`))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte(`{"test": "data"}`))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1237,7 +1255,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	jwtMgr := NewJWTManager("test-secret", time.Hour)
 
@@ -1257,17 +1275,18 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		// Deliberately omit the secret field
-		writer.WriteField("worldName", "altis")
-		writer.WriteField("missionName", "Cookie Upload Test")
-		writer.WriteField("missionDuration", "3600")
-		writer.WriteField("filename", "cookie_upload_test")
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Cookie Upload Test"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "cookie_upload_test"))
 
 		fileWriter, err := writer.CreateFormFile("file", "cookie_upload_test.json.gz")
 		require.NoError(t, err)
 		gw := gzip.NewWriter(fileWriter)
-		gw.Write([]byte(`{"test": "cookie auth"}`))
-		gw.Close()
-		writer.Close()
+		_, err = gw.Write([]byte(`{"test": "cookie auth"}`))
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1288,11 +1307,11 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 	t.Run("invalid JWT token without secret fails", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		writer.WriteField("worldName", "altis")
-		writer.WriteField("missionName", "Bad Cookie Test")
-		writer.WriteField("missionDuration", "3600")
-		writer.WriteField("filename", "bad_cookie_test")
-		writer.Close()
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Bad Cookie Test"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "bad_cookie_test"))
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1308,11 +1327,11 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 	t.Run("no secret and no token fails", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		writer.WriteField("worldName", "altis")
-		writer.WriteField("missionName", "No Auth Test")
-		writer.WriteField("missionDuration", "3600")
-		writer.WriteField("filename", "no_auth_test")
-		writer.Close()
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "No Auth Test"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "no_auth_test"))
+		require.NoError(t, writer.Close())
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
@@ -1334,7 +1353,7 @@ func TestStoreOperation_WrongSecret(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := Handler{
 		repoOperation: repo,
@@ -1347,18 +1366,20 @@ func TestStoreOperation_WrongSecret(t *testing.T) {
 	// Create multipart form with wrong secret
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("secret", "wrong-secret")
-	writer.WriteField("worldName", "altis")
-	writer.WriteField("missionName", "Wrong Secret Test")
-	writer.WriteField("missionDuration", "3600")
-	writer.WriteField("filename", "wrong_secret_test")
-	writer.WriteField("tag", "coop")
+	require.NoError(t, writer.WriteField("secret", "wrong-secret"))
+	require.NoError(t, writer.WriteField("worldName", "altis"))
+	require.NoError(t, writer.WriteField("missionName", "Wrong Secret Test"))
+	require.NoError(t, writer.WriteField("missionDuration", "3600"))
+	require.NoError(t, writer.WriteField("filename", "wrong_secret_test"))
+	require.NoError(t, writer.WriteField("tag", "coop"))
 
-	fileWriter, _ := writer.CreateFormFile("file", "test.json.gz")
+	fileWriter, err := writer.CreateFormFile("file", "test.json.gz")
+	require.NoError(t, err)
 	gw := gzip.NewWriter(fileWriter)
-	gw.Write([]byte(`{"test": "data"}`))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte(`{"test": "data"}`))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
