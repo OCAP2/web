@@ -2,7 +2,7 @@ import { createSignal, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Recording } from "../../data/types";
 import { EditIcon, XIcon, CheckIcon, UploadIcon, FilePlusIcon, RefreshCwIcon, AlertTriangleIcon, TrashIcon } from "../../components/Icons";
-import { formatDuration, formatDate, stripRecordingExtension } from "./helpers";
+import { formatDuration, formatDate, stripRecordingExtension, isoToLocalInput, localInputToIso } from "./helpers";
 import { TAG_OPTIONS } from "./constants";
 import ui from "../../components/ui.module.css";
 import styles from "./dialogs.module.css";
@@ -20,14 +20,14 @@ export function EditModal(props: {
   // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
   const [tag, setTag] = createSignal(props.rec.tag ?? "");
   // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
-  const [date, setDate] = createSignal(props.rec.date?.replace(/Z$/, "") ?? "");
+  const [date, setDate] = createSignal(isoToLocalInput(props.rec.date));
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     props.onSave(props.rec.id, {
       missionName: name(),
       tag: tag() || undefined,
-      date: date() ? date() + "Z" : undefined,
+      date: localInputToIso(date()),
     });
   };
 
@@ -140,7 +140,7 @@ export function UploadDialog(props: {
   const [name, setName] = createSignal("");
   const [map, setMap] = createSignal("");
   const [tag, setTag] = createSignal("");
-  const [date, setDate] = createSignal(new Date().toISOString().replace(/Z$/, ""));
+  const [date, setDate] = createSignal(isoToLocalInput(new Date().toISOString()));
 
   let fileInputRef: HTMLInputElement | undefined;
 
@@ -161,7 +161,7 @@ export function UploadDialog(props: {
   const handleSubmit = () => {
     const f = file();
     if (!f || !name()) return;
-    props.onUpload({ file: f, name: name(), map: map(), tag: tag(), date: date() ? date() + "Z" : "" });
+    props.onUpload({ file: f, name: name(), map: map(), tag: tag(), date: localInputToIso(date()) ?? "" });
   };
 
   const canSubmit = () => !!file() && !!name() && !props.uploading;

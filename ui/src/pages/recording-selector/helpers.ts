@@ -88,6 +88,23 @@ export function isRecordingReady(rec: Recording): boolean {
   return getStatusInfo(rec).key === "ready";
 }
 
+/** Format an ISO/RFC 3339 date string as a local datetime-local value (YYYY-MM-DDThh:mm:ss). */
+export function isoToLocalInput(isoStr: string | undefined): string {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/** Convert a datetime-local value (interpreted as local time) back to a UTC ISO string. */
+export function localInputToIso(localStr: string): string | undefined {
+  if (!localStr) return undefined;
+  const d = new Date(localStr);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
 /** Strip .json.gz / .json / .gz extensions from a recording filename. */
 export function stripRecordingExtension(filename: string): string {
   return filename.replace(/\.json\.gz$/, "").replace(/\.json$/, "").replace(/\.gz$/, "");

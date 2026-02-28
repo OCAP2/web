@@ -8,11 +8,14 @@ const mockRec: Recording = {
   worldName: "Altis",
   missionName: "Op Thunder",
   missionDuration: 3600,
-  date: "2024-01-15",
+  date: "2000-01-01T01:01:01.000+09:00",
   tag: "TvT",
   storageFormat: "protobuf",
   conversionStatus: "completed",
 };
+
+// Input date converted to UTC: 2000-01-01T01:01:01+09:00 = 1999-12-31T16:01:01Z
+const expectedDateUTC = "1999-12-31T16:01:01.000Z";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -49,20 +52,20 @@ describe("EditModal", () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
 
-    render(() => (
+    const { container } = render(() => (
       <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
     const nameInput = screen.getByDisplayValue("Op Thunder");
     fireEvent.input(nameInput, { target: { value: "Op Lightning" } });
 
-    fireEvent.click(screen.getByText("Save Changes"));
+    fireEvent.submit(container.querySelector("form")!);
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith("42", {
       missionName: "Op Lightning",
       tag: "TvT",
-      date: "2024-01-15",
+      date: expectedDateUTC,
     });
   });
 
@@ -70,7 +73,7 @@ describe("EditModal", () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
 
-    render(() => (
+    const { container } = render(() => (
       <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
     ));
 
@@ -85,12 +88,28 @@ describe("EditModal", () => {
     fireEvent.click(screen.getByText("COOP"));
 
     // Submit and verify the new tag is sent
-    fireEvent.click(screen.getByText("Save Changes"));
+    fireEvent.submit(container.querySelector("form")!);
     expect(onSave).toHaveBeenCalledWith("42", {
       missionName: "Op Thunder",
       tag: "COOP",
-      date: "2024-01-15",
+      date: expectedDateUTC,
     });
+  });
+
+  it("round-trips ISO date with timezone offset as UTC", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+
+    const { container } = render(() => (
+      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+    ));
+
+    // Submit without changing the date
+    fireEvent.submit(container.querySelector("form")!);
+
+    expect(onSave).toHaveBeenCalledWith("42", expect.objectContaining({
+      date: expectedDateUTC,
+    }));
   });
 });
 
