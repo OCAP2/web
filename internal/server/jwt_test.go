@@ -155,7 +155,8 @@ func TestJWT_ClaimsWrongSigningMethod(t *testing.T) {
 		"exp": time.Now().Add(time.Hour).Unix(),
 		"sub": "user123",
 	})
-	tokenStr, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	tokenStr, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	require.NoError(t, err)
 
 	claims := mgr.Claims(tokenStr)
 	assert.Nil(t, claims) // parseClaims should reject non-HMAC signing method

@@ -333,7 +333,7 @@ func TestPaintPNG(t *testing.T) {
 		f, err := os.Create(transparentPath)
 		require.NoError(t, err)
 		err = png.Encode(f, img)
-		f.Close()
+		require.NoError(t, f.Close())
 		require.NoError(t, err)
 
 		c := color.RGBA{255, 0, 0, 255}
@@ -486,7 +486,7 @@ func TestScanDir_UnreadableSubdir(t *testing.T) {
 	subdir := filepath.Join(dir, "locked")
 	require.NoError(t, os.MkdirAll(subdir, 0755))
 	require.NoError(t, os.Chmod(subdir, 0000))
-	defer os.Chmod(subdir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(subdir, 0755)) }()
 
 	files := make(map[string]string)
 	err := scanDir(dir, files)

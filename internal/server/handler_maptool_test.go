@@ -580,7 +580,7 @@ func TestRestyleMapToolAll_ScanError(t *testing.T) {
 	// Use a file (not dir) as maps dir so ScanMaps returns an error
 	dir := t.TempDir()
 	fakeFile := filepath.Join(dir, "notadir")
-	os.WriteFile(fakeFile, []byte("x"), 0644)
+	require.NoError(t, os.WriteFile(fakeFile, []byte("x"), 0644))
 
 	hdlr := &Handler{
 		maptoolCfg: &maptoolConfig{mapsDir: fakeFile},
@@ -604,9 +604,9 @@ func TestDeleteMapToolMap_RemoveError(t *testing.T) {
 
 	// Try to remove a map that exists but can't be removed (read-only parent)
 	mapDir := filepath.Join(mapsDir, "locked")
-	os.MkdirAll(mapDir, 0755)
-	os.Chmod(mapsDir, 0555)
-	defer os.Chmod(mapsDir, 0755)
+	require.NoError(t, os.MkdirAll(mapDir, 0755))
+	require.NoError(t, os.Chmod(mapsDir, 0555))
+	defer func() { assert.NoError(t, os.Chmod(mapsDir, 0755)) }()
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/", nil)

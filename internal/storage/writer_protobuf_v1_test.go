@@ -19,7 +19,7 @@ func TestWriteManifest_ReadOnlyDir(t *testing.T) {
 	outputDir := filepath.Join(dir, "readonly")
 	require.NoError(t, os.MkdirAll(outputDir, 0755))
 	require.NoError(t, os.Chmod(outputDir, 0555))
-	defer os.Chmod(outputDir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(outputDir, 0755)) }()
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{
@@ -38,7 +38,7 @@ func TestWriteChunks_ReadOnlyDir(t *testing.T) {
 	dir := t.TempDir()
 	outputDir := filepath.Join(dir, "output")
 	require.NoError(t, os.MkdirAll(outputDir, 0555))
-	defer os.Chmod(outputDir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(outputDir, 0755)) }()
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{
@@ -60,7 +60,7 @@ func TestWriteChunks_ReadOnlyChunksDir(t *testing.T) {
 	chunksDir := filepath.Join(outputDir, "chunks")
 	require.NoError(t, os.MkdirAll(chunksDir, 0755))
 	require.NoError(t, os.Chmod(chunksDir, 0555))
-	defer os.Chmod(chunksDir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(chunksDir, 0755)) }()
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{

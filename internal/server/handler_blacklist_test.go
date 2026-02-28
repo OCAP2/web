@@ -287,7 +287,8 @@ func TestGetMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close() // Force DB errors
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
 	e := echo.New()
@@ -309,7 +310,8 @@ func TestAddMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close()
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
 	e := echo.New()
@@ -331,7 +333,8 @@ func TestRemoveMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close()
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
 	e := echo.New()

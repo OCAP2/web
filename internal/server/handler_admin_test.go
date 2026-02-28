@@ -332,7 +332,8 @@ func TestDeleteOperation_WithFiles(t *testing.T) {
 
 	// Setup handler
 	jwt := NewJWTManager("test-secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{
 		repoOperation: repo,
 		setting:       Setting{Data: dataDir},
@@ -537,7 +538,8 @@ func TestEditOperation_UpdateError(t *testing.T) {
 	require.NoError(t, repo.Store(ctx, op))
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
 	// We need GetByID to succeed but UpdateOperation to fail.
@@ -580,7 +582,8 @@ func TestRetryConversion_UpdateStatusError(t *testing.T) {
 	require.NoError(t, repo.UpdateConversionStatus(ctx, op.ID, ConversionStatusFailed))
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, setting: Setting{Data: dir}, jwt: jwt}
 
 	e := echo.New()
@@ -613,7 +616,8 @@ func TestDeleteOperation_DBDeleteError(t *testing.T) {
 	require.NoError(t, repo.Store(ctx, op))
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, setting: Setting{Data: dataDir}, jwt: jwt}
 
 	// First call should succeed — covers the file cleanup code paths
@@ -634,7 +638,7 @@ func TestDeleteOperation_DBDeleteError(t *testing.T) {
 func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
-	os.MkdirAll(dataDir, 0755)
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
 
@@ -658,7 +662,8 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	defer func() { assert.NoError(t, os.Chmod(dataDir, 0755)) }()
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, err := jwt.Create("")
+	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, setting: Setting{Data: dataDir}, jwt: jwt}
 
 	e := echo.New()

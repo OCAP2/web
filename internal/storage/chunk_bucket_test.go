@@ -263,7 +263,7 @@ func TestNewChunkBucket_ReadOnlyParent(t *testing.T) {
 	// Make the dir read-only so MkdirAll for a subdir fails
 	readOnlyDir := filepath.Join(dir, "readonly")
 	require.NoError(t, os.MkdirAll(readOnlyDir, 0555))
-	defer os.Chmod(readOnlyDir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(readOnlyDir, 0755)) }()
 
 	_, err := NewChunkBucket(filepath.Join(readOnlyDir, "chunks"))
 	assert.Error(t, err)
@@ -274,7 +274,7 @@ func TestChunkBucket_Write_ReadOnlyDir(t *testing.T) {
 	dir := t.TempDir()
 	bucket, err := NewChunkBucket(dir)
 	require.NoError(t, err)
-	defer os.Chmod(dir, 0755)
+	defer func() { assert.NoError(t, os.Chmod(dir, 0755)) }()
 
 	// Make the bucket directory read-only AFTER creation so getWriter can't create files
 	require.NoError(t, os.Chmod(dir, 0555))
@@ -308,7 +308,7 @@ func TestChunkBucket_Read_PermissionDenied(t *testing.T) {
 	// Make the chunk file unreadable
 	chunkFile := filepath.Join(dir, "chunk_0000.tmp")
 	require.NoError(t, os.Chmod(chunkFile, 0000))
-	defer os.Chmod(chunkFile, 0644)
+	defer func() { assert.NoError(t, os.Chmod(chunkFile, 0644)) }()
 
 	_, err = bucket.Read(0)
 	assert.Error(t, err)

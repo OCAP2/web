@@ -29,7 +29,7 @@ func TestMigrationV3StorageFormat(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	// Verify columns exist
 	var storageFormat, conversionStatus string
@@ -64,12 +64,12 @@ func TestMigrationV5NormalizeFilenames(t *testing.T) {
 			VALUES ('altis', 'M3', 3600, 'mission_clean', '2026-01-03');
 	`)
 	require.NoError(t, err)
-	db.Close()
+	require.NoError(t, db.Close())
 
 	// Open via NewRepoOperation which runs migrations
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
@@ -92,7 +92,7 @@ func TestOperationStorageFormat(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -127,7 +127,7 @@ func TestGetTypes(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -158,7 +158,7 @@ func TestSelectAll(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -191,7 +191,7 @@ func TestUpdateMissionDuration(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -223,7 +223,7 @@ func TestStoreDefaults(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -251,7 +251,7 @@ func TestSelectWithFilters(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -311,7 +311,7 @@ func TestGetByID_NotFound(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -327,7 +327,7 @@ func TestSelectPending(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -364,7 +364,7 @@ func TestUpdateConversionStatus(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -395,7 +395,7 @@ func TestUpdateStorageFormat(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -427,12 +427,12 @@ func TestMigrationRerun(t *testing.T) {
 	// Create and close first repo (runs migrations)
 	repo1, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	repo1.db.Close()
+	require.NoError(t, repo1.db.Close())
 
 	// Create second repo on same DB (migrations should be idempotent)
 	repo2, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo2.db.Close()
+	defer func() { assert.NoError(t, repo2.db.Close()) }()
 
 	// Verify version table has the correct latest version
 	var version int
@@ -447,7 +447,7 @@ func TestGetTypesEmpty(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -463,7 +463,7 @@ func TestSelectAllEmpty(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -479,7 +479,7 @@ func TestSelectPendingEmpty(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -495,7 +495,7 @@ func TestGetByFilename(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -523,7 +523,7 @@ func TestGetByFilename_NotFound(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -539,7 +539,7 @@ func TestUpdateSchemaVersion(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -569,7 +569,7 @@ func TestSelectByStatus(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -600,7 +600,7 @@ func TestUpdateOperation(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := t.Context()
 	op := &Operation{
@@ -623,7 +623,7 @@ func TestDeleteOperation(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := t.Context()
 	op := &Operation{
@@ -643,7 +643,7 @@ func TestDeleteOperation_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	err = repo.Delete(t.Context(), 999)
 	assert.ErrorIs(t, err, ErrNotFound)
@@ -655,7 +655,7 @@ func TestResetConversionStatus(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -690,7 +690,7 @@ func TestUpdateOperationStats(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := t.Context()
 	op := &Operation{
@@ -719,7 +719,7 @@ func TestSelectStatsBackfill(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := t.Context()
 
@@ -777,7 +777,7 @@ func TestSelectByStatusEmpty(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -800,7 +800,7 @@ func TestResetConversionStatus_NoMatches(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	assert.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -823,7 +823,7 @@ func TestUpdateChunkCount(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -849,7 +849,7 @@ func TestStoreWithAllFields(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
@@ -906,7 +906,7 @@ func TestSelectDefaults(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	ctx := context.Background()
 
