@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,4 +131,32 @@ func TestJWT_ClaimsWrongSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Nil(t, mgr2.Claims(token))
+}
+
+func TestJWT_ValidateWrongSigningMethod(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	// Create a token signed with "none" method instead of HMAC
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour).Unix(),
+	})
+	tokenStr, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	require.NoError(t, err)
+
+	err = mgr.Validate(tokenStr)
+	assert.Error(t, err) // Should reject non-HMAC signing method
+}
+
+func TestJWT_ClaimsWrongSigningMethod(t *testing.T) {
+	mgr := NewJWTManager("test-secret", time.Hour)
+
+	// Create a token signed with "none" method instead of HMAC
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"sub": "user123",
+	})
+	tokenStr, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+
+	claims := mgr.Claims(tokenStr)
+	assert.Nil(t, claims) // parseClaims should reject non-HMAC signing method
 }

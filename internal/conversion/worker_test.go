@@ -905,6 +905,222 @@ func TestWorker_CleanupInterrupted_ResetsStreaming(t *testing.T) {
 	assert.Len(t, repo.byStatus["converting"], 0)
 }
 
+// backfillMockRepo extends mockRepo to return operations from SelectStatsBackfill
+type backfillMockRepo struct {
+	*mockRepo
+	backfillOps []server.Operation
+}
+
+func (m *backfillMockRepo) SelectStatsBackfill(ctx context.Context) ([]server.Operation, error) {
+	return m.backfillOps, nil
+}
+
+func TestBackfillStats(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a gzipped JSON file with entities and events that computeStats will parse
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Backfill Test",
+		"captureDelay": 1,
+		"endFrame": 100,
+		"entities": [
+			{"id": 1, "type": "unit", "name": "Player1", "side": "WEST", "isPlayer": 1, "startFrameNum": 0, "positions": [], "framesFired": []},
+			{"id": 2, "type": "unit", "name": "Player2", "side": "EAST", "isPlayer": 1, "startFrameNum": 0, "positions": [], "framesFired": []},
+			{"id": 3, "type": "unit", "name": "AI1", "side": "WEST", "isPlayer": 0, "startFrameNum": 0, "positions": [], "framesFired": []}
+		],
+		"events": [
+			[10, "killed", 3, 1, "rifle", 50]
+		],
+		"times": []
+	}`
+
+	jsonPath := filepath.Join(dir, "backfill_op.json.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	base := newMockRepo()
+	repo := &backfillMockRepo{
+		mockRepo: base,
+		backfillOps: []server.Operation{
+			{ID: 10, Filename: "backfill_op"},
+		},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	worker.backfillStats(ctx)
+
+	// Verify UpdateOperationStats was called (stored in base mockRepo)
+	stats, ok := base.stats[10]
+	assert.True(t, ok, "stats should be set for operation 10")
+	assert.Equal(t, "2", stats[0], "playerCount should be 2")
+	assert.Equal(t, "1", stats[1], "killCount should be 1")
+}
+
+func TestBackfillStats_SkipsZeroStats(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a gzipped JSON file with no players and no events
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Empty",
+		"captureDelay": 1,
+		"endFrame": 10,
+		"entities": [],
+		"events": [],
+		"times": []
+	}`
+
+	jsonPath := filepath.Join(dir, "empty_op.json.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	base := newMockRepo()
+	repo := &backfillMockRepo{
+		mockRepo: base,
+		backfillOps: []server.Operation{
+			{ID: 20, Filename: "empty_op"},
+		},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	worker.backfillStats(ctx)
+
+	// Stats should NOT be set (skipped because playerCount=0 and killCount=0)
+	_, ok := base.stats[20]
+	assert.False(t, ok, "stats should not be set for zero-stats operation")
+}
+
+func TestBackfillStats_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+
+	base := newMockRepo()
+	repo := &backfillMockRepo{
+		mockRepo: base,
+		backfillOps: []server.Operation{
+			{ID: 30, Filename: "nonexistent"},
+		},
+	}
+
+	worker := NewWorker(repo, Config{
+		DataDir: dir,
+	})
+
+	ctx := context.Background()
+	// Should not panic, just skip the operation
+	worker.backfillStats(ctx)
+
+	_, ok := base.stats[30]
+	assert.False(t, ok, "stats should not be set for missing file")
+}
+
+// backfillErrorMockRepo returns an error from SelectStatsBackfill.
+type backfillErrorMockRepo struct {
+	*mockRepo
+}
+
+func (m *backfillErrorMockRepo) SelectStatsBackfill(ctx context.Context) ([]server.Operation, error) {
+	return nil, fmt.Errorf("db error")
+}
+
+func TestBackfillStats_SelectError(t *testing.T) {
+	dir := t.TempDir()
+
+	base := newMockRepo()
+	repo := &backfillErrorMockRepo{mockRepo: base}
+
+	worker := NewWorker(repo, Config{DataDir: dir})
+
+	ctx := context.Background()
+	// Should not panic, just log the error and return
+	worker.backfillStats(ctx)
+
+	// No stats should be set
+	assert.Empty(t, base.stats)
+}
+
+// backfillProtobufMockRepo returns operations from SelectStatsBackfill that have
+// protobuf data on disk (not JSON fallback).
+type backfillProtobufMockRepo struct {
+	*mockRepo
+	backfillOps     []server.Operation
+	updateStatsErr  error
+	updatedStatsIDs []int64
+}
+
+func (m *backfillProtobufMockRepo) SelectStatsBackfill(ctx context.Context) ([]server.Operation, error) {
+	return m.backfillOps, nil
+}
+
+func (m *backfillProtobufMockRepo) UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition server.SideComposition) error {
+	if m.updateStatsErr != nil {
+		return m.updateStatsErr
+	}
+	m.updatedStatsIDs = append(m.updatedStatsIDs, id)
+	m.mockRepo.stats[id] = [3]string{fmt.Sprintf("%d", playerCount), fmt.Sprintf("%d", killCount), fmt.Sprintf("%v", sideComposition)}
+	return nil
+}
+
+func TestBackfillStats_UpdateStatsError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a gzipped JSON file with entities
+	testData := `{
+		"worldName": "altis",
+		"missionName": "Error Test",
+		"captureDelay": 1,
+		"endFrame": 10,
+		"entities": [
+			{"id": 1, "type": "unit", "name": "Player1", "side": "WEST", "isPlayer": 1, "startFrameNum": 0, "positions": [], "framesFired": []}
+		],
+		"events": [],
+		"times": []
+	}`
+
+	jsonPath := filepath.Join(dir, "error_op.json.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	gw.Write([]byte(testData))
+	gw.Close()
+	f.Close()
+
+	base := newMockRepo()
+	repo := &backfillProtobufMockRepo{
+		mockRepo: base,
+		backfillOps: []server.Operation{
+			{ID: 50, Filename: "error_op"},
+		},
+		updateStatsErr: fmt.Errorf("update stats failed"),
+	}
+
+	worker := NewWorker(repo, Config{DataDir: dir})
+
+	ctx := context.Background()
+	// Should not panic, just log the error and continue
+	worker.backfillStats(ctx)
+
+	// Stats should NOT be set (update failed)
+	_, ok := base.stats[50]
+	assert.False(t, ok)
+}
+
 func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	dir := t.TempDir()
 

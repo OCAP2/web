@@ -181,6 +181,140 @@ func TestChunkBucket_FlushAndReadMultipleChunks(t *testing.T) {
 	}
 }
 
+func TestChunkBucket_WriteAndFlush(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+	defer bucket.Cleanup()
+
+	// Write some data
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 10, FrameNum: 0, PosX: 1.0, PosY: 2.0, Alive: 1}))
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 11, FrameNum: 1, PosX: 3.0, PosY: 4.0, Alive: 1}))
+
+	// Flush to disk
+	require.NoError(t, bucket.Flush())
+
+	// Verify chunk file was created
+	chunkFile := filepath.Join(dir, "chunk_0000.tmp")
+	info, err := os.Stat(chunkFile)
+	require.NoError(t, err)
+	assert.Greater(t, info.Size(), int64(0))
+}
+
+func TestChunkBucket_ReadAfterFlush(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+	defer bucket.Cleanup()
+
+	// Write data
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 20, FrameNum: 5, PosX: 10.5, PosY: 20.5, Alive: 1}))
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 21, FrameNum: 6, PosX: 30.5, PosY: 40.5, Alive: 0}))
+
+	// Flush
+	require.NoError(t, bucket.Flush())
+
+	// Read back and verify contents match
+	got, err := bucket.Read(0)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, uint32(20), got[0].EntityId)
+	assert.Equal(t, uint32(5), got[0].FrameNum)
+	assert.Equal(t, float32(10.5), got[0].PosX)
+	assert.Equal(t, float32(20.5), got[0].PosY)
+	assert.Equal(t, uint32(1), got[0].Alive)
+	assert.Equal(t, uint32(21), got[1].EntityId)
+	assert.Equal(t, uint32(6), got[1].FrameNum)
+	assert.Equal(t, uint32(0), got[1].Alive)
+}
+
+func TestChunkBucket_CleanupRemovesFiles(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+
+	// Write and flush
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 1}))
+	require.NoError(t, bucket.Write(1, &pbv1.EntityState{EntityId: 2}))
+	require.NoError(t, bucket.Flush())
+
+	// Verify files exist before cleanup
+	_, err = os.Stat(filepath.Join(dir, "chunk_0000.tmp"))
+	require.NoError(t, err)
+	_, err = os.Stat(filepath.Join(dir, "chunk_0001.tmp"))
+	require.NoError(t, err)
+
+	// Cleanup
+	require.NoError(t, bucket.Cleanup())
+
+	// Verify directory is removed
+	_, err = os.Stat(dir)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestNewChunkBucket_InvalidDir(t *testing.T) {
+	// /dev/null is a file, not a directory — MkdirAll should fail
+	_, err := NewChunkBucket("/dev/null/impossible/path")
+	assert.Error(t, err)
+}
+
+func TestNewChunkBucket_ReadOnlyParent(t *testing.T) {
+	dir := t.TempDir()
+	// Make the dir read-only so MkdirAll for a subdir fails
+	readOnlyDir := filepath.Join(dir, "readonly")
+	require.NoError(t, os.MkdirAll(readOnlyDir, 0555))
+	defer os.Chmod(readOnlyDir, 0755)
+
+	_, err := NewChunkBucket(filepath.Join(readOnlyDir, "chunks"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create bucket dir")
+}
+
+func TestChunkBucket_Write_ReadOnlyDir(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+	defer os.Chmod(dir, 0755)
+
+	// Make the bucket directory read-only AFTER creation so getWriter can't create files
+	require.NoError(t, os.Chmod(dir, 0555))
+
+	err = bucket.Write(0, &pbv1.EntityState{EntityId: 1})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open chunk file")
+}
+
+func TestChunkBucket_FlushAfterCleanup(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 1}))
+	require.NoError(t, bucket.Cleanup()) // Closes files and clears maps
+
+	// Flush after cleanup — writers map is empty, nothing to flush
+	err = bucket.Flush()
+	assert.NoError(t, err)
+}
+
+func TestChunkBucket_Read_PermissionDenied(t *testing.T) {
+	dir := t.TempDir()
+	bucket, err := NewChunkBucket(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 1}))
+	require.NoError(t, bucket.Flush())
+
+	// Make the chunk file unreadable
+	chunkFile := filepath.Join(dir, "chunk_0000.tmp")
+	require.NoError(t, os.Chmod(chunkFile, 0000))
+	defer os.Chmod(chunkFile, 0644)
+
+	_, err = bucket.Read(0)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "open chunk 0")
+}
+
 func TestChunkBucket_LargeRecord(t *testing.T) {
 	bucket, err := NewChunkBucket(t.TempDir())
 	require.NoError(t, err)

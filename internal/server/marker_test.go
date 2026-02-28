@@ -446,6 +446,26 @@ func TestPaintSVG_InvalidTemplate(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRepoMarker_Get_UnsupportedExtension(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a marker file with an unsupported extension (.txt)
+	err := os.WriteFile(filepath.Join(dir, "badext.txt"), []byte("not an image"), 0644)
+	require.NoError(t, err)
+
+	repo, err := NewRepoMarker(dir)
+	require.NoError(t, err)
+
+	// "badext" should be in the markers map pointing to badext.txt
+	_, ok := repo.markers["badext"]
+	require.True(t, ok, "scanDir should have indexed badext.txt")
+
+	ctx := context.Background()
+	_, _, err = repo.Get(ctx, "badext", "blufor")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
 func TestPaintPNG_InvalidImage(t *testing.T) {
 	dir := t.TempDir()
 
@@ -456,6 +476,31 @@ func TestPaintPNG_InvalidImage(t *testing.T) {
 
 	c := color.RGBA{255, 0, 0, 255}
 	_, err = paintPNG(invalidPath, c)
+	assert.Error(t, err)
+}
+
+func TestScanDir_UnreadableSubdir(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a subdirectory, then make it unreadable
+	subdir := filepath.Join(dir, "locked")
+	require.NoError(t, os.MkdirAll(subdir, 0755))
+	require.NoError(t, os.Chmod(subdir, 0000))
+	defer os.Chmod(subdir, 0755)
+
+	files := make(map[string]string)
+	err := scanDir(dir, files)
+	assert.Error(t, err) // recursive scanDir should fail on locked subdir
+}
+
+func TestPaintSVG_TemplateError(t *testing.T) {
+	// Create an SVG file with invalid template syntax
+	dir := t.TempDir()
+	svgPath := filepath.Join(dir, "bad.svg")
+	// Unclosed action causes Execute to fail
+	require.NoError(t, os.WriteFile(svgPath, []byte(`<svg>{{ .BadField.Nope }}</svg>`), 0644))
+
+	_, err := paintSVG(svgPath, color.RGBA{R: 255, A: 255})
 	assert.Error(t, err)
 }
 

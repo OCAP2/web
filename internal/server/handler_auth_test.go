@@ -1,11 +1,13 @@
 package server
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -302,6 +304,12 @@ func TestFetchSteamProfile_InvalidJSON(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestFetchSteamProfile_ConnectionError(t *testing.T) {
+	// Use an address that immediately refuses connections
+	_, _, err := fetchSteamProfileFrom("http://127.0.0.1:1/", "76561198012345678", "TESTKEY")
+	assert.Error(t, err)
+}
+
 func TestRequestHost_WithForwardedHost(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -395,6 +403,96 @@ func TestSteamCallback_InvalidClaimedID(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_error")
+}
+
+func TestRequestScheme_HTTPS(t *testing.T) {
+	e := echo.New()
+	// httptest.NewRequest with https:// URL sets TLS field on the request
+	req := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+	c := e.NewContext(req, httptest.NewRecorder())
+
+	assert.Equal(t, "https", requestScheme(c))
+}
+
+func TestSteamLogin_WithXForwardedProto(t *testing.T) {
+	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Host = "proxy.example.com"
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.SteamLogin(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "steamcommunity.com/openid")
+
+	// The redirect URL sent to Steam should use https scheme
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	returnTo := u.Query().Get("openid.return_to")
+	assert.True(t, strings.HasPrefix(returnTo, "https://"), "return_to should use https, got: %s", returnTo)
+}
+
+func TestRandomHex(t *testing.T) {
+	result, err := randomHex(16)
+	require.NoError(t, err)
+	assert.Len(t, result, 32) // 16 bytes = 32 hex chars
+
+	// Verify it's valid hex
+	_, err = hex.DecodeString(result)
+	require.NoError(t, err)
+
+	// Two calls should return different values
+	result2, err := randomHex(16)
+	require.NoError(t, err)
+	assert.NotEqual(t, result, result2)
+}
+
+func TestSteamCallback_AllowedEmptyList(t *testing.T) {
+	hdlr := newSteamAuthHandler([]string{}) // empty allowed list
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.SteamCallback(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_denied")
+}
+
+func TestSteamCallback_SteamAPIError(t *testing.T) {
+	// Steam API returns an error — the callback should still succeed
+	// (profile fetch failure is logged as a warning, not a hard error)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
+	hdlr.setting.Admin.SteamAPIKey = "TESTKEY"
+	hdlr.steamAPIBaseURL = srv.URL
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.SteamCallback(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	// Should still get auth_token (just no profile data)
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
 }
 
 func TestSteamCallback_WithSteamAPIKey(t *testing.T) {

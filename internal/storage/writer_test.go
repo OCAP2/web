@@ -328,6 +328,66 @@ func TestStringToSide(t *testing.T) {
 	}
 }
 
+func TestProtobufWriterV1WriteManifest_WithFramesFired(t *testing.T) {
+	w := &ProtobufWriterV1{}
+	tmpDir := t.TempDir()
+
+	result := &ParseResult{
+		WorldName:      "TestWorld",
+		MissionName:    "TestMission",
+		FrameCount:     100,
+		ChunkSize:      50,
+		CaptureDelayMs: 1000,
+		Entities: []EntityDef{
+			{
+				ID:         1,
+				Type:       "unit",
+				Name:       "Player1",
+				Side:       "WEST",
+				StartFrame: 0,
+				EndFrame:   99,
+				IsPlayer:   true,
+				FramesFired: []FiredFrame{
+					{FrameNum: 10, PosX: 100.5, PosY: 200.5, PosZ: 5.0},
+					{FrameNum: 20, PosX: 110.0, PosY: 210.0, PosZ: 6.0},
+				},
+			},
+			{
+				ID:         2,
+				Type:       "unit",
+				Name:       "Player2",
+				Side:       "EAST",
+				StartFrame: 0,
+				EndFrame:   99,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	require.NoError(t, w.WriteManifest(ctx, tmpDir, result))
+
+	data, err := os.ReadFile(tmpDir + "/manifest.pb")
+	require.NoError(t, err)
+
+	var pbManifest pbv1.Manifest
+	require.NoError(t, proto.Unmarshal(data, &pbManifest))
+
+	require.Len(t, pbManifest.Entities, 2)
+
+	// Entity with FramesFired
+	e1 := pbManifest.Entities[0]
+	require.Len(t, e1.FramesFired, 2)
+	assert.Equal(t, uint32(10), e1.FramesFired[0].FrameNum)
+	assert.Equal(t, float32(100.5), e1.FramesFired[0].PosX)
+	assert.Equal(t, float32(200.5), e1.FramesFired[0].PosY)
+	assert.Equal(t, float32(5.0), e1.FramesFired[0].PosZ)
+	assert.Equal(t, uint32(20), e1.FramesFired[1].FrameNum)
+
+	// Entity without FramesFired
+	e2 := pbManifest.Entities[1]
+	assert.Empty(t, e2.FramesFired)
+}
+
 func TestProtobufWriterV1EmptyResult(t *testing.T) {
 	w := &ProtobufWriterV1{}
 

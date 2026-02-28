@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -683,4 +684,371 @@ func TestResetConversionStatus(t *testing.T) {
 	completed, err := repo.SelectByStatus(ctx, "completed")
 	assert.NoError(t, err)
 	assert.Len(t, completed, 1)
+}
+
+func TestUpdateOperationStats(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := t.Context()
+	op := &Operation{
+		WorldName: "altis", MissionName: "Stats Test",
+		MissionDuration: 300, Filename: "stats_test", Date: "2026-01-01",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	sides := SideComposition{
+		"WEST": SideCounts{Players: 5, Units: 20, Dead: 2, Kills: 3},
+		"EAST": SideCounts{Players: 3, Units: 15, Dead: 1, Kills: 1},
+	}
+	err = repo.UpdateOperationStats(ctx, op.ID, 8, 4, 3, sides)
+	require.NoError(t, err)
+
+	updated, err := repo.GetByID(ctx, fmt.Sprintf("%d", op.ID))
+	require.NoError(t, err)
+	assert.Equal(t, 8, updated.PlayerCount)
+	assert.Equal(t, 4, updated.KillCount)
+	assert.Equal(t, 3, updated.PlayerKillCount)
+	assert.Equal(t, 5, updated.SideComposition["WEST"].Players)
+	assert.Equal(t, 3, updated.SideComposition["EAST"].Players)
+}
+
+func TestSelectStatsBackfill(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := t.Context()
+
+	// completed, player_count=0 → should appear
+	op1 := &Operation{
+		WorldName: "altis", MissionName: "NeedsBackfill",
+		Filename: "backfill1", Date: "2026-01-01",
+		ConversionStatus: "completed", PlayerCount: 0,
+	}
+	require.NoError(t, repo.Store(ctx, op1))
+
+	// completed, player_count>0 → should NOT appear
+	op2 := &Operation{
+		WorldName: "altis", MissionName: "HasStats",
+		Filename: "has_stats", Date: "2026-01-02",
+		ConversionStatus: "completed", PlayerCount: 5,
+	}
+	require.NoError(t, repo.Store(ctx, op2))
+
+	// pending, player_count=0 → should NOT appear (not completed)
+	op3 := &Operation{
+		WorldName: "altis", MissionName: "StillPending",
+		Filename: "pending1", Date: "2026-01-03",
+		ConversionStatus: "pending", PlayerCount: 0,
+	}
+	require.NoError(t, repo.Store(ctx, op3))
+
+	result, err := repo.SelectStatsBackfill(ctx)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "NeedsBackfill", result[0].MissionName)
+}
+
+func TestMarshalSideComposition(t *testing.T) {
+	t.Run("nil returns empty JSON object", func(t *testing.T) {
+		assert.Equal(t, "{}", marshalSideComposition(nil))
+	})
+	t.Run("empty map returns empty JSON object", func(t *testing.T) {
+		assert.Equal(t, "{}", marshalSideComposition(SideComposition{}))
+	})
+	t.Run("valid map marshals correctly", func(t *testing.T) {
+		sc := SideComposition{"WEST": SideCounts{Players: 2, Units: 10}}
+		result := marshalSideComposition(sc)
+		var parsed SideComposition
+		err := json.Unmarshal([]byte(result), &parsed)
+		require.NoError(t, err)
+		assert.Equal(t, 2, parsed["WEST"].Players)
+		assert.Equal(t, 10, parsed["WEST"].Units)
+	})
+}
+
+func TestSelectByStatusEmpty(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store one operation with "completed" status
+	op := &Operation{
+		WorldName: "altis", MissionName: "Completed", Filename: "c1",
+		Date: "2026-01-01", ConversionStatus: "completed",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Query for a status that has no matches
+	result, err := repo.SelectByStatus(ctx, "failed")
+	assert.NoError(t, err)
+	assert.Empty(t, result)
+}
+
+func TestResetConversionStatus_NoMatches(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	assert.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	// Store only completed operations
+	op := &Operation{
+		WorldName: "altis", MissionName: "Completed", Filename: "c1",
+		Date: "2026-01-01", ConversionStatus: "completed",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Reset "converting" to "pending" — no ops match
+	count, err := repo.ResetConversionStatus(ctx, "converting", "pending")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+}
+
+func TestUpdateChunkCount(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	op := &Operation{
+		WorldName: "altis", MissionName: "Chunk Test", MissionDuration: 300,
+		Filename: "chunk_test", Date: "2026-01-01",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Update chunk count
+	err = repo.UpdateChunkCount(ctx, op.ID, 42)
+	require.NoError(t, err)
+
+	// Verify
+	updated, err := repo.GetByID(ctx, fmt.Sprintf("%d", op.ID))
+	require.NoError(t, err)
+	assert.Equal(t, 42, updated.ChunkCount)
+}
+
+func TestStoreWithAllFields(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	sides := SideComposition{
+		"WEST": SideCounts{Players: 10, Units: 40, Dead: 3, Kills: 5},
+		"EAST": SideCounts{Players: 8, Units: 35, Dead: 2, Kills: 4},
+	}
+	op := &Operation{
+		WorldName:        "stratis",
+		MissionName:      "Full Fields Test",
+		MissionDuration:  7200.5,
+		Filename:         "full_fields",
+		Date:             "2026-02-15",
+		Tag:              "zeus",
+		StorageFormat:    "protobuf",
+		ConversionStatus: "completed",
+		SchemaVersion:    2,
+		ChunkCount:       15,
+		PlayerCount:      18,
+		KillCount:        9,
+		PlayerKillCount:  7,
+		SideComposition:  sides,
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Retrieve and verify all fields
+	got, err := repo.GetByID(ctx, fmt.Sprintf("%d", op.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "stratis", got.WorldName)
+	assert.Equal(t, "Full Fields Test", got.MissionName)
+	assert.Equal(t, 7200.5, got.MissionDuration)
+	assert.Equal(t, "full_fields", got.Filename)
+	assert.Equal(t, "2026-02-15", got.Date)
+	assert.Equal(t, "zeus", got.Tag)
+	assert.Equal(t, "protobuf", got.StorageFormat)
+	assert.Equal(t, "completed", got.ConversionStatus)
+	assert.Equal(t, uint32(2), got.SchemaVersion)
+	assert.Equal(t, 15, got.ChunkCount)
+	assert.Equal(t, 18, got.PlayerCount)
+	assert.Equal(t, 9, got.KillCount)
+	assert.Equal(t, 7, got.PlayerKillCount)
+	require.NotNil(t, got.SideComposition)
+	assert.Equal(t, 10, got.SideComposition["WEST"].Players)
+	assert.Equal(t, 40, got.SideComposition["WEST"].Units)
+	assert.Equal(t, 3, got.SideComposition["WEST"].Dead)
+	assert.Equal(t, 5, got.SideComposition["WEST"].Kills)
+	assert.Equal(t, 8, got.SideComposition["EAST"].Players)
+	assert.Equal(t, 35, got.SideComposition["EAST"].Units)
+}
+
+func TestSelectDefaults(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	ctx := context.Background()
+
+	op := &Operation{
+		WorldName: "altis", MissionName: "Default Filter",
+		MissionDuration: 600, Filename: "default_filter",
+		Date: "2026-01-15", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Select with empty filter — should use default date range and return the op
+	result, err := repo.Select(ctx, Filter{})
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "Default Filter", result[0].MissionName)
+}
+
+// TestDBClosedErrors verifies that all repo functions return errors when the DB is closed.
+// This covers the error return paths of many functions at once.
+func TestDBClosedErrors(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Store an operation before closing
+	op := &Operation{
+		WorldName: "altis", MissionName: "Test",
+		MissionDuration: 300, Filename: "test_closed",
+		Date: "2026-01-01", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	// Close the DB
+	repo.db.Close()
+
+	t.Run("SelectPending", func(t *testing.T) {
+		_, err := repo.SelectPending(ctx, 10)
+		assert.Error(t, err)
+	})
+	t.Run("SelectAll", func(t *testing.T) {
+		_, err := repo.SelectAll(ctx)
+		assert.Error(t, err)
+	})
+	t.Run("SelectByStatus", func(t *testing.T) {
+		_, err := repo.SelectByStatus(ctx, "completed")
+		assert.Error(t, err)
+	})
+	t.Run("SelectStatsBackfill", func(t *testing.T) {
+		_, err := repo.SelectStatsBackfill(ctx)
+		assert.Error(t, err)
+	})
+	t.Run("GetTypes", func(t *testing.T) {
+		_, err := repo.GetTypes(ctx)
+		assert.Error(t, err)
+	})
+	t.Run("Select", func(t *testing.T) {
+		_, err := repo.Select(ctx, Filter{})
+		assert.Error(t, err)
+	})
+	t.Run("GetByID", func(t *testing.T) {
+		_, err := repo.GetByID(ctx, "1")
+		assert.Error(t, err)
+	})
+	t.Run("GetByFilename", func(t *testing.T) {
+		_, err := repo.GetByFilename(ctx, "test_closed")
+		assert.Error(t, err)
+	})
+	t.Run("Store", func(t *testing.T) {
+		err := repo.Store(ctx, &Operation{
+			WorldName: "x", MissionName: "x", Filename: "x", Date: "x",
+		})
+		assert.Error(t, err)
+	})
+	t.Run("Delete", func(t *testing.T) {
+		err := repo.Delete(ctx, 1)
+		assert.Error(t, err)
+	})
+	t.Run("ResetConversionStatus", func(t *testing.T) {
+		_, err := repo.ResetConversionStatus(ctx, "a", "b")
+		assert.Error(t, err)
+	})
+	t.Run("UpdateOperation", func(t *testing.T) {
+		err := repo.UpdateOperation(ctx, 1, "x", "x", "x")
+		assert.Error(t, err)
+	})
+	t.Run("UpdateConversionStatus", func(t *testing.T) {
+		err := repo.UpdateConversionStatus(ctx, 1, "x")
+		assert.Error(t, err)
+	})
+	t.Run("UpdateOperationStats", func(t *testing.T) {
+		err := repo.UpdateOperationStats(ctx, 1, 0, 0, 0, nil)
+		assert.Error(t, err)
+	})
+	t.Run("GetBlacklist", func(t *testing.T) {
+		_, err := repo.GetBlacklist(ctx, 1)
+		assert.Error(t, err)
+	})
+	t.Run("AddBlacklist", func(t *testing.T) {
+		err := repo.AddBlacklist(ctx, 1, 42)
+		assert.Error(t, err)
+	})
+	t.Run("RemoveBlacklist", func(t *testing.T) {
+		err := repo.RemoveBlacklist(ctx, 1, 42)
+		assert.Error(t, err)
+	})
+}
+
+func TestNewRepoOperation_InvalidPath(t *testing.T) {
+	// Use a path that can't be created
+	_, err := NewRepoOperation("/proc/nonexistent/test.db")
+	assert.Error(t, err)
+}
+
+func TestUnmarshalSideComposition(t *testing.T) {
+	t.Run("empty string returns nil", func(t *testing.T) {
+		assert.Nil(t, unmarshalSideComposition(""))
+	})
+	t.Run("empty JSON object returns nil", func(t *testing.T) {
+		assert.Nil(t, unmarshalSideComposition("{}"))
+	})
+	t.Run("new format parses correctly", func(t *testing.T) {
+		raw := `{"WEST":{"players":2,"units":100,"dead":1,"kills":3}}`
+		sc := unmarshalSideComposition(raw)
+		require.NotNil(t, sc)
+		assert.Equal(t, 2, sc["WEST"].Players)
+		assert.Equal(t, 100, sc["WEST"].Units)
+		assert.Equal(t, 1, sc["WEST"].Dead)
+		assert.Equal(t, 3, sc["WEST"].Kills)
+	})
+	t.Run("legacy format parses correctly", func(t *testing.T) {
+		raw := `{"WEST":100,"EAST":50}`
+		sc := unmarshalSideComposition(raw)
+		require.NotNil(t, sc)
+		assert.Equal(t, 0, sc["WEST"].Players)
+		assert.Equal(t, 100, sc["WEST"].Units)
+		assert.Equal(t, 50, sc["EAST"].Units)
+	})
+	t.Run("invalid JSON returns nil", func(t *testing.T) {
+		assert.Nil(t, unmarshalSideComposition("not json"))
+	})
 }

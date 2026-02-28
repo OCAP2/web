@@ -22,6 +22,7 @@ docs/plans/
 cover.out
 coverage.out
 coverage.html
+ui/coverage/
 
 # Frontend
 node_modules/

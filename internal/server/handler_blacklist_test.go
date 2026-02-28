@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -175,6 +177,53 @@ func TestRemoveBlacklist_Unauthorized(t *testing.T) {
 	assert.Equal(t, echo.ErrUnauthorized, err)
 }
 
+func TestBlacklist_MultipleEntries(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+	e := echo.New()
+	opID := fmt.Sprintf("%d", op.ID)
+
+	// Add players 1, 2, 3
+	for _, pid := range []string{"1", "2", "3"} {
+		req := httptest.NewRequest(http.MethodPut, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("id", "playerId")
+		c.SetParamValues(opID, pid)
+		require.NoError(t, hdlr.AddMarkerBlacklist(c))
+	}
+
+	// GET should return [1, 2, 3]
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(opID)
+	require.NoError(t, hdlr.GetMarkerBlacklist(c))
+
+	var ids []int
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
+	assert.Equal(t, []int{1, 2, 3}, ids)
+
+	// Remove player 2
+	req = httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
+	c.SetParamNames("id", "playerId")
+	c.SetParamValues(opID, "2")
+	require.NoError(t, hdlr.RemoveMarkerBlacklist(c))
+
+	// GET should return [1, 3]
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(opID)
+	require.NoError(t, hdlr.GetMarkerBlacklist(c))
+
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
+	assert.Equal(t, []int{1, 3}, ids)
+}
+
 func TestBlacklist_BadID(t *testing.T) {
 	hdlr, _ := setupAdminTest(t)
 
@@ -229,4 +278,70 @@ func TestBlacklist_BadID(t *testing.T) {
 
 	err = hdlr.RemoveMarkerBlacklist(c)
 	assert.Equal(t, echo.ErrBadRequest, err)
+}
+
+func TestGetMarkerBlacklist_DBError(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	repo.db.Close() // Force DB errors
+
+	jwt := NewJWTManager("secret", time.Hour)
+	token, _ := jwt.Create("")
+	h := &Handler{repoOperation: repo, jwt: jwt}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	err = h.GetMarkerBlacklist(c)
+	assert.Error(t, err)
+}
+
+func TestAddMarkerBlacklist_DBError(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	repo.db.Close()
+
+	jwt := NewJWTManager("secret", time.Hour)
+	token, _ := jwt.Create("")
+	h := &Handler{repoOperation: repo, jwt: jwt}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id", "playerId")
+	c.SetParamValues("1", "5")
+
+	err = h.AddMarkerBlacklist(c)
+	assert.Error(t, err)
+}
+
+func TestRemoveMarkerBlacklist_DBError(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	repo.db.Close()
+
+	jwt := NewJWTManager("secret", time.Hour)
+	token, _ := jwt.Create("")
+	h := &Handler{repoOperation: repo, jwt: jwt}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id", "playerId")
+	c.SetParamValues("1", "5")
+
+	err = h.RemoveMarkerBlacklist(c)
+	assert.Error(t, err)
 }
