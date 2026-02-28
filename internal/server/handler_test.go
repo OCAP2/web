@@ -74,10 +74,10 @@ func writeGzipped(path string, data []byte) error {
 	defer f.Close()
 
 	gw := gzip.NewWriter(f)
-	defer gw.Close()
-
-	_, err = gw.Write(data)
-	return err
+	if _, err := gw.Write(data); err != nil {
+		return err
+	}
+	return gw.Close()
 }
 
 func TestGetOperations(t *testing.T) {

@@ -131,8 +131,8 @@ func TestWorker_ConvertOne(t *testing.T) {
 	gw := gzip.NewWriter(f)
 	_, err = gw.Write([]byte(testData))
 	assert.NoError(t, err)
-	gw.Close()
-	f.Close()
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	// Create mock repo and worker
 	repo := newMockRepo()
@@ -175,11 +175,13 @@ func TestWorker_ProcessOnce(t *testing.T) {
 	// Write gzipped JSON files
 	for _, name := range []string{"mission1", "mission2"} {
 		jsonPath := filepath.Join(dir, name+".json.gz")
-		f, _ := os.Create(jsonPath)
+		f, err := os.Create(jsonPath)
+		assert.NoError(t, err)
 		gw := gzip.NewWriter(f)
-		gw.Write([]byte(testData))
-		gw.Close()
-		f.Close()
+		_, err = gw.Write([]byte(testData))
+		assert.NoError(t, err)
+		assert.NoError(t, gw.Close())
+		assert.NoError(t, f.Close())
 	}
 
 	// Create mock repo with pending operations
@@ -388,11 +390,13 @@ func TestWorker_ContextCancellation(t *testing.T) {
 	// Write multiple gzipped JSON files
 	for i := 1; i <= 3; i++ {
 		jsonPath := filepath.Join(dir, fmt.Sprintf("cancel_%d.json.gz", i))
-		f, _ := os.Create(jsonPath)
+		f, err := os.Create(jsonPath)
+		assert.NoError(t, err)
 		gw := gzip.NewWriter(f)
-		gw.Write([]byte(testData))
-		gw.Close()
-		f.Close()
+		_, err = gw.Write([]byte(testData))
+		assert.NoError(t, err)
+		assert.NoError(t, gw.Close())
+		assert.NoError(t, f.Close())
 	}
 
 	repo := newMockRepo()
@@ -795,8 +799,8 @@ func TestWorker_CleanupInterrupted(t *testing.T) {
 	// Create partial output directories
 	partial1 := filepath.Join(dir, "mission1")
 	partial2 := filepath.Join(dir, "mission2")
-	os.MkdirAll(filepath.Join(partial1, "chunks"), 0755)
-	os.MkdirAll(filepath.Join(partial2, "chunks"), 0755)
+	assert.NoError(t, os.MkdirAll(filepath.Join(partial1, "chunks"), 0755))
+	assert.NoError(t, os.MkdirAll(filepath.Join(partial2, "chunks"), 0755))
 
 	// Create mock repo with converting operations
 	repo := newMockRepo()

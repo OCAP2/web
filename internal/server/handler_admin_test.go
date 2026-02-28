@@ -310,7 +310,7 @@ func TestDeleteOperation_WithFiles(t *testing.T) {
 	// Create a test handler with a real repo and real data dir
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
-	os.MkdirAll(dataDir, 0755)
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
@@ -600,7 +600,7 @@ func TestRetryConversion_UpdateStatusError(t *testing.T) {
 func TestDeleteOperation_DBDeleteError(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
-	os.MkdirAll(dataDir, 0755)
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
 
@@ -648,10 +648,10 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 
 	// Create the json.gz file and protobuf dir
 	jsonGzPath := filepath.Join(dataDir, "test_ro_files.json.gz")
-	os.WriteFile(jsonGzPath, []byte("fake"), 0644)
+	require.NoError(t, os.WriteFile(jsonGzPath, []byte("fake"), 0644))
 	pbDir := filepath.Join(dataDir, "test_ro_files")
-	os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755)
-	os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644)
+	require.NoError(t, os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644))
 
 	// Make data dir read-only so os.Remove and os.RemoveAll fail with permission error
 	require.NoError(t, os.Chmod(dataDir, 0555))
