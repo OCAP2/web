@@ -53,7 +53,10 @@ func buildTestGradMehExport(t *testing.T) string {
 	// 3. DEM (dem.asc.gz): 8x8 elevation grid with a centered hill peaking at 60m
 	writeTestDEMGz(t, filepath.Join(dir, "dem.asc.gz"), 8, float64(worldSize)/8)
 
-	// 4. GeoJSON layers
+	// 4. Preview image (512x512 to exercise resizing)
+	writeTestPNG(t, filepath.Join(dir, "preview.png"), 512, 512)
+
+	// 5. GeoJSON layers
 	geojsonDir := filepath.Join(dir, "geojson")
 	require.NoError(t, os.MkdirAll(geojsonDir, 0755))
 	writeTestGeoJSONGz(t, filepath.Join(geojsonDir, "house.geojson.gz"), testHouseFeatures())
@@ -251,6 +254,11 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	// Verify vector PMTiles
 	assertFileExists(t, filepath.Join(outputDir, "tiles", "features.pmtiles"))
 
+	// Verify preview thumbnails
+	for _, size := range []int{256, 512, 1024} {
+		assertFileExists(t, filepath.Join(outputDir, fmt.Sprintf("preview_%d.png", size)))
+	}
+
 	// Verify style files
 	for _, name := range []string{"topo.json", "topo-dark.json", "topo-relief.json", "color-relief.json"} {
 		assertFileExists(t, filepath.Join(outputDir, "styles", name))
@@ -367,6 +375,38 @@ func TestIntegration_JobManager(t *testing.T) {
 	assertFileExists(t, filepath.Join(mapsDir, "testworld", "map.json"))
 	assertFileExists(t, filepath.Join(mapsDir, "testworld", "meta.json"))
 	assertFileExists(t, filepath.Join(mapsDir, "testworld", "tiles", "satellite.pmtiles"))
+}
+
+// TestIntegration_RestyleWorld verifies that RestyleWorld regenerates styles
+// from existing pipeline output (meta.json + tiles/). No external tools needed.
+func TestIntegration_RestyleWorld(t *testing.T) {
+	// Set up a fake maps/testworld directory with meta.json and tiles/
+	mapsDir := t.TempDir()
+	worldDir := filepath.Join(mapsDir, "testworld")
+	tilesDir := filepath.Join(worldDir, "tiles")
+	require.NoError(t, os.MkdirAll(tilesDir, 0755))
+
+	meta := worldMetaJSON{
+		WorldName:     "testworld",
+		DisplayName:   "Test World",
+		WorldSize:     256,
+		FeatureLayers: []string{"house", "road"},
+	}
+	data, err := json.MarshalIndent(meta, "", "  ")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "meta.json"), data, 0644))
+
+	// Create dummy pmtiles so the style config detects them
+	for _, name := range []string{"satellite.pmtiles", "features.pmtiles"} {
+		require.NoError(t, os.WriteFile(filepath.Join(tilesDir, name), []byte("dummy"), 0644))
+	}
+
+	err = RestyleWorld(mapsDir, "testworld")
+	require.NoError(t, err)
+
+	for _, name := range []string{"topo.json", "topo-dark.json", "topo-relief.json", "color-relief.json"} {
+		assertFileExists(t, filepath.Join(worldDir, "styles", name))
+	}
 }
 
 // --- Helpers ---
