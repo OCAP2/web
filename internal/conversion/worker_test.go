@@ -309,9 +309,10 @@ func TestTriggerConversion(t *testing.T) {
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	repo := newMockRepo()
 	worker := NewWorker(repo, Config{
@@ -573,11 +574,13 @@ func TestConvertOperation_UpdateConvertingStatusError(t *testing.T) {
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
 	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	repo := newErrorMockRepo()
 	repo.updateStatusErr = fmt.Errorf("cannot update to converting")
@@ -588,7 +591,7 @@ func TestConvertOperation_UpdateConvertingStatusError(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	err := worker.ConvertOne(ctx, 1, "test")
+	err = worker.ConvertOne(ctx, 1, "test")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "update status to converting")
@@ -600,11 +603,13 @@ func TestConvertOperation_UpdateStorageFormatError(t *testing.T) {
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
 	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	repo := newErrorMockRepo()
 	repo.updateFormatErr = fmt.Errorf("cannot update format")
@@ -614,7 +619,7 @@ func TestConvertOperation_UpdateStorageFormatError(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	err := worker.ConvertOne(ctx, 1, "test")
+	err = worker.ConvertOne(ctx, 1, "test")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "update storage format")
@@ -626,11 +631,13 @@ func TestConvertOperation_UpdateCompletedStatusError(t *testing.T) {
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
 	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	repo := newErrorMockRepo()
 	repo.updateStatusErr = fmt.Errorf("cannot update to completed")
@@ -641,7 +648,7 @@ func TestConvertOperation_UpdateCompletedStatusError(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	err := worker.ConvertOne(ctx, 1, "test")
+	err = worker.ConvertOne(ctx, 1, "test")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "update status to completed")
@@ -653,11 +660,13 @@ func TestConvertOperation_UpdateDurationError(t *testing.T) {
 	// Create test JSON file
 	testData := `{"worldName": "test", "missionName": "Test", "endFrame": 5, "captureDelay": 1, "entities": [], "events": [], "times": []}`
 	jsonPath := filepath.Join(dir, "test.json.gz")
-	f, _ := os.Create(jsonPath)
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	repo := newErrorMockRepo()
 	repo.updateDurationErr = fmt.Errorf("cannot update duration")
@@ -668,7 +677,7 @@ func TestConvertOperation_UpdateDurationError(t *testing.T) {
 
 	ctx := context.Background()
 	// Should complete successfully despite duration update failure (it's just a warning)
-	err := worker.ConvertOne(ctx, 1, "test")
+	err = worker.ConvertOne(ctx, 1, "test")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "completed", repo.status[1])
@@ -939,9 +948,10 @@ func TestBackfillStats(t *testing.T) {
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	base := newMockRepo()
 	repo := &backfillMockRepo{
@@ -983,9 +993,10 @@ func TestBackfillStats_SkipsZeroStats(t *testing.T) {
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	base := newMockRepo()
 	repo := &backfillMockRepo{
@@ -1097,9 +1108,10 @@ func TestBackfillStats_UpdateStatsError(t *testing.T) {
 	f, err := os.Create(jsonPath)
 	assert.NoError(t, err)
 	gw := gzip.NewWriter(f)
-	gw.Write([]byte(testData))
-	gw.Close()
-	f.Close()
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
 
 	base := newMockRepo()
 	repo := &backfillProtobufMockRepo{

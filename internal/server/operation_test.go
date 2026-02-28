@@ -944,7 +944,7 @@ func TestDBClosedErrors(t *testing.T) {
 	require.NoError(t, repo.Store(ctx, op))
 
 	// Close the DB
-	repo.db.Close()
+	require.NoError(t, repo.db.Close())
 
 	t.Run("SelectPending", func(t *testing.T) {
 		_, err := repo.SelectPending(ctx, 10)

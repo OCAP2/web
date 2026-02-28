@@ -1560,7 +1560,7 @@ func TestStoreOperation_RawJSON(t *testing.T) {
 	outPath := filepath.Join(dataDir, "raw_json_test.json.gz")
 	f, err := os.Open(outPath)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { assert.NoError(t, f.Close()) }()
 	var magic [2]byte
 	_, err = f.Read(magic[:])
 	require.NoError(t, err)

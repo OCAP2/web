@@ -325,10 +325,10 @@ func TestDeleteOperation_WithFiles(t *testing.T) {
 
 	// Create the json.gz file and protobuf dir
 	jsonGzPath := filepath.Join(dataDir, "test_file.json.gz")
-	os.WriteFile(jsonGzPath, []byte("fake"), 0644)
+	require.NoError(t, os.WriteFile(jsonGzPath, []byte("fake"), 0644))
 	pbDir := filepath.Join(dataDir, "test_file")
-	os.MkdirAll(pbDir, 0755)
-	os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644)
+	require.NoError(t, os.MkdirAll(pbDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644))
 
 	// Setup handler
 	jwt := NewJWTManager("test-secret", time.Hour)
@@ -654,8 +654,8 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644)
 
 	// Make data dir read-only so os.Remove and os.RemoveAll fail with permission error
-	os.Chmod(dataDir, 0555)
-	defer os.Chmod(dataDir, 0755)
+	require.NoError(t, os.Chmod(dataDir, 0555))
+	defer func() { assert.NoError(t, os.Chmod(dataDir, 0755)) }()
 
 	jwt := NewJWTManager("secret", time.Hour)
 	token, _ := jwt.Create("")
