@@ -15,17 +15,19 @@ export function EditModal(props: {
   onClose: () => void;
   onSave: (id: string, data: { missionName?: string; tag?: string; date?: string }) => void;
 }): JSX.Element {
-  const rec = () => props.rec;
-  const [name, setName] = createSignal(rec().missionName);
-  const [tag, setTag] = createSignal(rec().tag ?? "");
-  const [date, setDate] = createSignal(rec().date?.slice(0, 10) ?? "");
+  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
+  const [name, setName] = createSignal(props.rec.missionName);
+  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
+  const [tag, setTag] = createSignal(props.rec.tag ?? "");
+  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
+  const [date, setDate] = createSignal(props.rec.date?.replace(/Z$/, "") ?? "");
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     props.onSave(props.rec.id, {
       missionName: name(),
       tag: tag() || undefined,
-      date: date() || undefined,
+      date: date() ? date() + "Z" : undefined,
     });
   };
 
@@ -106,7 +108,7 @@ export function EditModal(props: {
             <div class={styles.editField}>
               <label class={styles.editLabel}>Date</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={date()}
                 onInput={(e) => setDate(e.currentTarget.value)}
                 class={ui.input}
@@ -138,7 +140,7 @@ export function UploadDialog(props: {
   const [name, setName] = createSignal("");
   const [map, setMap] = createSignal("");
   const [tag, setTag] = createSignal("");
-  const [date, setDate] = createSignal(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = createSignal(new Date().toISOString().replace(/Z$/, ""));
 
   let fileInputRef: HTMLInputElement | undefined;
 
@@ -159,7 +161,7 @@ export function UploadDialog(props: {
   const handleSubmit = () => {
     const f = file();
     if (!f || !name()) return;
-    props.onUpload({ file: f, name: name(), map: map(), tag: tag(), date: date() });
+    props.onUpload({ file: f, name: name(), map: map(), tag: tag(), date: date() ? date() + "Z" : "" });
   };
 
   const canSubmit = () => !!file() && !!name() && !props.uploading;
@@ -273,7 +275,7 @@ export function UploadDialog(props: {
           <div class={styles.editField}>
             <label class={styles.editLabel}>DATE</label>
             <input
-              type="date"
+              type="datetime-local"
               value={date()}
               onInput={(e) => setDate(e.currentTarget.value)}
               class={ui.input}
