@@ -2010,6 +2010,45 @@ func TestEditOperation_DBUpdateError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestEditOperation_ISODateRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	ctx := context.Background()
+	op := &Operation{
+		WorldName: "altis", MissionName: "Test",
+		MissionDuration: 300, Filename: "test_iso",
+		Date: "2026-01-01", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(ctx, op))
+
+	jwt := NewJWTManager("secret", time.Hour)
+	token, _ := jwt.Create("")
+	h := &Handler{repoOperation: repo, jwt: jwt}
+
+	isoDate := "2000-01-01T01:01:01.000+09:00"
+	body := fmt.Sprintf(`{"date":%q}`, isoDate)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+	err = h.EditOperation(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result Operation
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
+	assert.Equal(t, isoDate, result.Date)
+}
+
 func TestRetryConversion_DBError(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
