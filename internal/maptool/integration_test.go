@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,7 +78,7 @@ func writeTestPNG(t *testing.T, path string, w, h int) {
 	}
 	f, err := os.Create(path)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { require.NoError(t, f.Close()) }()
 	require.NoError(t, png.Encode(f, img))
 }
 
@@ -358,7 +359,7 @@ func TestIntegration_JobManager(t *testing.T) {
 	require.Eventually(t, func() bool {
 		finalSnap = mgr.GetJob(snap.ID)
 		return finalSnap != nil && (finalSnap.Status == StatusDone || finalSnap.Status == StatusFailed)
-	}, 60_000_000_000, 100_000_000, "job should complete within 60s") // 60s timeout, 100ms poll
+	}, 60*time.Second, 100*time.Millisecond, "job should complete within 60s")
 
 	require.Equal(t, StatusDone, finalSnap.Status, "job failed: %s", finalSnap.Error)
 
