@@ -771,7 +771,7 @@ export class LeafletRenderer implements MapRenderer {
       autoPan: false,
       autoClose: false,
       closeButton: false,
-      className: opts.iconType === "man" ? "leaflet-popup-unit animation" : "leaflet-popup-vehicle animation",
+      className: `${opts.iconType === "man" ? "leaflet-popup-unit" : "leaflet-popup-vehicle"} animation`,
     });
     popup.setContent(opts.name);
     marker.bindPopup(popup).openPopup();

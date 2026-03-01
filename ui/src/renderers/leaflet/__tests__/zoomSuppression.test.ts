@@ -424,7 +424,7 @@ describe("briefing marker SVG renderer", () => {
     });
     const marker = (handle as any)._internal.marker as L.Marker;
     const popup = marker.getPopup()!;
-    expect((popup.options as any).className).toBe("leaflet-popup-unit");
+    expect((popup.options as any).className).toBe("leaflet-popup-unit animation");
   });
 
   it("uses leaflet-popup-vehicle class for vehicle markers", () => {
@@ -437,7 +437,7 @@ describe("briefing marker SVG renderer", () => {
     });
     const marker = (handle as any)._internal.marker as L.Marker;
     const popup = marker.getPopup()!;
-    expect((popup.options as any).className).toBe("leaflet-popup-vehicle");
+    expect((popup.options as any).className).toBe("leaflet-popup-vehicle animation");
   });
 
   it("removeBriefingMarker removes ICON from briefingMarkers layer", () => {
