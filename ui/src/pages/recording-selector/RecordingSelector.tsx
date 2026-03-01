@@ -151,7 +151,6 @@ export function RecordingSelector(): JSX.Element {
         case "date": cmp = new Date(a.date).getTime() - new Date(b.date).getTime(); break;
         case "name": cmp = a.missionName.localeCompare(b.missionName); break;
         case "duration": cmp = a.missionDuration - b.missionDuration; break;
-        default: cmp = 0;
       }
       return sd === "desc" ? -cmp : cmp;
     });

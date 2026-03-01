@@ -24,6 +24,8 @@ export default [
     },
     rules: {
       ...solid.rules,
+      // SolidJS assigns refs via JSX ref={} prop — ESLint can't track this
+      "no-unassigned-vars": "off",
       // Use TS-aware version that understands _ prefix and type imports
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
