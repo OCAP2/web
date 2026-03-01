@@ -163,6 +163,13 @@ export function useRenderBridge(
     engine.unfollowEntity();
   });
 
+  // Smoothing: enable CSS transitions on markers during playback
+  createEffect(() => {
+    const playing = engine.isPlaying();
+    const speed = engine.playbackSpeed();
+    renderer.setSmoothingEnabled(playing, speed);
+  });
+
   // Side panel visibility → CSS custom property
   createEffect(() => {
     const offset = leftPanelVisible()

@@ -167,7 +167,7 @@ export class MockRenderer implements MapRenderer {
     this._setActiveStyleIndex(_index);
   }
 
-  setSmoothingEnabled(_enabled: boolean): void {
+  setSmoothingEnabled(_enabled: boolean, _speed?: number): void {
     // no-op
   }
 

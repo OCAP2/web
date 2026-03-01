@@ -63,7 +63,7 @@ export interface MapRenderer {
   setMapStyle(index: number): void;
 
   // Settings
-  setSmoothingEnabled(enabled: boolean): void;
+  setSmoothingEnabled(enabled: boolean, speed?: number): void;
   nameDisplayMode: () => "players" | "all" | "none";
   setNameDisplayMode(mode: "players" | "all" | "none"): void;
 
