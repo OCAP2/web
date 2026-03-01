@@ -108,6 +108,8 @@ export class PlaybackEngine {
   private _setCaptureDelayMs: (v: number) => void;
 
   // ─── Playback loop state ───
+  /** Max delta (ms) before treating a gap as a background-tab resume. */
+  private static readonly MAX_FRAME_DELTA_MS = 100;
   private animFrameId: number | null = null;
   private lastTickTime = 0;
   private accumulatedMs = 0;
@@ -364,7 +366,7 @@ export class PlaybackEngine {
     this.lastTickTime = now;
 
     // Background tab: rAF pauses, delta is huge on resume. Discard it.
-    if (delta > 100) {
+    if (delta > PlaybackEngine.MAX_FRAME_DELTA_MS) {
       delta = 0;
     }
 

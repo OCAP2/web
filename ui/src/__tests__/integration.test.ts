@@ -93,6 +93,20 @@ function makeMockChunkManager(
 }
 
 // ---------------------------------------------------------------------------
+// Shared rAF stub — engine uses requestAnimationFrame internally.
+// Stub to 1ms interval so timing assertions work precisely.
+// ---------------------------------------------------------------------------
+
+function stubRaf(): void {
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+    return setTimeout(() => cb(performance.now()), 1) as unknown as number;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+    clearTimeout(id);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Integration tests
 // ---------------------------------------------------------------------------
 
@@ -102,13 +116,7 @@ describe("Integration: Full stack playback", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    // Stub rAF to 1ms interval — engine uses requestAnimationFrame internally.
-    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-      return setTimeout(() => cb(performance.now()), 1) as unknown as number;
-    });
-    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
-      clearTimeout(id);
-    });
+    stubRaf();
     renderer = new MockRenderer();
     engine = new PlaybackEngine(renderer);
   });
@@ -404,12 +412,7 @@ describe("Integration: Event resolution", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-      return setTimeout(() => cb(performance.now()), 1) as unknown as number;
-    });
-    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
-      clearTimeout(id);
-    });
+    stubRaf();
     renderer = new MockRenderer();
     engine = new PlaybackEngine(renderer);
   });
