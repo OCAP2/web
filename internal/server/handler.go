@@ -478,9 +478,6 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 		}
 		if raw, err := io.ReadAll(f); err == nil {
 			base := prefix + "/"
-			if base == "/" {
-				base = "./"
-			}
 			inject := fmt.Sprintf(`<base href=%q /><script>window.__BASE_PATH__=%q;</script>`, base, prefix)
 			// Inject right after <head> so <base> is parsed before any relative URLs
 			indexContent = bytes.Replace(raw, []byte("<head>"), []byte("<head>"+inject), 1)
