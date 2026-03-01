@@ -102,12 +102,20 @@ describe("Integration: Full stack playback", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Stub rAF to 1ms interval — engine uses requestAnimationFrame internally.
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      return setTimeout(() => cb(performance.now()), 1) as unknown as number;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+      clearTimeout(id);
+    });
     renderer = new MockRenderer();
     engine = new PlaybackEngine(renderer);
   });
 
   afterEach(() => {
     engine.dispose();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -396,12 +404,19 @@ describe("Integration: Event resolution", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      return setTimeout(() => cb(performance.now()), 1) as unknown as number;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+      clearTimeout(id);
+    });
     renderer = new MockRenderer();
     engine = new PlaybackEngine(renderer);
   });
 
   afterEach(() => {
     engine.dispose();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
