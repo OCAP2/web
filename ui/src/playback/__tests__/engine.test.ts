@@ -70,12 +70,22 @@ describe("PlaybackEngine", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Stub rAF to 1ms interval so existing timing values work precisely.
+    // In production, rAF fires at ~16ms (paint-aligned). In tests, 1ms
+    // avoids rounding issues (e.g., advanceTimersByTime(1000) for interval=1000).
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      return setTimeout(() => cb(performance.now()), 1) as unknown as number;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+      clearTimeout(id);
+    });
     renderer = new MockRenderer();
     engine = new PlaybackEngine(renderer);
   });
 
   afterEach(() => {
     engine.dispose();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -871,6 +881,21 @@ describe("PlaybackEngine", () => {
 
       vi.advanceTimersByTime(1);
       expect(engine.currentFrame()).toBe(1);
+    });
+
+    it("skips frames when ideal interval is sub-16ms", () => {
+      const manifest = makeManifest({ frameCount: 1000, captureDelayMs: 100 });
+      const cm = makeMockChunkManager();
+      engine.loadRecording(manifest, cm);
+      engine.setSpeed(60); // interval = 100/60 ≈ 1.67ms
+
+      engine.play();
+      vi.advanceTimersByTime(100); // 100ms of playback
+      // At speed 60, ideal interval ≈ 1.67ms. Each 1ms rAF tick accumulates
+      // time and advances multiple frames when enough accumulates. Over 100ms
+      // we expect ~60 frames (minor float rounding may lose 1).
+      expect(engine.currentFrame()).toBeGreaterThanOrEqual(59);
+      expect(engine.currentFrame()).toBeLessThanOrEqual(60);
     });
   });
 
