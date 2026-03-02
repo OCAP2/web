@@ -87,7 +87,7 @@ func TestScanMaps_EmptyDir(t *testing.T) {
 func TestScanMaps_NonExistent(t *testing.T) {
 	maps, err := ScanMaps("/tmp/nonexistent-dir-12345")
 	require.NoError(t, err)
-	assert.Nil(t, maps)
+	assert.Empty(t, maps)
 }
 
 func TestScanMaps_NotADirectory(t *testing.T) {
