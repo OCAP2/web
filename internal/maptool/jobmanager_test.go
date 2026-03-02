@@ -380,6 +380,15 @@ func TestWriteErrorJSON_NoOutputDir(t *testing.T) {
 	writeErrorJSON(job) // should be a no-op
 }
 
+func TestWriteErrorJSON_WriteFailure(t *testing.T) {
+	// OutputDir does not exist — WriteFile should fail and log a warning
+	job := &Job{
+		OutputDir: filepath.Join(t.TempDir(), "nonexistent", "deep", "path"),
+		Error:     "some error",
+	}
+	writeErrorJSON(job) // should log warning, not panic
+}
+
 func TestJobManager_PipelineError_WritesErrorJSON(t *testing.T) {
 	mapsDir := t.TempDir()
 	failPipeline := func() *Pipeline {
