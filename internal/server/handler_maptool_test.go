@@ -86,8 +86,8 @@ func TestGetMapToolMaps_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Empty maps dir returns null JSON (nil slice)
-	assert.Equal(t, "null", jsonTrimmed(rec))
+	// Empty maps dir returns empty JSON array
+	assert.Equal(t, "[]", jsonTrimmed(rec))
 }
 
 func TestGetMapToolMaps_WithMaps(t *testing.T) {
