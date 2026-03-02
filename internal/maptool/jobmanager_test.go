@@ -246,11 +246,33 @@ func TestJobManager_OnProgress(t *testing.T) {
 }
 
 func TestJobManager_Submit_OutputDirFails(t *testing.T) {
-	// Use a file as mapsDir so MkdirAll(outputDir) fails
+	// Use a file as mapsDir so checkWritable fails
 	tmpFile := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(tmpFile, []byte("blocker"), 0644))
 
 	jm := NewJobManager(tmpFile, func() *Pipeline { return noopPipeline() })
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusFailed
+	}, 2*time.Second, 50*time.Millisecond)
+
+	got := jm.GetJob(snap.ID)
+	assert.Equal(t, StatusFailed, got.Status)
+}
+
+func TestJobManager_Submit_OutputDirBlockedByFile(t *testing.T) {
+	// mapsDir is writable (checkWritable passes) but a file at the
+	// worldName path blocks MkdirAll(outputDir).
+	mapsDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(mapsDir, "testworld"), []byte("blocker"), 0644))
+
+	jm := NewJobManager(mapsDir, func() *Pipeline { return noopPipeline() })
 	go jm.Start(context.Background())
 	defer jm.Stop()
 
@@ -340,10 +362,24 @@ func TestCheckWritable_OK(t *testing.T) {
 }
 
 func TestCheckWritable_NotWritable(t *testing.T) {
-	// Use a file as "directory" — CreateTemp will fail
+	// Use a file as "directory" — MkdirAll will fail
 	f := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(f, []byte("x"), 0644))
 	err := checkWritable(f)
+	assert.Error(t, err)
+}
+
+func TestCheckWritable_ReadOnlyDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("test requires non-root")
+	}
+	// MkdirAll succeeds (dir exists) but CreateTemp fails (no write permission)
+	dir := filepath.Join(t.TempDir(), "readonly")
+	require.NoError(t, os.MkdirAll(dir, 0755))
+	require.NoError(t, os.Chmod(dir, 0555))
+	t.Cleanup(func() { os.Chmod(dir, 0755) })
+
+	err := checkWritable(dir)
 	assert.Error(t, err)
 }
 
@@ -420,6 +456,43 @@ func TestJobManager_PipelineError_WritesErrorJSON(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(data, &errInfo))
 	assert.Contains(t, errInfo.Error, "GDAL OOM")
+}
+
+func TestJobManager_StaleErrorJSON_RemoveWarning(t *testing.T) {
+	mapsDir := t.TempDir()
+
+	// Pipeline creates a directory named "error.json" in OutputDir.
+	// After the pipeline succeeds, processJob tries os.Remove("error.json")
+	// which fails with EISDIR (not ENOENT), hitting the warning log path.
+	dirPipeline := func() *Pipeline {
+		return NewPipeline([]Stage{
+			{Name: "mkdir", Run: func(ctx context.Context, job *Job) error {
+				dir := filepath.Join(job.OutputDir, "error.json")
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					return err
+				}
+				// Put a file inside so os.Remove fails with ENOTEMPTY (not EISDIR)
+				return os.WriteFile(filepath.Join(dir, "keep"), []byte("x"), 0644)
+			}},
+		})
+	}
+
+	jm := NewJobManager(mapsDir, dirPipeline)
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusDone
+	}, 2*time.Second, 50*time.Millisecond)
+
+	// error.json directory should still exist (Remove failed, warning logged)
+	fi, err := os.Stat(filepath.Join(mapsDir, "testworld", "error.json"))
+	require.NoError(t, err)
+	assert.True(t, fi.IsDir())
 }
 
 func TestJobManager_Subscribe(t *testing.T) {
