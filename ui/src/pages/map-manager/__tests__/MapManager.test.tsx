@@ -9,6 +9,7 @@ import type { ToolSet, MapInfo } from "../types";
 const {
   mockGetMapToolTools,
   mockGetMapToolMaps,
+  mockGetMapToolHealth,
   mockDeleteMapToolMap,
   mockImportMapToolZip,
   mockRestyleMapToolAll,
@@ -17,6 +18,7 @@ const {
 } = vi.hoisted(() => ({
   mockGetMapToolTools: vi.fn(),
   mockGetMapToolMaps: vi.fn(),
+  mockGetMapToolHealth: vi.fn(),
   mockDeleteMapToolMap: vi.fn(),
   mockImportMapToolZip: vi.fn(),
   mockRestyleMapToolAll: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock("../../../data/apiClient", async () => {
     ApiClient: class {
       getMapToolTools = mockGetMapToolTools;
       getMapToolMaps = mockGetMapToolMaps;
+      getMapToolHealth = mockGetMapToolHealth;
       deleteMapToolMap = mockDeleteMapToolMap;
       importMapToolZip = mockImportMapToolZip;
       restyleMapToolAll = mockRestyleMapToolAll;
@@ -121,6 +124,7 @@ beforeEach(() => {
   mockJobsRef.current = [];
   mockGetMapToolTools.mockResolvedValue(tools);
   mockGetMapToolMaps.mockResolvedValue(maps);
+  mockGetMapToolHealth.mockResolvedValue([]);
   mockDeleteMapToolMap.mockResolvedValue(undefined);
   mockImportMapToolZip.mockResolvedValue({ id: "j1", status: "pending" });
   mockRestyleMapToolAll.mockResolvedValue(undefined);

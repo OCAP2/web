@@ -96,4 +96,19 @@ describe("MapCard", () => {
     ));
     expect(container.textContent).toContain("PARTIAL");
   });
+
+  it("shows 'Pipeline failed' when lastError is set", () => {
+    const map: MapInfo = { ...baseMap, status: "none" as any, lastError: "GDAL not found" };
+    const { container } = render(() => (
+      <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+    ));
+    expect(container.textContent).toContain("Pipeline failed");
+  });
+
+  it("does not show error indicator when lastError is absent", () => {
+    const { container } = render(() => (
+      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+    ));
+    expect(container.textContent).not.toContain("Pipeline failed");
+  });
 });

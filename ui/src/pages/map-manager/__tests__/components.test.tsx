@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { StatusStrip } from "../components";
-import type { ToolInfo, JobInfo } from "../types";
+import type { ToolInfo, HealthCheck, JobInfo } from "../types";
 
 const makeTools = (overrides: Partial<ToolInfo>[] = []): ToolInfo[] => {
   const defaults: ToolInfo[] = [
@@ -249,5 +249,67 @@ describe("StatusStrip", () => {
     const outside = container.querySelector("[data-testid='outside']")!;
     fireEvent.mouseDown(outside);
     expect(container.textContent).not.toContain("CLI TOOLS");
+  });
+
+  it("shows 'Environment issue' when health check fails", () => {
+    const health: HealthCheck[] = [
+      { id: "maps_writable", label: "Maps directory writable", ok: false, error: "permission denied" },
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={[]} health={health} onCancel={() => {}} />
+    ));
+    expect(container.textContent).toContain("Environment issue");
+  });
+
+  it("shows ENVIRONMENT section in tools dropdown with health errors", () => {
+    const health: HealthCheck[] = [
+      { id: "maps_writable", label: "Maps directory writable", ok: false, error: "maps dir not writable" },
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={[]} health={health} onCancel={() => {}} />
+    ));
+    const toolsBtn = container.querySelectorAll("button")[0];
+    fireEvent.click(toolsBtn);
+    expect(container.textContent).toContain("ENVIRONMENT");
+    expect(container.textContent).toContain("Maps directory writable");
+    expect(container.textContent).toContain("maps dir not writable");
+  });
+
+  it("shows passing health check in tools dropdown", () => {
+    const health: HealthCheck[] = [
+      { id: "maps_writable", label: "Maps directory writable", ok: true },
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={[]} health={health} onCancel={() => {}} />
+    ));
+    const toolsBtn = container.querySelectorAll("button")[0];
+    fireEvent.click(toolsBtn);
+    expect(container.textContent).toContain("ENVIRONMENT");
+    expect(container.textContent).toContain("Maps directory writable");
+    expect(container.textContent).not.toContain("Environment issue");
+  });
+
+  it("shows failed badge when there are failed jobs", () => {
+    const jobs: JobInfo[] = [
+      makeJob({ id: "j1", status: "failed", error: "boom" }),
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={jobs} health={[]} onCancel={() => {}} />
+    ));
+    // Should show failed count badge and "1 past" with failed styling
+    expect(container.textContent).toContain("1");
+    expect(container.textContent).toContain("1 past");
+  });
+
+  it("hides 'optional missing' label when health is failing", () => {
+    const health: HealthCheck[] = [
+      { id: "maps_writable", label: "Maps directory writable", ok: false, error: "permission denied" },
+    ];
+    const { container } = render(() => (
+      <StatusStrip tools={makeTools()} jobs={[]} health={health} onCancel={() => {}} />
+    ));
+    // "optional missing" should not appear when health is failing
+    expect(container.textContent).not.toContain("optional missing");
+    expect(container.textContent).toContain("Environment issue");
   });
 });

@@ -145,4 +145,19 @@ describe("MapDetail", () => {
     ));
     expect(container.textContent).toContain("30,720 m");
   });
+
+  it("shows lastError when present", () => {
+    const map: MapInfo = { ...baseMap, status: "none" as any, lastError: "maps directory not writable" };
+    const { container } = render(() => (
+      <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+    ));
+    expect(container.textContent).toContain("maps directory not writable");
+  });
+
+  it("does not show error when lastError is absent", () => {
+    const { container } = render(() => (
+      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+    ));
+    expect(container.textContent).not.toContain("Pipeline failed");
+  });
 });
