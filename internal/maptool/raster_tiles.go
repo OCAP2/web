@@ -28,6 +28,22 @@ func runCmd(ctx context.Context, name string, args ...string) error {
 	return nil
 }
 
+// runCmdDir is like runCmd but sets the working directory for the command.
+// Use this when a tool writes temp files to CWD (e.g. gdal_fillnodata.py).
+func runCmdDir(ctx context.Context, dir, name string, args ...string) error {
+	start := time.Now()
+	var buf bytes.Buffer
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w\nOutput:\n%s", err, buf.String())
+	}
+	log.Printf("%s completed in %s", filepath.Base(name), time.Since(start).Round(time.Millisecond))
+	return nil
+}
+
 // RasterToMBTiles converts a raster image to MBTiles using gdal_translate.
 func RasterToMBTiles(ctx context.Context, gdalTranslate, input, output, name string,
 	minZ, maxZ int, tileFormat, resampling string) error {

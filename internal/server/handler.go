@@ -185,6 +185,7 @@ func NewHandler(
 	// MapTool routes (require admin JWT; SSE endpoint handles its own auth via query param)
 	if hdlr.maptoolMgr != nil {
 		mt := admin.Group("/api/v1/maptool")
+		mt.GET("/health", hdlr.getMapToolHealth)
 		mt.GET("/tools", hdlr.getMapToolTools)
 		mt.GET("/maps", hdlr.getMapToolMaps)
 		mt.DELETE("/maps/:name", hdlr.deleteMapToolMap)

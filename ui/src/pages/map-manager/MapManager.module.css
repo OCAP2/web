@@ -360,6 +360,13 @@
   margin-bottom: 4px;
 }
 
+.cardError {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--accent-danger);
+  margin-bottom: 2px;
+}
+
 .cardMeta {
   display: flex;
   align-items: center;

@@ -119,6 +119,17 @@
   font-weight: 500;
 }
 
+/* ─── Error ─── */
+
+.errorMsg {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--accent-danger);
+  margin-top: 4px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
 /* ─── Elevation ─── */
 
 .elevRow {

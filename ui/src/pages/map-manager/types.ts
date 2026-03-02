@@ -9,6 +9,13 @@ export interface ToolInfo {
 
 export type ToolSet = ToolInfo[];
 
+export interface HealthCheck {
+  id: string;
+  label: string;
+  ok: boolean;
+  error?: string;
+}
+
 export interface MapElevation {
   min: number;
   max: number;
@@ -20,6 +27,7 @@ export interface MapInfo {
   name: string;
   worldSize?: number;
   status: "none" | "incomplete" | "complete";
+  lastError?: string;
   hasPreview?: boolean;
   elevation?: MapElevation;
   featureLayers?: string[];

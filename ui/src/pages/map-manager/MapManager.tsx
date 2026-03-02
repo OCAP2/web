@@ -3,7 +3,7 @@ import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "
 import { useNavigate } from "@solidjs/router";
 import { ApiClient } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
-import type { ToolSet, MapInfo } from "./types";
+import type { ToolSet, HealthCheck, MapInfo } from "./types";
 import { useMapToolEvents } from "./useMapToolEvents";
 import { StatusStrip } from "./components";
 import { MapCard } from "./MapCard";
@@ -32,6 +32,7 @@ export function MapManager(): JSX.Element {
 
   // ─── State ───
   const [tools, setTools] = createSignal<ToolSet>([]);
+  const [health, setHealth] = createSignal<HealthCheck[]>([]);
   const [maps, setMaps] = createSignal<MapInfo[]>([]);
   const [search, setSearch] = createSignal("");
   const [statusFilter, setStatusFilter] = createSignal<string | null>(null);
@@ -88,12 +89,14 @@ export function MapManager(): JSX.Element {
   // ─── Load data ───
   onMount(async () => {
     try {
-      const [t, m] = await Promise.all([
+      const [t, m, h] = await Promise.all([
         api.getMapToolTools(),
         api.getMapToolMaps(),
+        api.getMapToolHealth(),
       ]);
       setTools(t);
       setMaps(m);
+      setHealth(h);
     } catch (err) {
       console.error("Map manager failed to load:", err);
       navigate("/", { replace: true });
@@ -181,7 +184,7 @@ export function MapManager(): JSX.Element {
 
         <Show when={!loading()}>
           {/* Status strip — tools | active job | jobs */}
-          <StatusStrip tools={tools()} jobs={jobs()} onCancel={handleCancelJob} />
+          <StatusStrip tools={tools()} health={health()} jobs={jobs()} onCancel={handleCancelJob} />
 
           {/* Filter bar */}
           <div class={styles.filterBar}>

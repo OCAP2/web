@@ -2,7 +2,9 @@ package maptool
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -271,6 +273,15 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 		return
 	}
 
+	// Writability precheck: verify the maps directory is writable before
+	// creating subdirectories. Catches permission errors early with a
+	// clear message (e.g. read-only Docker mounts).
+	if err := checkWritable(jm.mapsDir); err != nil {
+		job.setStatus(StatusFailed, fmt.Sprintf("maps directory not writable: %v", err))
+		jm.broadcastStatus(job)
+		return
+	}
+
 	if err := os.MkdirAll(job.OutputDir, 0755); err != nil {
 		job.setStatus(StatusFailed, err.Error())
 		jm.broadcastStatus(job)
@@ -303,9 +314,19 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	}
 
 	if err := pipeline.Run(jobCtx, job); err != nil {
+		// Only persist error for actual failures, not cancellations.
+		job.mu.RLock()
+		status := job.Status
+		job.mu.RUnlock()
+		if status == StatusFailed {
+			writeErrorJSON(job)
+		}
 		jm.broadcastStatus(job)
 		return
 	}
+
+	// Remove any stale error.json from a previous failed run.
+	os.Remove(filepath.Join(job.OutputDir, "error.json"))
 
 	jm.broadcastStatus(job)
 
@@ -314,6 +335,52 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	if job.CleanupDir != "" {
 		os.RemoveAll(job.CleanupDir)
 	}
+}
+
+// writeErrorJSON persists pipeline failure details to the output directory
+// so they survive server restarts and are visible via the map scanner.
+func writeErrorJSON(job *Job) {
+	if job.OutputDir == "" {
+		return
+	}
+	job.mu.RLock()
+	errInfo := struct {
+		Error    string `json:"error"`
+		Stage    string `json:"stage,omitempty"`
+		StageNum int    `json:"stageNum,omitempty"`
+		Time     string `json:"timestamp"`
+	}{
+		Error:    job.Error,
+		Stage:    job.Stage,
+		StageNum: job.StageNum,
+		Time:     time.Now().UTC().Format(time.RFC3339),
+	}
+	job.mu.RUnlock()
+
+	data, err := json.MarshalIndent(errInfo, "", "  ")
+	if err != nil {
+		log.Printf("WARNING: marshal error.json: %v", err)
+		return
+	}
+	path := filepath.Join(job.OutputDir, "error.json")
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		log.Printf("WARNING: write error.json: %v", err)
+	}
+}
+
+// checkWritable verifies that a directory is writable by creating and
+// immediately removing a temp file.
+func checkWritable(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(dir, ".writable-check-*")
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	f.Close()
+	return os.Remove(name)
 }
 
 func (jm *JobManager) broadcastStatus(job *Job) {

@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import { createSignal, createMemo, createEffect, onCleanup, For, Show } from "solid-js";
-import type { ToolInfo, JobInfo } from "./types";
+import type { ToolInfo, HealthCheck, JobInfo } from "./types";
 import { PIPELINE_STAGES, STATUS_COLORS } from "./constants";
 import { elapsed } from "./helpers";
 import {
@@ -16,6 +16,7 @@ import styles from "./components.module.css";
 
 export function StatusStrip(props: {
   tools: ToolInfo[];
+  health: HealthCheck[];
   jobs: JobInfo[];
   onCancel: (id: string) => void;
 }): JSX.Element {
@@ -30,6 +31,12 @@ export function StatusStrip(props: {
   );
   const missingOpt = createMemo(() =>
     props.tools.filter((t) => !t.required && !t.found),
+  );
+  const healthOk = createMemo(() =>
+    props.health.every((h) => h.ok),
+  );
+  const failedJobs = createMemo(() =>
+    props.jobs.filter((j) => j.status === "failed").length,
   );
   const activeJob = createMemo(() =>
     props.jobs.find((j) => j.status === "running") ?? null,
@@ -81,20 +88,25 @@ export function StatusStrip(props: {
           <div
             class={styles.dot}
             classList={{
-              [styles.dotOk]: allReqOk(),
-              [styles.dotErr]: !allReqOk(),
+              [styles.dotOk]: allReqOk() && healthOk(),
+              [styles.dotErr]: !allReqOk() || !healthOk(),
             }}
           />
           <span
             class={styles.toolsLabel}
             classList={{
-              [styles.toolsLabelOk]: allReqOk(),
-              [styles.toolsLabelErr]: !allReqOk(),
+              [styles.toolsLabelOk]: allReqOk() && healthOk(),
+              [styles.toolsLabelErr]: !allReqOk() || !healthOk(),
             }}
           >
             {found()}/{props.tools.length} tools
           </span>
-          <Show when={missingOpt().length > 0}>
+          <Show when={!healthOk()}>
+            <span class={styles.healthErrLabel}>
+              Environment issue
+            </span>
+          </Show>
+          <Show when={healthOk() && missingOpt().length > 0}>
             <span class={styles.degradedLabel}>
               ({missingOpt().length} optional missing)
             </span>
@@ -168,7 +180,15 @@ export function StatusStrip(props: {
           <Show when={pending().length > 0}>
             <span class={styles.pendingBadge}>{pending().length}</span>
           </Show>
-          <span class={styles.pastLabel}>{past().length} past</span>
+          <Show when={failedJobs() > 0}>
+            <span class={styles.failedBadge}>{failedJobs()}</span>
+          </Show>
+          <span
+            class={styles.pastLabel}
+            classList={{ [styles.pastLabelFailed]: failedJobs() > 0 }}
+          >
+            {past().length} past
+          </span>
           <span
             class={styles.chevron}
             classList={{ [styles.chevronOpen]: openPanel() === "jobs" }}
@@ -224,6 +244,41 @@ export function StatusStrip(props: {
               )}
             </For>
           </div>
+
+          <Show when={props.health.length > 0}>
+            <div class={styles.healthSection}>
+              <div class={styles.dropdownHeading}>ENVIRONMENT</div>
+              <For each={props.health}>
+                {(h) => (
+                  <div>
+                    <div class={styles.toolRow}>
+                      <span
+                        class={styles.toolIcon}
+                        classList={{
+                          [styles.toolFound]: h.ok,
+                          [styles.toolMissingReq]: !h.ok,
+                        }}
+                      >
+                        {h.ok ? <CheckIcon size={12} /> : <XIcon size={14} />}
+                      </span>
+                      <span
+                        class={styles.toolName}
+                        classList={{
+                          [styles.toolNameFound]: h.ok,
+                          [styles.toolNameMissingReq]: !h.ok,
+                        }}
+                      >
+                        {h.label}
+                      </span>
+                    </div>
+                    <Show when={!h.ok && h.error}>
+                      <div class={styles.healthError}>{h.error}</div>
+                    </Show>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
 
         </div>
       </Show>

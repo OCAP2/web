@@ -59,6 +59,9 @@ export function MapDetail(props: {
             >
               {statusLabel(props.map.status)}
             </div>
+            <Show when={props.map.lastError}>
+              <div class={styles.errorMsg}>{props.map.lastError}</div>
+            </Show>
           </div>
           <Show when={props.map.worldSize}>
             <div class={styles.infoItem}>

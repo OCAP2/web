@@ -84,6 +84,13 @@
   color: var(--accent-warning);
 }
 
+.healthErrLabel {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--accent-danger);
+}
+
 /* ── Active job section ── */
 
 .activeSection {
@@ -212,11 +219,25 @@
   color: var(--accent-primary);
 }
 
+.failedBadge {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 74, 74, 0.1);
+  color: var(--accent-danger);
+}
+
 .pastLabel {
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--text-dimmer);
+}
+
+.pastLabelFailed {
+  color: var(--accent-danger);
 }
 
 .chevron {
@@ -333,6 +354,23 @@
 
 .toolLabelOpt {
   color: rgba(255, 184, 74, 0.53);
+}
+
+/* ── Health section in tools dropdown ── */
+
+.healthSection {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.healthError {
+  padding-left: 20px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 107, 107, 0.53);
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 /* ── Degraded outputs box ── */

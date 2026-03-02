@@ -22,6 +22,35 @@ type maptoolConfig struct {
 	mapsDir string
 }
 
+// getMapToolHealth returns a health check for the maptool environment.
+func (h *Handler) getMapToolHealth(c echo.Context) error {
+	checks := []map[string]any{}
+
+	// Check maps directory writability
+	writable := true
+	var writeErr string
+	f, err := os.CreateTemp(h.maptoolCfg.mapsDir, ".health-check-*")
+	if err != nil {
+		writable = false
+		writeErr = err.Error()
+	} else {
+		name := f.Name()
+		f.Close()
+		os.Remove(name)
+	}
+	check := map[string]any{
+		"id":    "maps_writable",
+		"label": "Maps directory writable",
+		"ok":    writable,
+	}
+	if !writable {
+		check["error"] = writeErr
+	}
+	checks = append(checks, check)
+
+	return c.JSON(http.StatusOK, checks)
+}
+
 // getMapToolTools returns detected tool availability.
 func (h *Handler) getMapToolTools(c echo.Context) error {
 	return c.JSON(http.StatusOK, h.maptoolCfg.tools)

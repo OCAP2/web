@@ -100,6 +100,11 @@ export function MapCard(props: {
       </div>
       <div class={styles.cardBody}>
         <span class={styles.cardName}>{props.map.name}</span>
+        <Show when={props.map.lastError}>
+          <div class={styles.cardError} title={props.map.lastError}>
+            Pipeline failed
+          </div>
+        </Show>
         <div class={styles.cardMeta}>
           <Show when={props.map.worldSize}>
             <span class={styles.cardMetaItem}>

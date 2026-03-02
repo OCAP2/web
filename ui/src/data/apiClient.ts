@@ -1,5 +1,5 @@
 import type { Recording, WorldConfig } from "./types";
-import type { ToolSet, MapInfo, JobInfo } from "../pages/map-manager/types";
+import type { ToolSet, HealthCheck, MapInfo, JobInfo } from "../pages/map-manager/types";
 
 // ─── Response types for endpoints not covered in types.ts ───
 
@@ -458,6 +458,10 @@ export class ApiClient {
   }
 
   // ─── MapTool methods ───
+
+  async getMapToolHealth(): Promise<HealthCheck[]> {
+    return this.fetchJsonAuth<HealthCheck[]>(`${this.baseUrl}/api/v1/maptool/health`);
+  }
 
   async getMapToolTools(): Promise<ToolSet> {
     return this.fetchJsonAuth<ToolSet>(`${this.baseUrl}/api/v1/maptool/tools`);
