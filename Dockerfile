@@ -27,12 +27,13 @@ RUN adduser -D -h /home/container container && \
 ARG TIPPECANOE_VERSION=2.79.0
 ARG PMTILES_VERSION=1.30.0
 RUN if [ "$VARIANT" = "full" ]; then \
-      apk add --no-cache gdal-tools py3-gdal build-base bash git sqlite-dev zlib-dev && \
+      apk add --no-cache gdal-tools gdal-driver-jpeg gdal-driver-png py3-gdal build-base bash git sqlite-dev zlib-dev && \
       wget -qO /tmp/tippecanoe.tar.gz "https://github.com/felt/tippecanoe/archive/refs/tags/${TIPPECANOE_VERSION}.tar.gz" && \
       tar -xzf /tmp/tippecanoe.tar.gz -C /tmp && \
       cd /tmp/tippecanoe-${TIPPECANOE_VERSION} && make -j$(nproc) && make install && \
       rm -rf /tmp/tippecanoe* && \
-      apk del build-base bash git && \
+      apk del build-base bash git sqlite-dev zlib-dev && \
+      apk add --no-cache sqlite-libs zlib && \
       case "$TARGETARCH" in \
         amd64) ARCH="x86_64" ;; \
         arm64) ARCH="arm64" ;; \
