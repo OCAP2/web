@@ -135,7 +135,7 @@ export function ImportDialog(props: {
             <div class={styles.structureTitle}>{t("mm_expected_structure").toUpperCase()}</div>
             <div class={styles.structureList}>
               <span class={styles.structureRequired}>meta.json</span> — world metadata ({t("mm_required")})<br />
-              <span class={styles.structureRequired}>sat/</span> — satellite tiles ({t("mm_required")})<br />
+              <span class={styles.structureRequired}>sat/</span> — satellite tiles as X/Y.png ({t("mm_required")})<br />
               <span class={styles.structureOptional}>dem.asc.gz</span> — elevation data ({t("mm_optional")})<br />
               <span class={styles.structureOptional}>geojson/</span> — vector feature layers ({t("mm_optional")})<br />
               <span class={styles.structureOptional}>preview.png</span> — preview image ({t("mm_optional")})
