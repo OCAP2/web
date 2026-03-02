@@ -38,8 +38,17 @@ func setupMaptoolTest(t *testing.T) (*Handler, string) {
 
 	jm := maptool.NewJobManager(mapsDir, noopPipeline)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() {
+		jm.Start(ctx)
+		close(done)
+	}()
+	// Cancel then wait for Start to return so all in-flight processJob
+	// calls finish before t.TempDir() cleanup removes the directory.
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
 
 	tools := maptool.ToolSet{
 		{Name: "pmtiles", Required: true, Found: true, Path: "/usr/bin/pmtiles"},
@@ -545,8 +554,9 @@ func TestRestyleMapToolAll_ExecutesCallback(t *testing.T) {
 
 	jm := maptool.NewJobManager(mapsDir, noopPipeline)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
 
 	hdlr := &Handler{
 		maptoolMgr: jm,
@@ -679,8 +689,9 @@ func TestRestyleMapToolAll_RestyleWorldError(t *testing.T) {
 
 	jm := maptool.NewJobManager(mapsDir, noopPipeline)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
 
 	hdlr := &Handler{
 		maptoolMgr: jm,
@@ -743,8 +754,9 @@ func TestMapToolEventStream_QueryToken(t *testing.T) {
 	mapsDir := t.TempDir()
 	jm := maptool.NewJobManager(mapsDir, noopPipeline)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
 
 	jwt := NewJWTManager("test-secret", time.Hour)
 	token, err := jwt.Create("")
@@ -818,8 +830,9 @@ func TestMapToolEventStream_BearerToken(t *testing.T) {
 	mapsDir := t.TempDir()
 	jm := maptool.NewJobManager(mapsDir, noopPipeline)
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
 
 	jwt := NewJWTManager("test-secret", time.Hour)
 	token, err := jwt.Create("")
@@ -894,7 +907,9 @@ func TestRestyleMapToolAll_SubmitError(t *testing.T) {
 
 	// Start the job manager briefly so Submit works, then stop to test the error
 	ctx, cancel := context.WithCancel(context.Background())
-	go jm.Start(ctx)
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
 	// Give it a moment to start
 	time.Sleep(20 * time.Millisecond)
 
@@ -907,7 +922,6 @@ func TestRestyleMapToolAll_SubmitError(t *testing.T) {
 	err := hdlr.restyleMapToolAll(c)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, rec.Code)
-	cancel()
 }
 
 // jsonTrimmed returns the recorder body with trailing whitespace removed.
