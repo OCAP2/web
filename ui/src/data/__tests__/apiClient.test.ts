@@ -749,7 +749,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith(
         "/aar/api/v1/operations/99/marker-blacklist",
-        expect.objectContaining({ cache: "no-cache" }),
+        expect.objectContaining({ cache: "no-store" }),
       );
       expect(result).toEqual([5, 10, 42]);
     });
