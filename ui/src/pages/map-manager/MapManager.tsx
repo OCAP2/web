@@ -270,20 +270,22 @@ export function MapManager(): JSX.Element {
                 <div class={styles.listContainer}>
                   <div class={styles.listHeader}>
                     <span />
-                    {[
+                    <For each={[
                       { key: "mm_size", right: false },
                       { key: "layers", right: false },
                       { key: "mm_disk", right: false },
                       { key: "status", right: true },
-                    ].map((h) => (
-                      <span
-                        class={styles.listHeaderLabel}
-                        classList={{ [styles.listHeaderRight]: h.right }}
-                        style={{ "text-transform": "uppercase" }}
-                      >
-                        {t(h.key)}
-                      </span>
-                    ))}
+                    ]}>
+                      {(h) => (
+                        <span
+                          class={styles.listHeaderLabel}
+                          classList={{ [styles.listHeaderRight]: h.right }}
+                          style={{ "text-transform": "uppercase" }}
+                        >
+                          {t(h.key)}
+                        </span>
+                      )}
+                    </For>
                   </div>
                   <For each={filteredMaps()}>
                     {(m) => (
