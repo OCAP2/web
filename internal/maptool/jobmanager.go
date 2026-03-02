@@ -326,7 +326,9 @@ func (jm *JobManager) processJob(ctx context.Context, job *Job) {
 	}
 
 	// Remove any stale error.json from a previous failed run.
-	os.Remove(filepath.Join(job.OutputDir, "error.json"))
+	if err := os.Remove(filepath.Join(job.OutputDir, "error.json")); err != nil && !os.IsNotExist(err) {
+		log.Printf("WARNING: failed to remove stale error.json: %v", err)
+	}
 
 	jm.broadcastStatus(job)
 

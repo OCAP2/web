@@ -3,6 +3,7 @@ package maptool
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -143,7 +144,9 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 				var errInfo struct {
 					Error string `json:"error"`
 				}
-				if json.Unmarshal(data, &errInfo) == nil && errInfo.Error != "" {
+				if err := json.Unmarshal(data, &errInfo); err != nil {
+					log.Printf("WARNING: failed to parse error.json for %s: %v", entry.Name(), err)
+				} else if errInfo.Error != "" {
 					info.LastError = errInfo.Error
 				}
 			}

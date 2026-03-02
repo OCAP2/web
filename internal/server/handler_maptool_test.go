@@ -74,6 +74,49 @@ func TestGetMapToolTools(t *testing.T) {
 	assert.False(t, tools[1].Found)
 }
 
+func TestGetMapToolHealth_Writable(t *testing.T) {
+	hdlr, _ := setupMaptoolTest(t)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.getMapToolHealth(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var checks []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &checks))
+	require.Len(t, checks, 1)
+	assert.Equal(t, "maps_writable", checks[0]["id"])
+	assert.Equal(t, true, checks[0]["ok"])
+	assert.Nil(t, checks[0]["error"])
+}
+
+func TestGetMapToolHealth_NotWritable(t *testing.T) {
+	hdlr, mapsDir := setupMaptoolTest(t)
+	// Point mapsDir to a non-existent path inside a file (not a dir)
+	blocker := filepath.Join(mapsDir, "blocker-file")
+	require.NoError(t, os.WriteFile(blocker, []byte("x"), 0644))
+	hdlr.maptoolCfg.mapsDir = blocker
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.getMapToolHealth(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var checks []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &checks))
+	require.Len(t, checks, 1)
+	assert.Equal(t, false, checks[0]["ok"])
+	assert.NotNil(t, checks[0]["error"])
+}
+
 func TestGetMapToolMaps_Empty(t *testing.T) {
 	hdlr, _ := setupMaptoolTest(t)
 

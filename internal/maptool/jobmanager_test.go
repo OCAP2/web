@@ -2,6 +2,7 @@ package maptool
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -330,6 +331,86 @@ func TestEventHub_DropOnSlowSubscriber(t *testing.T) {
 	}
 done:
 	assert.Equal(t, 64, count)
+}
+
+func TestCheckWritable_OK(t *testing.T) {
+	dir := t.TempDir()
+	err := checkWritable(dir)
+	assert.NoError(t, err)
+}
+
+func TestCheckWritable_NotWritable(t *testing.T) {
+	// Use a file as "directory" — CreateTemp will fail
+	f := filepath.Join(t.TempDir(), "not-a-dir")
+	require.NoError(t, os.WriteFile(f, []byte("x"), 0644))
+	err := checkWritable(f)
+	assert.Error(t, err)
+}
+
+func TestWriteErrorJSON(t *testing.T) {
+	dir := t.TempDir()
+	job := &Job{
+		OutputDir: dir,
+		Error:     "stage render: GDAL failed",
+		Stage:     "render",
+		StageNum:  3,
+	}
+
+	writeErrorJSON(job)
+
+	data, err := os.ReadFile(filepath.Join(dir, "error.json"))
+	require.NoError(t, err)
+
+	var errInfo struct {
+		Error    string `json:"error"`
+		Stage    string `json:"stage"`
+		StageNum int    `json:"stageNum"`
+		Time     string `json:"timestamp"`
+	}
+	require.NoError(t, json.Unmarshal(data, &errInfo))
+	assert.Equal(t, "stage render: GDAL failed", errInfo.Error)
+	assert.Equal(t, "render", errInfo.Stage)
+	assert.Equal(t, 3, errInfo.StageNum)
+	assert.NotEmpty(t, errInfo.Time)
+}
+
+func TestWriteErrorJSON_NoOutputDir(t *testing.T) {
+	// Should not panic when OutputDir is empty
+	job := &Job{OutputDir: "", Error: "something"}
+	writeErrorJSON(job) // should be a no-op
+}
+
+func TestJobManager_PipelineError_WritesErrorJSON(t *testing.T) {
+	mapsDir := t.TempDir()
+	failPipeline := func() *Pipeline {
+		return NewPipeline([]Stage{
+			{Name: "fail", Run: func(ctx context.Context, job *Job) error {
+				return fmt.Errorf("GDAL OOM")
+			}},
+		})
+	}
+
+	jm := NewJobManager(mapsDir, failPipeline)
+	go jm.Start(context.Background())
+	defer jm.Stop()
+
+	snap, err := jm.Submit(t.TempDir(), "testworld")
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got := jm.GetJob(snap.ID)
+		return got != nil && got.Status == StatusFailed
+	}, 2*time.Second, 50*time.Millisecond)
+
+	// error.json should have been written to the output dir
+	data, err := os.ReadFile(filepath.Join(mapsDir, "testworld", "error.json"))
+	require.NoError(t, err)
+
+	var errInfo struct {
+		Error string `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(data, &errInfo))
+	assert.Contains(t, errInfo.Error, "GDAL OOM")
 }
 
 func TestJobManager_Subscribe(t *testing.T) {

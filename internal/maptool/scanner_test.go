@@ -179,6 +179,80 @@ func TestScanMaps_SkipsFiles(t *testing.T) {
 	assert.Equal(t, "altis", maps[0].Name)
 }
 
+func TestScanMaps_ErrorJSON(t *testing.T) {
+	dir := t.TempDir()
+
+	worldDir := filepath.Join(dir, "broken")
+	require.NoError(t, os.MkdirAll(worldDir, 0755))
+
+	// Write an error.json — map has no files, so status will be "none"
+	errData, _ := json.Marshal(map[string]any{
+		"error":    "pipeline error: GDAL not found",
+		"stage":    "render",
+		"stageNum": 3,
+	})
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "error.json"), errData, 0644))
+
+	maps, err := ScanMaps(dir)
+	require.NoError(t, err)
+	require.Len(t, maps, 1)
+	assert.Equal(t, MapStatusNone, maps[0].Status)
+	assert.Equal(t, "pipeline error: GDAL not found", maps[0].LastError)
+}
+
+func TestScanMaps_ErrorJSON_IncompleteMap(t *testing.T) {
+	dir := t.TempDir()
+
+	worldDir := filepath.Join(dir, "partial")
+	require.NoError(t, os.MkdirAll(worldDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "map.json"), []byte("{}"), 0644))
+
+	errData, _ := json.Marshal(map[string]any{"error": "OOM killed"})
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "error.json"), errData, 0644))
+
+	maps, err := ScanMaps(dir)
+	require.NoError(t, err)
+	require.Len(t, maps, 1)
+	assert.Equal(t, MapStatusIncomplete, maps[0].Status)
+	assert.Equal(t, "OOM killed", maps[0].LastError)
+}
+
+func TestScanMaps_ErrorJSON_CompleteMapIgnored(t *testing.T) {
+	dir := t.TempDir()
+
+	// Complete map with stale error.json — should NOT populate LastError
+	worldDir := filepath.Join(dir, "altis")
+	require.NoError(t, os.MkdirAll(filepath.Join(worldDir, "tiles"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(worldDir, "styles"), 0755))
+	mapData, _ := json.Marshal(map[string]any{"name": "altis", "worldSize": 30720})
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "map.json"), mapData, 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "tiles", "satellite.pmtiles"), []byte("fake"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "tiles", "features.pmtiles"), []byte("fake"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "styles", "color-relief.json"), []byte("{}"), 0644))
+
+	errData, _ := json.Marshal(map[string]any{"error": "stale error"})
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "error.json"), errData, 0644))
+
+	maps, err := ScanMaps(dir)
+	require.NoError(t, err)
+	require.Len(t, maps, 1)
+	assert.Equal(t, MapStatusComplete, maps[0].Status)
+	assert.Empty(t, maps[0].LastError, "complete maps should not populate LastError")
+}
+
+func TestScanMaps_ErrorJSON_Malformed(t *testing.T) {
+	dir := t.TempDir()
+
+	worldDir := filepath.Join(dir, "bad")
+	require.NoError(t, os.MkdirAll(worldDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(worldDir, "error.json"), []byte("not json"), 0644))
+
+	maps, err := ScanMaps(dir)
+	require.NoError(t, err)
+	require.Len(t, maps, 1)
+	assert.Empty(t, maps[0].LastError, "malformed error.json should not set LastError")
+}
+
 func TestScanMaps_ExtraFiles(t *testing.T) {
 	dir := t.TempDir()
 
