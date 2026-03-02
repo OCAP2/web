@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { I18nProvider } from "../../../hooks/useLocale";
 import { ImportDialog, DeleteConfirm } from "../dialogs";
 import type { MapInfo } from "../types";
 
@@ -13,14 +14,18 @@ afterEach(() => {
 describe("ImportDialog", () => {
   it("renders dialog title", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Import Map");
   });
 
   it("renders drop zone with instructions", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain(".zip");
     expect(container.textContent).toContain("browse");
@@ -29,7 +34,9 @@ describe("ImportDialog", () => {
 
   it("renders structure hint", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("meta.json");
     expect(container.textContent).toContain("sat/");
@@ -37,7 +44,9 @@ describe("ImportDialog", () => {
 
   it("import button is disabled when no file selected", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const buttons = container.querySelectorAll("button");
     const importBtn = Array.from(buttons).find((b) =>
@@ -49,7 +58,9 @@ describe("ImportDialog", () => {
 
   it("shows 'Select a .zip file' status when no file", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Select a .zip file");
   });
@@ -57,7 +68,9 @@ describe("ImportDialog", () => {
   it("calls onClose when cancel clicked", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const cancelBtn = Array.from(container.querySelectorAll("button")).find(
       (b) => b.textContent === "Cancel",
@@ -70,7 +83,9 @@ describe("ImportDialog", () => {
   it("calls onClose when overlay clicked", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     // Overlay is the outermost div
     fireEvent.click(container.firstElementChild!);
@@ -79,7 +94,9 @@ describe("ImportDialog", () => {
 
   it("shows upload progress when uploading", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={45} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={45} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Uploading...");
     expect(container.textContent).toContain("45%");
@@ -87,14 +104,18 @@ describe("ImportDialog", () => {
 
   it("caps progress display at 100%", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={120} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={120} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("100%");
   });
 
   it("shows grad_meh link", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const link = container.querySelector('a[href*="grad_meh"]');
     expect(link).not.toBeNull();
@@ -102,7 +123,9 @@ describe("ImportDialog", () => {
 
   it("accepts a .zip file via file input and shows file info", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["data"], "test-map.zip", { type: "application/zip" });
@@ -113,7 +136,9 @@ describe("ImportDialog", () => {
 
   it("rejects non-.zip files via file input", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["data"], "test.txt", { type: "text/plain" });
@@ -124,7 +149,9 @@ describe("ImportDialog", () => {
 
   it("shows file size in MB after selection", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const data = new Uint8Array(10 * 1024 * 1024); // 10 MB
@@ -136,7 +163,9 @@ describe("ImportDialog", () => {
 
   it("enables import button when file is selected", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["data"], "map.zip", { type: "application/zip" });
@@ -151,7 +180,9 @@ describe("ImportDialog", () => {
   it("calls onImport with file when import button clicked", () => {
     const onImport = vi.fn();
     const { container } = render(() => (
-      <ImportDialog onImport={onImport} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={onImport} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["data"], "map.zip", { type: "application/zip" });
@@ -166,7 +197,9 @@ describe("ImportDialog", () => {
 
   it("clears selected file when clear button clicked", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["data"], "map.zip", { type: "application/zip" });
@@ -182,7 +215,9 @@ describe("ImportDialog", () => {
 
   it("accepts dropped .zip file", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const dropZone = container.querySelector('[class*="dropZone"]');
     expect(dropZone).not.toBeNull();
@@ -195,7 +230,9 @@ describe("ImportDialog", () => {
 
   it("handles dragOver and dragLeave", () => {
     const { container } = render(() => (
-      <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      <I18nProvider locale="en">
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+      </I18nProvider>
     ));
     const dropZone = container.querySelector('[class*="dropZone"]');
     expect(dropZone).not.toBeNull();
@@ -214,14 +251,18 @@ describe("DeleteConfirm", () => {
 
   it("renders map name in confirmation", () => {
     const { container } = render(() => (
-      <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={() => {}} />
+      <I18nProvider locale="en">
+        <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Delete Tanoa?");
   });
 
   it("renders warning text", () => {
     const { container } = render(() => (
-      <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={() => {}} />
+      <I18nProvider locale="en">
+        <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("cannot be undone");
   });
@@ -229,7 +270,9 @@ describe("DeleteConfirm", () => {
   it("calls onConfirm when delete clicked", () => {
     const onConfirm = vi.fn();
     const { container } = render(() => (
-      <DeleteConfirm map={testMap} onConfirm={onConfirm} onClose={() => {}} />
+      <I18nProvider locale="en">
+        <DeleteConfirm map={testMap} onConfirm={onConfirm} onClose={() => {}} />
+      </I18nProvider>
     ));
     const deleteBtn = Array.from(container.querySelectorAll("button")).find(
       (b) => b.textContent?.includes("Delete"),
@@ -242,7 +285,9 @@ describe("DeleteConfirm", () => {
   it("calls onClose when cancel clicked", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
-      <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={onClose} />
+      <I18nProvider locale="en">
+        <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={onClose} />
+      </I18nProvider>
     ));
     const cancelBtn = Array.from(container.querySelectorAll("button")).find(
       (b) => b.textContent === "Cancel",
@@ -255,7 +300,9 @@ describe("DeleteConfirm", () => {
   it("calls onClose when overlay clicked", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
-      <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={onClose} />
+      <I18nProvider locale="en">
+        <DeleteConfirm map={testMap} onConfirm={() => {}} onClose={onClose} />
+      </I18nProvider>
     ));
     fireEvent.click(container.firstElementChild!);
     expect(onClose).toHaveBeenCalled();

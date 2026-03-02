@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { I18nProvider } from "../../../hooks/useLocale";
 import { MapCard } from "../MapCard";
 import type { MapInfo } from "../types";
 
@@ -20,28 +21,36 @@ afterEach(() => {
 describe("MapCard", () => {
   it("renders the map name", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Altis");
   });
 
   it("renders world size", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("30.7 km");
   });
 
   it("renders status badge", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("COMPLETE");
   });
 
   it("renders disk size when files exist", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     // 700 MB total (500 + 200) * 1_048_576 bytes
     expect(container.textContent).toContain("700.0 MB");
@@ -49,7 +58,9 @@ describe("MapCard", () => {
 
   it("renders feature layer count", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("2");
   });
@@ -57,7 +68,9 @@ describe("MapCard", () => {
   it("calls onSelect when clicked", () => {
     const onSelect = vi.fn();
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={onSelect} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={onSelect} />
+      </I18nProvider>
     ));
     fireEvent.click(container.firstElementChild!);
     expect(onSelect).toHaveBeenCalled();
@@ -65,7 +78,9 @@ describe("MapCard", () => {
 
   it("shows 'No preview' when hasPreview is false", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("No preview");
   });
@@ -73,7 +88,9 @@ describe("MapCard", () => {
   it("shows preview image when hasPreview is true", () => {
     const map: MapInfo = { ...baseMap, hasPreview: true };
     const { container } = render(() => (
-      <MapCard map={map} selected={false} baseUrl="/test" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={map} selected={false} baseUrl="/test" onSelect={() => {}} />
+      </I18nProvider>
     ));
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
@@ -83,7 +100,9 @@ describe("MapCard", () => {
   it("renders without worldSize", () => {
     const map: MapInfo = { ...baseMap, worldSize: undefined };
     const { container } = render(() => (
-      <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Altis");
     expect(container.textContent).not.toContain("km");
@@ -92,7 +111,9 @@ describe("MapCard", () => {
   it("renders incomplete status", () => {
     const map: MapInfo = { ...baseMap, status: "incomplete" };
     const { container } = render(() => (
-      <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("PARTIAL");
   });
@@ -100,14 +121,18 @@ describe("MapCard", () => {
   it("shows 'Pipeline failed' when lastError is set", () => {
     const map: MapInfo = { ...baseMap, status: "none" as any, lastError: "GDAL not found" };
     const { container } = render(() => (
-      <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Pipeline failed");
   });
 
   it("does not show error indicator when lastError is absent", () => {
     const { container } = render(() => (
-      <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      <I18nProvider locale="en">
+        <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).not.toContain("Pipeline failed");
   });

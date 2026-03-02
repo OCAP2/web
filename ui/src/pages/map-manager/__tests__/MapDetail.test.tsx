@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
+import { I18nProvider } from "../../../hooks/useLocale";
 import { MapDetail } from "../MapDetail";
 import type { MapInfo } from "../types";
 
@@ -26,28 +27,36 @@ afterEach(() => {
 describe("MapDetail", () => {
   it("renders map name in hero", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Altis");
   });
 
   it("renders world size formatted", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("30.7 km");
   });
 
   it("renders status label", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Complete");
   });
 
   it("renders elevation data", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("0m");
     expect(container.textContent).toContain("350m");
@@ -57,7 +66,9 @@ describe("MapDetail", () => {
 
   it("renders feature layers as tags", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("roads");
     expect(container.textContent).toContain("buildings");
@@ -66,7 +77,9 @@ describe("MapDetail", () => {
 
   it("renders tile file list with found/missing indicators", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("satellite.pmtiles");
     expect(container.textContent).toContain("heightmap.pmtiles");
@@ -77,7 +90,9 @@ describe("MapDetail", () => {
 
   it("renders style variants", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("Topo");
     expect(container.textContent).toContain("Topo Dark");
@@ -86,7 +101,9 @@ describe("MapDetail", () => {
 
   it("shows preview image when hasPreview is true", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="/api" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="/api" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
@@ -96,7 +113,9 @@ describe("MapDetail", () => {
   it("calls onClose when close button clicked", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={onClose} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={onClose} onDelete={() => {}} />
+      </I18nProvider>
     ));
     // The close button is a button in the hero area
     const buttons = container.querySelectorAll("button");
@@ -108,7 +127,9 @@ describe("MapDetail", () => {
   it("calls onDelete when delete button clicked", () => {
     const onDelete = vi.fn();
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={onDelete} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={onDelete} />
+      </I18nProvider>
     ));
     const buttons = container.querySelectorAll("button");
     // Last button is the delete button
@@ -123,7 +144,9 @@ describe("MapDetail", () => {
   it("hides elevation when not provided", () => {
     const map: MapInfo = { ...baseMap, elevation: undefined };
     const { container } = render(() => (
-      <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     // Section heading "Elevation" should be gone, but "Elevation" substring
     // still appears in style variant descriptions. Check for stat labels instead.
@@ -134,14 +157,18 @@ describe("MapDetail", () => {
   it("hides feature layers when empty", () => {
     const map: MapInfo = { ...baseMap, featureLayers: [] };
     const { container } = render(() => (
-      <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).not.toContain("Feature Layers");
   });
 
   it("renders world size in meters for info grid", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("30,720 m");
   });
@@ -149,14 +176,18 @@ describe("MapDetail", () => {
   it("shows lastError when present", () => {
     const map: MapInfo = { ...baseMap, status: "none" as any, lastError: "maps directory not writable" };
     const { container } = render(() => (
-      <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={map} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).toContain("maps directory not writable");
   });
 
   it("does not show error when lastError is absent", () => {
     const { container } = render(() => (
-      <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      <I18nProvider locale="en">
+        <MapDetail map={baseMap} baseUrl="" onClose={() => {}} onDelete={() => {}} />
+      </I18nProvider>
     ));
     expect(container.textContent).not.toContain("Pipeline failed");
   });

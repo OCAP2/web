@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
+import { I18nProvider } from "../../../hooks/useLocale";
 import { MapManager } from "../MapManager";
 import type { ToolSet, MapInfo } from "../types";
 
@@ -107,9 +108,11 @@ const maps: MapInfo[] = [
 
 function renderPage() {
   return render(() => (
-    <Router root={(p) => <>{p.children}</>}>
-      <Route path="/" component={MapManager} />
-    </Router>
+    <I18nProvider locale="en">
+      <Router root={(p) => <>{p.children}</>}>
+        <Route path="/" component={MapManager} />
+      </Router>
+    </I18nProvider>
   ));
 }
 

@@ -280,9 +280,8 @@ export function MapManager(): JSX.Element {
                         <span
                           class={styles.listHeaderLabel}
                           classList={{ [styles.listHeaderRight]: h.right }}
-                          style={{ "text-transform": "uppercase" }}
                         >
-                          {t(h.key)}
+                          {t(h.key).toUpperCase()}
                         </span>
                       )}
                     </For>
