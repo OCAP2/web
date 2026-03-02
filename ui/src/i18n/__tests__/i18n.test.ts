@@ -167,9 +167,9 @@ describe("createI18n", () => {
 });
 
 describe("translations completeness", () => {
-  const locales: Locale[] = ["en", "ru", "de", "cs", "it"];
+  const locales: Locale[] = ["en", "ru", "de", "cs", "it", "fr", "fi"];
 
-  it("every key has all 5 locale entries", () => {
+  it("every key has all 7 locale entries", () => {
     for (const [key, entry] of Object.entries(translations)) {
       for (const locale of locales) {
         expect(
