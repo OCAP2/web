@@ -419,6 +419,7 @@ export function RecordingSelector(): JSX.Element {
         <Show when={showUpload() && authenticated()}>
           <UploadDialog
             maps={uniqueMaps()}
+            tags={uniqueTags()}
             onUpload={handleUpload}
             onCancel={() => setShowUpload(false)}
             uploading={uploading()}

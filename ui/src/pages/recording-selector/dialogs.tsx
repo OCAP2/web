@@ -3,7 +3,6 @@ import type { JSX } from "solid-js";
 import type { Recording } from "../../data/types";
 import { EditIcon, XIcon, CheckIcon, UploadIcon, FilePlusIcon, RefreshCwIcon, AlertTriangleIcon, TrashIcon } from "../../components/Icons";
 import { formatDuration, formatDate, stripRecordingExtension, isoToLocalInput, localInputToIso } from "./helpers";
-import { TAG_OPTIONS } from "./constants";
 import ui from "../../components/ui.module.css";
 import styles from "./dialogs.module.css";
 
@@ -80,28 +79,22 @@ export function EditModal(props: {
               />
             </div>
 
-            {/* Tag + Date side by side */}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <div class={styles.editField} style={{ flex: "1" }}>
-                <label class={styles.editLabel}>Tag</label>
-                <div class={styles.editTagGroup}>
-                  <For each={TAG_OPTIONS}>
-                    {(t) => {
-                      const active = () => tag() === t;
-                      return (
-                        <button
-                          type="button"
-                          class={styles.editTagBtn}
-                          classList={{ [styles.editTagBtnActive]: active() }}
-                          onClick={() => setTag(t)}
-                        >
-                          {t || "None"}
-                        </button>
-                      );
-                    }}
-                  </For>
-                </div>
-              </div>
+            {/* Tag */}
+            <div class={styles.editField}>
+              <label class={styles.editLabel}>Tag</label>
+              <input
+                type="text"
+                value={tag()}
+                onInput={(e) => setTag(e.currentTarget.value)}
+                placeholder="e.g. TvT, COOP, Zeus"
+                list="editTagSuggestions"
+                class={ui.input}
+              />
+              <datalist id="editTagSuggestions">
+                <For each={props.tags}>
+                  {(t) => <option value={t} />}
+                </For>
+              </datalist>
             </div>
 
             {/* Date */}
@@ -131,6 +124,7 @@ export function EditModal(props: {
 
 export function UploadDialog(props: {
   maps: string[];
+  tags?: string[];
   onUpload: (data: { file: File; name: string; map: string; tag: string; date: string }) => void;
   onCancel: () => void;
   uploading: boolean;
@@ -252,23 +246,19 @@ export function UploadDialog(props: {
           {/* Tag */}
           <div class={styles.editField}>
             <label class={styles.editLabel}>TAG</label>
-            <div class={styles.editTagGroup}>
-              <For each={TAG_OPTIONS}>
-                {(t) => {
-                  const active = () => tag() === t;
-                  return (
-                    <button
-                      type="button"
-                      class={styles.editTagBtn}
-                      classList={{ [styles.editTagBtnActive]: active() }}
-                      onClick={() => setTag(t)}
-                    >
-                      {t || "None"}
-                    </button>
-                  );
-                }}
+            <input
+              type="text"
+              value={tag()}
+              onInput={(e) => setTag(e.currentTarget.value)}
+              placeholder="e.g. TvT, COOP, Zeus"
+              list="uploadTagSuggestions"
+              class={ui.input}
+            />
+            <datalist id="uploadTagSuggestions">
+              <For each={props.tags ?? []}>
+                {(t) => <option value={t} />}
               </For>
-            </div>
+            </datalist>
           </div>
 
           {/* Date */}

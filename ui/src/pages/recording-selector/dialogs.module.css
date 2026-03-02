@@ -48,30 +48,6 @@
   font-weight: 600;
 }
 
-.editTagGroup {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.editTagBtn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-dimmer);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: 0.15s;
-}
-
-.editTagBtnActive {
-  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
-  color: var(--accent-primary);
-  border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
-}
 
 /* ── Delete confirm ── */
 .deleteBody {
