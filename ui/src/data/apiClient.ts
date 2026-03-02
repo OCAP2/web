@@ -1,4 +1,4 @@
-import type { Recording, WorldConfig } from "./types";
+import type { Recording, WorldConfig, WorldInfo } from "./types";
 import type { ToolSet, HealthCheck, MapInfo, JobInfo } from "../pages/map-manager/types";
 
 // ─── Response types for endpoints not covered in types.ts ───
@@ -195,6 +195,14 @@ export class ApiClient {
    */
   async getVersion(): Promise<BuildInfo> {
     return this.fetchJson<BuildInfo>(`${this.baseUrl}/api/version`);
+  }
+
+  /**
+   * Fetch installed world metadata (name + display name).
+   * GET {baseUrl}/api/v1/worlds
+   */
+  async getWorlds(): Promise<WorldInfo[]> {
+    return this.fetchJson<WorldInfo[]>(`${this.baseUrl}/api/v1/worlds`);
   }
 
   /**

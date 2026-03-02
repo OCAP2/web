@@ -573,6 +573,12 @@
   text-transform: uppercase;
 }
 
+.rowMapSystemName {
+  margin-left: 6px;
+  font-size: 0.75em;
+  color: var(--text-dimmer);
+}
+
 .rowDate {
   display: flex;
   flex-direction: column;
@@ -729,6 +735,14 @@
   font-family: var(--font-heading);
   opacity: 0.8;
   text-transform: uppercase;
+}
+
+.sidebarHeroSystemName {
+  font-size: 0.7rem;
+  color: var(--text-dimmer);
+  text-align: center;
+  z-index: 1;
+  margin-top: 2px;
 }
 
 .sidebarHeroTerrain {

@@ -192,3 +192,9 @@ export interface WorldConfig {
   hasColorRelief?: boolean;
   attribution?: string;
 }
+
+/** Installed map world with display name resolved from meta.json / map.json. */
+export interface WorldInfo {
+  name: string;
+  displayName: string;
+}

@@ -16,6 +16,7 @@ export function DetailSidebar(props: {
   onEdit?: (rec: Recording) => void;
   onDelete?: (rec: Recording) => void;
   onRetry?: (id: string) => void;
+  worldDisplayName?: string;
 }) {
   const { t, locale } = useI18n();
   const mapColor = () => getMapColor(props.rec.worldName);
@@ -57,8 +58,12 @@ export function DetailSidebar(props: {
         </Show>
         <div class={styles.sidebarHeroOverlay} />
         <div style={{ "text-align": "center", "z-index": "1" }}>
-          <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>{props.rec.worldName}</div>
-          {/* <div class={styles.sidebarHeroTerrain}>{props.rec.worldName}</div> */}
+          <div class={styles.sidebarHeroMapName} style={{ color: mapColor() }}>
+            {props.worldDisplayName ?? props.rec.worldName}
+          </div>
+          <Show when={props.worldDisplayName && props.worldDisplayName !== props.rec.worldName}>
+            <div class={styles.sidebarHeroSystemName}>{props.rec.worldName}</div>
+          </Show>
         </div>
         <button data-testid="sidebar-close" class={styles.sidebarCloseButton} onClick={() => props.onClose()}>
           <XIcon />

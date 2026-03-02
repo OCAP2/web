@@ -44,6 +44,9 @@ export function RecordingSelector(): JSX.Element {
   const [deletingRec, setDeletingRec] = createSignal<Recording | null>(null);
   const [uploading, setUploading] = createSignal(false);
   const [mapToolEnabled, setMapToolEnabled] = createSignal(false);
+  const [worldNames, setWorldNames] = createSignal<Map<string, string>>(new Map());
+
+  const worldDisplayName = (systemName: string) => worldNames().get(systemName) ?? systemName;
 
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
@@ -52,12 +55,18 @@ export function RecordingSelector(): JSX.Element {
   onMount(async () => {
     setLoading(true);
     try {
-      const [recs, info] = await Promise.all([
+      const [recs, info, worlds] = await Promise.all([
         api.getRecordings(),
         api.getVersion().catch(() => null),
+        api.getWorlds().catch(() => []),
       ]);
       setRecordings(recs.reverse());
       if (info) setBuildInfo(info);
+      const lookup = new Map<string, string>();
+      for (const w of worlds) {
+        lookup.set(w.name, w.displayName);
+      }
+      setWorldNames(lookup);
     } catch {
       setRecordings([]);
     } finally {
@@ -113,7 +122,11 @@ export function RecordingSelector(): JSX.Element {
   };
 
   // Derived data
-  const uniqueMaps = createMemo(() => [...new Set(recordings().map((o) => o.worldName))].sort((a, b) => a.localeCompare(b)));
+  const uniqueMaps = createMemo(() =>
+    [...new Set(recordings().map((o) => o.worldName))].sort((a, b) =>
+      (worldNames().get(a) ?? a).localeCompare(worldNames().get(b) ?? b)
+    )
+  );
   const uniqueTags = createMemo(() => ([...new Set(recordings().map((o) => o.tag).filter(Boolean))] as string[]).sort((a, b) => a.localeCompare(b)));
 
   const hasPlayerData = createMemo(() => recordings().some(r => (r.playerCount ?? 0) > 0));
@@ -398,7 +411,7 @@ export function RecordingSelector(): JSX.Element {
                         onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
                       >
                         <div class={styles.mapDot} style={{ background: active() ? color : "var(--text-dimmer)" }} />
-                        {mapName}
+                        {worldDisplayName(mapName)}
                       </button>
                     );
                   }}
@@ -480,6 +493,7 @@ export function RecordingSelector(): JSX.Element {
                               showPlayers={hasPlayerData()}
                               showKills={hasKillData()}
                               gridColumns={gridColumns()}
+                              worldDisplayName={worldDisplayName(o().worldName)}
                             />
                           </div>
                         )}
@@ -554,6 +568,7 @@ export function RecordingSelector(): JSX.Element {
                 onEdit={setEditingRec}
                 onDelete={setDeletingRec}
                 onRetry={handleRetry}
+                worldDisplayName={worldDisplayName(rec().worldName)}
               />
             )}
           </Show>

@@ -15,6 +15,7 @@ export function RecordingRow(props: {
   showPlayers?: boolean;
   showKills?: boolean;
   gridColumns?: string;
+  worldDisplayName?: string;
 }) {
   const { locale } = useI18n();
   const mapColor = () => getMapColor(props.rec.worldName);
@@ -42,7 +43,12 @@ export function RecordingRow(props: {
         </div>
         <div class={styles.rowMissionInfo}>
           <div class={styles.rowMissionName}>{props.rec.missionName}</div>
-          <div class={styles.rowMapName}>{props.rec.worldName}</div>
+          <div class={styles.rowMapName}>
+            {props.worldDisplayName ?? props.rec.worldName}
+            <Show when={props.worldDisplayName && props.worldDisplayName !== props.rec.worldName}>
+              <span class={styles.rowMapSystemName}>{props.rec.worldName}</span>
+            </Show>
+          </div>
         </div>
       </div>
 
