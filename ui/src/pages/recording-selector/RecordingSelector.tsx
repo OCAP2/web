@@ -148,7 +148,8 @@ export function RecordingSelector(): JSX.Element {
     if (s) {
       result = result.filter((r) =>
         r.missionName.toLowerCase().includes(s) ||
-        r.worldName.toLowerCase().includes(s)
+        r.worldName.toLowerCase().includes(s) ||
+        worldDisplayName(r.worldName).toLowerCase().includes(s)
       );
     }
     const tf = tagFilter();
