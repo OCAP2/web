@@ -70,9 +70,9 @@ describe("StatsTab", () => {
       </TestProviders>
     ));
 
-    // TOTAL and ALIVE labels should be present in the stat grid
-    expect(screen.getByText("TOTAL")).toBeTruthy();
-    expect(screen.getByText("ALIVE")).toBeTruthy();
+    // Total and Alive labels should be present in the stat grid
+    expect(screen.getByText("Total")).toBeTruthy();
+    expect(screen.getByText("Alive")).toBeTruthy();
     // alive=1 and total=2 appear as stat numbers
     expect(screen.getByText("1")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
@@ -119,9 +119,9 @@ describe("StatsTab", () => {
     expect(screen.getByText("BLUFOR")).toBeTruthy();
     expect(screen.getByText("OPFOR")).toBeTruthy();
 
-    // KILLS and DEATHS labels should be present (one per side card)
-    expect(screen.getAllByText("KILLS").length).toBe(2);
-    expect(screen.getAllByText("DEATHS").length).toBe(2);
+    // Kills and Deaths labels should be present (one per side card)
+    expect(screen.getAllByText("Kills").length).toBe(2);
+    expect(screen.getAllByText("Deaths").length).toBe(2);
 
     // BLUFOR has 1 kill, OPFOR has 1 death
     // The kill/death count "1" appears in forceStatNum elements
@@ -203,7 +203,7 @@ describe("StatsTab", () => {
     ));
 
     // Leaderboard should be visible
-    expect(screen.getByText("LEADERBOARD")).toBeTruthy();
+    expect(screen.getByText("Leaderboard")).toBeTruthy();
     expect(screen.getByText("TopKiller")).toBeTruthy();
     expect(screen.getByText("SecondKiller")).toBeTruthy();
 
@@ -231,9 +231,9 @@ describe("StatsTab", () => {
     ));
 
     // Force summary should still be visible
-    expect(screen.getByText("FORCE SUMMARY")).toBeTruthy();
+    expect(screen.getByText("Force Summary")).toBeTruthy();
     // Leaderboard should not appear
-    expect(screen.queryByText("LEADERBOARD")).toBeNull();
+    expect(screen.queryByText("Leaderboard")).toBeNull();
   });
 
   it("excludes AI units from leaderboard", () => {
@@ -263,7 +263,7 @@ describe("StatsTab", () => {
     ));
 
     // Player should appear in leaderboard, AI should not
-    expect(screen.getByText("LEADERBOARD")).toBeTruthy();
+    expect(screen.getByText("Leaderboard")).toBeTruthy();
     expect(screen.getByText("PlayerKiller")).toBeTruthy();
     expect(screen.queryByText("AIKiller")).toBeNull();
   });
@@ -290,10 +290,10 @@ describe("StatsTab", () => {
     ));
 
     // Force summary still shows (AI units count toward totals)
-    expect(screen.getByText("FORCE SUMMARY")).toBeTruthy();
+    expect(screen.getByText("Force Summary")).toBeTruthy();
     expect(screen.getByText("BLUFOR")).toBeTruthy();
     // Leaderboard hidden because no players have kills/deaths
-    expect(screen.queryByText("LEADERBOARD")).toBeNull();
+    expect(screen.queryByText("Leaderboard")).toBeNull();
   });
 
   it("includes AI kills in force summary totals", () => {
@@ -320,9 +320,9 @@ describe("StatsTab", () => {
     // Both sides should appear in force summary
     expect(screen.getByText("BLUFOR")).toBeTruthy();
     expect(screen.getByText("OPFOR")).toBeTruthy();
-    // KILLS and DEATHS labels should be present (AI kill still counted in force card)
-    expect(screen.getAllByText("KILLS").length).toBe(2);
-    expect(screen.getAllByText("DEATHS").length).toBe(2);
+    // Kills and Deaths labels should be present (AI kill still counted in force card)
+    expect(screen.getAllByText("Kills").length).toBe(2);
+    expect(screen.getAllByText("Deaths").length).toBe(2);
   });
 
   it("shows multiple side cards when multiple sides have units", () => {

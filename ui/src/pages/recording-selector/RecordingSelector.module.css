@@ -205,6 +205,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 .langOption {
@@ -802,6 +803,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
   font-weight: 600;
+  text-transform: uppercase;
   margin-bottom: 10px;
 }
 
@@ -927,6 +929,7 @@
   color: var(--text-dim);
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .sidebarCombatIcon {

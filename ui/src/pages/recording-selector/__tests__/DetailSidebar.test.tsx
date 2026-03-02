@@ -161,7 +161,7 @@ describe("DetailSidebar force composition", () => {
   it("renders side cards for each side in sideComposition", () => {
     const { container } = renderSidebarWithAdmin(recWithSides);
     // Should show the section label
-    expect(container.textContent).toContain("FORCE COMPOSITION");
+    expect(container.textContent).toContain("Force Composition");
     // All four side names should appear
     expect(container.textContent).toContain("WEST");
     expect(container.textContent).toContain("EAST");
@@ -177,10 +177,10 @@ describe("DetailSidebar force composition", () => {
     expect(container.textContent).toContain("15"); // kills
 
     // Check i18n labels
-    expect(container.textContent).toContain("TOTAL");
-    expect(container.textContent).toContain("ALIVE");
-    expect(container.textContent).toContain("DEAD");
-    expect(container.textContent).toContain("KILLS");
+    expect(container.textContent).toContain("Total");
+    expect(container.textContent).toContain("Alive");
+    expect(container.textContent).toContain("Dead");
+    expect(container.textContent).toContain("Kills");
   });
 
   it("shows AI only badge when players is 0", () => {
@@ -199,13 +199,13 @@ describe("DetailSidebar force composition", () => {
 
   it("does not render force composition when sideComposition is absent", () => {
     const { container } = renderSidebarWithAdmin(baseRec);
-    expect(container.textContent).not.toContain("FORCE COMPOSITION");
+    expect(container.textContent).not.toContain("Force Composition");
   });
 
   it("does not render force composition when sideComposition is empty", () => {
     const rec: Recording = { ...baseRec, sideComposition: {} };
     const { container } = renderSidebarWithAdmin(rec);
-    expect(container.textContent).not.toContain("FORCE COMPOSITION");
+    expect(container.textContent).not.toContain("Force Composition");
   });
 
   it("sorts sides in canonical order (EAST, WEST, GUER, CIV)", () => {
@@ -242,7 +242,7 @@ describe("DetailSidebar combat summary", () => {
     expect(container.textContent).toContain("5.0");
     // Labels
     expect(container.textContent).toContain("Kills");
-    expect(container.textContent).toContain("KILLS/MIN");
+    expect(container.textContent).toContain("Kills/Min");
   });
 
   it("renders player kills when playerKillCount > 0", () => {
@@ -254,7 +254,7 @@ describe("DetailSidebar combat summary", () => {
     };
     const { container } = renderSidebarWithAdmin(rec);
     expect(container.textContent).toContain("20");
-    expect(container.textContent).toContain("PLAYER KILLS");
+    expect(container.textContent).toContain("Player Kills");
   });
 
   it("does not render player kills cell when playerKillCount is 0", () => {
@@ -265,7 +265,7 @@ describe("DetailSidebar combat summary", () => {
       missionDuration: 300,
     };
     const { container } = renderSidebarWithAdmin(rec);
-    expect(container.textContent).not.toContain("PLAYER KILLS");
+    expect(container.textContent).not.toContain("Player Kills");
   });
 
   it("does not render combat summary when killCount is 0", () => {
@@ -275,12 +275,12 @@ describe("DetailSidebar combat summary", () => {
       missionDuration: 300,
     };
     const { container } = renderSidebarWithAdmin(rec);
-    expect(container.textContent).not.toContain("KILLS/MIN");
+    expect(container.textContent).not.toContain("Kills/Min");
   });
 
   it("does not render combat summary when killCount is absent", () => {
     const { container } = renderSidebarWithAdmin(baseRec);
-    expect(container.textContent).not.toContain("KILLS/MIN");
+    expect(container.textContent).not.toContain("Kills/Min");
   });
 
   it("shows dash for kills per minute when duration is 0", () => {

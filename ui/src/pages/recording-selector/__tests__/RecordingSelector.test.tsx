@@ -614,7 +614,7 @@ describe("RecordingSelector", () => {
 
     // 2 unique maps: Altis and Stratis
     expect(screen.getByText("2")).toBeDefined();
-    expect(screen.getByText("MAPS")).toBeDefined();
+    expect(screen.getByText("Maps")).toBeDefined();
   });
 
   // ── Auth error toast ──
@@ -715,10 +715,10 @@ describe("RecordingSelector (player/kill columns)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-10");
 
-    // maxPlayers = 32, label t("max_players") = "MAX PLAYERS"
+    // maxPlayers = 32, label t("max_players") = "Max Players"
     // "32" appears in both the stat pill and the row, so check for at least one
     expect(screen.getAllByText("32").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("MAX PLAYERS")).toBeDefined();
+    expect(screen.getByText("Max Players")).toBeDefined();
   });
 
   it("shows totalKills stat pill", async () => {
@@ -792,12 +792,12 @@ describe("RecordingSelector (language selector)", () => {
     // Click Escape to close
     fireEvent.keyDown(window, { key: "Escape" });
 
-    // The dropdown content (like the title "LANGUAGE") should disappear
+    // The dropdown content (like the title "Language") should disappear
     await vi.waitFor(() => {
       // After Escape, the dropdown should be closed
       // Check that one of the dropdown-only elements is no longer present
-      // The dropdown title "LANGUAGE" is only shown in the dropdown
-      expect(screen.queryByText("LANGUAGE")).toBeNull();
+      // The dropdown title "Language" is only shown in the dropdown
+      expect(screen.queryByText("Language")).toBeNull();
     });
   });
 });

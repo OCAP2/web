@@ -615,6 +615,7 @@
   letter-spacing: 0.06em;
   margin-top: 3px;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 /* ── Leaderboard ── */
