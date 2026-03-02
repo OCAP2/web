@@ -113,8 +113,8 @@ export function RecordingSelector(): JSX.Element {
   };
 
   // Derived data
-  const uniqueMaps = createMemo(() => [...new Set(recordings().map((o) => o.worldName))]);
-  const uniqueTags = createMemo(() => [...new Set(recordings().map((o) => o.tag).filter(Boolean))] as string[]);
+  const uniqueMaps = createMemo(() => [...new Set(recordings().map((o) => o.worldName))].sort((a, b) => a.localeCompare(b)));
+  const uniqueTags = createMemo(() => ([...new Set(recordings().map((o) => o.tag).filter(Boolean))] as string[]).sort((a, b) => a.localeCompare(b)));
 
   const hasPlayerData = createMemo(() => recordings().some(r => (r.playerCount ?? 0) > 0));
   const hasKillData = createMemo(() => recordings().some(r => (r.killCount ?? 0) > 0));
