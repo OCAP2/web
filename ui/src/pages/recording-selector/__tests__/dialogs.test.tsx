@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
+import { I18nProvider } from "../../../hooks/useLocale";
 import { EditModal, DeleteConfirm } from "../dialogs";
 import type { Recording } from "../../../data/types";
 
@@ -27,7 +28,9 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      <I18nProvider locale="en">
+        <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      </I18nProvider>
     ));
 
     expect(screen.getByText("Edit Recording")).not.toBeNull();
@@ -41,7 +44,9 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     render(() => (
-      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      <I18nProvider locale="en">
+        <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      </I18nProvider>
     ));
 
     fireEvent.click(screen.getByText("Cancel"));
@@ -53,7 +58,9 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     const { container } = render(() => (
-      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      <I18nProvider locale="en">
+        <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      </I18nProvider>
     ));
 
     const nameInput = screen.getByDisplayValue("Op Thunder");
@@ -74,7 +81,9 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     const { container } = render(() => (
-      <EditModal rec={mockRec} tags={["TvT", "COOP"]} onClose={onClose} onSave={onSave} />
+      <I18nProvider locale="en">
+        <EditModal rec={mockRec} tags={["TvT", "COOP"]} onClose={onClose} onSave={onSave} />
+      </I18nProvider>
     ));
 
     // Tag input should show current value
@@ -98,7 +107,9 @@ describe("EditModal", () => {
     const onSave = vi.fn();
 
     const { container } = render(() => (
-      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      <I18nProvider locale="en">
+        <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      </I18nProvider>
     ));
 
     // Submit without changing the date
@@ -118,7 +129,9 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      <I18nProvider locale="en">
+        <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      </I18nProvider>
     ));
 
     expect(screen.getAllByText("Delete Recording").length).toBeGreaterThanOrEqual(1);
@@ -130,7 +143,9 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      <I18nProvider locale="en">
+        <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      </I18nProvider>
     ));
 
     expect(
@@ -143,7 +158,9 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      <I18nProvider locale="en">
+        <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      </I18nProvider>
     ));
 
     // The delete button contains both an icon and text "Delete Recording";
@@ -161,7 +178,9 @@ describe("DeleteConfirm", () => {
     const onConfirm = vi.fn();
 
     render(() => (
-      <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      <I18nProvider locale="en">
+        <DeleteConfirm rec={mockRec} onClose={onClose} onConfirm={onConfirm} />
+      </I18nProvider>
     ));
 
     fireEvent.click(screen.getByText("Cancel"));

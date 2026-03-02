@@ -194,17 +194,17 @@ export function DetailSidebar(props: {
       {/* Admin Actions */}
       <Show when={props.isAdmin}>
         <div class={styles.adminActions}>
-          <div class={styles.sidebarSectionLabel} style={{ "margin-bottom": "2px" }}>ADMIN ACTIONS</div>
+          <div class={styles.sidebarSectionLabel} style={{ "margin-bottom": "2px" }}>{t("admin_actions").toUpperCase()}</div>
           <div class={styles.adminActionButtons}>
             <button class={styles.adminActionBtn} onClick={() => props.onEdit?.(props.rec)}>
-              <EditIcon /> Edit
+              <EditIcon /> {t("edit")}
             </button>
             <button class={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`} onClick={() => props.onDelete?.(props.rec)}>
-              <TrashIcon /> Delete
+              <TrashIcon /> {t("delete")}
             </button>
             <Show when={props.rec.conversionStatus === "failed"}>
               <button class={styles.adminActionBtn} onClick={() => props.onRetry?.(props.rec.id)}>
-                <RefreshCwIcon /> Retry
+                <RefreshCwIcon /> {t("retry")}
               </button>
             </Show>
           </div>

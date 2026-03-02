@@ -1073,7 +1073,7 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-1");
 
     // Click upload button
-    const uploadBtn = screen.getByTitle("Upload recording");
+    const uploadBtn = screen.getByTitle("Upload Recording");
     fireEvent.click(uploadBtn);
 
     // Upload dialog should appear
@@ -1115,7 +1115,7 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-1");
 
     // Open upload zone
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1134,7 +1134,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1152,7 +1152,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1170,7 +1170,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1189,7 +1189,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1221,7 +1221,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1243,7 +1243,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1276,7 +1276,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1325,7 +1325,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload recording") as HTMLButtonElement;
+    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     // No file: "Select a file to upload"

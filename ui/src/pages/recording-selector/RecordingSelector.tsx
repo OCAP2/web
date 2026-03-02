@@ -342,7 +342,7 @@ export function RecordingSelector(): JSX.Element {
                     <button
                       class={styles.adminIconButton}
                       onClick={() => navigate("/map-manager")}
-                      title="Map Manager"
+                      title={t("map_manager")}
                     >
                       <GlobeIcon />
                     </button>
@@ -350,7 +350,7 @@ export function RecordingSelector(): JSX.Element {
                   <button
                     class={`${styles.adminIconButton} ${showUpload() ? styles.adminIconButtonActive : ""}`}
                     onClick={() => setShowUpload(u => !u)}
-                    title="Upload recording"
+                    title={t("upload_recording")}
                   >
                     <UploadIcon />
                   </button>
