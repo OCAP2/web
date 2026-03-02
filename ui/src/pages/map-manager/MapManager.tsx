@@ -94,7 +94,8 @@ export function MapManager(): JSX.Element {
       ]);
       setTools(t);
       setMaps(m);
-    } catch {
+    } catch (err) {
+      console.error("Map manager failed to load:", err);
       navigate("/", { replace: true });
       return;
     }
