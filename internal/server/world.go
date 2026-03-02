@@ -41,19 +41,13 @@ func resolveDisplayName(worldDir, dirName string) string {
 		DisplayName string `json:"displayName"`
 	}
 
-	// Try meta.json first
-	if data, err := os.ReadFile(filepath.Join(worldDir, "meta.json")); err == nil {
-		var h nameHolder
-		if json.Unmarshal(data, &h) == nil && h.DisplayName != "" {
-			return h.DisplayName
-		}
-	}
-
-	// Try map.json
-	if data, err := os.ReadFile(filepath.Join(worldDir, "map.json")); err == nil {
-		var h nameHolder
-		if json.Unmarshal(data, &h) == nil && h.DisplayName != "" {
-			return h.DisplayName
+	// Try meta.json, then map.json
+	for _, filename := range []string{"meta.json", "map.json"} {
+		if data, err := os.ReadFile(filepath.Join(worldDir, filename)); err == nil {
+			var h nameHolder
+			if json.Unmarshal(data, &h) == nil && h.DisplayName != "" {
+				return h.DisplayName
+			}
 		}
 	}
 
