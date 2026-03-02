@@ -16,7 +16,7 @@ const baseRec: Recording = {
   tag: "TvT",
 };
 
-function renderSidebar(initial: Recording = baseRec) {
+function renderSidebar(initial: Recording = baseRec, worldDisplayName?: string) {
   const [rec, setRec] = createSignal(initial);
   const onLaunch = vi.fn();
   const onClose = vi.fn();
@@ -24,7 +24,7 @@ function renderSidebar(initial: Recording = baseRec) {
   const result = render(() => (
     <Router root={(p) => <I18nProvider locale="en"><CustomizeProvider>{p.children}</CustomizeProvider></I18nProvider>}>
       <Route path="/" component={() => (
-        <DetailSidebar rec={rec()} onLaunch={onLaunch} onClose={onClose} />
+        <DetailSidebar rec={rec()} onLaunch={onLaunch} onClose={onClose} worldDisplayName={worldDisplayName} />
       )} />
     </Router>
   ));
@@ -348,5 +348,25 @@ describe("DetailSidebar admin actions", () => {
     expect(retryBtn).toBeDefined();
     fireEvent.click(retryBtn!);
     expect(onRetry).toHaveBeenCalledWith("1");
+  });
+});
+
+describe("DetailSidebar world display name", () => {
+  it("shows display name and system name when they differ", () => {
+    const rec: Recording = { ...baseRec, worldName: "juju_javory" };
+    const { container } = renderSidebar(rec, "Garmanda");
+    expect(container.textContent).toContain("Garmanda");
+    expect(container.textContent).toContain("juju_javory");
+  });
+
+  it("does not show system name when display name matches world name", () => {
+    const { container } = renderSidebar(baseRec, "Altis");
+    const text = container.textContent ?? "";
+    expect(text.split("Altis").length - 1).toBe(1);
+  });
+
+  it("falls back to world name when no display name is provided", () => {
+    const { container } = renderSidebar(baseRec);
+    expect(container.textContent).toContain("Altis");
   });
 });

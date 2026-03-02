@@ -22,6 +22,7 @@ function renderRow(
     showPlayers?: boolean;
     showKills?: boolean;
     gridColumns?: string;
+    worldDisplayName?: string;
   } = {},
 ) {
   const onSelect = vi.fn();
@@ -39,6 +40,7 @@ function renderRow(
           showPlayers={opts.showPlayers}
           showKills={opts.showKills}
           gridColumns={opts.gridColumns}
+          worldDisplayName={opts.worldDisplayName}
         />
       )} />
     </Router>
@@ -182,5 +184,27 @@ describe("RecordingRow status", () => {
       return b.querySelector('path[d="M8 5v14l11-7z"]');
     });
     expect(playBtns.length).toBe(0);
+  });
+});
+
+describe("RecordingRow world display name", () => {
+  it("shows display name and system name when they differ", () => {
+    const rec: Recording = { ...baseRec, worldName: "juju_javory" };
+    const { container } = renderRow(rec, { worldDisplayName: "Garmanda" });
+    expect(container.textContent).toContain("Garmanda");
+    expect(container.textContent).toContain("juju_javory");
+  });
+
+  it("does not show system name when display name matches world name", () => {
+    const { container } = renderRow(baseRec, { worldDisplayName: "Altis" });
+    // "Altis" appears as display name, but system name span should not render
+    const text = container.textContent ?? "";
+    // Count occurrences — should only appear once (as display name, not duplicated)
+    expect(text.split("Altis").length - 1).toBe(1);
+  });
+
+  it("falls back to world name when no display name is provided", () => {
+    const { container } = renderRow(baseRec);
+    expect(container.textContent).toContain("Altis");
   });
 });

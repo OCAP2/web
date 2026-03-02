@@ -78,6 +78,17 @@ func TestScanWorlds_MalformedJSON(t *testing.T) {
 	assert.Equal(t, "broken", worlds[0].DisplayName) // falls back to dir name
 }
 
+func TestScanWorlds_ReadDirError(t *testing.T) {
+	// Use a file (not a directory) as the maps path to trigger a non-IsNotExist error
+	f, err := os.CreateTemp(t.TempDir(), "not-a-dir")
+	require.NoError(t, err)
+	f.Close()
+
+	worlds, err := ScanWorlds(f.Name())
+	assert.Error(t, err)
+	assert.Nil(t, worlds)
+}
+
 func TestScanWorlds_SkipsFiles(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "not-a-dir.txt"), []byte("hi"), 0644))
