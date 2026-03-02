@@ -52,8 +52,9 @@ type Handler struct {
 	openIDNonceStore  openid.NonceStore
 	steamAPIBaseURL   string // override for testing; empty uses default
 
-	spriteOnce  sync.Once
-	spriteFiles map[string][]byte
+	spriteOnce    sync.Once
+	spriteFiles   map[string][]byte
+	spriteInitErr error
 }
 
 // HandlerOption configures the Handler
@@ -453,8 +454,11 @@ func (h *Handler) GetMarker(c echo.Context) error {
 
 func (h *Handler) GetSprite(c echo.Context) error {
 	h.spriteOnce.Do(func() {
-		h.spriteFiles, _ = maptool.GenerateSpriteBytes()
+		h.spriteFiles, h.spriteInitErr = maptool.GenerateSpriteBytes()
 	})
+	if h.spriteInitErr != nil {
+		return fmt.Errorf("generate sprites: %w", h.spriteInitErr)
+	}
 
 	name := c.Param("name")
 	data, ok := h.spriteFiles[name]
