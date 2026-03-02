@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
@@ -50,6 +51,9 @@ type Handler struct {
 	openIDCache       openid.DiscoveryCache
 	openIDNonceStore  openid.NonceStore
 	steamAPIBaseURL   string // override for testing; empty uses default
+
+	spriteOnce  sync.Once
+	spriteFiles map[string][]byte
 }
 
 // HandlerOption configures the Handler
@@ -155,6 +159,11 @@ func NewHandler(
 	g.GET(
 		"/images/maps/fonts/:fontstack/:range",
 		hdlr.GetFont,
+		hdlr.cacheControl(CacheDuration),
+	)
+	g.GET(
+		"/images/maps/sprites/:name",
+		hdlr.GetSprite,
 		hdlr.cacheControl(CacheDuration),
 	)
 	g.GET(
@@ -440,6 +449,24 @@ func (h *Handler) GetMarker(c echo.Context) error {
 	}
 
 	return c.Stream(http.StatusOK, ct, img)
+}
+
+func (h *Handler) GetSprite(c echo.Context) error {
+	h.spriteOnce.Do(func() {
+		h.spriteFiles, _ = maptool.GenerateSpriteBytes()
+	})
+
+	name := c.Param("name")
+	data, ok := h.spriteFiles[name]
+	if !ok {
+		return echo.ErrNotFound
+	}
+
+	ct := "application/json"
+	if strings.HasSuffix(name, ".png") {
+		ct = "image/png"
+	}
+	return c.Blob(http.StatusOK, ct, data)
 }
 
 func (h *Handler) GetFont(c echo.Context) error {

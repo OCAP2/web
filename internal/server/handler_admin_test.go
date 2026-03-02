@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupAdminTest(t *testing.T) (Handler, *Operation) {
+func setupAdminTest(t *testing.T) (*Handler, *Operation) {
 	t.Helper()
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
@@ -34,7 +34,7 @@ func setupAdminTest(t *testing.T) (Handler, *Operation) {
 	}
 	require.NoError(t, repo.Store(t.Context(), op))
 
-	hdlr := Handler{
+	hdlr := &Handler{
 		repoOperation: repo,
 		setting:       Setting{Secret: "test-secret", Data: dir},
 		jwt:           NewJWTManager("test-secret", time.Hour),
@@ -391,7 +391,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	jwtMgr := NewJWTManager("test-secret", time.Hour)
 
 	e := echo.New()
-	hdlr := Handler{
+	hdlr := &Handler{
 		repoOperation: repo,
 		setting:       setting,
 		jwt:           jwtMgr,

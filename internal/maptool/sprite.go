@@ -143,6 +143,34 @@ func GenerateSprite(blacken bool) (*image.NRGBA, map[string]spriteEntry) {
 	return sheet, manifest
 }
 
+// GenerateSpriteBytes returns all sprite files as in-memory byte slices.
+// Keys: "sprite.json", "sprite.png", "sprite-dark.json", "sprite-dark.png".
+func GenerateSpriteBytes() (map[string][]byte, error) {
+	result := make(map[string][]byte, 4)
+	for _, v := range []struct {
+		prefix  string
+		blacken bool
+	}{
+		{"sprite", true},
+		{"sprite-dark", false},
+	} {
+		img, manifest := GenerateSprite(v.blacken)
+
+		data, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshal %s.json: %w", v.prefix, err)
+		}
+		result[v.prefix+".json"] = data
+
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			return nil, fmt.Errorf("encode %s.png: %w", v.prefix, err)
+		}
+		result[v.prefix+".png"] = buf.Bytes()
+	}
+	return result, nil
+}
+
 // WriteSpriteFiles generates sprite sheets at native 64px and writes to dir:
 //   - sprite.json, sprite.png (blackened — for light themes)
 //   - sprite-dark.json, sprite-dark.png (original — for dark themes)

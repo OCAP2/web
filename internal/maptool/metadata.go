@@ -104,11 +104,9 @@ func NewGenerateStylesStage() Stage {
 
 			mapBase := "images/maps/" + worldName
 			tilesPrefix := mapBase
-			stylesPrefix := mapBase
 			stylesDir := job.OutputDir
 			if job.SubDirs {
 				tilesPrefix = mapBase + "/tiles"
-				stylesPrefix = mapBase + "/styles"
 				stylesDir = job.StylesOutputDir()
 				if err := os.MkdirAll(stylesDir, 0755); err != nil {
 					return fmt.Errorf("create styles dir: %w", err)
@@ -118,7 +116,6 @@ func NewGenerateStylesStage() Stage {
 			styleCfg := StyleConfig{
 				WorldName:      worldName,
 				URLPrefix:      tilesPrefix,
-				StylesPrefix:   stylesPrefix,
 				VectorLayers:   job.VectorLayers,
 				HasSatellite:   true,
 				HasHeightmap:   job.HasHeightmap,
@@ -145,10 +142,6 @@ func NewGenerateStylesStage() Stage {
 				}
 			}
 			job.HasMaplibre = true
-
-			if err := WriteSpriteFiles(stylesDir); err != nil {
-				return fmt.Errorf("write sprites: %w", err)
-			}
 
 			return nil
 		},

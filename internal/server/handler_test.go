@@ -1518,6 +1518,44 @@ func TestGetFont(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
+func TestGetSprite(t *testing.T) {
+	hdlr := Handler{}
+
+	e := echo.New()
+
+	tests := []struct {
+		name        string
+		wantStatus  int
+		wantType    string
+	}{
+		{"sprite.json", http.StatusOK, "application/json"},
+		{"sprite.png", http.StatusOK, "image/png"},
+		{"sprite-dark.json", http.StatusOK, "application/json"},
+		{"sprite-dark.png", http.StatusOK, "image/png"},
+		{"nonexistent.json", http.StatusNotFound, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/images/maps/sprites/"+tt.name, nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("name")
+			c.SetParamValues(tt.name)
+
+			err := hdlr.GetSprite(c)
+			if tt.wantStatus == http.StatusNotFound {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantStatus, rec.Code)
+				assert.Contains(t, rec.Header().Get("Content-Type"), tt.wantType)
+				assert.Greater(t, rec.Body.Len(), 0)
+			}
+		})
+	}
+}
+
 func TestWithMapTool(t *testing.T) {
 	jm := maptool.NewJobManager(t.TempDir(), func() *maptool.Pipeline {
 		return maptool.NewPipeline(nil)

@@ -344,14 +344,36 @@ export class LeafletRenderer implements MapRenderer {
           }
         }
 
-        // 2. transformRequest resolves relative sprite/glyph/tile URLs.
+        // 2. transformRequest resolves relative tile/sprite/glyph fetch URLs.
         // URLs with any protocol (http:, https:, pmtiles:, data:) or
         // protocol-relative (//) are left unchanged.
-        const transformRequest = (url: string) => {
-          if (!/^(\w+:)?\/\/|^data:/.test(url)) {
-            return { url: absBase + url.replace(/^\//, "") };
+        const isAbsoluteUrl = (u: string) => /^(\w+:)?\/\/|^data:/.test(u);
+        const makeAbsolute = (u: string) =>
+          isAbsoluteUrl(u) ? u : absBase + u.replace(/^\//, "");
+        const transformRequest = (url: string) => ({
+          url: makeAbsolute(url),
+        });
+
+        // fetchStyle fetches a style JSON and patches relative sprite/glyphs
+        // URLs to absolute before MapLibre sees them. MapLibre 5.x validates
+        // sprite URLs with `new URL()` which rejects relative paths.
+        // leaflet-maplibre-gl doesn't forward `transformStyle` to the
+        // underlying Map constructor, so we must resolve URLs ourselves.
+        const fetchStyle = async (url: string) => {
+          const resp = await fetch(url);
+          const style = await resp.json();
+          if (typeof style.sprite === "string") {
+            style.sprite = makeAbsolute(style.sprite);
+          } else if (Array.isArray(style.sprite)) {
+            style.sprite = style.sprite.map((s: any) => ({
+              ...s,
+              url: makeAbsolute(s.url),
+            }));
           }
-          return { url };
+          if (typeof style.glyphs === "string") {
+            style.glyphs = makeAbsolute(style.glyphs);
+          }
+          return style;
         };
 
         // 3. Build style candidates
@@ -371,10 +393,11 @@ export class LeafletRenderer implements MapRenderer {
             localStorage.getItem("ocap-maplibre-style") ?? "0",
             10,
           ) || 0;
-        const initialStyle =
+        const initialCandidate =
           styleCandidates[
             savedIdx >= 0 && savedIdx < styleCandidates.length ? savedIdx : 0
-          ].url;
+          ];
+        const initialStyle = await fetchStyle(initialCandidate.url);
 
         await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
@@ -431,7 +454,7 @@ export class LeafletRenderer implements MapRenderer {
         this._styleSwitchFn = (index: number) => {
           const glMap2 = mlLayer.getMaplibreMap?.();
           if (!glMap2 || index < 0 || index >= styleCandidates.length) return;
-          glMap2.setStyle(styleCandidates[index].url);
+          fetchStyle(styleCandidates[index].url).then((s) => glMap2.setStyle(s));
           this._setActiveStyleIndexSig(index);
           try { localStorage.setItem("ocap-maplibre-style", String(index)); } catch { /* noop */ }
         };
@@ -451,6 +474,7 @@ export class LeafletRenderer implements MapRenderer {
               [previewCenter[1], previewCenter[0]],
               12,
               transformRequest,
+              fetchStyle,
               (dataUrl) => {
                 if (dataUrl) {
                   this._setMapStylesSig((prev) => {
@@ -1317,6 +1341,7 @@ export class LeafletRenderer implements MapRenderer {
     center: [number, number],
     zoom: number,
     transformRequest: ((url: string, resourceType: string) => any) | undefined,
+    fetchStyleFn: (url: string) => Promise<any>,
     callback: (dataUrl: string | null) => void,
   ): void {
     const div = document.createElement("div");
@@ -1324,11 +1349,12 @@ export class LeafletRenderer implements MapRenderer {
       "width:128px;height:128px;position:absolute;left:-9999px;top:-9999px;visibility:hidden";
     document.body.appendChild(div);
 
-    import("maplibre-gl")
-      .then((maplibregl) => {
+    fetchStyleFn(styleUrl)
+      .then((style) => import("maplibre-gl").then((maplibregl) => ({ style, maplibregl })))
+      .then(({ style, maplibregl }) => {
         const mapOpts: any = {
           container: div,
-          style: styleUrl,
+          style,
           center,
           zoom,
           interactive: false,

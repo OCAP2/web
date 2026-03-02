@@ -43,7 +43,6 @@ func RestyleWorld(mapsDir, worldName string) error {
 	styleCfg := StyleConfig{
 		WorldName:      meta.WorldName,
 		URLPrefix:      mapBase + "/tiles",
-		StylesPrefix:   mapBase + "/styles",
 		VectorLayers:   meta.FeatureLayers,
 		HasSatellite:   hasFile("satellite.pmtiles"),
 		HasHeightmap:   hasFile("heightmap.pmtiles"),
@@ -78,11 +77,6 @@ func RestyleWorld(mapsDir, worldName string) error {
 		if err := os.WriteFile(filepath.Join(stylesDir, v.filename), data, 0644); err != nil {
 			return fmt.Errorf("write %s: %w", v.filename, err)
 		}
-	}
-
-	// 5. Regenerate sprites
-	if err := WriteSpriteFiles(stylesDir); err != nil {
-		return fmt.Errorf("write sprites: %w", err)
 	}
 
 	return nil

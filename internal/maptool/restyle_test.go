@@ -94,10 +94,4 @@ func TestRestyleWorld_ProbesTileFiles(t *testing.T) {
 		require.NoError(t, err, "expected %s to exist", name)
 		assert.Greater(t, info.Size(), int64(0))
 	}
-
-	// Should have generated sprites
-	for _, name := range []string{"sprite.json", "sprite.png", "sprite-dark.json", "sprite-dark.png"} {
-		_, err := os.Stat(filepath.Join(worldDir, "styles", name))
-		assert.NoError(t, err, "expected %s to exist", name)
-	}
 }

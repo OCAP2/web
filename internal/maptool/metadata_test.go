@@ -136,9 +136,6 @@ func TestNewGenerateStylesStage(t *testing.T) {
 		_, err := os.Stat(filepath.Join(dir, name))
 		assert.NoError(t, err, "expected %s to exist", name)
 	}
-	// Verify sprites exist
-	_, err = os.Stat(filepath.Join(dir, "sprite.json"))
-	assert.NoError(t, err)
 }
 
 func TestNewGenerateStylesStage_SubDirs(t *testing.T) {
