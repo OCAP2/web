@@ -134,11 +134,11 @@ export function ImportDialog(props: {
           <div class={styles.structureHint}>
             <div class={styles.structureTitle}>{t("mm_expected_structure").toUpperCase()}</div>
             <div class={styles.structureList}>
-              <span class={styles.structureRequired}>meta.json</span> — world metadata ({t("mm_required")})<br />
-              <span class={styles.structureRequired}>sat/</span> — satellite tiles as X/Y.png ({t("mm_required")})<br />
-              <span class={styles.structureOptional}>dem.asc.gz</span> — elevation data ({t("mm_optional")})<br />
-              <span class={styles.structureOptional}>geojson/</span> — vector feature layers ({t("mm_optional")})<br />
-              <span class={styles.structureOptional}>preview.png</span> — preview image ({t("mm_optional")})
+              <span class={styles.structureRequired}>meta.json</span> — {t("mm_struct_meta")} ({t("mm_required")})<br />
+              <span class={styles.structureRequired}>sat/</span> — {t("mm_struct_sat")} ({t("mm_required")})<br />
+              <span class={styles.structureOptional}>dem.asc.gz</span> — {t("mm_struct_dem")} ({t("mm_optional")})<br />
+              <span class={styles.structureOptional}>geojson/</span> — {t("mm_struct_geojson")} ({t("mm_optional")})<br />
+              <span class={styles.structureOptional}>preview.png</span> — {t("mm_struct_preview")} ({t("mm_optional")})
             </div>
           </div>
         </div>
