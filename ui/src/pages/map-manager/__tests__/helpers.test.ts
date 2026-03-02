@@ -4,7 +4,7 @@ import {
   formatWorldSize,
   formatFileSize,
   totalDiskMB,
-  statusLabel,
+  statusLabelKey,
   elapsed,
 } from "../helpers";
 
@@ -80,18 +80,18 @@ describe("totalDiskMB", () => {
   });
 });
 
-describe("statusLabel", () => {
+describe("statusLabelKey", () => {
   it("maps complete", () => {
-    expect(statusLabel("complete")).toBe("Complete");
+    expect(statusLabelKey("complete")).toBe("mm_status_complete");
   });
 
-  it("maps incomplete to Partial", () => {
-    expect(statusLabel("incomplete")).toBe("Partial");
+  it("maps incomplete to partial key", () => {
+    expect(statusLabelKey("incomplete")).toBe("mm_status_partial");
   });
 
-  it("maps unknown status to None", () => {
-    expect(statusLabel("none")).toBe("None");
-    expect(statusLabel("anything")).toBe("None");
+  it("maps unknown status to none key", () => {
+    expect(statusLabelKey("none")).toBe("mm_status_none");
+    expect(statusLabelKey("anything")).toBe("mm_status_none");
   });
 });
 

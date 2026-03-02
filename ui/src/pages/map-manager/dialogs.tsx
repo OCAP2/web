@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import { createSignal, Show } from "solid-js";
 import type { MapInfo } from "./types";
+import { useI18n } from "../../hooks/useLocale";
 import {
   XIcon,
   UploadIcon,
@@ -21,6 +22,7 @@ export function ImportDialog(props: {
 }): JSX.Element {
   const [file, setFile] = createSignal<File | null>(null);
   const [dragOver, setDragOver] = createSignal(false);
+  const { t } = useI18n();
   let fileInput!: HTMLInputElement;
 
   const handleFile = (f: File | undefined) => {
@@ -44,7 +46,7 @@ export function ImportDialog(props: {
         <div class={styles.dialogHeader}>
           <div class={styles.dialogTitleGroup}>
             <span class={styles.dialogTitleIcon}><FilePlusIcon size={16} /></span>
-            <span class={styles.dialogTitleText}>Import Map</span>
+            <span class={styles.dialogTitleText}>{t("mm_import_map")}</span>
           </div>
           <button class={styles.closeBtn} onClick={() => props.onClose()}>
             <XIcon size={14} />
@@ -53,17 +55,24 @@ export function ImportDialog(props: {
 
         <div class={styles.dialogBody}>
           <p class={styles.importHint}>
-            Import an Arma 3 map from a{" "}
-            <a
-              href="https://github.com/gruppe-adler/grad_meh"
-              target="_blank"
-              rel="noopener noreferrer"
-              class={styles.link}
-              onClick={(e) => e.stopPropagation()}
-            >
-              grad_meh
-            </a>{" "}
-            export. Package the output directory as a .zip file.
+            {(() => {
+              const parts = t("mm_import_hint").split("{link}");
+              return (
+                <>
+                  {parts[0]}
+                  <a
+                    href="https://github.com/gruppe-adler/grad_meh"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class={styles.link}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    grad_meh
+                  </a>
+                  {parts[1]}
+                </>
+              );
+            })()}
           </p>
 
           <input
@@ -94,10 +103,10 @@ export function ImportDialog(props: {
                 <>
                   <span class={styles.dropIcon}><FilePlusIcon size={28} /></span>
                   <p class={styles.dropLabel}>
-                    Drop <span class={styles.dropHighlight}>.zip</span> here or{" "}
-                    <span class={styles.dropBrowse}>browse</span>
+                    {t("mm_drop_hint")}{" "}
+                    <span class={styles.dropBrowse}>{t("mm_browse")}</span>
                   </p>
-                  <span class={styles.dropLimit}>Max 2 GB</span>
+                  <span class={styles.dropLimit}>{t("mm_max_size")}</span>
                 </>
               }
             >
@@ -123,13 +132,13 @@ export function ImportDialog(props: {
           </div>
 
           <div class={styles.structureHint}>
-            <div class={styles.structureTitle}>EXPECTED ZIP STRUCTURE</div>
+            <div class={styles.structureTitle}>{t("mm_expected_structure").toUpperCase()}</div>
             <div class={styles.structureList}>
-              <span class={styles.structureRequired}>meta.json</span> — world metadata (required)<br />
-              <span class={styles.structureRequired}>sat/</span> — satellite tiles as X/Y.png (required)<br />
-              <span class={styles.structureOptional}>dem.asc.gz</span> — elevation data (optional)<br />
-              <span class={styles.structureOptional}>geojson/</span> — vector feature layers (optional)<br />
-              <span class={styles.structureOptional}>preview.png</span> — preview image (optional)
+              <span class={styles.structureRequired}>meta.json</span> — world metadata ({t("mm_required")})<br />
+              <span class={styles.structureRequired}>sat/</span> — satellite tiles ({t("mm_required")})<br />
+              <span class={styles.structureOptional}>dem.asc.gz</span> — elevation data ({t("mm_optional")})<br />
+              <span class={styles.structureOptional}>geojson/</span> — vector feature layers ({t("mm_optional")})<br />
+              <span class={styles.structureOptional}>preview.png</span> — preview image ({t("mm_optional")})
             </div>
           </div>
         </div>
@@ -140,18 +149,18 @@ export function ImportDialog(props: {
             fallback={
               <div class={styles.footerRow}>
                 <span class={styles.footerStatus} classList={{ [styles.footerStatusReady]: !!file() }}>
-                  {file() ? "Ready to import" : "Select a .zip file"}
+                  {file() ? t("mm_ready_to_import") : t("mm_select_zip")}
                 </span>
                 <div class={styles.footerActions}>
                   <button class={styles.btnCancel} onClick={() => props.onClose()}>
-                    Cancel
+                    {t("mm_cancel")}
                   </button>
                   <button
                     class={styles.btnImport}
                     disabled={!file()}
                     onClick={() => file() && props.onImport(file()!)}
                   >
-                    <FilePlusIcon size={14} /> Import
+                    <FilePlusIcon size={14} /> {t("mm_import")}
                   </button>
                 </div>
               </div>
@@ -160,7 +169,7 @@ export function ImportDialog(props: {
             <div class={styles.footerUpload}>
               <div class={styles.uploadHeader}>
                 <span class={styles.uploadLabel}>
-                  <UploadIcon size={14} /> Uploading...
+                  <UploadIcon size={14} /> {t("mm_uploading")}
                 </span>
                 <span class={styles.uploadPct}>
                   {Math.min(100, Math.round(props.uploadProgress))}%
@@ -188,6 +197,7 @@ export function DeleteConfirm(props: {
   onConfirm: () => void;
   onClose: () => void;
 }): JSX.Element {
+  const { t } = useI18n();
   return (
     <div class={styles.overlay} onClick={() => props.onClose()}>
       <div class={styles.deleteDialog} onClick={(e) => e.stopPropagation()}>
@@ -196,19 +206,18 @@ export function DeleteConfirm(props: {
             <AlertTriangleIcon size={20} />
           </div>
           <div class={styles.deleteTitle}>
-            Delete {props.map.name}?
+            {t("mm_delete")} {props.map.name}?
           </div>
           <p class={styles.deleteDesc}>
-            This removes all tiles, styles, previews, and metadata.
-            This action cannot be undone.
+            {t("mm_delete_warning")}
           </p>
         </div>
         <div class={styles.deleteFooter}>
           <button class={styles.btnCancel} onClick={() => props.onClose()}>
-            Cancel
+            {t("mm_cancel")}
           </button>
           <button class={styles.btnDelete} onClick={() => props.onConfirm()}>
-            <TrashIcon size={12} /> Delete
+            <TrashIcon size={12} /> {t("mm_delete")}
           </button>
         </div>
       </div>

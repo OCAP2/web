@@ -2,7 +2,8 @@ import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import type { MapInfo } from "./types";
 import { MAP_STATUS_COLORS } from "./constants";
-import { mapHue, formatWorldSize, formatFileSize, totalDiskMB, statusLabel } from "./helpers";
+import { mapHue, formatWorldSize, formatFileSize, totalDiskMB, statusLabelKey } from "./helpers";
+import { useI18n } from "../../hooks/useLocale";
 import { LayersIcon } from "../../components/Icons";
 import styles from "./MapManager.module.css";
 
@@ -12,6 +13,7 @@ export function MapCard(props: {
   baseUrl: string;
   onSelect: () => void;
 }): JSX.Element {
+  const { t } = useI18n();
   const hue = () => mapHue(props.map.name);
   const statusColor = () => MAP_STATUS_COLORS[props.map.status] ?? "var(--text-dimmer)";
   const disk = () => totalDiskMB(props.map.files);
@@ -76,7 +78,7 @@ export function MapCard(props: {
                   fill={`hsl(${(hue() + 60) % 360},22%,30%)`}
                 />
               </svg>
-              <span class={styles.cardNoPreview}>No preview</span>
+              <span class={styles.cardNoPreview}>{t("mm_no_preview")}</span>
             </>
           }
         >
@@ -95,14 +97,14 @@ export function MapCard(props: {
             border: `1px solid color-mix(in srgb, ${statusColor()} 25%, transparent)`,
           }}
         >
-          {statusLabel(props.map.status).toUpperCase()}
+          {t(statusLabelKey(props.map.status)).toUpperCase()}
         </span>
       </div>
       <div class={styles.cardBody}>
         <span class={styles.cardName}>{props.map.name}</span>
         <Show when={props.map.lastError}>
           <div class={styles.cardError} title={props.map.lastError}>
-            Pipeline failed
+            {t("mm_pipeline_failed")}
           </div>
         </Show>
         <div class={styles.cardMeta}>

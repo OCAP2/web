@@ -3,6 +3,7 @@ import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "
 import { useNavigate } from "@solidjs/router";
 import { ApiClient } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
+import { useI18n } from "../../hooks/useLocale";
 import type { ToolSet, HealthCheck, MapInfo } from "./types";
 import { useMapToolEvents } from "./useMapToolEvents";
 import { StatusStrip } from "./components";
@@ -29,6 +30,7 @@ const imageBase = basePath.replace(/\/+$/, "");
 export function MapManager(): JSX.Element {
   const navigate = useNavigate();
   const { authenticated } = useAuth();
+  const { t } = useI18n();
 
   // ─── State ───
   const [tools, setTools] = createSignal<ToolSet>([]);
@@ -157,7 +159,7 @@ export function MapManager(): JSX.Element {
       <header class={styles.header}>
         <div class={styles.headerTop}>
           <div class={styles.headerLeft}>
-            <button class={styles.backBtn} title="Back to recordings" onClick={() => navigate("/")}>
+            <button class={styles.backBtn} title={t("back_to_recordings")} onClick={() => navigate("/")}>
               <ArrowLeftIcon size={16} />
             </button>
             <div>
@@ -173,10 +175,10 @@ export function MapManager(): JSX.Element {
                 class={styles.importBtn}
                 onClick={() => setShowImport(true)}
               >
-                <FilePlusIcon size={12} /> Import Map
+                <FilePlusIcon size={12} /> {t("mm_import_map")}
               </button>
               <button class={styles.restyleBtn} onClick={handleRestyle}>
-                <PaletteIcon size={12} /> Restyle All
+                <PaletteIcon size={12} /> {t("mm_restyle_all")}
               </button>
             </Show>
           </div>
@@ -194,7 +196,7 @@ export function MapManager(): JSX.Element {
               </span>
               <input
                 type="text"
-                placeholder="Search maps..."
+                placeholder={t("mm_search_maps")}
                 value={search()}
                 onInput={(e) => setSearch(e.currentTarget.value)}
                 class={styles.searchInput}
@@ -203,14 +205,14 @@ export function MapManager(): JSX.Element {
 
             {/* Status filter */}
             <div class={styles.filterGroup}>
-              <For each={[{ val: null, label: "All" }, { val: "complete", label: "Complete" }, { val: "incomplete", label: "Partial" }]}>
+              <For each={[{ val: null, labelKey: "mm_filter_all" }, { val: "complete", labelKey: "mm_status_complete" }, { val: "incomplete", labelKey: "mm_status_partial" }] as const}>
                 {(f) => (
                   <button
                     class={styles.filterBtn}
                     classList={{ [styles.filterBtnActive]: statusFilter() === f.val }}
                     onClick={() => setStatusFilter(statusFilter() === f.val ? null : f.val)}
                   >
-                    {f.label}
+                    {t(f.labelKey)}
                   </button>
                 )}
               </For>
@@ -218,15 +220,15 @@ export function MapManager(): JSX.Element {
 
             {/* Sort */}
             <div class={styles.sortGroup}>
-              <span class={styles.sortLabel}>Sort</span>
-              <For each={[{ id: "name", label: "Name" }, { id: "size", label: "Size" }, { id: "disk", label: "Disk" }]}>
+              <span class={styles.sortLabel}>{t("mm_sort")}</span>
+              <For each={[{ id: "name", labelKey: "name" }, { id: "size", labelKey: "mm_size" }, { id: "disk", labelKey: "mm_disk" }]}>
                 {(s) => (
                   <button
                     class={styles.sortBtn}
                     classList={{ [styles.sortBtnActive]: sortBy() === s.id }}
                     onClick={() => setSortBy(s.id)}
                   >
-                    {s.label}
+                    {t(s.labelKey)}
                   </button>
                 )}
               </For>
@@ -268,16 +270,20 @@ export function MapManager(): JSX.Element {
                 <div class={styles.listContainer}>
                   <div class={styles.listHeader}>
                     <span />
-                    <For each={["SIZE", "LAYERS", "DISK", "STATUS"]}>
-                      {(h) => (
-                        <span
-                          class={styles.listHeaderLabel}
-                          classList={{ [styles.listHeaderRight]: h === "STATUS" }}
-                        >
-                          {h}
-                        </span>
-                      )}
-                    </For>
+                    {[
+                      { key: "mm_size", right: false },
+                      { key: "layers", right: false },
+                      { key: "mm_disk", right: false },
+                      { key: "status", right: true },
+                    ].map((h) => (
+                      <span
+                        class={styles.listHeaderLabel}
+                        classList={{ [styles.listHeaderRight]: h.right }}
+                        style={{ "text-transform": "uppercase" }}
+                      >
+                        {t(h.key)}
+                      </span>
+                    ))}
                   </div>
                   <For each={filteredMaps()}>
                     {(m) => (
@@ -314,15 +320,15 @@ export function MapManager(): JSX.Element {
                 <GlobeIcon size={14} />
                 <span class={styles.emptyText}>
                   {search()
-                    ? "No maps match your search"
-                    : "No maps imported yet"}
+                    ? t("mm_no_maps_match")
+                    : t("mm_no_maps_yet")}
                 </span>
                 <Show when={!search()}>
                   <button
                     class={styles.emptyImportBtn}
                     onClick={() => setShowImport(true)}
                   >
-                    <FilePlusIcon size={12} /> Import Map
+                    <FilePlusIcon size={12} /> {t("mm_import_map")}
                   </button>
                 </Show>
               </div>

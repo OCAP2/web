@@ -2,7 +2,8 @@ import type { JSX } from "solid-js";
 import { Show, For } from "solid-js";
 import type { MapInfo } from "./types";
 import { MAP_STATUS_COLORS, OUTPUT_FILES, STYLE_VARIANTS } from "./constants";
-import { mapHue, formatWorldSize, statusLabel } from "./helpers";
+import { mapHue, formatWorldSize, statusLabelKey } from "./helpers";
+import { useI18n } from "../../hooks/useLocale";
 import {
   XIcon,
   TrashIcon,
@@ -16,6 +17,7 @@ export function MapDetail(props: {
   onClose: () => void;
   onDelete: () => void;
 }): JSX.Element {
+  const { t } = useI18n();
   const hue = () => mapHue(props.map.name);
 
   return (
@@ -52,12 +54,12 @@ export function MapDetail(props: {
       <div class={styles.content}>
         <div class={styles.infoGrid}>
           <div class={styles.infoItem}>
-            <div class={styles.infoLabel}>STATUS</div>
+            <div class={styles.infoLabel}>{t("status").toUpperCase()}</div>
             <div
               class={styles.infoValue}
               style={{ color: MAP_STATUS_COLORS[props.map.status] }}
             >
-              {statusLabel(props.map.status)}
+              {t(statusLabelKey(props.map.status))}
             </div>
             <Show when={props.map.lastError}>
               <div class={styles.errorMsg}>{props.map.lastError}</div>
@@ -65,7 +67,7 @@ export function MapDetail(props: {
           </div>
           <Show when={props.map.worldSize}>
             <div class={styles.infoItem}>
-              <div class={styles.infoLabel}>WORLD SIZE</div>
+              <div class={styles.infoLabel}>{t("mm_world_size").toUpperCase()}</div>
               <div class={styles.infoValue} style={{ color: "var(--text-muted)" }}>
                 {props.map.worldSize!.toLocaleString()} m
               </div>
@@ -73,7 +75,7 @@ export function MapDetail(props: {
           </Show>
           <Show when={props.map.featureLayers?.length}>
             <div class={styles.infoItem}>
-              <div class={styles.infoLabel}>LAYERS</div>
+              <div class={styles.infoLabel}>{t("layers").toUpperCase()}</div>
               <div class={styles.infoValue} style={{ color: "var(--text-muted)" }}>
                 {props.map.featureLayers!.length}
               </div>
@@ -84,7 +86,7 @@ export function MapDetail(props: {
         {/* Elevation */}
         <Show when={props.map.elevation}>
           <div class={styles.section}>
-            <h4 class={styles.sectionTitle}>Elevation</h4>
+            <h4 class={styles.sectionTitle}>{t("mm_elevation")}</h4>
             <div class={styles.elevRow}>
               <For
                 each={[
@@ -129,7 +131,7 @@ export function MapDetail(props: {
         {/* Feature layers */}
         <Show when={props.map.featureLayers?.length}>
           <div class={styles.section}>
-            <h4 class={styles.sectionTitle}>Feature Layers</h4>
+            <h4 class={styles.sectionTitle}>{t("mm_feature_layers")}</h4>
             <div class={styles.layerTags}>
               <For each={props.map.featureLayers}>
                 {(layer) => <span class={styles.layerTag}>{layer}</span>}
@@ -140,7 +142,7 @@ export function MapDetail(props: {
 
         {/* Tile files */}
         <div class={styles.section}>
-          <h4 class={styles.sectionTitle}>Tile Files</h4>
+          <h4 class={styles.sectionTitle}>{t("mm_tile_files")}</h4>
           <div class={styles.fileList}>
             <For each={OUTPUT_FILES}>
               {(f) => {
@@ -182,7 +184,7 @@ export function MapDetail(props: {
 
         {/* Style variants */}
         <div class={styles.section}>
-          <h4 class={styles.sectionTitle}>Styles</h4>
+          <h4 class={styles.sectionTitle}>{t("mm_styles")}</h4>
           <div class={styles.variantList}>
             <For each={STYLE_VARIANTS}>
               {(v) => (
@@ -200,7 +202,7 @@ export function MapDetail(props: {
       {/* Actions */}
       <div class={styles.actions}>
         <button class={styles.deleteBtn} onClick={() => props.onDelete()}>
-          <TrashIcon size={12} /> Delete Map
+          <TrashIcon size={12} /> {t("mm_delete_map")}
         </button>
       </div>
     </div>

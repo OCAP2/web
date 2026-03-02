@@ -3,6 +3,7 @@ import { createSignal, createMemo, createEffect, onCleanup, For, Show } from "so
 import type { ToolInfo, HealthCheck, JobInfo } from "./types";
 import { PIPELINE_STAGES, STATUS_COLORS } from "./constants";
 import { elapsed } from "./helpers";
+import { useI18n } from "../../hooks/useLocale";
 import {
   CheckIcon,
   XIcon,
@@ -20,6 +21,7 @@ export function StatusStrip(props: {
   jobs: JobInfo[];
   onCancel: (id: string) => void;
 }): JSX.Element {
+  const { t } = useI18n();
   const [openPanel, setOpenPanel] = createSignal<"tools" | "jobs" | null>(null);
   const [tick, setTick] = createSignal(0);
   let stripRef: HTMLDivElement | undefined;
@@ -99,16 +101,16 @@ export function StatusStrip(props: {
               [styles.toolsLabelErr]: !allReqOk() || !healthOk(),
             }}
           >
-            {found()}/{props.tools.length} tools
+            {found()}/{props.tools.length} {t("mm_tools")}
           </span>
           <Show when={!healthOk()}>
             <span class={styles.healthErrLabel}>
-              Environment issue
+              {t("mm_env_issue")}
             </span>
           </Show>
           <Show when={healthOk() && missingOpt().length > 0}>
             <span class={styles.degradedLabel}>
-              ({missingOpt().length} optional missing)
+              ({missingOpt().length} {t("mm_optional_missing")})
             </span>
           </Show>
         </button>
@@ -117,7 +119,7 @@ export function StatusStrip(props: {
         <div class={styles.activeSection}>
           <Show
             when={activeJob()}
-            fallback={<span class={styles.activeIdle}>No active imports</span>}
+            fallback={<span class={styles.activeIdle}>{t("mm_no_active_imports")}</span>}
           >
             {(job) => (
               <>
@@ -162,7 +164,7 @@ export function StatusStrip(props: {
                     e.stopPropagation();
                     props.onCancel(job().id);
                   }}
-                  title="Cancel import"
+                  title={t("mm_cancel_import")}
                 >
                   <SquareIcon size={10} />
                 </button>
@@ -187,7 +189,7 @@ export function StatusStrip(props: {
             class={styles.pastLabel}
             classList={{ [styles.pastLabelFailed]: failedJobs() > 0 }}
           >
-            {past().length} past
+            {past().length} {t("mm_past")}
           </span>
           <span
             class={styles.chevron}
@@ -201,43 +203,43 @@ export function StatusStrip(props: {
       {/* ── Tools dropdown ── */}
       <Show when={openPanel() === "tools"}>
         <div class={`${styles.dropdown} ${styles.toolsDropdown}`}>
-          <div class={styles.dropdownHeading}>CLI TOOLS</div>
+          <div class={styles.dropdownHeading}>{t("mm_cli_tools").toUpperCase()}</div>
           <div class={styles.toolRows}>
             <For each={props.tools}>
-              {(t) => (
+              {(tool) => (
                 <div class={styles.toolRow}>
                   <span
                     class={styles.toolIcon}
                     classList={{
-                      [styles.toolFound]: t.found,
-                      [styles.toolMissingReq]: !t.found && t.required,
-                      [styles.toolMissingOpt]: !t.found && !t.required,
+                      [styles.toolFound]: tool.found,
+                      [styles.toolMissingReq]: !tool.found && tool.required,
+                      [styles.toolMissingOpt]: !tool.found && !tool.required,
                     }}
                   >
-                    {t.found ? <CheckIcon size={12} /> : <XIcon size={14} />}
+                    {tool.found ? <CheckIcon size={12} /> : <XIcon size={14} />}
                   </span>
                   <span
                     class={styles.toolName}
                     classList={{
-                      [styles.toolNameFound]: t.found,
-                      [styles.toolNameMissingReq]: !t.found && t.required,
-                      [styles.toolNameMissingOpt]: !t.found && !t.required,
+                      [styles.toolNameFound]: tool.found,
+                      [styles.toolNameMissingReq]: !tool.found && tool.required,
+                      [styles.toolNameMissingOpt]: !tool.found && !tool.required,
                     }}
                   >
-                    {t.name}
+                    {tool.name}
                   </span>
-                  <Show when={t.found}>
-                    <span class={styles.toolPath}>{t.path}</span>
+                  <Show when={tool.found}>
+                    <span class={styles.toolPath}>{tool.path}</span>
                   </Show>
-                  <Show when={!t.found}>
+                  <Show when={!tool.found}>
                     <span
                       class={styles.toolLabel}
                       classList={{
-                        [styles.toolLabelReq]: t.required,
-                        [styles.toolLabelOpt]: !t.required,
+                        [styles.toolLabelReq]: tool.required,
+                        [styles.toolLabelOpt]: !tool.required,
                       }}
                     >
-                      {t.required ? "required" : "optional"}
+                      {tool.required ? t("mm_required") : t("mm_optional")}
                     </span>
                   </Show>
                 </div>
@@ -247,7 +249,7 @@ export function StatusStrip(props: {
 
           <Show when={props.health.length > 0}>
             <div class={styles.healthSection}>
-              <div class={styles.dropdownHeading}>ENVIRONMENT</div>
+              <div class={styles.dropdownHeading}>{t("mm_environment").toUpperCase()}</div>
               <For each={props.health}>
                 {(h) => (
                   <div>
@@ -288,7 +290,7 @@ export function StatusStrip(props: {
         <div class={`${styles.dropdown} ${styles.jobsDropdown}`}>
           {/* Queued */}
           <Show when={pending().length > 0}>
-            <div class={styles.dropdownHeading}>QUEUED</div>
+            <div class={styles.dropdownHeading}>{t("mm_queued").toUpperCase()}</div>
             <For each={pending()}>
               {(j) => (
                 <div class={`${styles.jobRow} ${styles.jobRowPending}`}>
@@ -299,7 +301,7 @@ export function StatusStrip(props: {
                     {j.worldName}
                   </span>
                   <span class={styles.jobStatusLabel} style={{ color: "var(--text-dimmer)" }}>
-                    PENDING
+                    {t("mm_pending").toUpperCase()}
                   </span>
                 </div>
               )}
@@ -312,7 +314,7 @@ export function StatusStrip(props: {
               class={styles.dropdownHeading}
               style={{ "margin-top": pending().length > 0 ? "10px" : "0" }}
             >
-              HISTORY
+              {t("mm_history").toUpperCase()}
             </div>
             <For each={past()}>
               {(j) => (
@@ -360,7 +362,7 @@ export function StatusStrip(props: {
           </Show>
 
           <Show when={pending().length === 0 && past().length === 0}>
-            <div class={styles.emptyJobs}>No job history</div>
+            <div class={styles.emptyJobs}>{t("mm_no_job_history")}</div>
           </Show>
         </div>
       </Show>

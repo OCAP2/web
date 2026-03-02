@@ -25,10 +25,10 @@ export function totalDiskMB(files?: Record<string, number>): number {
   return Object.values(files).reduce((a, b) => a + b, 0);
 }
 
-export function statusLabel(status: string): string {
-  if (status === "complete") return "Complete";
-  if (status === "incomplete") return "Partial";
-  return "None";
+export function statusLabelKey(status: string): string {
+  if (status === "complete") return "mm_status_complete";
+  if (status === "incomplete") return "mm_status_partial";
+  return "mm_status_none";
 }
 
 export function elapsed(start: string, end?: string): string {

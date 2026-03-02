@@ -1,7 +1,8 @@
 import type { JSX } from "solid-js";
 import type { MapInfo } from "./types";
 import { MAP_STATUS_COLORS } from "./constants";
-import { formatWorldSize, formatFileSize, totalDiskMB, statusLabel } from "./helpers";
+import { formatWorldSize, formatFileSize, totalDiskMB, statusLabelKey } from "./helpers";
+import { useI18n } from "../../hooks/useLocale";
 import styles from "./MapManager.module.css";
 
 export function MapRow(props: {
@@ -9,6 +10,7 @@ export function MapRow(props: {
   selected: boolean;
   onSelect: () => void;
 }): JSX.Element {
+  const { t } = useI18n();
   const disk = () => totalDiskMB(props.map.files);
 
   return (
@@ -31,7 +33,7 @@ export function MapRow(props: {
         class={styles.rowStatus}
         style={{ color: MAP_STATUS_COLORS[props.map.status] }}
       >
-        ● {statusLabel(props.map.status)}
+        ● {t(statusLabelKey(props.map.status))}
       </span>
     </div>
   );
