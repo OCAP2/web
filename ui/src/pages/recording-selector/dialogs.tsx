@@ -1,4 +1,4 @@
-import { createSignal, Show, For } from "solid-js";
+import { createSignal, createUniqueId, Show, For } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Recording } from "../../data/types";
 import { EditIcon, XIcon, CheckIcon, UploadIcon, FilePlusIcon, RefreshCwIcon, AlertTriangleIcon, TrashIcon } from "../../components/Icons";
@@ -14,6 +14,7 @@ export function EditModal(props: {
   onClose: () => void;
   onSave: (id: string, data: { missionName?: string; tag?: string; date?: string }) => void;
 }): JSX.Element {
+  const tagListId = createUniqueId();
   // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
   const [name, setName] = createSignal(props.rec.missionName);
   // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
@@ -87,10 +88,10 @@ export function EditModal(props: {
                 value={tag()}
                 onInput={(e) => setTag(e.currentTarget.value)}
                 placeholder="e.g. TvT, COOP, Zeus"
-                list="editTagSuggestions"
+                list={tagListId}
                 class={ui.input}
               />
-              <datalist id="editTagSuggestions">
+              <datalist id={tagListId}>
                 <For each={props.tags}>
                   {(t) => <option value={t} />}
                 </For>
@@ -129,6 +130,7 @@ export function UploadDialog(props: {
   onCancel: () => void;
   uploading: boolean;
 }): JSX.Element {
+  const tagListId = createUniqueId();
   const [dragOver, setDragOver] = createSignal(false);
   const [file, setFile] = createSignal<File | null>(null);
   const [name, setName] = createSignal("");
@@ -251,10 +253,10 @@ export function UploadDialog(props: {
               value={tag()}
               onInput={(e) => setTag(e.currentTarget.value)}
               placeholder="e.g. TvT, COOP, Zeus"
-              list="uploadTagSuggestions"
+              list={tagListId}
               class={ui.input}
             />
-            <datalist id="uploadTagSuggestions">
+            <datalist id={tagListId}>
               <For each={props.tags ?? []}>
                 {(t) => <option value={t} />}
               </For>

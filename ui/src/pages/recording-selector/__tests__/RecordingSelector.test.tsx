@@ -1297,11 +1297,9 @@ describe("RecordingSelector (Admin)", () => {
     const mapInput = screen.getByPlaceholderText(/altis/) as HTMLInputElement;
     fireEvent.input(mapInput, { target: { value: "altis" } });
 
-    // Select a tag — find the TvT button inside the upload dialog
-    const tagLabel = screen.getByText("TAG");
-    const tagGroup = tagLabel.nextElementSibling!;
-    const tvtBtn = within(tagGroup as HTMLElement).getByText("TvT");
-    fireEvent.click(tvtBtn);
+    // Type a tag in the free-form input
+    const tagInput = screen.getByPlaceholderText("e.g. TvT, COOP, Zeus") as HTMLInputElement;
+    fireEvent.input(tagInput, { target: { value: "TvT" } });
 
     // Submit
     fireEvent.click(screen.getByTestId("upload-submit"));

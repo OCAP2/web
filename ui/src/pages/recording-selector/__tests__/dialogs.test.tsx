@@ -69,29 +69,26 @@ describe("EditModal", () => {
     });
   });
 
-  it("shows tag buttons and allows selection", () => {
+  it("shows tag input and allows free-form entry", () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
 
     const { container } = render(() => (
-      <EditModal rec={mockRec} tags={[]} onClose={onClose} onSave={onSave} />
+      <EditModal rec={mockRec} tags={["TvT", "COOP"]} onClose={onClose} onSave={onSave} />
     ));
 
-    // All tag option buttons should be rendered
-    expect(screen.getByText("TvT")).not.toBeNull();
-    expect(screen.getByText("COOP")).not.toBeNull();
-    expect(screen.getByText("Zeus")).not.toBeNull();
-    expect(screen.getByText("Training")).not.toBeNull();
-    expect(screen.getByText("None")).not.toBeNull();
+    // Tag input should show current value
+    const tagInput = screen.getByPlaceholderText("e.g. TvT, COOP, Zeus") as HTMLInputElement;
+    expect(tagInput.value).toBe("TvT");
 
-    // Select a different tag
-    fireEvent.click(screen.getByText("COOP"));
+    // Type a custom tag
+    fireEvent.input(tagInput, { target: { value: "CustomTag" } });
 
     // Submit and verify the new tag is sent
     fireEvent.submit(container.querySelector("form")!);
     expect(onSave).toHaveBeenCalledWith("42", {
       missionName: "Op Thunder",
-      tag: "COOP",
+      tag: "CustomTag",
       date: expectedDateUTC,
     });
   });
