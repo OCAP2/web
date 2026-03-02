@@ -2543,3 +2543,48 @@ func TestStoreOperation_ReadOnlyOutputDir(t *testing.T) {
 	err = hdlr.StoreOperation(c)
 	assert.Error(t, err) // os.Create should fail on read-only dir
 }
+
+func TestGetWorlds(t *testing.T) {
+	dir := t.TempDir()
+	mapsDir := filepath.Join(dir, "maps")
+	require.NoError(t, os.MkdirAll(filepath.Join(mapsDir, "enoch"), 0755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(mapsDir, "enoch", "meta.json"),
+		[]byte(`{"displayName":"Livonia"}`), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(mapsDir, "altis"), 0755))
+
+	hdlr := Handler{setting: Setting{Maps: mapsDir}}
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/worlds", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.GetWorlds(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var worlds []WorldInfo
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &worlds))
+	assert.Len(t, worlds, 2)
+
+	lookup := make(map[string]string)
+	for _, w := range worlds {
+		lookup[w.Name] = w.DisplayName
+	}
+	assert.Equal(t, "Livonia", lookup["enoch"])
+	assert.Equal(t, "altis", lookup["altis"])
+}
+
+func TestGetWorlds_EmptyMapsDir(t *testing.T) {
+	dir := t.TempDir()
+	hdlr := Handler{setting: Setting{Maps: dir}}
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/worlds", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := hdlr.GetWorlds(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "[]\n", rec.Body.String())
+}

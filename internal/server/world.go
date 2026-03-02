@@ -23,7 +23,7 @@ func ScanWorlds(mapsDir string) ([]WorldInfo, error) {
 		return nil, err
 	}
 
-	var worlds []WorldInfo
+	worlds := []WorldInfo{}
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue

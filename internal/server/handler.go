@@ -131,6 +131,10 @@ func NewHandler(
 		hdlr.StoreOperation,
 	)
 	g.GET(
+		"/api/v1/worlds",
+		hdlr.GetWorlds,
+	)
+	g.GET(
 		"/api/v1/customize",
 		hdlr.GetCustomize,
 	)
@@ -279,6 +283,14 @@ func (h *Handler) GetOperation(c echo.Context) error {
 	}
 
 	return c.JSONPretty(http.StatusOK, op, "\t")
+}
+
+func (h *Handler) GetWorlds(c echo.Context) error {
+	worlds, err := ScanWorlds(h.setting.Maps)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, worlds)
 }
 
 func (h *Handler) GetCustomize(c echo.Context) error {
