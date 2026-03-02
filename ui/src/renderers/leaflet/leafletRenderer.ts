@@ -227,6 +227,7 @@ export class LeafletRenderer implements MapRenderer {
     this.imageSize = world.imageSize ?? world.worldSize;
     this.multiplier = world.multiplier ?? 1;
     this.useMapLibreMode = Boolean(world.maplibre);
+    console.debug(`[LeafletRenderer] init: mode=${this.useMapLibreMode ? "maplibre" : "legacy"}, maplibre=${world.maplibre}, maxZoom=${world.maxZoom}, tileBaseUrl=${world.tileBaseUrl}`);
 
     const maxZoom = this.maxNativeZoom + 2;
 

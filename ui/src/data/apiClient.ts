@@ -577,7 +577,7 @@ export class ApiClient {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    const response = await fetch(url, { cache: "no-cache" });
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       throw new ApiError(
         `GET ${url} failed: ${response.status} ${response.statusText}`,
