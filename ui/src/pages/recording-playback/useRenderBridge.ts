@@ -69,22 +69,17 @@ export function useRenderBridge(
   const markerHandles = new Map<number, MarkerHandle>();
   let firelineHandles: LineHandle[] = [];
 
-  // Hit flash: scan the last N frames for hit events each render.
-  // Stateless — works identically for sequential playback and seeking.
-  const HIT_FLASH_FRAMES = 3;
-
   // Entity snapshot → marker sync
   createEffect(() => {
     const snapshots = engine.entitySnapshots();
     const frame = engine.currentFrame();
 
-    // Build set of entities currently in hit-flash state
+    // Build set of entities hit on this exact frame.
+    // The canvas layer handles the visual duration (wall-clock fade-out).
     const hitEntityIds = new Set<number>();
-    for (let f = Math.max(0, frame - HIT_FLASH_FRAMES + 1); f <= frame; f++) {
-      for (const ev of engine.eventManager.getEventsAtFrame(f)) {
-        if (ev instanceof HitKilledEvent && ev.type === "hit") {
-          hitEntityIds.add(ev.victimId);
-        }
+    for (const ev of engine.eventManager.getEventsAtFrame(frame)) {
+      if (ev instanceof HitKilledEvent && ev.type === "hit") {
+        hitEntityIds.add(ev.victimId);
       }
     }
 
