@@ -9,8 +9,8 @@ import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 /** Duration of the hit flash color tint in milliseconds. */
 const HIT_FLASH_DURATION_MS = 300;
 
-/** Hit flash tint color (yellow-orange). */
-const HIT_FLASH_COLOR = "rgba(255, 200, 0, 0.8)";
+/** Hit flash glow color (yellow-orange). Alpha controlled via globalAlpha. */
+const HIT_FLASH_COLOR = "#ffc800";
 
 // --------------- Internal entity state ---------------
 
@@ -421,6 +421,25 @@ export class EntityCanvasLayer {
         continue;
       }
 
+      // Hit flash: draw a colored glow circle behind the icon
+      if (e.hitStartTime > 0) {
+        const elapsed = performance.now() - e.hitStartTime;
+        if (elapsed < HIT_FLASH_DURATION_MS) {
+          const alpha = 0.8 * (1 - elapsed / HIT_FLASH_DURATION_MS);
+          const [iw, ih] = e.iconSize;
+          const radius = Math.max(iw, ih) * cs * 0.8;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = HIT_FLASH_COLOR;
+          ctx.beginPath();
+          ctx.arc(px, py, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          e.hitStartTime = 0; // Flash complete
+        }
+      }
+
       // Draw icon (rotated, counter-scaled during zoom)
       const img = iconCache.get(e.iconType, e.iconVariant);
       if (img) {
@@ -435,28 +454,6 @@ export class EntityCanvasLayer {
         ctx.rotate((dir * Math.PI) / 180);
         ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
         ctx.restore();
-      }
-
-      // Hit flash: color tint overlay fading out over HIT_FLASH_DURATION_MS
-      if (e.hitStartTime > 0) {
-        const elapsed = performance.now() - e.hitStartTime;
-        if (elapsed < HIT_FLASH_DURATION_MS) {
-          const alpha = 0.8 * (1 - elapsed / HIT_FLASH_DURATION_MS);
-          const [iw, ih] = e.iconSize;
-          const dw = iw * cs;
-          const dh = ih * cs;
-          const offy = e.iconType === "man" ? 0.1 * dh : 0;
-          ctx.save();
-          ctx.translate(px, py);
-          ctx.rotate((dir * Math.PI) / 180);
-          ctx.globalCompositeOperation = "source-atop";
-          ctx.fillStyle = HIT_FLASH_COLOR;
-          ctx.globalAlpha = alpha;
-          ctx.fillRect(-dw / 2, -dh / 2 + offy, dw, dh);
-          ctx.restore();
-        } else {
-          e.hitStartTime = 0; // Flash complete
-        }
       }
 
       // Draw label (not rotated, positioned above icon, counter-scaled during zoom)
