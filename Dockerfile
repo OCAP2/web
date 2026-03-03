@@ -35,14 +35,21 @@ RUN if [ "$VARIANT" = "full" ]; then \
       rm -rf /tmp/tippecanoe* && \
       apk del .build-deps && \
       case "$TARGETARCH" in \
-        amd64) ARCH="x86_64" ;; \
-        arm64) ARCH="arm64" ;; \
-        *) echo "unsupported arch: $TARGETARCH" && exit 1 ;; \
+        amd64) PMTILES_ARCH="x86_64" ;; \
+        arm64) PMTILES_ARCH="arm64" ;; \
+        *) PMTILES_ARCH="" ;; \
       esac && \
-      wget -qO /tmp/pmtiles.tar.gz "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/go-pmtiles_${PMTILES_VERSION}_Linux_${ARCH}.tar.gz" && \
-      tar -xzf /tmp/pmtiles.tar.gz -C /usr/local/bin pmtiles && \
-      chmod +x /usr/local/bin/pmtiles && \
-      rm /tmp/pmtiles.tar.gz; \
+      if [ -n "$PMTILES_ARCH" ]; then \
+        wget -qO /tmp/pmtiles.tar.gz "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/go-pmtiles_${PMTILES_VERSION}_Linux_${PMTILES_ARCH}.tar.gz" && \
+        tar -xzf /tmp/pmtiles.tar.gz -C /usr/local/bin pmtiles && \
+        chmod +x /usr/local/bin/pmtiles && \
+        rm /tmp/pmtiles.tar.gz; \
+      else \
+        apk add --no-cache --virtual .pmtiles-build go git && \
+        GOBIN=/usr/local/bin go install "github.com/protomaps/go-pmtiles/cmd/pmtiles@v${PMTILES_VERSION}" && \
+        apk del .pmtiles-build && \
+        rm -rf /root/go /root/.cache/go-build; \
+      fi; \
     fi
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \
