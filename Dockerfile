@@ -16,7 +16,7 @@ ARG build_version
 ARG build_commit
 RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -o app ./cmd/ocap-webserver
 ARG PMTILES_VERSION=1.30.0
-RUN go install "github.com/protomaps/go-pmtiles/cmd/pmtiles@v${PMTILES_VERSION}"
+RUN go install "github.com/protomaps/go-pmtiles@v${PMTILES_VERSION}"
 
 FROM alpine:3.23
 ARG VARIANT=slim
@@ -35,7 +35,7 @@ RUN if [ "$VARIANT" = "full" ]; then \
       rm -rf /tmp/tippecanoe* && \
       apk del .build-deps; \
     fi
-RUN --mount=from=builder,source=/go/bin/pmtiles,target=/tmp/pmtiles \
+RUN --mount=from=builder,source=/go/bin/go-pmtiles,target=/tmp/pmtiles \
     if [ "$VARIANT" = "full" ]; then cp /tmp/pmtiles /usr/local/bin/pmtiles; fi
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \
