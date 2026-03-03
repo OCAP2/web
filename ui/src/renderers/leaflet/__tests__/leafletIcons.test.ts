@@ -106,7 +106,7 @@ describe("getEntityIcon", () => {
     expect(icon).toBeDefined();
     expect(icon.options.iconUrl).toBe("/images/markers/man/blufor.svg");
     expect(icon.options.iconSize).toEqual([16, 16]);
-    expect(icon.options.className).toBe("animation");
+
   });
 
   it("returns correct icon for tank/opfor", () => {
@@ -171,7 +171,7 @@ describe("getEntityIcon", () => {
         const icon = getEntityIcon(type, state);
         expect(icon).toBeDefined();
         expect(icon.options.iconUrl).toContain(`${state}.svg`);
-        expect(icon.options.className).toBe("animation");
+    
       }
     }
   });
@@ -242,7 +242,7 @@ describe("hitIcon", () => {
     const icon = hitIcon("man");
     expect(icon.options.iconUrl).toBe("/images/markers/man/hit.svg");
     expect(icon.options.iconSize).toEqual([16, 16]);
-    expect(icon.options.className).toBe("animation");
+
   });
 
   it("falls back to unknown type for unrecognised entity type", () => {

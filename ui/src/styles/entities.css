@@ -1,40 +1,6 @@
 /* ==========================================================================
    Entity Marker Styles
-   Smooth CSS transitions for marker interpolation during playback.
    ========================================================================== */
-
-/* ---------- Speed-dependent custom property ---------- */
-
-:root {
-  --marker-speed: 0.15s;
-}
-
-.speed-1 { --marker-speed: 1s; }
-.speed-2 { --marker-speed: 0.9s; }
-.speed-3 { --marker-speed: 0.8s; }
-.speed-4 { --marker-speed: 0.7s; }
-.speed-5 { --marker-speed: 0.6s; }
-.speed-6 { --marker-speed: 0.5s; }
-.speed-7 { --marker-speed: 0.4s; }
-.speed-8 { --marker-speed: 0.3s; }
-.speed-9 { --marker-speed: 0.2s; }
-.speed-10 { --marker-speed: 0.15s; }
-
-/* ---------- Marker transitions ---------- */
-
-.marker-transition .leaflet-marker-icon.animation {
-  transition: transform var(--marker-speed) linear;
-}
-
-.marker-transition .leaflet-popup.animation {
-  transition: transform var(--marker-speed) linear !important;
-}
-
-/* Disable transitions during zoom to prevent visual glitches */
-.marker-transition.zooming .leaflet-marker-icon.animation,
-.marker-transition.zooming .leaflet-popup.animation {
-  transition: none !important;
-}
 
 /* ---------- Side colour utilities ---------- */
 
