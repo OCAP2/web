@@ -140,9 +140,9 @@ export function latLngToArmaMapLibre(latlng: L.LatLng): ArmaCoord {
 // --------------- Renderer ---------------
 
 export class LeafletRenderer implements MapRenderer {
-  private map!: L.Map;
+  protected map!: L.Map;
   private world!: WorldConfig;
-  private useMapLibreMode = false;
+  protected useMapLibreMode = false;
 
   // Signal-backed display mode state
   private readonly _nameDisplayMode: Accessor<"players" | "all" | "none">;
@@ -726,9 +726,9 @@ export class LeafletRenderer implements MapRenderer {
     this.map.remove();
   }
 
-  // ==================== Coordinate conversion (private) ====================
+  // ==================== Coordinate conversion ====================
 
-  private armaToLatLng(coords: ArmaCoord): L.LatLng {
+  protected armaToLatLng(coords: ArmaCoord): L.LatLng {
     if (this.useMapLibreMode) {
       return armaToLatLngMapLibre(coords);
     }

@@ -8,6 +8,7 @@ import { PlaybackEngine } from "../../playback/engine";
 import { MarkerManager } from "../../playback/markerManager";
 import { formatElapsedTime } from "../../playback/time";
 import { LeafletRenderer } from "../../renderers/leaflet/leafletRenderer";
+import { CanvasLeafletRenderer } from "../../renderers/leaflet/canvasLeafletRenderer";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { EngineProvider } from "../../hooks/useEngine";
 import { RendererProvider } from "../../hooks/useRenderer";
@@ -49,7 +50,10 @@ export function RecordingPlayback(): JSX.Element {
   const { t } = useI18n();
   const { authenticated } = useAuth();
   const api = new ApiClient();
-  const renderer: MapRenderer = new LeafletRenderer();
+  const useCanvas = new URLSearchParams(window.location.search).has("canvas");
+  const renderer: MapRenderer = useCanvas
+    ? new CanvasLeafletRenderer()
+    : new LeafletRenderer();
   const engine = new PlaybackEngine(renderer);
   const markerManager = new MarkerManager(renderer);
   const [worldConfig, setWorldConfig] = createSignal<WorldConfig | undefined>(
