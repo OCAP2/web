@@ -30,7 +30,7 @@ function makeRenderer(mockCanvasLayer: ReturnType<typeof makeMockCanvasLayer>) {
   ) as any;
   renderer.canvasLayer = mockCanvasLayer;
   renderer.pendingFireLines = [];
-  return renderer as CanvasLeafletRenderer & { canvasLayer: any; pendingFireLines: any[] };
+  return renderer as CanvasLeafletRenderer;
 }
 
 function makeOpts(overrides?: Partial<EntityMarkerOpts>): EntityMarkerOpts {
@@ -63,7 +63,7 @@ function makeState(overrides?: Partial<EntityMarkerState>): EntityMarkerState {
 
 describe("CanvasLeafletRenderer", () => {
   let mockCanvasLayer: ReturnType<typeof makeMockCanvasLayer>;
-  let renderer: ReturnType<typeof makeRenderer>;
+  let renderer: CanvasLeafletRenderer;
 
   beforeEach(() => {
     mockCanvasLayer = makeMockCanvasLayer();
@@ -151,7 +151,7 @@ describe("CanvasLeafletRenderer", () => {
     });
 
     it("guards against null canvasLayer (pre-init)", () => {
-      renderer.canvasLayer = null as any;
+      (renderer as any).canvasLayer = null;
       // Should not throw
       expect(() => renderer.setSmoothingEnabled(true)).not.toThrow();
     });
@@ -181,7 +181,7 @@ describe("CanvasLeafletRenderer", () => {
     });
 
     it("guards against null canvasLayer", () => {
-      renderer.canvasLayer = null as any;
+      (renderer as any).canvasLayer = null;
       const superDispose = vi.fn();
       Object.getPrototypeOf(CanvasLeafletRenderer.prototype).dispose = superDispose;
 
@@ -237,7 +237,7 @@ describe("CanvasLeafletRenderer", () => {
     });
 
     it("guards against null canvasLayer", () => {
-      renderer.canvasLayer = null as any;
+      (renderer as any).canvasLayer = null;
       // Should not throw — the ?. operator guards the call
       expect(() =>
         renderer.addLine([0, 0] as ArmaCoord, [1, 1] as ArmaCoord, {
@@ -271,7 +271,7 @@ describe("CanvasLeafletRenderer", () => {
       // First removeLine clears everything
       renderer.removeLine(h1);
       expect(mockCanvasLayer.clearFireLines).toHaveBeenCalledOnce();
-      expect(renderer.pendingFireLines).toHaveLength(0);
+      expect((renderer as any).pendingFireLines).toHaveLength(0);
     });
 
     it("subsequent removeLine calls are no-ops", () => {
@@ -297,12 +297,12 @@ describe("CanvasLeafletRenderer", () => {
 
     it("guards against null canvasLayer", () => {
       // Add a line so pendingFireLines is non-empty
-      renderer.pendingFireLines.push({
+      (renderer as any).pendingFireLines.push({
         fromX: 0, fromY: 0, toX: 1, toY: 1,
         color: "red", weight: 1, opacity: 1,
         cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0,
       });
-      renderer.canvasLayer = null as any;
+      (renderer as any).canvasLayer = null;
       expect(() => renderer.removeLine({} as any)).not.toThrow();
     });
   });
@@ -348,7 +348,7 @@ describe("CanvasLeafletRenderer", () => {
       Object.getPrototypeOf(CanvasLeafletRenderer.prototype).setLayerVisible =
         superSetLayerVisible;
 
-      renderer.canvasLayer = null as any;
+      (renderer as any).canvasLayer = null;
       expect(() => renderer.setLayerVisible("grid", true)).not.toThrow();
     });
   });
