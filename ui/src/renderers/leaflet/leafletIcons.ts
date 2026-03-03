@@ -89,7 +89,7 @@ export function entityIcon(
 
   return {
     icon: L.icon({
-      className: "animation",
+
       iconSize: size,
       iconAnchor: [size[0] / 2, size[1] / 2],
       iconUrl: `${path}${variant}.svg`,
@@ -106,7 +106,7 @@ export function hitIcon(iconType: string): L.Icon {
   const size = ICON_SIZES[type];
   const path = ICON_PATHS[type];
   return L.icon({
-    className: "animation",
+
     iconSize: size,
     iconAnchor: [size[0] / 2, size[1] / 2],
     iconUrl: `${path}hit.svg`,
@@ -158,7 +158,7 @@ export function getEntityIcon(iconType: string, state: string): L.Icon {
   const variant = ICON_STATES.includes(state as IconState) ? state : "unknown";
 
   return L.icon({
-    className: "animation",
+
     iconSize: size,
     iconAnchor: [size[0] / 2, size[1] / 2],
     iconUrl: `${path}${variant}.svg`,

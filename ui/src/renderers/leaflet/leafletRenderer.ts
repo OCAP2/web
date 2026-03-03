@@ -27,11 +27,6 @@ import { basePath } from "../../data/basePath";
 import type { StyleCandidate } from "./leafletControls";
 import { createGridLayer } from "./leafletGrid";
 import {
-  enableSmoothing,
-  disableSmoothing,
-  setZooming,
-} from "./leafletSmoothing";
-import {
   ensureDefs,
   nextPatternId,
   createStripePattern,
@@ -170,9 +165,6 @@ export class LeafletRenderer implements MapRenderer {
   private svgRenderer!: L.SVG;
   private svgDefs!: SVGDefsElement;
 
-  // Smoothing state
-  private smoothingEnabled = false;
-  private smoothingSpeed = 1;
 
   // MapLibre layer reference (for style switching)
   private maplibreLayer: any = null;
@@ -265,11 +257,7 @@ export class LeafletRenderer implements MapRenderer {
     this.hideMarkerPopups = this.map.getZoom() <= hideThreshold;
 
     // Forward Leaflet events
-    this.map.on("zoomstart", () => {
-      setZooming(container, true);
-    });
     this.map.on("zoomend", () => {
-      setZooming(container, false);
       const hideThreshold = this.useMapLibreMode ? 14 : 4;
       this.hideMarkerPopups = this.map.getZoom() <= hideThreshold;
       this.refreshPopupVisibility();
@@ -796,7 +784,7 @@ export class LeafletRenderer implements MapRenderer {
       autoPan: false,
       autoClose: false,
       closeButton: false,
-      className: `${opts.iconType === "man" ? "leaflet-popup-unit" : "leaflet-popup-vehicle"} animation`,
+      className: opts.iconType === "man" ? "leaflet-popup-unit" : "leaflet-popup-vehicle",
     });
     popup.setContent(opts.name);
     marker.bindPopup(popup).openPopup();
@@ -1238,20 +1226,8 @@ export class LeafletRenderer implements MapRenderer {
 
   // ==================== Settings ====================
 
-  setSmoothingEnabled(enabled: boolean, speed?: number): void {
-    this.smoothingEnabled = enabled;
-    if (speed !== undefined) {
-      this.smoothingSpeed = speed;
-    }
-
-    const container = this.map?.getContainer();
-    if (!container) return;
-
-    if (enabled) {
-      enableSmoothing(container, this.smoothingSpeed);
-    } else {
-      disableSmoothing(container);
-    }
+  setSmoothingEnabled(_enabled: boolean, _speed?: number): void {
+    // no-op: CSS marker transitions removed
   }
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
