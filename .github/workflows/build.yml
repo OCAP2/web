@@ -23,9 +23,6 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             digest: linux-arm64
-          - platform: linux/arm/v7
-            runner: ubuntu-latest
-            digest: linux-armv7
 
     runs-on: ${{ matrix.runner }}
 
@@ -35,9 +32,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -152,9 +146,6 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             digest: linux-arm64
-          - platform: linux/arm/v7
-            runner: ubuntu-latest
-            digest: linux-armv7
 
     runs-on: ${{ matrix.runner }}
 
@@ -164,9 +155,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -302,20 +290,12 @@ jobs:
             binary: ocap-webserver
             archive: ocap-webserver-linux-arm64.tar.gz
             archiver: tar -czvf
-          - goos: linux
-            goarch: arm
-            goarm: "7"
-            cc: arm-linux-gnueabihf-gcc
-            cxx: arm-linux-gnueabihf-g++
-            binary: ocap-webserver
-            archive: ocap-webserver-linux-armv7.tar.gz
-            archiver: tar -czvf
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Install cross compile dependencies
-        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
       - uses: actions/setup-node@v6
         with:
@@ -335,7 +315,6 @@ jobs:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: |
