@@ -46,16 +46,6 @@ describe("MapRenderer interface", () => {
     expect(handle._internal).toBeDefined();
   });
 
-  it("addPulse returns a handle", () => {
-    const renderer = new MockRenderer();
-    const handle = renderer.addPulse([50, 50], {
-      color: "#FF0000",
-      fillColor: "#FF0000",
-      iconSize: [30, 30],
-    });
-    expect(handle).toBeDefined();
-    expect(handle._internal).toBeDefined();
-  });
 
   it("each handle has a unique _internal value", () => {
     const renderer = new MockRenderer();

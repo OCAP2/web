@@ -11,8 +11,6 @@ import type {
   BriefingMarkerState,
   LineHandle,
   LineOpts,
-  PulseHandle,
-  PulseOpts,
   RenderLayer,
   MapStyleInfo,
   RendererEvent,
@@ -140,13 +138,6 @@ export class MockRenderer implements MapRenderer {
     // no-op
   }
 
-  addPulse(_pos: ArmaCoord, _opts: PulseOpts): PulseHandle {
-    return makeHandle<PulseHandle>();
-  }
-
-  removePulse(_handle: PulseHandle): void {
-    // no-op
-  }
 
   // Signal accessors
   get layerVisibility() { return this._layerVisibility; }

@@ -15,8 +15,6 @@ import type {
   BriefingMarkerState,
   LineHandle,
   LineOpts,
-  PulseHandle,
-  PulseOpts,
   RenderLayer,
   RendererEvent,
   RendererControls,
@@ -80,10 +78,6 @@ interface InternalLineHandle {
   line: L.Polyline;
 }
 
-interface InternalPulseHandle {
-  marker: L.Marker;
-}
-
 function wrapMarker(data: InternalMarkerHandle): MarkerHandle {
   return { _brand: undefined as any, _internal: data } as unknown as MarkerHandle;
 }
@@ -106,14 +100,6 @@ function wrapLine(data: InternalLineHandle): LineHandle {
 
 function unwrapLine(handle: LineHandle): InternalLineHandle {
   return (handle as any)._internal as InternalLineHandle;
-}
-
-function wrapPulse(data: InternalPulseHandle): PulseHandle {
-  return { _brand: undefined as any, _internal: data } as unknown as PulseHandle;
-}
-
-function unwrapPulse(handle: PulseHandle): InternalPulseHandle {
-  return (handle as any)._internal as InternalPulseHandle;
 }
 
 // --------------- Layer group keys ---------------
@@ -1144,25 +1130,6 @@ export class LeafletRenderer implements MapRenderer {
     this.layers.projectileMarkers.removeLayer(internal.line);
   }
 
-  // ==================== Pulses ====================
-
-  addPulse(pos: ArmaCoord, opts: PulseOpts): PulseHandle {
-    const latlng = this.armaToLatLng(pos);
-    const marker = L.marker(latlng, {
-      icon: L.divIcon({
-        className: "pulse-icon",
-        html: `<div class="pulse-ring" style="border-color:${opts.color};background:${opts.fillColor}"></div>`,
-        iconSize: opts.iconSize,
-      }),
-    });
-    marker.addTo(this.layers.entities);
-    return wrapPulse({ marker });
-  }
-
-  removePulse(handle: PulseHandle): void {
-    const internal = unwrapPulse(handle);
-    this.layers.entities.removeLayer(internal.marker);
-  }
 
   // ==================== Layer visibility ====================
 

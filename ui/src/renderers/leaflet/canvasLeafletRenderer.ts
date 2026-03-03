@@ -37,7 +37,7 @@ function wrapLineHandle(index: number): LineHandle {
 /**
  * Extends LeafletRenderer, replacing only entity marker rendering with a
  * canvas overlay. Fire lines are also drawn on canvas. Everything else
- * (map tiles, briefing markers, pulses, grid, styles, events) is inherited unchanged.
+ * (map tiles, briefing markers, grid, styles, events) is inherited unchanged.
  */
 export class CanvasLeafletRenderer extends LeafletRenderer {
   private canvasLayer!: EntityCanvasLayer;
