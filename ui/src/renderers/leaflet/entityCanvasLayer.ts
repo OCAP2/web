@@ -102,6 +102,10 @@ export class EntityCanvasLayer {
   private zoomScale = 1;
   private fireLines: FireLine[] = [];
 
+  // Reusable offscreen canvas for per-icon hit tint (avoids source-atop bleed)
+  private hitCanvas: OffscreenCanvas;
+  private hitCtx: OffscreenCanvasRenderingContext2D;
+
   private animFrameId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
 
@@ -114,6 +118,10 @@ export class EntityCanvasLayer {
     this.canvas.style.cssText =
       "position:absolute;inset:0;pointer-events:none;z-index:625;";
     this.ctx = this.canvas.getContext("2d")!;
+
+    // Small offscreen canvas for isolated per-icon hit tint
+    this.hitCanvas = new OffscreenCanvas(64, 64);
+    this.hitCtx = this.hitCanvas.getContext("2d")!;
 
     // Insert into map container
     map.getContainer().appendChild(this.canvas);
@@ -421,25 +429,6 @@ export class EntityCanvasLayer {
         continue;
       }
 
-      // Hit flash: draw a colored glow circle behind the icon
-      if (e.hitStartTime > 0) {
-        const elapsed = performance.now() - e.hitStartTime;
-        if (elapsed < HIT_FLASH_DURATION_MS) {
-          const alpha = 0.8 * (1 - elapsed / HIT_FLASH_DURATION_MS);
-          const [iw, ih] = e.iconSize;
-          const radius = Math.max(iw, ih) * cs * 0.8;
-          ctx.save();
-          ctx.globalAlpha = alpha;
-          ctx.fillStyle = HIT_FLASH_COLOR;
-          ctx.beginPath();
-          ctx.arc(px, py, radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        } else {
-          e.hitStartTime = 0; // Flash complete
-        }
-      }
-
       // Draw icon (rotated, counter-scaled during zoom)
       const img = iconCache.get(e.iconType, e.iconVariant);
       if (img) {
@@ -448,12 +437,54 @@ export class EntityCanvasLayer {
         const dh = ih * cs;
         // Man icons rotate around 50% 60% (matching leaflet-rotatedmarker's rotationOrigin)
         const offy = e.iconType === "man" ? 0.1 * dh : 0;
-        ctx.save();
-        ctx.globalAlpha = e.opacity;
-        ctx.translate(px, py);
-        ctx.rotate((dir * Math.PI) / 180);
-        ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
-        ctx.restore();
+
+        // Hit flash: tint the icon via an offscreen canvas (isolates source-atop
+        // to just this icon's pixels, avoiding bleed onto other canvas content).
+        let hitAlpha = 0;
+        if (e.hitStartTime > 0) {
+          const elapsed = performance.now() - e.hitStartTime;
+          if (elapsed < HIT_FLASH_DURATION_MS) {
+            hitAlpha = 1 - elapsed / HIT_FLASH_DURATION_MS;
+          } else {
+            e.hitStartTime = 0;
+          }
+        }
+
+        if (hitAlpha > 0) {
+          const hc = this.hitCanvas;
+          const hctx = this.hitCtx;
+          // Resize offscreen canvas if needed (icons are small, 64x64 covers all)
+          const pw = Math.ceil(dw) + 2;
+          const ph = Math.ceil(dh) + 2;
+          if (hc.width < pw || hc.height < ph) {
+            hc.width = pw;
+            hc.height = ph;
+          }
+          hctx.clearRect(0, 0, hc.width, hc.height);
+          // Draw icon centered in offscreen canvas
+          hctx.globalCompositeOperation = "source-over";
+          hctx.globalAlpha = 1;
+          hctx.drawImage(img, 1, 1, dw, dh);
+          // Tint only the icon pixels
+          hctx.globalCompositeOperation = "source-atop";
+          hctx.fillStyle = HIT_FLASH_COLOR;
+          hctx.globalAlpha = hitAlpha;
+          hctx.fillRect(0, 0, hc.width, hc.height);
+          // Blit tinted icon to main canvas
+          ctx.save();
+          ctx.globalAlpha = e.opacity;
+          ctx.translate(px, py);
+          ctx.rotate((dir * Math.PI) / 180);
+          ctx.drawImage(hc, 0, 0, pw, ph, -dw / 2 - 1, -dh / 2 + offy - 1, pw, ph);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.globalAlpha = e.opacity;
+          ctx.translate(px, py);
+          ctx.rotate((dir * Math.PI) / 180);
+          ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
+          ctx.restore();
+        }
       }
 
       // Draw label (not rotated, positioned above icon, counter-scaled during zoom)
