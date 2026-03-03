@@ -102,7 +102,7 @@ export function EditModal(props: {
 
             {/* Date */}
             <div class={styles.editField}>
-              <label class={styles.editLabel}>{t("data")}</label>
+              <label class={styles.editLabel}>{t("date")}</label>
               <input
                 type="datetime-local"
                 value={date()}
@@ -276,7 +276,7 @@ export function UploadDialog(props: {
 
           {/* Date */}
           <div class={styles.editField}>
-            <label class={styles.editLabel}>{t("data")}</label>
+            <label class={styles.editLabel}>{t("date")}</label>
             <input
               type="datetime-local"
               value={date()}

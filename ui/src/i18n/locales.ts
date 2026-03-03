@@ -277,7 +277,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "Carte",
     fi: "Kartta",
   },
-  data: {
+  date: {
     ru: "Дата",
     en: "Date",
     de: "Datum",

@@ -446,7 +446,7 @@ export function RecordingSelector(): JSX.Element {
             {/* Column Headers */}
             <div class={styles.tableHeader} style={{ "grid-template-columns": gridColumns() }}>
               <SortHeader label={t("recording")} sortKey="name" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
-              <SortHeader label={t("data")} sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
+              <SortHeader label={t("date")} sortKey="date" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <SortHeader label={t("durability")} sortKey="duration" currentSort={sortBy()} currentDir={sortDir()} onSort={handleSort} />
               <Show when={hasPlayerData()}>
                 <span class={styles.colLabel}>{t("players")}</span>

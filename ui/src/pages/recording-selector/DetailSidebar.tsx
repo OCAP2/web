@@ -85,7 +85,7 @@ export function DetailSidebar(props: {
 
         {/* Stats Grid */}
         <div class={styles.sidebarStatsGrid}>
-          <StatPill class={styles.sidebarStatsGridFull} icon={<CalendarIcon />} value={formatDate(props.rec.date, locale())} label={t("data")} />
+          <StatPill class={styles.sidebarStatsGridFull} icon={<CalendarIcon />} value={formatDate(props.rec.date, locale())} label={t("date")} />
           <StatPill icon={<ClockIcon />} value={formatDuration(props.rec.missionDuration)} label={t("durability")} />
           <StatPill icon={<UsersIcon />} value={(props.rec.playerCount ?? 0) > 0 ? props.rec.playerCount! : "\u2014"} label={t("players")} />
         </div>
