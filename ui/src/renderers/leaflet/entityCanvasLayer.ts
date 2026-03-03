@@ -186,11 +186,14 @@ export class EntityCanvasLayer {
     e.targetY = state.position[1];
     e.targetDir = closestEquivalentAngle(e.prevDir, state.direction);
 
-    // Snap immediately for teleports or when smoothing is off (seek/pause)
+    // Snap immediately for teleports, smoothing off, or vehicle exit
+    // (units re-appearing after being hidden in a vehicle must not interpolate
+    // from their stale pre-vehicle position).
+    const exitingVehicle = e.isInVehicle && !state.isInVehicle;
     const dx = e.targetX - e.prevX;
     const dy = e.targetY - e.prevY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > SKIP_ANIMATION_DISTANCE || !this.smoothing) {
+    if (dist > SKIP_ANIMATION_DISTANCE || !this.smoothing || exitingVehicle) {
       e.prevX = e.targetX;
       e.prevY = e.targetY;
       e.prevDir = e.targetDir;
