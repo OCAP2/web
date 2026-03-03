@@ -6,6 +6,12 @@ import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/mat
 import { getTransitionDuration } from "./leafletSmoothing";
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 
+/** Duration of the hit flash color tint in milliseconds. */
+const HIT_FLASH_DURATION_MS = 300;
+
+/** Hit flash tint color (yellow-orange). */
+const HIT_FLASH_COLOR = "rgba(255, 200, 0, 0.8)";
+
 // --------------- Internal entity state ---------------
 
 interface CanvasEntity {
@@ -37,6 +43,9 @@ interface CanvasEntity {
   cachedPx: number;
   cachedPy: number;
   cachedDir: number;
+
+  // Hit flash — wall-clock fade-out managed by canvas render loop
+  hitStartTime: number; // 0 = no active hit
 }
 
 export interface FireLine {
@@ -150,6 +159,7 @@ export class EntityCanvasLayer {
       cachedPx: 0,
       cachedPy: 0,
       cachedDir: 0,
+      hitStartTime: 0,
     });
   }
 
@@ -183,8 +193,11 @@ export class EntityCanvasLayer {
 
     // Update visual state
     const iconType = this.config.iconCache.resolveType(state.iconType);
-    const isHit = !!state.hit && state.alive !== 0;
-    e.iconVariant = resolveVariant(state.alive, state.side, isHit);
+    // Trigger hit flash on new hit events (wall-clock timer)
+    if (state.hit && state.alive !== 0) {
+      e.hitStartTime = performance.now();
+    }
+    e.iconVariant = resolveVariant(state.alive, state.side, false);
     e.iconType = iconType;
     e.iconSize = this.config.iconCache.getSize(iconType);
     e.opacity = state.isInVehicle ? 0 : state.alive === 0 ? 0.4 : 1;
@@ -422,6 +435,28 @@ export class EntityCanvasLayer {
         ctx.rotate((dir * Math.PI) / 180);
         ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
         ctx.restore();
+      }
+
+      // Hit flash: color tint overlay fading out over HIT_FLASH_DURATION_MS
+      if (e.hitStartTime > 0) {
+        const elapsed = performance.now() - e.hitStartTime;
+        if (elapsed < HIT_FLASH_DURATION_MS) {
+          const alpha = 0.8 * (1 - elapsed / HIT_FLASH_DURATION_MS);
+          const [iw, ih] = e.iconSize;
+          const dw = iw * cs;
+          const dh = ih * cs;
+          const offy = e.iconType === "man" ? 0.1 * dh : 0;
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate((dir * Math.PI) / 180);
+          ctx.globalCompositeOperation = "source-atop";
+          ctx.fillStyle = HIT_FLASH_COLOR;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(-dw / 2, -dh / 2 + offy, dw, dh);
+          ctx.restore();
+        } else {
+          e.hitStartTime = 0; // Flash complete
+        }
       }
 
       // Draw label (not rotated, positioned above icon, counter-scaled during zoom)
