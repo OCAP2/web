@@ -122,11 +122,12 @@ export function RecordingSelector(): JSX.Element {
   };
 
   // Derived data
-  const uniqueMaps = createMemo(() =>
-    [...new Set(recordings().map((o) => o.worldName))].sort((a, b) =>
-      (worldNames().get(a) ?? a).localeCompare(worldNames().get(b) ?? b)
-    )
-  );
+  const uniqueMaps = createMemo(() => {
+    const names = worldNames();
+    return [...new Set(recordings().map((o) => o.worldName))].sort((a, b) =>
+      (names.get(a) ?? a).localeCompare(names.get(b) ?? b)
+    );
+  });
   const uniqueTags = createMemo(() => ([...new Set(recordings().map((o) => o.tag).filter(Boolean))] as string[]).sort((a, b) => a.localeCompare(b)));
 
   const hasPlayerData = createMemo(() => recordings().some(r => (r.playerCount ?? 0) > 0));
