@@ -40,6 +40,10 @@ jobs:
         run: npm ci
         working-directory: ui
 
+      - name: Typecheck
+        run: npx tsc --noEmit
+        working-directory: ui
+
       - name: Lint
         run: npx eslint src/
         working-directory: ui
