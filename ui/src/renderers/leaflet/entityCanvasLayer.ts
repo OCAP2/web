@@ -6,6 +6,14 @@ import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/mat
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 import { getGridInterval, computeGridLines, formatCoordLabel } from "./gridUtils";
 
+/** Map Side enum to bright hex color for canvas drawing. */
+const SIDE_COLORS: Record<Side, string> = {
+  WEST: "#00a8ff",
+  EAST: "#ff0000",
+  GUER: "#00cc00",
+  CIV: "#c900ff",
+};
+
 /** Duration of the hit flash color tint in milliseconds. */
 const HIT_FLASH_DURATION_MS = 300;
 
@@ -34,6 +42,7 @@ interface CanvasEntity {
 
   // Label / visibility
   name: string;
+  side: Side | null;
   isPlayer: boolean;
   isInVehicle: boolean;
   alive: AliveState;
@@ -83,9 +92,9 @@ export interface EntityCanvasConfig {
 
 // --------------- Helpers ---------------
 
-/** Strip HTML tags from vehicle display names for canvas text. */
-function stripHtml(html: string): string {
-  return html.replace(/<br\s*\/?>/gi, " \u00B7 ").replace(/<[^>]*>/g, "");
+/** Split an HTML name string into plain-text lines (split on <br>). */
+function htmlToLines(html: string): string[] {
+  return html.split(/<br\s*\/?>/gi).map((s) => s.replace(/<[^>]*>/g, ""));
 }
 
 // --------------- Canvas layer ---------------
@@ -177,6 +186,7 @@ export class EntityCanvasLayer {
       iconSize: this.config.iconCache.getSize(iconType),
       opacity: 1,
       name: opts.name,
+      side: opts.side,
       isPlayer: opts.isPlayer,
       isInVehicle: false,
       alive: 1,
@@ -229,6 +239,7 @@ export class EntityCanvasLayer {
     e.iconSize = this.config.iconCache.getSize(iconType);
     e.opacity = state.isInVehicle ? 0 : state.alive === 0 ? 0.4 : 1;
     e.name = state.name;
+    e.side = state.side;
     e.isPlayer = state.isPlayer;
     e.isInVehicle = state.isInVehicle;
     e.alive = state.alive;
@@ -611,21 +622,65 @@ export class EntityCanvasLayer {
         (nameMode === "all" || (nameMode === "players" && e.isPlayer))
       ) {
         const [, ih] = e.iconSize;
-        const labelY = py - (ih * cs) / 2 - 4 * cs;
-        const plainName = stripHtml(e.name);
+        const lines = htmlToLines(e.name);
         const fontSize = Math.round(11 * cs);
+        const lineHeight = fontSize * 1.3;
+        // Stack lines upward from just above the icon
+        const baseY = py - (ih * cs) / 2 - 4 * cs;
 
         ctx.save();
         ctx.globalAlpha = e.opacity;
-        ctx.font =
-          `${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-        ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.lineWidth = 3 * cs;
-        ctx.strokeStyle = "rgba(0,0,0,0.7)";
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeText(plainName, px, labelY);
-        ctx.fillText(plainName, px, labelY);
+
+        const fontNormal =
+          `${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+        const fontBold =
+          `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+        const isMultiLine = lines.length > 1;
+
+        if (!isMultiLine) {
+          // Single-line unit label: text outline for contrast, no background
+          ctx.font = fontNormal;
+          ctx.textAlign = "center";
+          ctx.lineWidth = 3 * cs;
+          ctx.strokeStyle = "rgba(0,0,0,0.7)";
+          ctx.fillStyle = "#ffffff";
+          ctx.strokeText(lines[0], px, baseY);
+          ctx.fillText(lines[0], px, baseY);
+        } else {
+          // Multi-line vehicle label: background pill + side-colored crew
+          const sideColor = (e.side && SIDE_COLORS[e.side]) || "#ffffff";
+          const padX = 4 * cs;
+          const padY = 2 * cs;
+
+          ctx.textAlign = "left";
+          let maxW = 0;
+          for (let i = 0; i < lines.length; i++) {
+            ctx.font = i === 0 ? fontBold : fontNormal;
+            const w = ctx.measureText(lines[i]).width;
+            if (w > maxW) maxW = w;
+          }
+
+          // Background pill
+          const bgW = maxW + padX * 2;
+          const bgH = lines.length * lineHeight + padY * 2;
+          const bgX = px - bgW / 2;
+          const bgY = baseY - bgH + padY;
+          const r = 3 * cs;
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.beginPath();
+          ctx.roundRect(bgX, bgY, bgW, bgH, r);
+          ctx.fill();
+
+          // Text lines
+          const leftX = px - maxW / 2;
+          for (let i = lines.length - 1; i >= 0; i--) {
+            ctx.font = i === 0 ? fontBold : fontNormal;
+            ctx.fillStyle = i === 0 ? "#ffffff" : sideColor;
+            const y = baseY - (lines.length - 1 - i) * lineHeight;
+            ctx.fillText(lines[i], leftX, y);
+          }
+        }
         ctx.restore();
       }
     }
