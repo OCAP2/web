@@ -203,7 +203,7 @@ export function StatusStrip(props: {
       {/* ── Tools dropdown ── */}
       <Show when={openPanel() === "tools"}>
         <div class={`${styles.dropdown} ${styles.toolsDropdown}`}>
-          <div class={styles.dropdownHeading}>{t("mm_cli_tools").toUpperCase()}</div>
+          <div class={styles.dropdownHeading}>{t("mm_cli_tools")}</div>
           <div class={styles.toolRows}>
             <For each={props.tools}>
               {(tool) => (
@@ -249,7 +249,7 @@ export function StatusStrip(props: {
 
           <Show when={props.health.length > 0}>
             <div class={styles.healthSection}>
-              <div class={styles.dropdownHeading}>{t("mm_environment").toUpperCase()}</div>
+              <div class={styles.dropdownHeading}>{t("mm_environment")}</div>
               <For each={props.health}>
                 {(h) => (
                   <div>
@@ -290,7 +290,7 @@ export function StatusStrip(props: {
         <div class={`${styles.dropdown} ${styles.jobsDropdown}`}>
           {/* Queued */}
           <Show when={pending().length > 0}>
-            <div class={styles.dropdownHeading}>{t("mm_queued").toUpperCase()}</div>
+            <div class={styles.dropdownHeading}>{t("mm_queued")}</div>
             <For each={pending()}>
               {(j) => (
                 <div class={`${styles.jobRow} ${styles.jobRowPending}`}>
@@ -301,7 +301,7 @@ export function StatusStrip(props: {
                     {j.worldName}
                   </span>
                   <span class={styles.jobStatusLabel} style={{ color: "var(--text-dimmer)" }}>
-                    {t("mm_pending").toUpperCase()}
+                    {t("mm_pending")}
                   </span>
                 </div>
               )}
@@ -314,7 +314,7 @@ export function StatusStrip(props: {
               class={styles.dropdownHeading}
               style={{ "margin-top": pending().length > 0 ? "10px" : "0" }}
             >
-              {t("mm_history").toUpperCase()}
+              {t("mm_history")}
             </div>
             <For each={past()}>
               {(j) => (

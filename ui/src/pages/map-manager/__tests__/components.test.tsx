@@ -112,7 +112,7 @@ describe("StatusStrip", () => {
     // Click the tools button (first button)
     const toolsBtn = container.querySelectorAll("button")[0];
     fireEvent.click(toolsBtn);
-    expect(container.textContent).toContain("CLI TOOLS");
+    expect(container.textContent).toContain("CLI Tools");
     expect(container.textContent).toContain("pmtiles");
     expect(container.textContent).toContain("tippecanoe");
   });
@@ -128,7 +128,7 @@ describe("StatusStrip", () => {
     const buttons = container.querySelectorAll("button");
     const jobsBtn = buttons[buttons.length - 1];
     fireEvent.click(jobsBtn);
-    expect(container.textContent).toContain("HISTORY");
+    expect(container.textContent).toContain("History");
     expect(container.textContent).toContain("Tanoa");
     expect(container.textContent).toContain("DONE");
   });
@@ -205,10 +205,10 @@ describe("StatusStrip", () => {
     ));
     const buttons = container.querySelectorAll("button");
     fireEvent.click(buttons[buttons.length - 1]);
-    expect(container.textContent).toContain("QUEUED");
+    expect(container.textContent).toContain("Queued");
     expect(container.textContent).toContain("Livonia");
     expect(container.textContent).toContain("Tanoa");
-    expect(container.textContent).toContain("PENDING");
+    expect(container.textContent).toContain("Pending");
   });
 
   it("shows elapsed time for finished jobs", () => {
@@ -259,8 +259,8 @@ describe("StatusStrip", () => {
     ));
     const buttons = container.querySelectorAll("button");
     fireEvent.click(buttons[buttons.length - 1]);
-    expect(container.textContent).toContain("QUEUED");
-    expect(container.textContent).toContain("HISTORY");
+    expect(container.textContent).toContain("Queued");
+    expect(container.textContent).toContain("History");
     expect(container.textContent).toContain("Livonia");
     expect(container.textContent).toContain("DONE");
     expect(container.textContent).toContain("FAILED");
@@ -278,12 +278,12 @@ describe("StatusStrip", () => {
     // Open tools dropdown
     const toolsBtn = container.querySelectorAll("button")[0];
     fireEvent.click(toolsBtn);
-    expect(container.textContent).toContain("CLI TOOLS");
+    expect(container.textContent).toContain("CLI Tools");
 
     // Click outside
     const outside = container.querySelector("[data-testid='outside']")!;
     fireEvent.mouseDown(outside);
-    expect(container.textContent).not.toContain("CLI TOOLS");
+    expect(container.textContent).not.toContain("CLI Tools");
   });
 
   it("shows 'Environment issue' when health check fails", () => {
@@ -309,7 +309,7 @@ describe("StatusStrip", () => {
     ));
     const toolsBtn = container.querySelectorAll("button")[0];
     fireEvent.click(toolsBtn);
-    expect(container.textContent).toContain("ENVIRONMENT");
+    expect(container.textContent).toContain("Environment");
     expect(container.textContent).toContain("Maps directory writable");
     expect(container.textContent).toContain("maps dir not writable");
   });
@@ -325,7 +325,7 @@ describe("StatusStrip", () => {
     ));
     const toolsBtn = container.querySelectorAll("button")[0];
     fireEvent.click(toolsBtn);
-    expect(container.textContent).toContain("ENVIRONMENT");
+    expect(container.textContent).toContain("Environment");
     expect(container.textContent).toContain("Maps directory writable");
     expect(container.textContent).not.toContain("Environment issue");
   });

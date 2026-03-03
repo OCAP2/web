@@ -97,7 +97,7 @@ export function MapCard(props: {
             border: `1px solid color-mix(in srgb, ${statusColor()} 25%, transparent)`,
           }}
         >
-          {t(statusLabelKey(props.map.status)).toUpperCase()}
+          {t(statusLabelKey(props.map.status))}
         </span>
       </div>
       <div class={styles.cardBody}>

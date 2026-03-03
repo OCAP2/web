@@ -54,7 +54,7 @@ export function MapDetail(props: {
       <div class={styles.content}>
         <div class={styles.infoGrid}>
           <div class={styles.infoItem}>
-            <div class={styles.infoLabel}>{t("status").toUpperCase()}</div>
+            <div class={styles.infoLabel}>{t("status")}</div>
             <div
               class={styles.infoValue}
               style={{ color: MAP_STATUS_COLORS[props.map.status] }}
@@ -67,7 +67,7 @@ export function MapDetail(props: {
           </div>
           <Show when={props.map.worldSize}>
             <div class={styles.infoItem}>
-              <div class={styles.infoLabel}>{t("mm_world_size").toUpperCase()}</div>
+              <div class={styles.infoLabel}>{t("mm_world_size")}</div>
               <div class={styles.infoValue} style={{ color: "var(--text-muted)" }}>
                 {props.map.worldSize!.toLocaleString()} m
               </div>
@@ -75,7 +75,7 @@ export function MapDetail(props: {
           </Show>
           <Show when={props.map.featureLayers?.length}>
             <div class={styles.infoItem}>
-              <div class={styles.infoLabel}>{t("layers").toUpperCase()}</div>
+              <div class={styles.infoLabel}>{t("layers")}</div>
               <div class={styles.infoValue} style={{ color: "var(--text-muted)" }}>
                 {props.map.featureLayers!.length}
               </div>

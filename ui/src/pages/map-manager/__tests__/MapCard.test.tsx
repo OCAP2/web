@@ -43,7 +43,7 @@ describe("MapCard", () => {
         <MapCard map={baseMap} selected={false} baseUrl="" onSelect={() => {}} />
       </I18nProvider>
     ));
-    expect(container.textContent).toContain("COMPLETE");
+    expect(container.textContent).toContain("Complete");
   });
 
   it("renders disk size when files exist", () => {
@@ -115,7 +115,7 @@ describe("MapCard", () => {
         <MapCard map={map} selected={false} baseUrl="" onSelect={() => {}} />
       </I18nProvider>
     ));
-    expect(container.textContent).toContain("PARTIAL");
+    expect(container.textContent).toContain("Partial");
   });
 
   it("shows 'Pipeline failed' when lastError is set", () => {

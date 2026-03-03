@@ -46,6 +46,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 

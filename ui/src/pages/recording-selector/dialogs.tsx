@@ -228,7 +228,7 @@ export function UploadDialog(props: {
 
           {/* Mission Name */}
           <div class={styles.editField}>
-            <label class={styles.editLabel}>{t("name_missions").toUpperCase()} <span class={styles.uploadRequired}>*</span></label>
+            <label class={styles.editLabel}>{t("name_missions")} <span class={styles.uploadRequired}>*</span></label>
             <input
               type="text"
               value={name()}
@@ -240,7 +240,7 @@ export function UploadDialog(props: {
 
           {/* Map / World Name */}
           <div class={styles.editField}>
-            <label class={styles.editLabel}>{t("map_world_name").toUpperCase()}</label>
+            <label class={styles.editLabel}>{t("map_world_name")}</label>
             <input
               type="text"
               value={map()}
@@ -258,7 +258,7 @@ export function UploadDialog(props: {
 
           {/* Tag */}
           <div class={styles.editField}>
-            <label class={styles.editLabel}>{t("tag").toUpperCase()}</label>
+            <label class={styles.editLabel}>{t("tag")}</label>
             <input
               type="text"
               value={tag()}
@@ -276,7 +276,7 @@ export function UploadDialog(props: {
 
           {/* Date */}
           <div class={styles.editField}>
-            <label class={styles.editLabel}>{t("data").toUpperCase()}</label>
+            <label class={styles.editLabel}>{t("data")}</label>
             <input
               type="datetime-local"
               value={date()}

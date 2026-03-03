@@ -132,7 +132,7 @@ export function ImportDialog(props: {
           </div>
 
           <div class={styles.structureHint}>
-            <div class={styles.structureTitle}>{t("mm_expected_structure").toUpperCase()}</div>
+            <div class={styles.structureTitle}>{t("mm_expected_structure")}</div>
             <div class={styles.structureList}>
               <span class={styles.structureRequired}>meta.json</span> — {t("mm_struct_meta")} ({t("mm_required")})<br />
               <span class={styles.structureRequired}>sat/</span> — {t("mm_struct_sat")} ({t("mm_required")})<br />

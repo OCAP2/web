@@ -282,6 +282,7 @@
   color: var(--text-dimmer);
   font-weight: 600;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin-bottom: 6px;
 }
 

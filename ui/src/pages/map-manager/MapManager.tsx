@@ -281,7 +281,7 @@ export function MapManager(): JSX.Element {
                           class={styles.listHeaderLabel}
                           classList={{ [styles.listHeaderRight]: h.right }}
                         >
-                          {t(h.key).toUpperCase()}
+                          {t(h.key)}
                         </span>
                       )}
                     </For>

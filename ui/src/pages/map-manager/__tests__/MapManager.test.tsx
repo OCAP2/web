@@ -291,10 +291,10 @@ describe("MapManager", () => {
     const viewBtns = container.querySelectorAll("[class*='viewBtn']");
     if (viewBtns.length >= 2) {
       fireEvent.click(viewBtns[1]); // second = list view
-      expect(container.textContent).toContain("SIZE");
-      expect(container.textContent).toContain("LAYERS");
-      expect(container.textContent).toContain("DISK");
-      expect(container.textContent).toContain("STATUS");
+      expect(container.textContent).toContain("Size");
+      expect(container.textContent).toContain("Layers");
+      expect(container.textContent).toContain("Disk");
+      expect(container.textContent).toContain("Status");
     }
   });
 
@@ -522,8 +522,8 @@ describe("MapManager", () => {
 
     // Switch to list view
     fireEvent.click(viewBtns[1]);
-    expect(container.textContent).toContain("SIZE");
-    expect(container.textContent).toContain("LAYERS");
+    expect(container.textContent).toContain("Size");
+    expect(container.textContent).toContain("Layers");
 
     // Switch back to grid view
     fireEvent.click(viewBtns[0]);

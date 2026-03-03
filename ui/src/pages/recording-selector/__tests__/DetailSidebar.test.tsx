@@ -298,12 +298,12 @@ describe("DetailSidebar combat summary", () => {
 describe("DetailSidebar admin actions", () => {
   it("does not render admin actions when isAdmin is false", () => {
     const { container } = renderSidebarWithAdmin(baseRec, { isAdmin: false });
-    expect(container.textContent).not.toContain("ADMIN ACTIONS");
+    expect(container.textContent).not.toContain("Admin Actions");
   });
 
   it("renders Edit and Delete buttons when isAdmin is true", () => {
     const { container } = renderSidebarWithAdmin(baseRec, { isAdmin: true });
-    expect(container.textContent).toContain("ADMIN ACTIONS");
+    expect(container.textContent).toContain("Admin Actions");
     expect(container.textContent).toContain("Edit");
     expect(container.textContent).toContain("Delete");
   });
