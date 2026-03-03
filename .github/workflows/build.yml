@@ -19,8 +19,10 @@ jobs:
         include:
           - platform: linux/amd64
             runner: ubuntu-latest
+            digest: linux-amd64
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
+            digest: linux-arm64
 
     runs-on: ${{ matrix.runner }}
 
@@ -78,7 +80,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v7
         with:
-          name: digests-${{ matrix.runner }}
+          name: digests-${{ matrix.digest }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -140,8 +142,10 @@ jobs:
         include:
           - platform: linux/amd64
             runner: ubuntu-latest
+            digest: linux-amd64
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
+            digest: linux-arm64
 
     runs-on: ${{ matrix.runner }}
 
@@ -200,7 +204,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v7
         with:
-          name: full-digests-${{ matrix.runner }}
+          name: full-digests-${{ matrix.digest }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1

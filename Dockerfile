@@ -1,4 +1,4 @@
-FROM node:24-alpine AS frontend
+FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend
 WORKDIR /app
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
@@ -15,17 +15,17 @@ COPY --from=frontend /frontend-dist ./internal/frontend/dist
 ARG build_version
 ARG build_commit
 RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$build_version -X github.com/OCAP2/web/internal/server.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X github.com/OCAP2/web/internal/server.BuildCommit=$build_commit" -o app ./cmd/ocap-webserver
+ARG PMTILES_VERSION=1.30.0
+RUN go install "github.com/protomaps/go-pmtiles@v${PMTILES_VERSION}"
 
 FROM alpine:3.23
 ARG VARIANT=slim
-ARG TARGETARCH
 WORKDIR /usr/local/ocap
 RUN adduser -D -h /home/container container && \
     mkdir -p /usr/local/ocap/data /var/lib/ocap/db /var/lib/ocap/maps /var/lib/ocap/data
 
-# Full variant: install maptool dependencies (GDAL, tippecanoe, pmtiles)
+# Full variant: install maptool dependencies (GDAL, tippecanoe)
 ARG TIPPECANOE_VERSION=2.79.0
-ARG PMTILES_VERSION=1.30.0
 RUN if [ "$VARIANT" = "full" ]; then \
       apk add --no-cache gdal-tools gdal-driver-jpeg gdal-driver-png py3-gdal sqlite-libs zlib && \
       apk add --no-cache --virtual .build-deps build-base bash git sqlite-dev zlib-dev && \
@@ -33,17 +33,10 @@ RUN if [ "$VARIANT" = "full" ]; then \
       tar -xzf /tmp/tippecanoe.tar.gz -C /tmp && \
       cd /tmp/tippecanoe-${TIPPECANOE_VERSION} && make -j$(nproc) && make install && \
       rm -rf /tmp/tippecanoe* && \
-      apk del .build-deps && \
-      case "$TARGETARCH" in \
-        amd64) ARCH="x86_64" ;; \
-        arm64) ARCH="arm64" ;; \
-        *) echo "unsupported arch: $TARGETARCH" && exit 1 ;; \
-      esac && \
-      wget -qO /tmp/pmtiles.tar.gz "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/go-pmtiles_${PMTILES_VERSION}_Linux_${ARCH}.tar.gz" && \
-      tar -xzf /tmp/pmtiles.tar.gz -C /usr/local/bin pmtiles && \
-      chmod +x /usr/local/bin/pmtiles && \
-      rm /tmp/pmtiles.tar.gz; \
+      apk del .build-deps; \
     fi
+RUN --mount=from=builder,source=/go/bin/go-pmtiles,target=/tmp/pmtiles \
+    if [ "$VARIANT" = "full" ]; then cp /tmp/pmtiles /usr/local/bin/pmtiles; fi
 
 ENV OCAP_AMMO=/usr/local/ocap/ammo \
     OCAP_DATA=/var/lib/ocap/data \
