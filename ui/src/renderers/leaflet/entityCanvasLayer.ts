@@ -4,6 +4,7 @@ import type { AliveState, Side } from "../../data/types";
 import type { EntityMarkerOpts, EntityMarkerState } from "../renderer.types";
 import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/math";
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
+import { getGridInterval, computeGridLines, formatCoordLabel } from "./gridUtils";
 
 /** Duration of the hit flash color tint in milliseconds. */
 const HIT_FLASH_DURATION_MS = 300;
@@ -75,6 +76,9 @@ export interface EntityCanvasConfig {
   isMapLibreMode: boolean;
   nameDisplayMode: () => "players" | "all" | "none";
   layerVisible: () => boolean;
+  // Grid
+  worldSize: number;
+  latLngToArma: (latlng: L.LatLng) => ArmaCoord;
 }
 
 // --------------- Helpers ---------------
@@ -100,6 +104,7 @@ export class EntityCanvasLayer {
   private zooming = false;
   private zoomScale = 1;
   private fireLines: FireLine[] = [];
+  private gridVisible = false;
 
   // Reusable offscreen canvas for per-icon hit tint (avoids source-atop bleed)
   private hitCanvas: OffscreenCanvas;
@@ -243,6 +248,10 @@ export class EntityCanvasLayer {
     this.fireLines = [];
   }
 
+  setGridVisible(visible: boolean): void {
+    this.gridVisible = visible;
+  }
+
   dispose(): void {
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
@@ -329,7 +338,7 @@ export class EntityCanvasLayer {
     ctx.clearRect(0, 0, w, h);
 
     if (!this.config.layerVisible()) return;
-    if (this.entities.size === 0 && this.fireLines.length === 0) return;
+    if (this.entities.size === 0 && this.fireLines.length === 0 && !this.gridVisible) return;
 
     const hideThreshold = this.config.isMapLibreMode ? 14 : 4;
     const hideLabels = this.config.getZoom() <= hideThreshold;
