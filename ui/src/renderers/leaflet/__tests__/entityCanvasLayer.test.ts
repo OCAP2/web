@@ -387,4 +387,458 @@ describe("EntityCanvasLayer", () => {
       expect(getEntity(1)).toBeUndefined();
     });
   });
+
+  describe("fire lines", () => {
+    it("stores fire lines via setFireLines", () => {
+      const lines = [
+        { fromX: 0, fromY: 0, toX: 100, toY: 100, color: "#f00", weight: 2, opacity: 0.8, cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0 },
+      ];
+      layer.setFireLines(lines);
+      expect((layer as any).fireLines).toBe(lines);
+    });
+
+    it("clears fire lines via clearFireLines", () => {
+      layer.setFireLines([
+        { fromX: 0, fromY: 0, toX: 100, toY: 100, color: "#f00", weight: 2, opacity: 0.8, cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0 },
+      ]);
+      layer.clearFireLines();
+      expect((layer as any).fireLines).toEqual([]);
+    });
+  });
+
+  describe("dispose", () => {
+    it("cancels animation frame", () => {
+      const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
+      layer.dispose();
+      expect(cancelSpy).toHaveBeenCalled();
+      cancelSpy.mockRestore();
+    });
+
+    it("removes canvas from DOM", () => {
+      const canvas = (layer as any).canvas as HTMLCanvasElement;
+      expect(canvas.parentNode).toBeTruthy();
+      layer.dispose();
+      expect(canvas.parentNode).toBeNull();
+    });
+
+    it("clears entities and fire lines", () => {
+      layer.addEntity(1, DEFAULT_OPTS);
+      layer.setFireLines([
+        { fromX: 0, fromY: 0, toX: 100, toY: 100, color: "#f00", weight: 2, opacity: 0.8, cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0 },
+      ]);
+      layer.dispose();
+      expect((layer as any).entities.size).toBe(0);
+      expect((layer as any).fireLines).toEqual([]);
+    });
+
+    it("unregisters map events", () => {
+      const offSpy = mockMap.off as ReturnType<typeof vi.fn>;
+      layer.dispose();
+      expect(offSpy).toHaveBeenCalledWith("zoomanim", expect.any(Function), layer);
+    });
+  });
+
+  describe("updateEntity — label cache invalidation", () => {
+    it("resets cachedLabelFontSize on update", () => {
+      layer.addEntity(1, DEFAULT_OPTS);
+      const e = getEntity(1);
+      // Simulate a cached value
+      e.cachedLabelFontSize = 11;
+      e.cachedLabelMaxW = 50;
+      layer.updateEntity(1, makeState());
+      expect(e.cachedLabelFontSize).toBe(0);
+    });
+  });
+
+  describe("updateEntity — ignores unknown entities", () => {
+    it("does not throw for non-existent entity", () => {
+      expect(() => layer.updateEntity(999, makeState())).not.toThrow();
+    });
+  });
+
+  describe("removeEntity — non-existent", () => {
+    it("does not throw for non-existent entity", () => {
+      expect(() => layer.removeEntity(999)).not.toThrow();
+    });
+  });
+});
+
+// --------------- Render path tests ---------------
+// Separate top-level describe so the canvas 2D context is mocked BEFORE
+// the EntityCanvasLayer constructor runs (the outer block's ctx is null in jsdom).
+
+describe("EntityCanvasLayer — render paths", () => {
+  let layer: EntityCanvasLayer;
+  let mockMap: L.Map;
+  let mockCtx: Record<string, any>;
+  let config: EntityCanvasConfig;
+  let rafSpy: ReturnType<typeof vi.spyOn>;
+  let ctxSpy: ReturnType<typeof vi.spyOn>;
+
+  function render(dt = 0.016) {
+    (layer as any).render(dt);
+  }
+
+  function getEntity(id: number) {
+    return (layer as any).entities.get(id);
+  }
+
+  beforeEach(() => {
+    rafSpy = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockReturnValue(0);
+
+    mockCtx = {
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      strokeText: vi.fn(),
+      fillText: vi.fn(),
+      drawImage: vi.fn(),
+      fill: vi.fn(),
+      roundRect: vi.fn(),
+      measureText: vi.fn(() => ({ width: 50 })),
+      globalAlpha: 1,
+      strokeStyle: "",
+      fillStyle: "",
+      lineWidth: 1,
+      font: "",
+      textBaseline: "alphabetic",
+      textAlign: "start",
+    };
+
+    ctxSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue(mockCtx as any);
+
+    const container = document.createElement("div");
+    Object.defineProperty(container, "clientWidth", { value: 800 });
+    Object.defineProperty(container, "clientHeight", { value: 600 });
+
+    mockMap = {
+      getContainer: () => container,
+      latLngToContainerPoint: (ll: L.LatLng) => ({
+        x: ll.lng * 0.01 + 400,
+        y: 300 - ll.lat * 0.01,
+      }),
+      getZoomScale: () => 1,
+      getZoom: () => 5,
+      getCenter: () => L.latLng(0, 0),
+      getSize: () => L.point(800, 600),
+      getBounds: () =>
+        L.latLngBounds(L.latLng(-10000, -10000), L.latLng(10000, 10000)),
+      project: (ll: L.LatLng) => L.point(ll.lng, ll.lat),
+      on: vi.fn(),
+      off: vi.fn(),
+    } as unknown as L.Map;
+
+    const fakeImg = { width: 24, height: 24 };
+    config = {
+      armaToLatLng: (c) => L.latLng(c[1], c[0]),
+      iconCache: {
+        resolveType: (t: string) => t,
+        get: () => fakeImg as any,
+        getSize: () => [24, 24] as [number, number],
+        preloadAll: () => Promise.resolve(),
+      } as unknown as CanvasIconCache,
+      getZoom: () => 5,
+      isMapLibreMode: false,
+      nameDisplayMode: () => "all" as const,
+      layerVisible: () => true,
+      worldSize: 30720,
+      latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
+    };
+
+    layer = new EntityCanvasLayer(mockMap, config);
+  });
+
+  afterEach(() => {
+    layer.dispose();
+    ctxSpy.mockRestore();
+    rafSpy.mockRestore();
+  });
+
+  // --- Early returns ---
+
+  it("early return when layer not visible and grid hidden", () => {
+    (layer as any).config.layerVisible = () => false;
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    expect(mockCtx.clearRect).toHaveBeenCalled();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("early return when no entities, fire lines, or grid", () => {
+    render();
+    expect(mockCtx.clearRect).toHaveBeenCalled();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+    expect(mockCtx.stroke).not.toHaveBeenCalled();
+  });
+
+  it("continues when layer hidden but grid visible", () => {
+    (layer as any).config.layerVisible = () => false;
+    layer.setGridVisible(true);
+    render();
+    expect(mockCtx.stroke).toHaveBeenCalled();
+  });
+
+  // --- Fire lines ---
+
+  it("renders fire lines", () => {
+    layer.setFireLines([{
+      fromX: 100, fromY: 100, toX: 200, toY: 200,
+      color: "#f00", weight: 2, opacity: 0.8,
+      cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0,
+    }]);
+    render();
+    expect(mockCtx.stroke).toHaveBeenCalled();
+    expect(mockCtx.moveTo).toHaveBeenCalled();
+    expect(mockCtx.lineTo).toHaveBeenCalled();
+  });
+
+  it("culls fire lines outside viewport", () => {
+    layer.setFireLines([{
+      fromX: -100000, fromY: 0, toX: -100001, toY: 0,
+      color: "#f00", weight: 2, opacity: 0.8,
+      cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0,
+    }]);
+    render();
+    expect(mockCtx.stroke).not.toHaveBeenCalled();
+  });
+
+  it("caches fire line pixel positions", () => {
+    const fl = {
+      fromX: 100, fromY: 100, toX: 200, toY: 200,
+      color: "#f00", weight: 2, opacity: 0.8,
+      cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0,
+    };
+    layer.setFireLines([fl]);
+    render();
+    expect(fl.cachedFromPx).not.toBe(0);
+    expect(fl.cachedToPx).not.toBe(0);
+  });
+
+  it("uses cached fire line positions during zoom", () => {
+    layer.setFireLines([{
+      fromX: 100, fromY: 100, toX: 200, toY: 200,
+      color: "#f00", weight: 2, opacity: 0.8,
+      cachedFromPx: 50, cachedFromPy: 50, cachedToPx: 150, cachedToPy: 150,
+    }]);
+    (layer as any).zooming = true;
+    (layer as any).zoomScale = 2;
+    render();
+    expect(mockCtx.moveTo).toHaveBeenCalledWith(50, 50);
+    expect(mockCtx.lineTo).toHaveBeenCalledWith(150, 150);
+  });
+
+  // --- Entity icons ---
+
+  it("renders entity icons", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("skips entities with opacity 0 (in vehicle)", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.updateEntity(1, makeState({ isInVehicle: true }));
+    render();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("culls entities outside viewport", () => {
+    layer.addEntity(1, { ...DEFAULT_OPTS, position: [-1000000, 0] });
+    render();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("uses cached entity positions during zoom", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    (layer as any).zooming = true;
+    (layer as any).zoomScale = 2;
+    mockCtx.drawImage.mockClear();
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("advances interpolation", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.setSmoothingEnabled(true, 1);
+    layer.updateEntity(1, makeState({ position: [1010, 2010] }));
+    expect(getEntity(1).interpProgress).toBe(0);
+    render(0.5);
+    expect(getEntity(1).interpProgress).toBeCloseTo(0.5);
+  });
+
+  it("clamps interpolation progress to 1", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.setSmoothingEnabled(true, 10); // 0.1s duration
+    layer.updateEntity(1, makeState({ position: [1010, 2010] }));
+    render(1.0); // well past 0.1s
+    expect(getEntity(1).interpProgress).toBe(1);
+  });
+
+  it("snaps interpolation when interpDuration is 0", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.setSmoothingEnabled(true, 0); // duration fallback to 1
+    layer.updateEntity(1, makeState({ position: [1010, 2010] }));
+    // interpProgress was snapped to 1 by updateEntity (smoothing + speed 0 → dur 1)
+    // but let's also verify render handles dur>0 normally
+    expect(getEntity(1).interpProgress).toBe(0);
+    render(2.0); // 2s > 1s duration
+    expect(getEntity(1).interpProgress).toBe(1);
+  });
+
+  it("renders hit flash with offscreen canvas tint", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.updateEntity(1, makeState({ hit: true, alive: 1 }));
+    render();
+    const calls = mockCtx.drawImage.mock.calls;
+    // Hit flash uses 9-arg drawImage (source rect from offscreen canvas)
+    expect(calls.some((c: any[]) => c.length === 9)).toBe(true);
+  });
+
+  it("clears hit flash after duration expires", () => {
+    const perfSpy = vi.spyOn(performance, "now").mockReturnValue(10000);
+    layer.addEntity(1, DEFAULT_OPTS);
+    const e = getEntity(1);
+    e.hitStartTime = 5000; // elapsed = 10000 - 5000 = 5000 > 300ms
+    render();
+    expect(e.hitStartTime).toBe(0);
+    perfSpy.mockRestore();
+  });
+
+  it("draws man and non-man icons differently (rotation origin)", () => {
+    layer.addEntity(1, { ...DEFAULT_OPTS, iconType: "man" });
+    layer.addEntity(2, { ...DEFAULT_OPTS, iconType: "car", position: [1100, 2000] });
+    render();
+    // Both should draw — verify via setTransform being called for rotation
+    expect(mockCtx.setTransform).toHaveBeenCalled();
+    expect(mockCtx.drawImage).toHaveBeenCalledTimes(2);
+  });
+
+  // --- Labels ---
+
+  it("renders unit labels when nameMode is 'all'", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("Unit1");
+  });
+
+  it("hides labels when zoom below threshold", () => {
+    (layer as any).config.getZoom = () => 3;
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).not.toContain("Unit1");
+  });
+
+  it("hides labels when nameMode is 'none'", () => {
+    (layer as any).config.nameDisplayMode = () => "none";
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).not.toContain("Unit1");
+  });
+
+  it("shows only player labels when nameMode is 'players'", () => {
+    (layer as any).config.nameDisplayMode = () => "players";
+    layer.addEntity(1, { ...DEFAULT_OPTS, isPlayer: true });
+    layer.addEntity(2, { ...DEFAULT_OPTS, isPlayer: false, name: "AI Unit", position: [1100, 2000] });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("Unit1");
+    expect(texts).not.toContain("AI Unit");
+  });
+
+  it("renders vehicle crew label with background pill", () => {
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      crew: { count: 2, names: ["Driver", "Gunner"] },
+    });
+    render();
+    expect(mockCtx.roundRect).toHaveBeenCalled();
+    expect(mockCtx.fill).toHaveBeenCalled();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("Driver");
+    expect(texts).toContain("Gunner");
+  });
+
+  it("renders vehicle label without crew names (AI only)", () => {
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      crew: { count: 3, names: [] },
+    });
+    render();
+    expect(mockCtx.roundRect).not.toHaveBeenCalled();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("Unit1 (3)");
+  });
+
+  it("uses label measurement cache on subsequent renders", () => {
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      crew: { count: 2, names: ["Driver", "Gunner"] },
+    });
+    render();
+    expect(mockCtx.measureText.mock.calls.length).toBeGreaterThan(0);
+    mockCtx.measureText.mockClear();
+    render();
+    expect(mockCtx.measureText).not.toHaveBeenCalled();
+  });
+
+  // --- Grid ---
+
+  it("renders grid lines and labels when grid visible", () => {
+    layer.setGridVisible(true);
+    render();
+    expect(mockCtx.stroke).toHaveBeenCalled();
+    expect(mockCtx.strokeText).toHaveBeenCalled();
+    expect(mockCtx.fillText).toHaveBeenCalled();
+  });
+
+  // --- Affine projection ---
+
+  it("computes affine projection coefficients", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const l = layer as any;
+    expect(l.projAx).not.toBe(0);
+    expect(l.projCx).not.toBe(0);
+  });
+
+  it("preserves affine projection during zoom", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const prevAx = (layer as any).projAx;
+    (layer as any).zooming = true;
+    (layer as any).zoomScale = 2;
+    render();
+    expect((layer as any).projAx).toBe(prevAx);
+  });
+
+  // --- Snapshot ---
+
+  it("snapshots drawnCenter and drawnZoom after render", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    expect((layer as any).drawnCenter).toBeNull();
+    render();
+    expect((layer as any).drawnCenter).not.toBeNull();
+    expect((layer as any).drawnZoom).toBe(5);
+  });
+
+  it("does not update drawnCenter during zoom", () => {
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    const center1 = (layer as any).drawnCenter;
+    (layer as any).zooming = true;
+    (layer as any).zoomScale = 2;
+    render();
+    expect((layer as any).drawnCenter).toBe(center1); // same reference
+  });
 });
