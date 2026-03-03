@@ -103,6 +103,10 @@ export class EntityCanvasLayer {
   private interpDurationSec = 1;
   private zooming = false;
   private zoomScale = 1;
+  // Snapshot of the map center/zoom when the canvas was last drawn (pre-zoom).
+  // Used by zoom transforms to compute the correct scale/offset.
+  private drawnCenter: L.LatLng | null = null;
+  private drawnZoom = 0;
   private fireLines: FireLine[] = [];
   private gridVisible = false;
 
@@ -117,10 +121,11 @@ export class EntityCanvasLayer {
     this.map = map;
     this.config = config;
 
-    // Create canvas element
+    // Create canvas element. We set transform-origin:0 0 to match Leaflet's
+    // zoom transform math (translate3d + scale with origin at top-left).
     this.canvas = document.createElement("canvas");
     this.canvas.style.cssText =
-      "position:absolute;inset:0;pointer-events:none;z-index:625;";
+      "position:absolute;inset:0;pointer-events:none;z-index:625;transform-origin:0 0;";
     this.ctx = this.canvas.getContext("2d")!;
 
     // Small offscreen canvas for isolated per-icon hit tint
@@ -137,10 +142,17 @@ export class EntityCanvasLayer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(map.getContainer());
 
-    // Zoom animation: apply a matching CSS transform so entities scale
-    // in sync with the map tiles during the zoom transition.
+    // Zoom animation: apply CSS translate3d+scale during zoom, then redraw
+    // fresh on completion. The canvas is outside Leaflet's _mapPane so the
+    // standard .leaflet-zoom-anim .leaflet-zoom-animated CSS transition
+    // doesn't apply — we manage the transition manually in onZoomAnim.
     map.on("zoomanim", this.onZoomAnim, this);
-    map.on("zoomend", this.onZoomEnd, this);
+    // Listen for the CSS transition completing to know when to clear the
+    // transform and resume normal rendering. This replaces zoomend for
+    // transform cleanup, preventing the transform from being cleared
+    // before the animation visually finishes.
+    this.onTransitionEnd = this.onTransitionEnd.bind(this);
+    this.canvas.addEventListener("transitionend", this.onTransitionEnd);
 
     // Start render loop
     this.startRenderLoop();
@@ -155,10 +167,10 @@ export class EntityCanvasLayer {
       id,
       prevX: opts.position[0],
       prevY: opts.position[1],
-      prevDir: 0,
+      prevDir: opts.direction,
       targetX: opts.position[0],
       targetY: opts.position[1],
-      targetDir: 0,
+      targetDir: opts.direction,
       interpProgress: 1, // start at target
       iconType,
       iconVariant: variant,
@@ -258,7 +270,7 @@ export class EntityCanvasLayer {
       this.animFrameId = null;
     }
     this.map.off("zoomanim", this.onZoomAnim, this);
-    this.map.off("zoomend", this.onZoomEnd, this);
+    this.canvas.removeEventListener("transitionend", this.onTransitionEnd);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.canvas.remove();
@@ -268,37 +280,39 @@ export class EntityCanvasLayer {
 
   // --------------- Zoom animation ---------------
 
+  /**
+   * Leaflet fires zoomanim with the target center/zoom. We compute a CSS
+   * translate3d + scale transform matching Leaflet's own formula (see
+   * L.Renderer._updateTransform). The CSS transition animates it smoothly.
+   *
+   * This works in BOTH legacy and MapLibre modes because even when MapLibre
+   * jumps Leaflet's internal zoom instantly, zoomanim still provides the
+   * correct target values relative to our drawnCenter/drawnZoom snapshot.
+   */
   private onZoomAnim(ev: L.ZoomAnimEvent): void {
-    // Compute the zoom pivot — the point in container space that stays fixed
-    // during zoom (e.g. mouse cursor for scroll-zoom, map center for buttons).
-    //
-    // Given: after zoom, ev.center will be at container center (w/2, h/2).
-    // Currently ev.center is at container point C.
-    // For CSS `transform-origin: ox,oy; scale(s)`:
-    //   ox + (C.x - ox)*s = w/2   →   ox = (w/2 - C.x*s) / (1-s)
-    const scale = this.map.getZoomScale(ev.zoom);
-    const c = this.map.latLngToContainerPoint(ev.center);
-    const container = this.map.getContainer();
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    const denom = 1 - scale;
-
-    if (Math.abs(denom) < 1e-6) return; // no actual zoom change
-
-    const ox = (w / 2 - c.x * scale) / denom;
-    const oy = (h / 2 - c.y * scale) / denom;
+    if (!this.drawnCenter) return;
+    const scale = this.map.getZoomScale(ev.zoom, this.drawnZoom);
+    const viewHalf = this.map.getSize().multiplyBy(0.5);
+    const currentCenterPoint = this.map.project(this.drawnCenter, ev.zoom);
+    const destCenterPoint = this.map.project(ev.center, ev.zoom);
+    const centerOffset = destCenterPoint.subtract(currentCenterPoint);
+    const offset = viewHalf.multiplyBy(-scale).add(viewHalf).subtract(centerOffset);
 
     this.zoomScale = scale;
-    this.canvas.style.transition = "transform 250ms ease-out";
-    this.canvas.style.transformOrigin = `${ox}px ${oy}px`;
-    this.canvas.style.transform = `scale(${scale})`;
     this.zooming = true;
+    // Enable CSS transition, then apply transform. The canvas is outside
+    // _mapPane so the standard .leaflet-zoom-anim descendant rule doesn't
+    // apply — we set the transition directly on the element.
+    this.canvas.style.transition =
+      "transform 0.25s cubic-bezier(0,0,0.25,1)";
+    this.canvas.style.transform =
+      `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`;
   }
 
-  private onZoomEnd(): void {
+  /** Called when the CSS transition on the canvas finishes. */
+  private onTransitionEnd(): void {
     this.canvas.style.transition = "";
     this.canvas.style.transform = "";
-    this.canvas.style.transformOrigin = "";
     this.zooming = false;
     this.zoomScale = 1;
   }
@@ -614,6 +628,13 @@ export class EntityCanvasLayer {
         ctx.fillText(plainName, px, labelY);
         ctx.restore();
       }
+    }
+
+    // Snapshot the current map center/zoom so the next zoom transform
+    // has the correct baseline (matching Leaflet's _center / _zoom pattern).
+    if (!this.zooming) {
+      this.drawnCenter = this.map.getCenter();
+      this.drawnZoom = this.map.getZoom();
     }
   }
 }

@@ -71,6 +71,7 @@ function makeConfig(overrides?: Partial<EntityCanvasConfig>): EntityCanvasConfig
 
 const DEFAULT_OPTS: EntityMarkerOpts = {
   position: [1000, 2000],
+  direction: 90,
   iconType: "man",
   side: "WEST",
   name: "Unit1",
@@ -129,6 +130,20 @@ describe("EntityCanvasLayer", () => {
       expect(e.targetY).toBe(2000);
       expect(e.interpProgress).toBe(1);
       expect(e.isInVehicle).toBe(false);
+    });
+
+    it("spawns with the correct direction", () => {
+      layer.addEntity(1, { ...DEFAULT_OPTS, direction: 180 });
+      const e = getEntity(1);
+      expect(e.prevDir).toBe(180);
+      expect(e.targetDir).toBe(180);
+    });
+
+    it("spawns facing north when direction is 0", () => {
+      layer.addEntity(1, { ...DEFAULT_OPTS, direction: 0 });
+      const e = getEntity(1);
+      expect(e.prevDir).toBe(0);
+      expect(e.targetDir).toBe(0);
     });
   });
 

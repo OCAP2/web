@@ -332,6 +332,7 @@ describe("briefing marker SVG renderer", () => {
   it("hides entity popups when zoomed out below threshold", () => {
     const handle = renderer.createEntityMarker(1, {
       position: [5000, 5000],
+      direction: 0,
       iconType: "man",
       side: "WEST",
       name: "Rifleman",
@@ -365,6 +366,7 @@ describe("briefing marker SVG renderer", () => {
   it("shows entity popups when zoomed above threshold", () => {
     const handle = renderer.createEntityMarker(1, {
       position: [5000, 5000],
+      direction: 0,
       iconType: "man",
       side: "WEST",
       name: "Rifleman",
@@ -417,6 +419,7 @@ describe("briefing marker SVG renderer", () => {
   it("uses leaflet-popup-unit class for infantry markers", () => {
     const handle = renderer.createEntityMarker(1, {
       position: [5000, 5000],
+      direction: 0,
       iconType: "man",
       side: "WEST",
       name: "Rifleman",
@@ -430,6 +433,7 @@ describe("briefing marker SVG renderer", () => {
   it("uses leaflet-popup-vehicle class for vehicle markers", () => {
     const handle = renderer.createEntityMarker(2, {
       position: [5000, 5000],
+      direction: 0,
       iconType: "car",
       side: "WEST",
       name: "Hunter",

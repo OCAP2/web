@@ -150,9 +150,6 @@ export class LeafletRenderer implements MapRenderer {
   // SVG renderer for briefing marker shapes (avoids canvas zoom-animation scaling)
   private svgRenderer!: L.SVG;
   private svgDefs!: SVGDefsElement;
-
-
-  // MapLibre layer reference (for style switching)
   private maplibreLayer: any = null;
 
   // Grid and MapLibre toggle layers for overlay control

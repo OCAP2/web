@@ -13,6 +13,7 @@ describe("MapRenderer interface", () => {
     const renderer = new MockRenderer();
     const handle = renderer.createEntityMarker(1, {
       position: [0, 0],
+      direction: 0,
       iconType: "man",
       side: "WEST",
       name: "Player1",
@@ -51,6 +52,7 @@ describe("MapRenderer interface", () => {
     const renderer = new MockRenderer();
     const h1 = renderer.createEntityMarker(1, {
       position: [0, 0],
+      direction: 0,
       iconType: "man",
       side: "WEST",
       name: "A",
@@ -58,6 +60,7 @@ describe("MapRenderer interface", () => {
     });
     const h2 = renderer.createEntityMarker(2, {
       position: [100, 100],
+      direction: 0,
       iconType: "car",
       side: "EAST",
       name: "B",

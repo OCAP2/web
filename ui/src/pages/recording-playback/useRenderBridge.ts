@@ -110,6 +110,7 @@ export function useRenderBridge(
       if (!handle) {
         handle = renderer.createEntityMarker(id, {
           position: snap.position,
+          direction: snap.direction,
           iconType: snap.iconType,
           side: snap.side,
           name: displayName,

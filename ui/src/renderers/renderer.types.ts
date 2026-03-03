@@ -25,6 +25,7 @@ export type LineHandle = { readonly _brand: typeof lineBrand; _internal: unknown
 
 export interface EntityMarkerOpts {
   position: ArmaCoord;
+  direction: number;
   iconType: string;
   side: Side | null;
   name: string;
