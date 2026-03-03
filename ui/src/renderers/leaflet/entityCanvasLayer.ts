@@ -56,6 +56,10 @@ interface CanvasEntity {
 
   // Hit flash — wall-clock fade-out managed by canvas render loop
   hitStartTime: number; // 0 = no active hit
+
+  // Cached label measurement (invalidated on entity update or font size change)
+  cachedLabelMaxW: number;
+  cachedLabelFontSize: number;
 }
 
 export interface FireLine {
@@ -112,6 +116,14 @@ export class EntityCanvasLayer {
   private drawnZoom = 0;
   private fireLines: FireLine[] = [];
   private gridVisible = false;
+
+  // Precomputed affine projection: px = projAx*arma_x + projBx*arma_y + projCx
+  private projAx = 0;
+  private projBx = 0;
+  private projCx = 0;
+  private projAy = 0;
+  private projBy = 0;
+  private projCy = 0;
 
   // Reusable offscreen canvas for per-icon hit tint (avoids source-atop bleed)
   private hitCanvas: OffscreenCanvas;
@@ -189,6 +201,8 @@ export class EntityCanvasLayer {
       cachedPy: 0,
       cachedDir: 0,
       hitStartTime: 0,
+      cachedLabelMaxW: 0,
+      cachedLabelFontSize: 0,
     });
   }
 
@@ -239,6 +253,7 @@ export class EntityCanvasLayer {
     e.isPlayer = state.isPlayer;
     e.isInVehicle = state.isInVehicle;
     e.alive = state.alive;
+    e.cachedLabelFontSize = 0; // invalidate label measurement cache
   }
 
   removeEntity(id: number): void {
@@ -456,6 +471,12 @@ export class EntityCanvasLayer {
     const nameMode = this.config.nameDisplayMode();
     const iconCache = this.config.iconCache;
     const interpDur = this.interpDurationSec;
+    const labelFontSize = Math.round(11 * cs);
+    const labelLineHeight = labelFontSize * 1.3;
+    const fontNormal =
+      `${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    const fontBold =
+      `bold ${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
 
     // Draw fire lines (behind entity icons)
     for (const fl of this.fireLines) {
@@ -507,6 +528,23 @@ export class EntityCanvasLayer {
     }
     ctx.globalAlpha = 1;
 
+    // Precompute affine projection: Arma [x,y] → container [px,py].
+    // Both CRS modes are linear over the map extent (EPSG:3857 distortion
+    // is <0.001% at equator), so 3 reference points give exact coefficients.
+    // Avoids per-entity L.LatLng allocation and Leaflet CRS projection calls.
+    if (!this.zooming) {
+      const d = 10000;
+      const p0 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, 0]));
+      const p1 = this.map.latLngToContainerPoint(this.config.armaToLatLng([d, 0]));
+      const p2 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, d]));
+      this.projAx = (p1.x - p0.x) / d;
+      this.projBx = (p2.x - p0.x) / d;
+      this.projCx = p0.x;
+      this.projAy = (p1.y - p0.y) / d;
+      this.projBy = (p2.y - p0.y) / d;
+      this.projCy = p0.y;
+    }
+
     for (const e of this.entities.values()) {
       // Skip hidden (in vehicle) entities
       if (e.opacity === 0) continue;
@@ -534,11 +572,8 @@ export class EntityCanvasLayer {
         const y = e.prevY + (e.targetY - e.prevY) * t;
         dir = e.prevDir + (e.targetDir - e.prevDir) * t;
 
-        const pt = this.map.latLngToContainerPoint(
-          this.config.armaToLatLng([x, y]),
-        );
-        px = pt.x;
-        py = pt.y;
+        px = this.projAx * x + this.projBx * y + this.projCx;
+        py = this.projAy * x + this.projBy * y + this.projCy;
 
         // Cache for zoom animation
         e.cachedPx = px;
@@ -617,18 +652,11 @@ export class EntityCanvasLayer {
         const [, ih] = e.iconSize;
         const crew = e.crew;
         const hasCrew = crew && crew.names.length > 0;
-        const fontSize = Math.round(11 * cs);
-        const lineHeight = fontSize * 1.3;
         // Stack lines upward from just above the icon
         const baseY = py - (ih * cs) / 2 - 4 * cs;
 
         ctx.globalAlpha = e.opacity;
         ctx.textBaseline = "bottom";
-
-        const fontNormal =
-          `${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-        const fontBold =
-          `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
 
         if (!hasCrew) {
           // Unit label (or vehicle with no player crew): text outline, no background
@@ -651,16 +679,23 @@ export class EntityCanvasLayer {
           const padY = 2 * cs;
 
           ctx.textAlign = "left";
-          let maxW = 0;
-          for (let i = 0; i < lines.length; i++) {
-            ctx.font = i === 0 ? fontBold : fontNormal;
-            const w = ctx.measureText(lines[i]).width;
-            if (w > maxW) maxW = w;
+          let maxW: number;
+          if (e.cachedLabelFontSize === labelFontSize) {
+            maxW = e.cachedLabelMaxW;
+          } else {
+            maxW = 0;
+            for (let i = 0; i < lines.length; i++) {
+              ctx.font = i === 0 ? fontBold : fontNormal;
+              const mw = ctx.measureText(lines[i]).width;
+              if (mw > maxW) maxW = mw;
+            }
+            e.cachedLabelMaxW = maxW;
+            e.cachedLabelFontSize = labelFontSize;
           }
 
           // Background pill
           const bgW = maxW + padX * 2;
-          const bgH = lines.length * lineHeight + padY * 2;
+          const bgH = lines.length * labelLineHeight + padY * 2;
           const bgX = px - bgW / 2;
           const bgY = baseY - bgH + padY;
           const r = 3 * cs;
@@ -674,7 +709,7 @@ export class EntityCanvasLayer {
           for (let i = lines.length - 1; i >= 0; i--) {
             ctx.font = i === 0 ? fontBold : fontNormal;
             ctx.fillStyle = i === 0 ? "#ffffff" : sideColor;
-            const y = baseY - (lines.length - 1 - i) * lineHeight;
+            const y = baseY - (lines.length - 1 - i) * labelLineHeight;
             ctx.fillText(lines[i], leftX, y);
           }
         }
