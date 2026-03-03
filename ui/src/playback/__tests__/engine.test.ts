@@ -748,6 +748,55 @@ describe("PlaybackEngine", () => {
       expect(engine.entitySnapshots().get(3)!.side).toBe("EAST");
     });
 
+    it("vehicle crew clears when seeking backward to frame without crew", () => {
+      const manifest = makeManifest({
+        frameCount: 10,
+        entities: [
+          makeEntityDef({
+            id: 1,
+            name: "Pilot",
+            type: "man",
+            side: "WEST",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 1 },
+            ],
+          }),
+          makeEntityDef({
+            id: 2,
+            type: "heli",
+            name: "Heli",
+            startFrame: 0,
+            endFrame: 9,
+            positions: [
+              // Frame 0: no crew
+              { position: [100, 200], direction: 0, alive: 1 },
+              // Frame 1: pilot enters
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [1] },
+              // Frame 2: pilot still in
+              { position: [100, 200], direction: 0, alive: 1, crewIds: [1] },
+            ],
+          }),
+        ],
+      });
+
+      engine.loadRecording(manifest);
+
+      // Seek forward: pilot in vehicle
+      engine.seekTo(1);
+      const vehicle = engine.entityManager.getEntity(2) as any;
+      expect(vehicle.crew).toEqual([1]);
+      expect(engine.entitySnapshots().get(2)!.side).toBe("WEST");
+
+      // Seek backward: no crew — crew must be cleared
+      engine.seekTo(0);
+      expect(vehicle.crew).toEqual([]);
+      expect(engine.entitySnapshots().get(2)!.side).toBeNull();
+    });
+
     it("unit snapshots always use their own side", () => {
       const manifest = makeManifest({
         frameCount: 10,
