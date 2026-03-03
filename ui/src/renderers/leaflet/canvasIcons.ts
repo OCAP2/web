@@ -52,7 +52,7 @@ export function resolveVariant(
   if (isHit && alive !== 0) return "hit";
   if (alive === 0) return "dead";
   if (alive === 2) return "unconscious";
-  if (!side) return "unknown";
+  if (!side) return "dead"; // match leafletIcons: null-side alive entities use dead variant
   return SIDE_CLASS[side] ?? "unknown";
 }
 

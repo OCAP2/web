@@ -334,11 +334,13 @@ export class EntityCanvasLayer {
         const [iw, ih] = e.iconSize;
         const dw = iw * cs;
         const dh = ih * cs;
+        // Man icons rotate around 50% 60% (matching leaflet-rotatedmarker's rotationOrigin)
+        const offy = e.iconType === "man" ? 0.1 * dh : 0;
         ctx.save();
         ctx.globalAlpha = e.opacity;
         ctx.translate(px, py);
         ctx.rotate((dir * Math.PI) / 180);
-        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
         ctx.restore();
       }
 
