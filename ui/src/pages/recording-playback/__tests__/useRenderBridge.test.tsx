@@ -639,7 +639,7 @@ describe("useRenderBridge", () => {
     dispose();
   });
 
-  it("hit flash expires after HIT_FLASH_FRAMES", async () => {
+  it("hit flash only active on the exact hit frame", async () => {
     const { engine, renderer, markerManager } = createTestSetup();
     const updateSpy = vi.spyOn(renderer, "updateEntityMarker");
 
@@ -668,12 +668,8 @@ describe("useRenderBridge", () => {
 
     await flush();
 
-    // Seek to hit frame
+    // Seek to hit frame — hit is active
     engine.seekTo(5);
-    await flush();
-
-    // Still flashing at frame 7 (5 + 3 - 1)
-    engine.seekTo(7);
     await flush();
 
     let victimCalls = updateSpy.mock.calls.filter(
@@ -681,8 +677,8 @@ describe("useRenderBridge", () => {
     );
     expect((victimCalls[victimCalls.length - 1]![1] as any).hit).toBe(true);
 
-    // Expired at frame 8 (5 + 3)
-    engine.seekTo(8);
+    // Next frame — hit is no longer active (canvas layer handles visual duration)
+    engine.seekTo(6);
     await flush();
 
     victimCalls = updateSpy.mock.calls.filter(
