@@ -337,18 +337,104 @@ export class EntityCanvasLayer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    if (!this.config.layerVisible()) return;
+    if (!this.config.layerVisible() && !this.gridVisible) return;
     if (this.entities.size === 0 && this.fireLines.length === 0 && !this.gridVisible) return;
+
+    // During zoom the CSS transform scales the canvas — counter-scale so
+    // lines and text stay at their true pixel size.
+    const cs = this.zooming ? 1 / this.zoomScale : 1;
+
+    // Coordinate grid (behind fire lines and entities)
+    if (this.gridVisible) {
+      const zoom = this.config.getZoom();
+      const interval = getGridInterval(zoom, this.config.isMapLibreMode);
+      const bounds = this.map.getBounds();
+      const sw = this.config.latLngToArma(bounds.getSouthWest());
+      const ne = this.config.latLngToArma(bounds.getNorthEast());
+
+      const armaBounds = {
+        minX: Math.max(0, Math.floor(sw[0] / interval) * interval),
+        maxX: Math.min(this.config.worldSize, Math.ceil(ne[0] / interval) * interval),
+        minY: Math.max(0, Math.floor(sw[1] / interval) * interval),
+        maxY: Math.min(this.config.worldSize, Math.ceil(ne[1] / interval) * interval),
+      };
+
+      const gridLines = computeGridLines(armaBounds, interval);
+
+      // Double-stroke: dark outline then light line for contrast on any map
+      for (const pass of [
+        { color: "rgba(0,0,0,0.3)", width: 2.5 * cs },
+        { color: "rgba(255,255,255,0.4)", width: 1 * cs },
+      ] as const) {
+        ctx.strokeStyle = pass.color;
+        ctx.lineWidth = pass.width;
+        ctx.beginPath();
+
+        for (const x of gridLines.x) {
+          const start = this.map.latLngToContainerPoint(
+            this.config.armaToLatLng([x, armaBounds.minY]),
+          );
+          const end = this.map.latLngToContainerPoint(
+            this.config.armaToLatLng([x, armaBounds.maxY]),
+          );
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+        }
+
+        for (const y of gridLines.y) {
+          const start = this.map.latLngToContainerPoint(
+            this.config.armaToLatLng([armaBounds.minX, y]),
+          );
+          const end = this.map.latLngToContainerPoint(
+            this.config.armaToLatLng([armaBounds.maxX, y]),
+          );
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+        }
+
+        ctx.stroke();
+      }
+
+      // Labels
+      const fontSize = Math.round(10 * cs);
+      ctx.font = `${fontSize}px sans-serif`;
+
+      // X labels (bottom edge)
+      ctx.textBaseline = "top";
+      ctx.textAlign = "center";
+      for (const x of gridLines.x) {
+        const pos = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([x, armaBounds.minY]),
+        );
+        const label = formatCoordLabel(x, interval);
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.lineWidth = 3 * cs;
+        ctx.strokeText(label, pos.x, pos.y + 2 * cs);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillText(label, pos.x, pos.y + 2 * cs);
+      }
+
+      // Y labels (left edge)
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      for (const y of gridLines.y) {
+        const pos = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([armaBounds.minX, y]),
+        );
+        const label = formatCoordLabel(y, interval);
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.lineWidth = 3 * cs;
+        ctx.strokeText(label, pos.x + 3 * cs, pos.y);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillText(label, pos.x + 3 * cs, pos.y);
+      }
+    }
 
     const hideThreshold = this.config.isMapLibreMode ? 14 : 4;
     const hideLabels = this.config.getZoom() <= hideThreshold;
     const nameMode = this.config.nameDisplayMode();
     const iconCache = this.config.iconCache;
     const interpDur = this.interpDurationSec;
-
-    // During zoom the CSS transform scales the canvas — counter-scale icons
-    // and labels so they stay at their true pixel size.
-    const cs = this.zooming ? 1 / this.zoomScale : 1;
 
     // Draw fire lines (behind entity icons)
     for (const fl of this.fireLines) {
