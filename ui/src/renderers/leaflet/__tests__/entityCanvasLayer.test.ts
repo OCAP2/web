@@ -63,6 +63,8 @@ function makeConfig(overrides?: Partial<EntityCanvasConfig>): EntityCanvasConfig
     isMapLibreMode: false,
     nameDisplayMode: () => "all",
     layerVisible: () => true,
+    worldSize: 30720,
+    latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
     ...overrides,
   };
 }
@@ -346,6 +348,19 @@ describe("EntityCanvasLayer", () => {
       // Toggle smoothing without changing speed
       layer.setSmoothingEnabled(false);
       expect(getInterpDuration()).toBeCloseTo(0.25); // unchanged
+    });
+  });
+
+  describe("setGridVisible", () => {
+    it("grid is hidden by default", () => {
+      expect((layer as any).gridVisible).toBe(false);
+    });
+
+    it("setGridVisible toggles the flag", () => {
+      layer.setGridVisible(true);
+      expect((layer as any).gridVisible).toBe(true);
+      layer.setGridVisible(false);
+      expect((layer as any).gridVisible).toBe(false);
     });
   });
 
