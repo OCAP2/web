@@ -3,7 +3,6 @@ import type { ArmaCoord } from "../../utils/coordinates";
 import type { AliveState, Side } from "../../data/types";
 import type { EntityMarkerOpts, EntityMarkerState } from "../renderer.types";
 import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/math";
-import { getTransitionDuration } from "./leafletSmoothing";
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 
 /** Duration of the hit flash color tint in milliseconds. */
@@ -225,7 +224,12 @@ export class EntityCanvasLayer {
   setSmoothingEnabled(enabled: boolean, speed?: number): void {
     this.smoothing = enabled;
     if (speed !== undefined) {
-      this.interpDurationSec = getTransitionDuration(speed);
+      // Canvas interpolation must complete within the frame interval (1/speed)
+      // so entities reach their target before the next update arrives.
+      // The CSS renderer uses longer durations (getTransitionDuration) because
+      // CSS transitions redirect smoothly when interrupted, but canvas lerp
+      // accumulates visible lag if the duration exceeds the frame interval.
+      this.interpDurationSec = speed > 0 ? 1 / speed : 1;
     }
     // Don't snap on disable — entities freeze at their current interpolated
     // position. Seeking while paused snaps via updateEntity() instead.
