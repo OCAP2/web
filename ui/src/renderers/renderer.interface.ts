@@ -9,8 +9,6 @@ import type {
   BriefingMarkerState,
   LineHandle,
   LineOpts,
-  PulseHandle,
-  PulseOpts,
   RenderLayer,
   MapStyleInfo,
   RendererEvent,
@@ -44,10 +42,6 @@ export interface MapRenderer {
   // Transient lines (fire lines, kill lines)
   addLine(from: ArmaCoord, to: ArmaCoord, opts: LineOpts): LineHandle;
   removeLine(handle: LineHandle): void;
-
-  // Pulse effects
-  addPulse(pos: ArmaCoord, opts: PulseOpts): PulseHandle;
-  removePulse(handle: PulseHandle): void;
 
   // Layer visibility (signal accessors)
   layerVisibility: () => Record<string, boolean>;

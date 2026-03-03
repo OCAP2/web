@@ -19,9 +19,6 @@ declare const lineBrand: unique symbol;
 /** Opaque handle returned by addLine. */
 export type LineHandle = { readonly _brand: typeof lineBrand; _internal: unknown };
 
-declare const pulseBrand: unique symbol;
-/** Opaque handle returned by addPulse. */
-export type PulseHandle = { readonly _brand: typeof pulseBrand; _internal: unknown };
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
 // --------------- Entity markers ---------------
@@ -68,19 +65,12 @@ export interface BriefingMarkerState {
   points?: ArmaCoord[];
 }
 
-// --------------- Lines & pulses ---------------
+// --------------- Lines ---------------
 
 export interface LineOpts {
   color: string;
   weight: number;
   opacity: number;
-}
-
-export interface PulseOpts {
-  color: string;
-  fillColor: string;
-  iconSize: [number, number];
-  iterationCount?: number;
 }
 
 // --------------- Enums & config ---------------
