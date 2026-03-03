@@ -51,9 +51,9 @@ export function RecordingPlayback(): JSX.Element {
   const { authenticated } = useAuth();
   const api = new ApiClient();
   const rendererParam = new URLSearchParams(window.location.search).get("renderer");
-  const renderer: MapRenderer = rendererParam === "canvas"
-    ? new CanvasLeafletRenderer()
-    : new LeafletRenderer();
+  const renderer: MapRenderer = rendererParam === "dom"
+    ? new LeafletRenderer()
+    : new CanvasLeafletRenderer();
   const engine = new PlaybackEngine(renderer);
   const markerManager = new MarkerManager(renderer);
   const [worldConfig, setWorldConfig] = createSignal<WorldConfig | undefined>(
