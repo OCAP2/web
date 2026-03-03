@@ -380,105 +380,107 @@ export class EntityCanvasLayer {
     // lines and text stay at their true pixel size.
     const cs = this.zooming ? 1 / this.zoomScale : 1;
 
-    // Coordinate grid (behind fire lines and entities)
-    if (this.gridVisible) {
-      const zoom = this.config.getZoom();
-      const interval = getGridInterval(zoom, this.config.isMapLibreMode);
-      const bounds = this.map.getBounds();
-      const sw = this.config.latLngToArma(bounds.getSouthWest());
-      const ne = this.config.latLngToArma(bounds.getNorthEast());
+    if (this.gridVisible) this.renderGrid(cs);
+    this.renderFireLines(cs, w, h);
+    this.renderEntities(dt, cs, w, h);
 
-      const armaBounds = {
-        minX: Math.max(0, Math.floor(sw[0] / interval) * interval),
-        maxX: Math.min(this.config.worldSize, Math.ceil(ne[0] / interval) * interval),
-        minY: Math.max(0, Math.floor(sw[1] / interval) * interval),
-        maxY: Math.min(this.config.worldSize, Math.ceil(ne[1] / interval) * interval),
-      };
+    // Snapshot the current map center/zoom so the next zoom transform
+    // has the correct baseline (matching Leaflet's _center / _zoom pattern).
+    if (!this.zooming) {
+      this.drawnCenter = this.map.getCenter();
+      this.drawnZoom = this.map.getZoom();
+    }
+  }
 
-      const gridLines = computeGridLines(armaBounds, interval);
+  private renderGrid(cs: number): void {
+    const ctx = this.ctx;
+    const zoom = this.config.getZoom();
+    const interval = getGridInterval(zoom, this.config.isMapLibreMode);
+    const bounds = this.map.getBounds();
+    const sw = this.config.latLngToArma(bounds.getSouthWest());
+    const ne = this.config.latLngToArma(bounds.getNorthEast());
 
-      // Double-stroke: dark outline then light line for contrast on any map
-      for (const pass of [
-        { color: "rgba(0,0,0,0.3)", width: 2.5 * cs },
-        { color: "rgba(255,255,255,0.4)", width: 1 * cs },
-      ] as const) {
-        ctx.strokeStyle = pass.color;
-        ctx.lineWidth = pass.width;
-        ctx.beginPath();
+    const armaBounds = {
+      minX: Math.max(0, Math.floor(sw[0] / interval) * interval),
+      maxX: Math.min(this.config.worldSize, Math.ceil(ne[0] / interval) * interval),
+      minY: Math.max(0, Math.floor(sw[1] / interval) * interval),
+      maxY: Math.min(this.config.worldSize, Math.ceil(ne[1] / interval) * interval),
+    };
 
-        for (const x of gridLines.x) {
-          const start = this.map.latLngToContainerPoint(
-            this.config.armaToLatLng([x, armaBounds.minY]),
-          );
-          const end = this.map.latLngToContainerPoint(
-            this.config.armaToLatLng([x, armaBounds.maxY]),
-          );
-          ctx.moveTo(start.x, start.y);
-          ctx.lineTo(end.x, end.y);
-        }
+    const gridLines = computeGridLines(armaBounds, interval);
 
-        for (const y of gridLines.y) {
-          const start = this.map.latLngToContainerPoint(
-            this.config.armaToLatLng([armaBounds.minX, y]),
-          );
-          const end = this.map.latLngToContainerPoint(
-            this.config.armaToLatLng([armaBounds.maxX, y]),
-          );
-          ctx.moveTo(start.x, start.y);
-          ctx.lineTo(end.x, end.y);
-        }
+    // Double-stroke: dark outline then light line for contrast on any map
+    for (const pass of [
+      { color: "rgba(0,0,0,0.3)", width: 2.5 * cs },
+      { color: "rgba(255,255,255,0.4)", width: 1 * cs },
+    ] as const) {
+      ctx.strokeStyle = pass.color;
+      ctx.lineWidth = pass.width;
+      ctx.beginPath();
 
-        ctx.stroke();
-      }
-
-      // Labels
-      const fontSize = Math.round(10 * cs);
-      ctx.font = `${fontSize}px sans-serif`;
-
-      // X labels (bottom edge)
-      ctx.textBaseline = "top";
-      ctx.textAlign = "center";
       for (const x of gridLines.x) {
-        const pos = this.map.latLngToContainerPoint(
+        const start = this.map.latLngToContainerPoint(
           this.config.armaToLatLng([x, armaBounds.minY]),
         );
-        const label = formatCoordLabel(x, interval);
-        ctx.strokeStyle = "rgba(0,0,0,0.7)";
-        ctx.lineWidth = 3 * cs;
-        ctx.strokeText(label, pos.x, pos.y + 2 * cs);
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.fillText(label, pos.x, pos.y + 2 * cs);
+        const end = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([x, armaBounds.maxY]),
+        );
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
       }
 
-      // Y labels (left edge)
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
       for (const y of gridLines.y) {
-        const pos = this.map.latLngToContainerPoint(
+        const start = this.map.latLngToContainerPoint(
           this.config.armaToLatLng([armaBounds.minX, y]),
         );
-        const label = formatCoordLabel(y, interval);
-        ctx.strokeStyle = "rgba(0,0,0,0.7)";
-        ctx.lineWidth = 3 * cs;
-        ctx.strokeText(label, pos.x + 3 * cs, pos.y);
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.fillText(label, pos.x + 3 * cs, pos.y);
+        const end = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([armaBounds.maxX, y]),
+        );
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
       }
+
+      ctx.stroke();
     }
 
-    const hideThreshold = this.config.isMapLibreMode ? 14 : 4;
-    const hideLabels = this.config.getZoom() <= hideThreshold;
-    const nameMode = this.config.nameDisplayMode();
-    const iconCache = this.config.iconCache;
-    const interpDur = this.interpDurationSec;
-    const labelFontSize = Math.round(11 * cs);
-    const labelLineHeight = labelFontSize * 1.3;
-    const fontNormal =
-      `${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    const fontBold =
-      `bold ${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    // Labels
+    const fontSize = Math.round(10 * cs);
+    ctx.font = `${fontSize}px sans-serif`;
 
-    // Draw fire lines (behind entity icons)
+    // X labels (bottom edge)
+    ctx.textBaseline = "top";
+    ctx.textAlign = "center";
+    for (const x of gridLines.x) {
+      const pos = this.map.latLngToContainerPoint(
+        this.config.armaToLatLng([x, armaBounds.minY]),
+      );
+      const label = formatCoordLabel(x, interval);
+      ctx.strokeStyle = "rgba(0,0,0,0.7)";
+      ctx.lineWidth = 3 * cs;
+      ctx.strokeText(label, pos.x, pos.y + 2 * cs);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillText(label, pos.x, pos.y + 2 * cs);
+    }
+
+    // Y labels (left edge)
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    for (const y of gridLines.y) {
+      const pos = this.map.latLngToContainerPoint(
+        this.config.armaToLatLng([armaBounds.minX, y]),
+      );
+      const label = formatCoordLabel(y, interval);
+      ctx.strokeStyle = "rgba(0,0,0,0.7)";
+      ctx.lineWidth = 3 * cs;
+      ctx.strokeText(label, pos.x + 3 * cs, pos.y);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillText(label, pos.x + 3 * cs, pos.y);
+    }
+  }
+
+  private renderFireLines(cs: number, w: number, h: number): void {
+    const ctx = this.ctx;
+
     for (const fl of this.fireLines) {
       let fromPx: number;
       let fromPy: number;
@@ -527,6 +529,22 @@ export class EntityCanvasLayer {
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
+  }
+
+  private renderEntities(dt: number, cs: number, w: number, h: number): void {
+    const ctx = this.ctx;
+    const dpr = this.dpr;
+    const hideThreshold = this.config.isMapLibreMode ? 14 : 4;
+    const hideLabels = this.config.getZoom() <= hideThreshold;
+    const nameMode = this.config.nameDisplayMode();
+    const iconCache = this.config.iconCache;
+    const interpDur = this.interpDurationSec;
+    const labelFontSize = Math.round(11 * cs);
+    const labelLineHeight = labelFontSize * 1.3;
+    const fontNormal =
+      `${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    const fontBold =
+      `bold ${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
 
     // Precompute affine projection: Arma [x,y] → container [px,py].
     // Both CRS modes are linear over the map extent (EPSG:3857 distortion
@@ -716,12 +734,5 @@ export class EntityCanvasLayer {
       }
     }
     ctx.globalAlpha = 1;
-
-    // Snapshot the current map center/zoom so the next zoom transform
-    // has the correct baseline (matching Leaflet's _center / _zoom pattern).
-    if (!this.zooming) {
-      this.drawnCenter = this.map.getCenter();
-      this.drawnZoom = this.map.getZoom();
-    }
   }
 }
