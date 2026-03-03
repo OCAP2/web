@@ -42,8 +42,9 @@ export default defineConfig({
         "src/pages/recording-selector/constants.ts",
         // Entry point (side-effectful, tested via App.test.tsx)
         "src/main.tsx",
-        // Leaflet renderer (requires real browser DOM, not testable in jsdom)
+        // Leaflet renderers (init() requires real browser DOM, not testable in jsdom)
         "src/renderers/leaflet/leafletRenderer.ts",
+        "src/renderers/leaflet/canvasLeafletRenderer.ts",
         "src/renderers/leaflet/leafletGrid.ts",
       ],
     },

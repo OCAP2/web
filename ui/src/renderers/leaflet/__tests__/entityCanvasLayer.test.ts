@@ -841,4 +841,64 @@ describe("EntityCanvasLayer — render paths", () => {
     render();
     expect((layer as any).drawnCenter).toBe(center1); // same reference
   });
+
+  it("resizes hit canvas when icon exceeds current dimensions", () => {
+    // Use a large icon size to trigger hitCanvas resize (default is 64×64)
+    (layer as any).config.iconCache.getSize = () => [80, 80] as [number, number];
+    layer.addEntity(1, DEFAULT_OPTS);
+    layer.updateEntity(1, makeState({ hit: true, alive: 1 }));
+    const perfSpy = vi.spyOn(performance, "now").mockReturnValue(10000);
+    // Set hitStartTime very recent so hit flash is active
+    getEntity(1).hitStartTime = 9999; // elapsed = 1ms < 300ms
+    render();
+    const hc = (layer as any).hitCanvas;
+    // hitCanvas should have been resized to fit the icon
+    expect(hc.width).toBeGreaterThanOrEqual(80);
+    expect(hc.height).toBeGreaterThanOrEqual(80);
+    perfSpy.mockRestore();
+  });
+
+  // --- Zoom animation ---
+
+  describe("onZoomAnim", () => {
+    it("early returns when drawnCenter is null", () => {
+      expect((layer as any).drawnCenter).toBeNull();
+      (layer as any).onZoomAnim({ zoom: 7, center: L.latLng(0, 0) });
+      // Should not set zooming because drawnCenter was null
+      expect((layer as any).zooming).toBe(false);
+    });
+
+    it("sets CSS transform and zooming state", () => {
+      // Make getZoomScale return non-1 to simulate actual zoom
+      (mockMap as any).getZoomScale = () => 2;
+      // First render to populate drawnCenter
+      layer.addEntity(1, DEFAULT_OPTS);
+      render();
+      expect((layer as any).drawnCenter).not.toBeNull();
+
+      (layer as any).onZoomAnim({ zoom: 7, center: L.latLng(0, 0) });
+      expect((layer as any).zooming).toBe(true);
+      expect((layer as any).zoomScale).toBe(2);
+      const canvas = (layer as any).canvas as HTMLCanvasElement;
+      expect(canvas.style.transition).toContain("transform");
+      expect(canvas.style.transform).toContain("scale");
+    });
+  });
+
+  describe("onTransitionEnd", () => {
+    it("clears CSS transform and resets zoom state", () => {
+      // Set up zooming state
+      (layer as any).zooming = true;
+      (layer as any).zoomScale = 2;
+      const canvas = (layer as any).canvas as HTMLCanvasElement;
+      canvas.style.transition = "transform 0.25s";
+      canvas.style.transform = "scale(2)";
+
+      (layer as any).onTransitionEnd();
+      expect((layer as any).zooming).toBe(false);
+      expect((layer as any).zoomScale).toBe(1);
+      expect(canvas.style.transition).toBe("");
+      expect(canvas.style.transform).toBe("");
+    });
+  });
 });
