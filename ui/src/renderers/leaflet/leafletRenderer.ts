@@ -10,6 +10,7 @@ import type {
   MarkerHandle,
   EntityMarkerOpts,
   EntityMarkerState,
+  CrewInfo,
   BriefingMarkerHandle,
   BriefingMarkerDef,
   BriefingMarkerState,
@@ -32,6 +33,8 @@ import {
   removePattern,
   patchSVGUpdateStyle,
 } from "./svgPatterns";
+
+import { formatPopupContent } from "./popupFormat";
 
 // --------------- Internal handle wrapper ---------------
 
@@ -769,11 +772,12 @@ export class LeafletRenderer implements MapRenderer {
       closeButton: false,
       className: opts.iconType === "man" ? "leaflet-popup-unit" : "leaflet-popup-vehicle",
     });
-    popup.setContent(opts.name);
+    const popupContent = formatPopupContent(opts.name, opts.crew);
+    popup.setContent(popupContent);
     marker.bindPopup(popup).openPopup();
 
     const iconKey = `${opts.iconType}:${opts.side}:1`;
-    const internal: InternalMarkerHandle = { marker, id, lastDirection: 0, iconKey, popupName: opts.name, isPlayer: opts.isPlayer, isInVehicle: false };
+    const internal: InternalMarkerHandle = { marker, id, lastDirection: 0, iconKey, popupName: popupContent, isPlayer: opts.isPlayer, isInVehicle: false };
     (marker as any)._ocapInternal = internal;
     return wrapMarker(internal);
   }
@@ -812,9 +816,10 @@ export class LeafletRenderer implements MapRenderer {
     // Update popup text and visibility via CSS display (matching old hideMarkerPopup).
     const popup = marker.getPopup();
     if (popup) {
-      if (state.name !== internal.popupName) {
-        popup.setContent(state.name);
-        internal.popupName = state.name;
+      const popupContent = formatPopupContent(state.name, state.crew);
+      if (popupContent !== internal.popupName) {
+        popup.setContent(popupContent);
+        internal.popupName = popupContent;
       }
 
       const popupEl = popup.getElement();

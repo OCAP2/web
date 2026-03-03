@@ -1,8 +1,7 @@
 import { createEffect } from "solid-js";
-import type { MarkerHandle, LineHandle } from "../../renderers/renderer.types";
+import type { MarkerHandle, LineHandle, CrewInfo } from "../../renderers/renderer.types";
 import { SIDE_COLORS_DARK } from "../../config/sideColors";
 import type { PlaybackEngine } from "../../playback/engine";
-import type { EntityManager } from "../../playback/entityManager";
 import type { MarkerManager } from "../../playback/markerManager";
 import { Vehicle } from "../../playback/entities/vehicle";
 import { Unit } from "../../playback/entities/unit";
@@ -10,51 +9,22 @@ import { HitKilledEvent } from "../../playback/events/hitKilledEvent";
 import type { MapRenderer } from "../../renderers/renderer.interface";
 import { leftPanelVisible, activeSide } from "./shortcuts";
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 /**
- * Build display name for a vehicle showing crew count and member names,
- * matching the old frontend's `setCrew` / `getCrewString` behaviour.
+ * Build structured crew info for a vehicle.
+ * The renderer decides how to format this for display.
  */
-function vehicleDisplayName(
-  vehicleName: string,
+function getCrewInfo(
   vehicle: Vehicle,
-  entityManager: EntityManager,
-): string {
-  const crew = vehicle.crew;
-  if (crew.length === 0) {
-    return `${escapeHtml(vehicleName)} <i>(0)</i>`;
-  }
-
-  const crewNames: string[] = [];
-  for (const id of crew) {
+  entityManager: PlaybackEngine["entityManager"],
+): CrewInfo {
+  const names: string[] = [];
+  for (const id of vehicle.crew) {
     const member = entityManager.getEntity(id);
-    // Only list player crew members, matching the old frontend's getCrewString()
     if (member instanceof Unit && member.isPlayer) {
-      crewNames.push(escapeHtml(member.name || `Unit ${id}`));
+      names.push(member.name || `Unit ${id}`);
     }
   }
-
-  if (crewNames.length === 0) {
-    return `${escapeHtml(vehicleName)} <i>(${crew.length})</i>`;
-  }
-  return `<u>${escapeHtml(vehicleName)}</u> <i>(${crew.length})</i><br>${crewNames.join("<br>")}`;
-}
-
-/**
- * Check if any crew member of a vehicle is a player.
- * Used to determine vehicle popup visibility in "players" nameDisplayMode.
- */
-function vehicleHasPlayerCrew(
-  vehicle: Vehicle,
-  entityManager: EntityManager,
-): boolean {
-  return vehicle.crew.some((id) => {
-    const member = entityManager.getEntity(id);
-    return member instanceof Unit && member.isPlayer;
-  });
+  return { count: vehicle.crew.length, names };
 }
 
 /**
@@ -96,14 +66,13 @@ export function useRenderBridge(
     }
 
     for (const [id, snap] of snapshots) {
-      // Build display name: vehicles show crew count + member names
-      let displayName = snap.name;
       let isPlayer = snap.isPlayer;
+      let crew: CrewInfo | undefined;
       const entity = engine.entityManager.getEntity(id);
       if (entity instanceof Vehicle) {
-        displayName = vehicleDisplayName(snap.name, entity, engine.entityManager);
+        crew = getCrewInfo(entity, engine.entityManager);
         // In "players" mode, show vehicle popup if any crew member is a player
-        isPlayer = vehicleHasPlayerCrew(entity, engine.entityManager);
+        isPlayer = crew.names.length > 0;
       }
 
       let handle = markerHandles.get(id);
@@ -113,8 +82,9 @@ export function useRenderBridge(
           direction: snap.direction,
           iconType: snap.iconType,
           side: snap.side,
-          name: displayName,
+          name: snap.name,
           isPlayer,
+          crew,
         });
         markerHandles.set(id, handle);
       }
@@ -123,11 +93,12 @@ export function useRenderBridge(
         direction: snap.direction,
         alive: snap.alive,
         side: snap.side,
-        name: displayName,
+        name: snap.name,
         iconType: snap.iconType,
         isPlayer,
         isInVehicle: snap.isInVehicle,
         hit: hitEntityIds.has(id),
+        crew,
       });
 
       if (snap.firedTarget) {

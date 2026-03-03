@@ -1,7 +1,7 @@
 import L from "leaflet";
 import type { ArmaCoord } from "../../utils/coordinates";
 import type { AliveState, Side } from "../../data/types";
-import type { EntityMarkerOpts, EntityMarkerState } from "../renderer.types";
+import type { EntityMarkerOpts, EntityMarkerState, CrewInfo } from "../renderer.types";
 import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/math";
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 import { getGridInterval, computeGridLines, formatCoordLabel } from "./gridUtils";
@@ -43,6 +43,7 @@ interface CanvasEntity {
   // Label / visibility
   name: string;
   side: Side | null;
+  crew: CrewInfo | undefined;
   isPlayer: boolean;
   isInVehicle: boolean;
   alive: AliveState;
@@ -88,13 +89,6 @@ export interface EntityCanvasConfig {
   // Grid
   worldSize: number;
   latLngToArma: (latlng: L.LatLng) => ArmaCoord;
-}
-
-// --------------- Helpers ---------------
-
-/** Split an HTML name string into plain-text lines (split on <br>). */
-function htmlToLines(html: string): string[] {
-  return html.split(/<br\s*\/?>/gi).map((s) => s.replace(/<[^>]*>/g, ""));
 }
 
 // --------------- Canvas layer ---------------
@@ -187,6 +181,7 @@ export class EntityCanvasLayer {
       opacity: 1,
       name: opts.name,
       side: opts.side,
+      crew: opts.crew,
       isPlayer: opts.isPlayer,
       isInVehicle: false,
       alive: 1,
@@ -240,6 +235,7 @@ export class EntityCanvasLayer {
     e.opacity = state.isInVehicle ? 0 : state.alive === 0 ? 0.4 : 1;
     e.name = state.name;
     e.side = state.side;
+    e.crew = state.crew;
     e.isPlayer = state.isPlayer;
     e.isInVehicle = state.isInVehicle;
     e.alive = state.alive;
@@ -622,7 +618,8 @@ export class EntityCanvasLayer {
         (nameMode === "all" || (nameMode === "players" && e.isPlayer))
       ) {
         const [, ih] = e.iconSize;
-        const lines = htmlToLines(e.name);
+        const crew = e.crew;
+        const hasCrew = crew && crew.names.length > 0;
         const fontSize = Math.round(11 * cs);
         const lineHeight = fontSize * 1.3;
         // Stack lines upward from just above the icon
@@ -636,19 +633,23 @@ export class EntityCanvasLayer {
           `${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
         const fontBold =
           `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-        const isMultiLine = lines.length > 1;
 
-        if (!isMultiLine) {
-          // Single-line unit label: text outline for contrast, no background
+        if (!hasCrew) {
+          // Unit label (or vehicle with no player crew): text outline, no background
+          const label = crew
+            ? `${e.name} (${crew.count})`
+            : e.name;
           ctx.font = fontNormal;
           ctx.textAlign = "center";
           ctx.lineWidth = 3 * cs;
           ctx.strokeStyle = "rgba(0,0,0,0.7)";
           ctx.fillStyle = "#ffffff";
-          ctx.strokeText(lines[0], px, baseY);
-          ctx.fillText(lines[0], px, baseY);
+          ctx.strokeText(label, px, baseY);
+          ctx.fillText(label, px, baseY);
         } else {
-          // Multi-line vehicle label: background pill + side-colored crew
+          // Vehicle with player crew: background pill + side-colored crew names
+          const titleLine = `${e.name} (${crew.count})`;
+          const lines = [titleLine, ...crew.names];
           const sideColor = (e.side && SIDE_COLORS[e.side]) || "#ffffff";
           const padX = 4 * cs;
           const padY = 2 * cs;

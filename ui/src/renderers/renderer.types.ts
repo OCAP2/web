@@ -23,6 +23,14 @@ export type LineHandle = { readonly _brand: typeof lineBrand; _internal: unknown
 
 // --------------- Entity markers ---------------
 
+/** Crew info for vehicles — renderer decides how to display. */
+export interface CrewInfo {
+  /** Total crew count (players + AI). */
+  count: number;
+  /** Player crew member names only. */
+  names: string[];
+}
+
 export interface EntityMarkerOpts {
   position: ArmaCoord;
   direction: number;
@@ -30,6 +38,7 @@ export interface EntityMarkerOpts {
   side: Side | null;
   name: string;
   isPlayer: boolean;
+  crew?: CrewInfo;
 }
 
 export interface EntityMarkerState {
@@ -43,6 +52,7 @@ export interface EntityMarkerState {
   isInVehicle: boolean;
   /** When true, show the "hit" flash icon instead of the normal side icon. */
   hit?: boolean;
+  crew?: CrewInfo;
 }
 
 // --------------- Briefing markers ---------------
