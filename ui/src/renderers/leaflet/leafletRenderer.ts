@@ -164,7 +164,7 @@ export class LeafletRenderer implements MapRenderer {
   private maplibreLayer: any = null;
 
   // Grid and MapLibre toggle layers for overlay control
-  private gridLayer: L.LayerGroup | null = null;
+  protected gridLayer: L.LayerGroup | null = null;
   private mapIconsLayer: L.LayerGroup | null = null;
   private buildings3DLayer: L.LayerGroup | null = null;
 
@@ -726,7 +726,7 @@ export class LeafletRenderer implements MapRenderer {
     return this.map.unproject(pixelCoords, this.maxNativeZoom);
   }
 
-  private latLngToArma(latlng: L.LatLng): ArmaCoord {
+  protected latLngToArma(latlng: L.LatLng): ArmaCoord {
     if (this.useMapLibreMode) {
       return latLngToArmaMapLibre(latlng);
     }

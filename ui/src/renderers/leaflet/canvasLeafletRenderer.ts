@@ -6,6 +6,7 @@ import type {
   EntityMarkerOpts,
   EntityMarkerState,
   LineOpts,
+  RenderLayer,
 } from "../renderer.types";
 import { LeafletRenderer } from "./leafletRenderer";
 import { EntityCanvasLayer, type FireLine } from "./entityCanvasLayer";
@@ -36,8 +37,8 @@ function wrapLineHandle(index: number): LineHandle {
 
 /**
  * Extends LeafletRenderer, replacing only entity marker rendering with a
- * canvas overlay. Fire lines are also drawn on canvas. Everything else
- * (map tiles, briefing markers, grid, styles, events) is inherited unchanged.
+ * canvas overlay. Fire lines and the coordinate grid are also drawn on canvas.
+ * Everything else (map tiles, briefing markers, styles, events) is inherited unchanged.
  */
 export class CanvasLeafletRenderer extends LeafletRenderer {
   private canvasLayer!: EntityCanvasLayer;
@@ -47,6 +48,12 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
   override init(container: HTMLElement, world: WorldConfig): void {
     super.init(container, world);
 
+    // Suppress DOM-based grid — canvas layer handles grid rendering
+    if (this.gridLayer && this.map.hasLayer(this.gridLayer)) {
+      this.map.removeLayer(this.gridLayer);
+    }
+    this.gridLayer = null;
+
     this.canvasLayer = new EntityCanvasLayer(this.map, {
       armaToLatLng: (c) => this.armaToLatLng(c),
       iconCache: this.iconCache,
@@ -54,6 +61,8 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
       isMapLibreMode: this.useMapLibreMode,
       nameDisplayMode: () => this.nameDisplayMode(),
       layerVisible: () => this.layerVisibility().entities ?? true,
+      worldSize: world.worldSize,
+      latLngToArma: (ll) => this.latLngToArma(ll),
     });
 
     void this.iconCache.preloadAll().then(() => {
@@ -117,5 +126,14 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
       this.pendingFireLines = [];
       this.canvasLayer?.clearFireLines();
     }
+  }
+
+  override setLayerVisible(layer: RenderLayer, visible: boolean): void {
+    if (layer === "grid") {
+      this.canvasLayer?.setGridVisible(visible);
+    }
+    // Update signal so UI stays in sync; base class grid toggle is a no-op
+    // since we set this.gridLayer = null in init().
+    super.setLayerVisible(layer, visible);
   }
 }
