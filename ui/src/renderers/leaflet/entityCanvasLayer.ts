@@ -497,7 +497,6 @@ export class EntityCanvasLayer {
         continue;
       }
 
-      ctx.save();
       ctx.globalAlpha = fl.opacity;
       ctx.strokeStyle = fl.color;
       ctx.lineWidth = fl.weight * cs;
@@ -505,8 +504,8 @@ export class EntityCanvasLayer {
       ctx.moveTo(fromPx, fromPy);
       ctx.lineTo(toPx, toPy);
       ctx.stroke();
-      ctx.restore();
     }
+    ctx.globalAlpha = 1;
 
     for (const e of this.entities.values()) {
       // Skip hidden (in vehicle) entities
@@ -573,10 +572,18 @@ export class EntityCanvasLayer {
           }
         }
 
+        // Set rotated transform centered on entity (replaces save/translate/rotate/restore)
+        const rad = (dir * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        ctx.setTransform(
+          dpr * cos, dpr * sin, -dpr * sin, dpr * cos, dpr * px, dpr * py,
+        );
+        ctx.globalAlpha = e.opacity;
+
         if (hitAlpha > 0) {
           const hc = this.hitCanvas;
           const hctx = this.hitCtx;
-          // Resize offscreen canvas if needed (icons are small, 64x64 covers all)
           const pw = Math.ceil(dw) + 2;
           const ph = Math.ceil(dh) + 2;
           if (hc.width < pw || hc.height < ph) {
@@ -584,30 +591,20 @@ export class EntityCanvasLayer {
             hc.height = ph;
           }
           hctx.clearRect(0, 0, hc.width, hc.height);
-          // Draw icon centered in offscreen canvas
           hctx.globalCompositeOperation = "source-over";
           hctx.globalAlpha = 1;
           hctx.drawImage(img, 1, 1, dw, dh);
-          // Tint only the icon pixels
           hctx.globalCompositeOperation = "source-atop";
           hctx.fillStyle = HIT_FLASH_COLOR;
           hctx.globalAlpha = hitAlpha;
           hctx.fillRect(0, 0, hc.width, hc.height);
-          // Blit tinted icon to main canvas
-          ctx.save();
-          ctx.globalAlpha = e.opacity;
-          ctx.translate(px, py);
-          ctx.rotate((dir * Math.PI) / 180);
           ctx.drawImage(hc, 0, 0, pw, ph, -dw / 2 - 1, -dh / 2 + offy - 1, pw, ph);
-          ctx.restore();
         } else {
-          ctx.save();
-          ctx.globalAlpha = e.opacity;
-          ctx.translate(px, py);
-          ctx.rotate((dir * Math.PI) / 180);
           ctx.drawImage(img, -dw / 2, -dh / 2 + offy, dw, dh);
-          ctx.restore();
         }
+
+        // Reset to base DPR transform for label drawing
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
       // Draw label (not rotated, positioned above icon, counter-scaled during zoom)
@@ -625,7 +622,6 @@ export class EntityCanvasLayer {
         // Stack lines upward from just above the icon
         const baseY = py - (ih * cs) / 2 - 4 * cs;
 
-        ctx.save();
         ctx.globalAlpha = e.opacity;
         ctx.textBaseline = "bottom";
 
@@ -682,9 +678,9 @@ export class EntityCanvasLayer {
             ctx.fillText(lines[i], leftX, y);
           }
         }
-        ctx.restore();
       }
     }
+    ctx.globalAlpha = 1;
 
     // Snapshot the current map center/zoom so the next zoom transform
     // has the correct baseline (matching Leaflet's _center / _zoom pattern).
