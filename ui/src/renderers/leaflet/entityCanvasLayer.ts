@@ -39,6 +39,25 @@ interface CanvasEntity {
   cachedDir: number;
 }
 
+export interface FireLine {
+  // Arma coordinate space (meters)
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+
+  // Visual
+  color: string;
+  weight: number;
+  opacity: number;
+
+  // Cached pixel positions for zoom
+  cachedFromPx: number;
+  cachedFromPy: number;
+  cachedToPx: number;
+  cachedToPy: number;
+}
+
 // --------------- Config passed from the renderer ---------------
 
 export interface EntityCanvasConfig {
@@ -72,6 +91,7 @@ export class EntityCanvasLayer {
   private interpDurationSec = 1;
   private zooming = false;
   private zoomScale = 1;
+  private fireLines: FireLine[] = [];
 
   private animFrameId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -187,6 +207,14 @@ export class EntityCanvasLayer {
     // position. Seeking while paused snaps via updateEntity() instead.
   }
 
+  setFireLines(lines: FireLine[]): void {
+    this.fireLines = lines;
+  }
+
+  clearFireLines(): void {
+    this.fireLines = [];
+  }
+
   dispose(): void {
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
@@ -198,6 +226,7 @@ export class EntityCanvasLayer {
     this.resizeObserver = null;
     this.canvas.remove();
     this.entities.clear();
+    this.fireLines = [];
   }
 
   // --------------- Zoom animation ---------------
@@ -272,7 +301,7 @@ export class EntityCanvasLayer {
     ctx.clearRect(0, 0, w, h);
 
     if (!this.config.layerVisible()) return;
-    if (this.entities.size === 0) return;
+    if (this.entities.size === 0 && this.fireLines.length === 0) return;
 
     const hideThreshold = this.config.isMapLibreMode ? 14 : 4;
     const hideLabels = this.config.getZoom() <= hideThreshold;
@@ -283,6 +312,57 @@ export class EntityCanvasLayer {
     // During zoom the CSS transform scales the canvas — counter-scale icons
     // and labels so they stay at their true pixel size.
     const cs = this.zooming ? 1 / this.zoomScale : 1;
+
+    // Draw fire lines (behind entity icons)
+    for (const fl of this.fireLines) {
+      let fromPx: number;
+      let fromPy: number;
+      let toPx: number;
+      let toPy: number;
+
+      if (this.zooming) {
+        fromPx = fl.cachedFromPx;
+        fromPy = fl.cachedFromPy;
+        toPx = fl.cachedToPx;
+        toPy = fl.cachedToPy;
+      } else {
+        const fp = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([fl.fromX, fl.fromY]),
+        );
+        const tp = this.map.latLngToContainerPoint(
+          this.config.armaToLatLng([fl.toX, fl.toY]),
+        );
+        fromPx = fp.x;
+        fromPy = fp.y;
+        toPx = tp.x;
+        toPy = tp.y;
+
+        fl.cachedFromPx = fromPx;
+        fl.cachedFromPy = fromPy;
+        fl.cachedToPx = toPx;
+        fl.cachedToPy = toPy;
+      }
+
+      // Frustum culling — skip if both endpoints are off-screen
+      if (
+        (fromPx < -40 && toPx < -40) ||
+        (fromPx > w + 40 && toPx > w + 40) ||
+        (fromPy < -40 && toPy < -40) ||
+        (fromPy > h + 40 && toPy > h + 40)
+      ) {
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = fl.opacity;
+      ctx.strokeStyle = fl.color;
+      ctx.lineWidth = fl.weight * cs;
+      ctx.beginPath();
+      ctx.moveTo(fromPx, fromPy);
+      ctx.lineTo(toPx, toPy);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     for (const e of this.entities.values()) {
       // Skip hidden (in vehicle) entities
