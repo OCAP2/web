@@ -50,8 +50,8 @@ export function RecordingPlayback(): JSX.Element {
   const { t } = useI18n();
   const { authenticated } = useAuth();
   const api = new ApiClient();
-  const useCanvas = new URLSearchParams(window.location.search).has("canvas");
-  const renderer: MapRenderer = useCanvas
+  const rendererParam = new URLSearchParams(window.location.search).get("renderer");
+  const renderer: MapRenderer = rendererParam === "canvas"
     ? new CanvasLeafletRenderer()
     : new LeafletRenderer();
   const engine = new PlaybackEngine(renderer);
