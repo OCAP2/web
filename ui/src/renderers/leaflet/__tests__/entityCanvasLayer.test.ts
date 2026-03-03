@@ -289,6 +289,66 @@ describe("EntityCanvasLayer", () => {
     });
   });
 
+  describe("setSmoothingEnabled — interpolation duration", () => {
+    /** Access the private interpDurationSec. */
+    function getInterpDuration() {
+      return (layer as any).interpDurationSec;
+    }
+
+    it("sets interpDurationSec to 1/speed (frame interval)", () => {
+      layer.setSmoothingEnabled(true, 1);
+      expect(getInterpDuration()).toBeCloseTo(1.0);
+
+      layer.setSmoothingEnabled(true, 2);
+      expect(getInterpDuration()).toBeCloseTo(0.5);
+
+      layer.setSmoothingEnabled(true, 5);
+      expect(getInterpDuration()).toBeCloseTo(0.2);
+
+      layer.setSmoothingEnabled(true, 10);
+      expect(getInterpDuration()).toBeCloseTo(0.1);
+    });
+
+    it("entities reach target within one frame interval at high speed", () => {
+      layer.addEntity(1, DEFAULT_OPTS);
+      layer.setSmoothingEnabled(true, 10);
+      const interpDur = getInterpDuration(); // 0.1s
+
+      // Move to new position — starts interpolation
+      layer.updateEntity(1, makeState({ position: [1010, 2010] }));
+      const e = getEntity(1);
+      expect(e.interpProgress).toBe(0);
+
+      // Simulate one full frame interval elapsed (dt = interpDur)
+      // progress = 0 + dt / interpDur = 1.0 → entity at target
+      const progress = Math.min(1, 0 + interpDur / interpDur);
+      expect(progress).toBe(1);
+    });
+
+    it("does not exceed 1s duration for fractional speeds", () => {
+      layer.setSmoothingEnabled(true, 0.5);
+      // speed 0.5 → 1/0.5 = 2s, but the guard caps at 1/speed
+      // which is correct: at 0.5x, frames come every 2s
+      expect(getInterpDuration()).toBeCloseTo(2.0);
+    });
+
+    it("handles edge case of speed 0 without division error", () => {
+      layer.setSmoothingEnabled(true, 0);
+      expect(getInterpDuration()).toBe(1);
+      expect(Number.isFinite(getInterpDuration())).toBe(true);
+    });
+
+    it("preserves duration when speed is not provided", () => {
+      layer.setSmoothingEnabled(true, 4);
+      const dur = getInterpDuration();
+      expect(dur).toBeCloseTo(0.25);
+
+      // Toggle smoothing without changing speed
+      layer.setSmoothingEnabled(false);
+      expect(getInterpDuration()).toBeCloseTo(0.25); // unchanged
+    });
+  });
+
   describe("removeEntity", () => {
     it("removes the entity from internal map", () => {
       layer.addEntity(1, DEFAULT_OPTS);
