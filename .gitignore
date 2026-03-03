@@ -18,6 +18,9 @@ setting.json
 # Plans
 docs/plans/
 
+# Worktrees
+.worktrees/
+
 # Test coverage
 cover.out
 coverage.out
