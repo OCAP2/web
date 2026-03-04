@@ -23,6 +23,19 @@ interface HeatmapBucket {
   other: number;
 }
 
+function eventLabel(ev: GameEvent): string {
+  if (ev instanceof HitKilledEvent) {
+    const name = ev.victimName ?? "Unknown";
+    return ev.type === "killed" ? `\u2620 ${name}` : `\u26A1 ${name}`;
+  }
+  if (ev instanceof ConnectEvent) return `${ev.type === "connected" ? "+" : "-"} ${ev.unitName}`;
+  if (ev instanceof EndMissionEvent) return ev.message;
+  if (ev instanceof GeneralMissionEvent) return ev.message;
+  if (ev instanceof CapturedEvent) return `\u2691 ${ev.unitName}`;
+  if (ev instanceof TerminalHackEvent) return `\u2328 ${ev.unitName}`;
+  return "";
+}
+
 export interface TimelineScrubberProps {
   focusRange: Accessor<FocusRange | null>;
   editingFocus: Accessor<boolean>;
@@ -340,13 +353,7 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
                         [styles.hoverEventHit]: ev instanceof HitKilledEvent && ev.type === "hit",
                       }}
                     >
-                      {ev instanceof HitKilledEvent && ev.type === "killed" && `\u2620 ${ev.victimName ?? "Unknown"}`}
-                      {ev instanceof HitKilledEvent && ev.type === "hit" && `\u26A1 ${ev.victimName ?? "Unknown"}`}
-                      {ev instanceof ConnectEvent && `${ev.type === "connected" ? "+" : "-"} ${ev.unitName}`}
-                      {ev instanceof EndMissionEvent && ev.message}
-                      {ev instanceof GeneralMissionEvent && ev.message}
-                      {ev instanceof CapturedEvent && `\u2691 ${ev.unitName}`}
-                      {ev instanceof TerminalHackEvent && `\u2328 ${ev.unitName}`}
+                      {eventLabel(ev)}
                     </div>
                   )}
                 </For>
