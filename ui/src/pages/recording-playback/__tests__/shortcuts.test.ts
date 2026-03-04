@@ -7,6 +7,8 @@ import {
   leftPanelVisible,
   setLeftPanelVisible,
   setActivePanelTab,
+  setEditingFocusForShortcuts,
+  setFocusShortcutCallbacks,
   stepBack,
   stepForward,
   seekToPrevKill,
@@ -400,5 +402,77 @@ describe("seekToPrevKill / seekToNextKill", () => {
     invalidateKillFrames();
     seekToNextKill(engine);
     expect(engine.currentFrame()).toBe(100);
+  });
+});
+
+// ── Focus editing shortcuts ──
+
+describe("focus editing shortcuts", () => {
+  let engine: PlaybackEngine;
+
+  beforeEach(() => {
+    engine = createEngine();
+    loadWithKills(engine, []);
+  });
+
+  afterEach(() => {
+    unregisterShortcuts();
+    setEditingFocusForShortcuts(false);
+    setFocusShortcutCallbacks({});
+  });
+
+  it("'i' calls onSetIn when editing focus", () => {
+    const onSetIn = vi.fn();
+    setEditingFocusForShortcuts(true);
+    setFocusShortcutCallbacks({ onSetIn });
+    registerShortcuts(engine);
+
+    fireKey("i");
+
+    expect(onSetIn).toHaveBeenCalledOnce();
+  });
+
+  it("'o' calls onSetOut when editing focus", () => {
+    const onSetOut = vi.fn();
+    setEditingFocusForShortcuts(true);
+    setFocusShortcutCallbacks({ onSetOut });
+    registerShortcuts(engine);
+
+    fireKey("o");
+
+    expect(onSetOut).toHaveBeenCalledOnce();
+  });
+
+  it("Escape calls onCancel when editing focus", () => {
+    const onCancel = vi.fn();
+    setEditingFocusForShortcuts(true);
+    setFocusShortcutCallbacks({ onCancel });
+    registerShortcuts(engine);
+
+    fireKey("Escape");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("'i' does nothing when not editing focus", () => {
+    const onSetIn = vi.fn();
+    setEditingFocusForShortcuts(false);
+    setFocusShortcutCallbacks({ onSetIn });
+    registerShortcuts(engine);
+
+    fireKey("i");
+
+    expect(onSetIn).not.toHaveBeenCalled();
+  });
+
+  it("'o' does nothing when not editing focus", () => {
+    const onSetOut = vi.fn();
+    setEditingFocusForShortcuts(false);
+    setFocusShortcutCallbacks({ onSetOut });
+    registerShortcuts(engine);
+
+    fireKey("o");
+
+    expect(onSetOut).not.toHaveBeenCalled();
   });
 });

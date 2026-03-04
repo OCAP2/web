@@ -329,6 +329,103 @@ describe("TimelineScrubber", () => {
   });
 });
 
+function renderScrubberWithFocus(
+  focusRange: FocusRange | null,
+  editing = false,
+  focusDraftVal: FocusRange | null = null,
+) {
+  const { engine, renderer } = createTestEngine();
+  engine.loadRecording(makeManifest(
+    [unitDef({ id: 1, name: "V", side: "WEST", endFrame: 99 }), unitDef({ id: 2, name: "K", side: "EAST", endFrame: 99 })],
+    [killedEvent(30, 1, 2, "AK", 100), killedEvent(70, 2, 1, "M4", 200)],
+    100,
+  ));
+
+  const [focusSignal] = createSignal<FocusRange | null>(focusRange);
+  const [editingFocus] = createSignal(editing);
+  const [focusDraft] = createSignal<FocusRange | null>(focusDraftVal ?? (editing ? focusRange : null));
+  const onDraftChange = vi.fn();
+
+  const result = render(() => (
+    <TestProviders engine={engine} renderer={renderer}>
+      <TimelineScrubber
+        focusRange={focusSignal}
+        editingFocus={editingFocus}
+        focusDraft={focusDraft}
+        onDraftChange={onDraftChange}
+        constrainToFocus={() => false}
+      />
+    </TestProviders>
+  ));
+
+  return { engine, renderer, onDraftChange, ...result };
+}
+
+describe("TimelineScrubber (focus overlays)", () => {
+  it("renders dim overlays when focusRange is set", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 });
+    const track = screen.getByTestId("scrubber-track");
+    const overlays = track.querySelectorAll('[class*="focusDimOverlay"]');
+    expect(overlays.length).toBe(2);
+  });
+
+  it("renders accent line in view mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 });
+    const track = screen.getByTestId("scrubber-track");
+    expect(track.querySelector('[class*="focusAccentLine"]')).not.toBeNull();
+  });
+
+  it("renders dashed border in edit mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    const track = screen.getByTestId("scrubber-track");
+    expect(track.querySelector('[class*="focusBorderEditing"]')).not.toBeNull();
+    expect(track.querySelector('[class*="focusAccentLine"]')).toBeNull();
+  });
+
+  it("renders focus ticks in view mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 });
+    const track = screen.getByTestId("scrubber-track");
+    const ticks = track.querySelectorAll('[class*="focusTick"]');
+    expect(ticks.length).toBe(2);
+  });
+
+  it("hides focus ticks in edit mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    const track = screen.getByTestId("scrubber-track");
+    expect(track.querySelectorAll('[class*="focusTick"]').length).toBe(0);
+  });
+
+  it("renders focus handles in edit mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    const track = screen.getByTestId("scrubber-track");
+    const handleIn = track.querySelectorAll('[class*="focusHandleIn"]');
+    const handleOut = track.querySelectorAll('[class*="focusHandleOut"]');
+    expect(handleIn.length).toBe(1);
+    expect(handleOut.length).toBe(1);
+  });
+
+  it("renders handle labels in edit mode", () => {
+    renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    const track = screen.getByTestId("scrubber-track");
+    const labels = track.querySelectorAll('[class*="focusHandleLabel"]');
+    expect(labels.length).toBe(2);
+  });
+
+  it("no overlays or handles when focusRange is null", () => {
+    renderScrubberWithFocus(null);
+    const track = screen.getByTestId("scrubber-track");
+    expect(track.querySelector('[class*="focusDimOverlay"]')).toBeNull();
+    expect(track.querySelector('[class*="focusHandle"]')).toBeNull();
+  });
+
+  it("dims heatmap buckets outside focus range in view mode", () => {
+    renderScrubberWithFocus({ inFrame: 40, outFrame: 60 });
+    const buckets = screen.getAllByTestId("heatmap-bucket");
+    const dimmed = buckets.filter(b => b.className.includes("heatmapBucketDimmed"));
+    expect(dimmed.length).toBeGreaterThan(0);
+  });
+});
+
 function renderConstrainedScrubber(
   focusRange: FocusRange,
   entities = [unitDef({ id: 1, name: "V", side: "WEST", endFrame: 99 }), unitDef({ id: 2, name: "K", side: "EAST", endFrame: 99 })],

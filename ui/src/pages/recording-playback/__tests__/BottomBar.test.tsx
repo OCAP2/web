@@ -15,18 +15,30 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderBottomBar(frameCount = 200) {
+function renderBottomBar(frameCount = 200, opts?: {
+  focusRange?: FocusRange | null;
+  editingFocus?: boolean;
+  isAdmin?: boolean;
+}) {
   const { engine, renderer } = createTestEngine();
   engine.loadRecording(makeManifest([], [], frameCount));
 
   const [panelOpen, setPanelOpen] = createSignal(true);
   const onTogglePanel = vi.fn(() => setPanelOpen((v) => !v));
   const [timeMode] = createSignal<TimeMode>("elapsed");
-  const [focusRange] = createSignal<FocusRange | null>(null);
-  const [editingFocus] = createSignal(false);
-  const [focusDraft] = createSignal<FocusRange | null>(null);
+  const [focusRange] = createSignal<FocusRange | null>(opts?.focusRange ?? null);
+  const [editingFocus] = createSignal(opts?.editingFocus ?? false);
+  const [focusDraft] = createSignal<FocusRange | null>(opts?.editingFocus ? (opts?.focusRange ?? { inFrame: 0, outFrame: 199 }) : null);
   const [showFullTimeline] = createSignal(false);
-  const [isAdmin] = createSignal(false);
+  const [isAdmin] = createSignal(opts?.isAdmin ?? false);
+
+  const onStartFocusEdit = vi.fn();
+  const onSetIn = vi.fn();
+  const onSetOut = vi.fn();
+  const onClearFocus = vi.fn();
+  const onCancelFocus = vi.fn();
+  const onSaveFocus = vi.fn();
+  const onToggleFullTimeline = vi.fn();
 
   const result = render(() => (
     <TestProviders engine={engine} renderer={renderer}>
@@ -39,19 +51,19 @@ function renderBottomBar(frameCount = 200) {
         focusDraft={focusDraft}
         onDraftChange={vi.fn()}
         showFullTimeline={showFullTimeline}
-        onToggleFullTimeline={vi.fn()}
+        onToggleFullTimeline={onToggleFullTimeline}
         isAdmin={isAdmin}
-        onStartFocusEdit={vi.fn()}
-        onSetIn={vi.fn()}
-        onSetOut={vi.fn()}
-        onClearFocus={vi.fn()}
-        onCancelFocus={vi.fn()}
-        onSaveFocus={vi.fn()}
+        onStartFocusEdit={onStartFocusEdit}
+        onSetIn={onSetIn}
+        onSetOut={onSetOut}
+        onClearFocus={onClearFocus}
+        onCancelFocus={onCancelFocus}
+        onSaveFocus={onSaveFocus}
       />
     </TestProviders>
   ));
 
-  return { engine, renderer, onTogglePanel, ...result };
+  return { engine, renderer, onTogglePanel, onStartFocusEdit, onToggleFullTimeline, ...result };
 }
 
 describe("BottomBar", () => {
@@ -144,5 +156,49 @@ describe("BottomBar", () => {
 
     // The time display shows "current / total" — total is based on endFrame
     expect(screen.getByText("0:03:19")).toBeTruthy();
+  });
+
+  it("shows FocusToolbar when editingFocus is true", () => {
+    renderBottomBar(200, { editingFocus: true, isAdmin: true });
+    expect(screen.getByText("Focus Range")).toBeTruthy();
+    expect(screen.getByText("Save")).toBeTruthy();
+  });
+
+  it("hides FocusToolbar when editingFocus is false", () => {
+    renderBottomBar(200, { editingFocus: false });
+    expect(screen.queryByText("Focus Range")).toBeNull();
+  });
+
+  it("shows Focus button when admin and not editing", () => {
+    renderBottomBar(200, { isAdmin: true });
+    expect(screen.getByText("Focus")).toBeTruthy();
+  });
+
+  it("hides Focus button when not admin", () => {
+    renderBottomBar(200, { isAdmin: false });
+    expect(screen.queryByText("Focus")).toBeNull();
+  });
+
+  it("Focus button calls onStartFocusEdit", () => {
+    const { onStartFocusEdit } = renderBottomBar(200, { isAdmin: true });
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    expect(onStartFocusEdit).toHaveBeenCalledOnce();
+  });
+
+  it("shows FOCUS toggle when focusRange is set and not editing", () => {
+    renderBottomBar(200, { focusRange: { inFrame: 10, outFrame: 100 } });
+    expect(screen.getByText("FOCUS")).toBeTruthy();
+  });
+
+  it("FOCUS toggle calls onToggleFullTimeline", () => {
+    const { onToggleFullTimeline } = renderBottomBar(200, { focusRange: { inFrame: 10, outFrame: 100 } });
+    fireEvent.click(screen.getByText("FOCUS"));
+    expect(onToggleFullTimeline).toHaveBeenCalledOnce();
+  });
+
+  it("Focus button has active styling when focusRange exists", () => {
+    renderBottomBar(200, { isAdmin: true, focusRange: { inFrame: 10, outFrame: 100 } });
+    const btn = screen.getByText("Focus").closest("button")!;
+    expect(btn.className).toMatch(/focusBtnActive/);
   });
 });

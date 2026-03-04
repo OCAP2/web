@@ -551,6 +551,92 @@ describe("RecordingPlayback", () => {
     expect(blacklistCalls).toHaveLength(0);
   });
 
+  it("initializes focus range from recording metadata", async () => {
+    // Override fetch to return recording with focusStart/focusEnd
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              id: 42,
+              world_name: "Altis",
+              mission_name: "Op Alpha",
+              mission_duration: 3600,
+              filename: "test-42",
+              date: "2024-01-15",
+              storageFormat: "json",
+              focusStart: 50,
+              focusEnd: 250,
+            }),
+        });
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({}),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // The FOCUS toggle should appear since focusRange is set
+    await vi.waitFor(() => {
+      expect(screen.getByText("FOCUS")).toBeTruthy();
+    });
+  });
+
+  it("shows Focus button for admin users", async () => {
+    setAuthToken("test-token");
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              id: 42, world_name: "Altis", mission_name: "Op Alpha",
+              mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json",
+            }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // Admin should see the Focus button in the BottomBar
+    await vi.waitFor(() => {
+      expect(screen.getByText("Focus")).toBeTruthy();
+    });
+  });
+
   it("handles getRecording failure gracefully", async () => {
     // Override fetch to return 404 for getRecording
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
