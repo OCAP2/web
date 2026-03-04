@@ -3,7 +3,7 @@
 .settingsBtn {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-interactive);
   border: var(--border-subtle);
   color: var(--text-muted);
@@ -34,14 +34,14 @@
   background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 8px 6px;
   min-width: 260px;
   max-height: 70vh;
   overflow-y: auto;
   box-shadow: var(--shadow-dropdown);
-  z-index: 100;
+  z-index: var(--z-dropdown);
   animation: fadeIn 0.12s ease-out;
 }
 
@@ -57,7 +57,7 @@
 }
 
 .sectionBorder {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: var(--border-subtle);
   margin-top: 4px;
   padding-top: 8px;
 }
@@ -67,7 +67,7 @@
 .checkItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   width: 100%;
   padding: 5px 8px;
   border-radius: 4px;
@@ -116,7 +116,7 @@
 .radioItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   width: 100%;
   padding: 5px 8px;
   border-radius: 4px;
