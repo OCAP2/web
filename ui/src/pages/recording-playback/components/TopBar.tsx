@@ -1,16 +1,15 @@
 import { createSignal, createMemo, onCleanup, Show, For } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
-import { ArrowLeftIcon, LayersIcon, DownloadIcon, ShareIcon, InfoIcon } from "../../../components/Icons";
+import { ArrowLeftIcon, DownloadIcon, ShareIcon, InfoIcon } from "../../../components/Icons";
 import { AuthBadge } from "../../../components/AuthBadge";
 import { useEngine } from "../../../hooks/useEngine";
-import { useRenderer } from "../../../hooks/useRenderer";
 import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import type { Side, WorldConfig } from "../../../data/types";
-import type { RenderLayer } from "../../../renderers/renderer.types";
-import { useClickOutside } from "../../../hooks/useClickOutside";
 import { basePath } from "../../../data/basePath";
+import { ViewSettings } from "./ViewSettings";
+import type { TimeMode } from "../../../playback/time";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
@@ -20,6 +19,8 @@ export interface TopBarProps {
   recordingId: Accessor<string | null>;
   recordingFilename: Accessor<string | null>;
   worldConfig: Accessor<WorldConfig | undefined>;
+  timeMode: Accessor<TimeMode>;
+  onTimeMode: (mode: TimeMode) => void;
   onInfoClick?: () => void;
   onBack?: () => void;
 }
@@ -43,7 +44,6 @@ const SIDE_LABEL: Record<Side, string> = {
  */
 export function TopBar(props: TopBarProps): JSX.Element {
   const engine = useEngine();
-  const renderer = useRenderer();
   const customize = useCustomize();
   const { t } = useI18n();
 
@@ -64,33 +64,6 @@ export function TopBar(props: TopBarProps): JSX.Element {
       if (total > 0) stats.push({ side, alive, total });
     }
     return stats;
-  });
-
-  // ── Layer control ──
-
-  const [layersOpen, setLayersOpen] = createSignal(false);
-
-  let layerRef: HTMLDivElement | undefined;
-  useClickOutside(() => layerRef, setLayersOpen);
-
-  const toggleLayer = (key: string) => {
-    renderer.setLayerVisible(key as RenderLayer, !renderer.layerVisibility()[key]);
-  };
-
-  const isMapLibre = () => !!props.worldConfig()?.maplibre;
-
-  const layerItems = createMemo(() => {
-    const items: Array<{ key: string; label: string }> = [
-      { key: "entities", label: t("layer_entities") },
-      { key: "systemMarkers", label: t("layer_side_markers") },
-      { key: "projectileMarkers", label: t("layer_projectiles") },
-      { key: "grid", label: t("grid") },
-    ];
-    if (isMapLibre()) {
-      items.push({ key: "mapIcons", label: t("layer_map_icons") });
-      items.push({ key: "buildings3D", label: t("layer_buildings_3d") });
-    }
-    return items;
   });
 
   // ── Share ──
@@ -194,53 +167,12 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
         <div class={styles.divider} />
 
-        {/* Layer toggle */}
-        <div ref={layerRef} style={{ position: "relative" }}>
-          <button
-            class={styles.layerBtn}
-            title={t("layers")}
-            onClick={() => setLayersOpen((v) => !v)}
-          >
-            <LayersIcon size={16} />
-          </button>
-          <Show when={layersOpen()}>
-            <div class={styles.layerDropdown}>
-              <div class={styles.layerLabel}>{t("layers")}</div>
-              <For each={layerItems()}>
-                {(item) => {
-                  const active = () => !!renderer.layerVisibility()[item.key];
-                  return (
-                    <button
-                      class={styles.layerItem}
-                      onClick={() => toggleLayer(item.key)}
-                    >
-                      <div
-                        class={`${styles.layerCheckbox} ${
-                          active()
-                            ? styles.layerCheckboxActive
-                            : styles.layerCheckboxInactive
-                        }`}
-                      >
-                        <Show when={active()}>
-                          <div class={styles.layerCheckboxDot} />
-                        </Show>
-                      </div>
-                      <span
-                        class={`${styles.layerItemText} ${
-                          active()
-                            ? styles.layerItemTextActive
-                            : styles.layerItemTextInactive
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                }}
-              </For>
-            </div>
-          </Show>
-        </div>
+        {/* View Settings (layers + time/name/marker modes) */}
+        <ViewSettings
+          timeMode={props.timeMode}
+          onTimeMode={props.onTimeMode}
+          worldConfig={props.worldConfig}
+        />
 
         {/* Download */}
         <Show when={props.recordingId()}>

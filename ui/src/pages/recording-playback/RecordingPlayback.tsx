@@ -7,6 +7,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { PlaybackEngine } from "../../playback/engine";
 import { MarkerManager } from "../../playback/markerManager";
 import { formatElapsedTime } from "../../playback/time";
+import type { TimeMode } from "../../playback/time";
 import { LeafletRenderer } from "../../renderers/leaflet/leafletRenderer";
 import { CanvasLeafletRenderer } from "../../renderers/leaflet/canvasLeafletRenderer";
 import type { MapRenderer } from "../../renderers/renderer.interface";
@@ -68,6 +69,7 @@ export function RecordingPlayback(): JSX.Element {
   const [loading, setLoading] = createSignal(true);
   const [blacklist, setBlacklist] = createSignal<Set<number>>(new Set());
   const [markerCounts, setMarkerCounts] = createSignal<Map<number, number>>(new Map());
+  const [timeMode, setTimeMode] = createSignal<TimeMode>("elapsed");
 
   const locState = () => location.state as LocationState | undefined;
 
@@ -167,6 +169,8 @@ export function RecordingPlayback(): JSX.Element {
           recordingId={recordingId}
           recordingFilename={recordingFilename}
           worldConfig={worldConfig}
+          timeMode={timeMode}
+          onTimeMode={setTimeMode}
           onInfoClick={() => setAboutOpen(true)}
           onBack={() => navigate("/")}
         />
@@ -183,6 +187,7 @@ export function RecordingPlayback(): JSX.Element {
         <BottomBar
           panelOpen={leftPanelVisible}
           onTogglePanel={() => setLeftPanelVisible((v) => !v)}
+          timeMode={timeMode}
         />
         <MapControls />
         <CounterDisplay />

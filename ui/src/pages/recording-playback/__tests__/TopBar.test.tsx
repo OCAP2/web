@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { TopBar } from "../components/TopBar";
 import type { WorldConfig } from "../../../data/types";
+import type { TimeMode } from "../../../playback/time";
 import {
   createTestEngine,
   TestProviders,
@@ -25,6 +26,8 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
   const [worldConfig] = createSignal<WorldConfig | undefined>(undefined);
   const onInfoClick = vi.fn();
   const onBack = vi.fn();
+  const [timeMode, setTimeMode] = createSignal<TimeMode>("elapsed");
+  const onTimeMode = vi.fn((mode: TimeMode) => setTimeMode(mode));
 
   const props = {
     missionName,
@@ -33,6 +36,8 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
     recordingId,
     recordingFilename,
     worldConfig,
+    timeMode,
+    onTimeMode,
     onInfoClick,
     onBack,
     ...overrides,
@@ -130,7 +135,7 @@ describe("TopBar", () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it("layer dropdown opens on click", () => {
+  it("view settings panel opens on click", () => {
     const { engine, renderer, props } = renderTopBar();
     engine.loadRecording(makeManifest([]));
 
@@ -144,7 +149,7 @@ describe("TopBar", () => {
     expect(screen.queryByText("Units & vehicles")).toBeNull();
 
     // Click the layers button
-    const layerBtn = screen.getByTitle("Layers");
+    const layerBtn = screen.getByTitle("View Settings");
     fireEvent.click(layerBtn);
 
     // Dropdown should now show layer items
@@ -166,7 +171,7 @@ describe("TopBar", () => {
     ));
 
     // Open layer dropdown
-    fireEvent.click(screen.getByTitle("Layers"));
+    fireEvent.click(screen.getByTitle("View Settings"));
 
     // Click "Units & vehicles" to toggle it off (default is on)
     fireEvent.click(screen.getByText("Units & vehicles"));
@@ -195,7 +200,7 @@ describe("TopBar", () => {
       </TestProviders>
     ));
 
-    fireEvent.click(screen.getByTitle("Layers"));
+    fireEvent.click(screen.getByTitle("View Settings"));
 
     // MapLibre-specific layers should appear
     expect(screen.getByText("Map icons")).toBeTruthy();

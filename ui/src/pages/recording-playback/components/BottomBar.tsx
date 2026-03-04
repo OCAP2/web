@@ -1,7 +1,6 @@
-import { createSignal, Show } from "solid-js";
+import { Show } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
-import { useRenderer } from "../../../hooks/useRenderer";
 import { useI18n } from "../../../hooks/useLocale";
 import { formatTime } from "../../../playback/time";
 import type { TimeMode } from "../../../playback/time";
@@ -27,60 +26,20 @@ import styles from "./BottomBar.module.css";
 export interface BottomBarProps {
   panelOpen: Accessor<boolean>;
   onTogglePanel: () => void;
+  timeMode: Accessor<TimeMode>;
 }
 
 const SPEEDS = ["1", "2", "5", "10", "20", "30", "60"];
 
-type NameMode = "all" | "players" | "none";
-const NAME_MODES: NameMode[] = ["all", "players", "none"];
-const NAME_MODE_KEYS: Record<NameMode, string> = {
-  all: "names_all",
-  players: "names_players",
-  none: "names_none",
-};
-
-type MarkerMode = "all" | "noLabels" | "none";
-const MARKER_MODES: MarkerMode[] = ["all", "noLabels", "none"];
-const MARKER_MODE_KEYS: Record<MarkerMode, string> = {
-  all: "markers_all",
-  noLabels: "markers_no_labels",
-  none: "markers_none",
-};
-
-const TIME_MODES: TimeMode[] = ["elapsed", "mission", "system"];
-const TIME_MODE_KEYS: Record<TimeMode, string> = {
-  elapsed: "time_elapsed",
-  mission: "time_mission",
-  system: "time_system",
-};
-
 export function BottomBar(props: BottomBarProps): JSX.Element {
   const engine = useEngine();
-  const renderer = useRenderer();
   const { t } = useI18n();
 
-  // ── Time display ──
-  const [timeMode, setTimeMode] = createSignal<TimeMode>("elapsed");
-
   const currentTime = () =>
-    formatTime(engine.currentFrame(), timeMode(), engine.timeConfig);
+    formatTime(engine.currentFrame(), props.timeMode(), engine.timeConfig);
 
   const totalTime = () =>
-    formatTime(engine.endFrame(), timeMode(), engine.timeConfig);
-
-  const isTimeModeAvailable = (mode: TimeMode): boolean => {
-    if (mode === "elapsed") return true;
-    if (mode === "system") {
-      const times = engine.timeConfig.times;
-      return !!times && times.length > 0;
-    }
-    if (mode === "mission") {
-      return !!engine.timeConfig.missionDate;
-    }
-    return false;
-  };
-
-  // ── Names / Markers — read directly from renderer signals ──
+    formatTime(engine.endFrame(), props.timeMode(), engine.timeConfig);
 
   return (
     <div class={styles.bottomBar}>
@@ -160,38 +119,13 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           </button>
         </div>
 
-        {/* Right: Speed, time mode, names, markers */}
+        {/* Right: Speed */}
         <div class={styles.controlsRight}>
           <SelectDropdown
             value={() => String(engine.playbackSpeed())}
             options={SPEEDS}
             getLabel={(s) => `${s}x`}
             onSelect={(s) => engine.setSpeed(Number(s))}
-          />
-
-          <SelectDropdown<TimeMode>
-            value={timeMode}
-            options={TIME_MODES}
-            getLabel={(m) => t(TIME_MODE_KEYS[m])}
-            onSelect={setTimeMode}
-            isDisabled={(m) => !isTimeModeAvailable(m)}
-            wide
-          />
-
-          <SelectDropdown<NameMode>
-            value={renderer.nameDisplayMode}
-            options={NAME_MODES}
-            getLabel={(m) => t(NAME_MODE_KEYS[m])}
-            onSelect={(m) => renderer.setNameDisplayMode(m)}
-            wide
-          />
-
-          <SelectDropdown<MarkerMode>
-            value={renderer.markerDisplayMode}
-            options={MARKER_MODES}
-            getLabel={(m) => t(MARKER_MODE_KEYS[m])}
-            onSelect={(m) => renderer.setMarkerDisplayMode(m)}
-            wide
           />
         </div>
       </div>
