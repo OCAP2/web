@@ -21,6 +21,7 @@ function renderBottomBar(frameCount = 200, opts?: {
   focusRange?: FocusRange | null;
   editingFocus?: boolean;
   isAdmin?: boolean;
+  showFullTimeline?: boolean;
 }) {
   const { engine, renderer } = createTestEngine();
   engine.loadRecording(makeManifest([], [], frameCount));
@@ -31,7 +32,7 @@ function renderBottomBar(frameCount = 200, opts?: {
   const [focusRange] = createSignal<FocusRange | null>(opts?.focusRange ?? null);
   const [editingFocus] = createSignal(opts?.editingFocus ?? false);
   const [focusDraft] = createSignal<FocusRange | null>(opts?.editingFocus ? (opts?.focusRange ?? { inFrame: 0, outFrame: 199 }) : null);
-  const [showFullTimeline] = createSignal(false);
+  const [showFullTimeline] = createSignal(opts?.showFullTimeline ?? false);
   const [isAdmin] = createSignal(opts?.isAdmin ?? false);
 
   const onStartFocusEdit = vi.fn();
@@ -202,6 +203,20 @@ describe("BottomBar", () => {
     renderBottomBar(200, { isAdmin: true, focusRange: { inFrame: 10, outFrame: 100 } });
     const btn = screen.getByText("Focus").closest("button")!;
     expect(btn.className).toMatch(/focusBtnActive/);
+  });
+
+  it("shows FULL text when showFullTimeline is true and focusRange exists", () => {
+    renderBottomBar(200, { focusRange: { inFrame: 10, outFrame: 100 }, showFullTimeline: true });
+    expect(screen.getByText("FULL")).toBeTruthy();
+    expect(screen.queryByText("FOCUS")).toBeNull();
+  });
+
+  it("passes null focusRange to scrubber when showFullTimeline is true", () => {
+    // When showFullTimeline is true, the scrubber should NOT show focus overlays
+    renderBottomBar(200, { focusRange: { inFrame: 10, outFrame: 100 }, showFullTimeline: true });
+    const track = screen.getByTestId("scrubber-track");
+    // No dim overlays since focusRange is null for the scrubber
+    expect(track.querySelector('[class*="focusDimOverlay"]')).toBeNull();
   });
 
   it("prev-kill button seeks to previous kill event", () => {

@@ -939,6 +939,38 @@ describe("RecordingPlayback", () => {
     });
   });
 
+  it("FOCUS toggle switches to FULL and shows full timeline", async () => {
+    // Return recording with focus range so FOCUS toggle appears
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          json: () => Promise.resolve({
+            id: 42, world_name: "Altis", mission_name: "Op Alpha",
+            mission_duration: 3600, filename: "test-42", date: "2024-01-15",
+            storageFormat: "json", focusStart: 10, focusEnd: 80,
+          }),
+        });
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // FOCUS toggle should appear
+    await vi.waitFor(() => expect(screen.getByText("FOCUS")).toBeTruthy());
+
+    // Click FOCUS to switch to full timeline
+    fireEvent.click(screen.getByText("FOCUS"));
+
+    // Should now show FULL
+    await vi.waitFor(() => expect(screen.getByText("FULL")).toBeTruthy());
+  });
+
   it("handles getRecording failure gracefully", async () => {
     // Override fetch to return 404 for getRecording
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
