@@ -255,6 +255,7 @@
 /* ── Filter bar ── */
 .filterBar {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   padding-bottom: 16px;
@@ -263,6 +264,7 @@
 
 .searchWrap {
   flex: 1;
+  min-width: 200px;
   max-width: 400px;
   position: relative;
   display: flex;
@@ -1347,10 +1349,6 @@
 
 /* ── Responsive ── */
 @media (max-width: 1200px) {
-  .filterBar {
-    flex-wrap: wrap;
-  }
-
   .searchWrap {
     max-width: 300px;
   }
