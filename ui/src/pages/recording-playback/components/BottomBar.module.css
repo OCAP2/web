@@ -204,4 +204,35 @@
   box-shadow: none;
 }
 
+/* ─── Speed Strip ─── */
 
+.speedStrip {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: var(--bg-interactive);
+  border-radius: 5px;
+  padding: 2px;
+  border: var(--border-subtle);
+}
+
+.speedBtn {
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  min-width: 28px;
+  text-align: center;
+  transition: all 0.12s;
+  background: transparent;
+  color: var(--text-dimmer);
+}
+
+.speedBtnActive {
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
+  font-weight: 700;
+}

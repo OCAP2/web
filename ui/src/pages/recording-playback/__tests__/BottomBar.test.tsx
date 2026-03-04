@@ -90,22 +90,20 @@ describe("BottomBar", () => {
     expect(onTogglePanel).toHaveBeenCalledOnce();
   });
 
-  it("shows speed display text (default '10x')", () => {
+  it("shows speed strip with default 10x active", () => {
     renderBottomBar();
 
-    expect(screen.getByText("10x")).toBeTruthy();
+    // All speed buttons are visible inline
+    expect(screen.getByText("1×")).toBeTruthy();
+    expect(screen.getByText("10×")).toBeTruthy();
+    expect(screen.getByText("60×")).toBeTruthy();
   });
 
-  it("speed selector changes engine speed", () => {
+  it("speed strip button changes engine speed", () => {
     const { engine } = renderBottomBar();
 
-    // Click the speed button to open the popup
-    const speedButton = screen.getByText("10x").closest("button")!;
-    fireEvent.click(speedButton);
-
-    // Select a different speed
-    const option5x = screen.getByText("5x");
-    fireEvent.click(option5x);
+    // Click a speed button directly (no popup needed)
+    fireEvent.click(screen.getByText("5×"));
 
     expect(engine.playbackSpeed()).toBe(5);
   });

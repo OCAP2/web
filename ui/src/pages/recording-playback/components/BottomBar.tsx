@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { useI18n } from "../../../hooks/useLocale";
@@ -20,7 +20,6 @@ import {
   seekToNextKill,
 } from "../shortcuts";
 import { TimelineScrubber } from "./TimelineScrubber";
-import { SelectDropdown } from "../../../components/SelectDropdown";
 import styles from "./BottomBar.module.css";
 
 export interface BottomBarProps {
@@ -29,7 +28,7 @@ export interface BottomBarProps {
   timeMode: Accessor<TimeMode>;
 }
 
-const SPEEDS = ["1", "2", "5", "10", "20", "30", "60"];
+const SPEEDS = [1, 2, 5, 10, 20, 60];
 
 export function BottomBar(props: BottomBarProps): JSX.Element {
   const engine = useEngine();
@@ -119,14 +118,21 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           </button>
         </div>
 
-        {/* Right: Speed */}
+        {/* Right: Speed strip */}
         <div class={styles.controlsRight}>
-          <SelectDropdown
-            value={() => String(engine.playbackSpeed())}
-            options={SPEEDS}
-            getLabel={(s) => `${s}x`}
-            onSelect={(s) => engine.setSpeed(Number(s))}
-          />
+          <div class={styles.speedStrip}>
+            <For each={SPEEDS}>
+              {(s) => (
+                <button
+                  class={styles.speedBtn}
+                  classList={{ [styles.speedBtnActive]: engine.playbackSpeed() === s }}
+                  onClick={() => engine.setSpeed(s)}
+                >
+                  {s}&times;
+                </button>
+              )}
+            </For>
+          </div>
         </div>
       </div>
     </div>
