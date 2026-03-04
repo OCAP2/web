@@ -2552,7 +2552,7 @@ func TestStoreOperation_WithFocusRange(t *testing.T) {
 
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { require.NoError(t, repo.db.Close()) }()
 
 	hdlr := Handler{
 		repoOperation: repo,
@@ -2574,9 +2574,10 @@ func TestStoreOperation_WithFocusRange(t *testing.T) {
 	fw, err := writer.CreateFormFile("file", "focus_test.json.gz")
 	require.NoError(t, err)
 	gw := gzip.NewWriter(fw)
-	gw.Write([]byte("{}"))
-	gw.Close()
-	writer.Close()
+	_, err = gw.Write([]byte("{}"))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)

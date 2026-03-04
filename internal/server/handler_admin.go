@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -51,13 +52,19 @@ func decodeEditRequest(c echo.Context) (editOperationRequest, error) {
 
 	// Decode standard string fields from the raw map
 	if v, ok := rawMap["missionName"]; ok {
-		json.Unmarshal(v, &req.MissionName)
+		if err := json.Unmarshal(v, &req.MissionName); err != nil {
+			return req, fmt.Errorf("invalid missionName: %w", err)
+		}
 	}
 	if v, ok := rawMap["tag"]; ok {
-		json.Unmarshal(v, &req.Tag)
+		if err := json.Unmarshal(v, &req.Tag); err != nil {
+			return req, fmt.Errorf("invalid tag: %w", err)
+		}
 	}
 	if v, ok := rawMap["date"]; ok {
-		json.Unmarshal(v, &req.Date)
+		if err := json.Unmarshal(v, &req.Date); err != nil {
+			return req, fmt.Errorf("invalid date: %w", err)
+		}
 	}
 
 	// Track focus field presence (key exists in JSON, even if value is null)

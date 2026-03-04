@@ -20,6 +20,10 @@ const (
 	ConversionStatusFailed     = "failed"
 )
 
+// operationColumns is the canonical SELECT column list for the operations table.
+// Every query that feeds into scan() must use this exact list.
+const operationColumns = `id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end`
+
 // SideCounts holds per-side breakdown of units, players, casualties, and kills.
 type SideCounts struct {
 	Players int `json:"players"`
@@ -309,7 +313,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 
 	query := `
 		SELECT
-			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+			` + operationColumns + `
 		FROM
 			operations
 		WHERE
@@ -372,7 +376,7 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 // GetByID retrieves a single operation by its ID
 func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations WHERE id = ?`, id)
 
 	var op Operation
@@ -390,7 +394,7 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 // GetByFilename retrieves a single operation by its filename
 func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations WHERE filename = ?`, filename)
 
 	var op Operation
@@ -408,7 +412,7 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 // SelectPending returns operations with pending conversion status
 func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations
 		 WHERE conversion_status = 'pending'
 		 ORDER BY id ASC
@@ -424,7 +428,7 @@ func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operati
 // SelectAll returns all operations for conversion
 func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations
 		 ORDER BY id ASC`)
 	if err != nil {
@@ -438,7 +442,7 @@ func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 // SelectByStatus returns operations with a specific conversion status
 func (r *RepoOperation) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations
 		 WHERE conversion_status = ?
 		 ORDER BY id ASC`, status)
@@ -564,7 +568,7 @@ func unmarshalSideComposition(raw string) SideComposition {
 // SelectStatsBackfill returns completed protobuf operations that have no stats yet
 func (r *RepoOperation) SelectStatsBackfill(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
+		`SELECT ` + operationColumns + `
 		 FROM operations
 		 WHERE conversion_status = 'completed' AND player_count = 0
 		 ORDER BY id ASC`)

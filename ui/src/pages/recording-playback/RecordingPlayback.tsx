@@ -215,7 +215,8 @@ export function RecordingPlayback(): JSX.Element {
     try {
       await api.editRecording(rid, { focusStart: draft.inFrame, focusEnd: draft.outFrame });
       setFocusRange({ ...draft });
-    } catch {
+    } catch (e) {
+      console.error("Failed to save focus range:", e);
       return;
     }
     setEditingFocus(false);
@@ -233,7 +234,8 @@ export function RecordingPlayback(): JSX.Element {
     try {
       await api.editRecording(rid, { focusStart: null, focusEnd: null });
       setFocusRange(null);
-    } catch {
+    } catch (e) {
+      console.error("Failed to clear focus range:", e);
       return;
     }
     setEditingFocus(false);
