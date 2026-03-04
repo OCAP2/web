@@ -94,9 +94,16 @@ describe("BottomBar", () => {
     renderBottomBar();
 
     // All speed buttons are visible inline
-    expect(screen.getByText("1×")).toBeTruthy();
-    expect(screen.getByText("10×")).toBeTruthy();
-    expect(screen.getByText("60×")).toBeTruthy();
+    for (const speed of [1, 2, 5, 10, 20, 60]) {
+      expect(screen.getByText(`${speed}×`)).toBeTruthy();
+    }
+
+    // Default speed (10x) has active class, others don't
+    const activeBtn = screen.getByText("10×").closest("button")!;
+    expect(activeBtn.className).toMatch(/speedBtnActive/);
+
+    const inactiveBtn = screen.getByText("5×").closest("button")!;
+    expect(inactiveBtn.className).not.toMatch(/speedBtnActive/);
   });
 
   it("speed strip button changes engine speed", () => {
