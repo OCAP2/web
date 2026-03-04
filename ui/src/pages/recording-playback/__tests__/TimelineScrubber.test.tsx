@@ -566,7 +566,7 @@ describe("TimelineScrubber (hover tooltip deduplication)", () => {
     expect(tooltipEvents.length).toBe(1);
   });
 
-  it("caps each event type at 5 so other types remain visible", () => {
+  it("caps each event type at 3 so other types remain visible", () => {
     const entities = [
       unitDef({ id: 1, name: "Attacker", side: "EAST", endFrame: 99 }),
       ...Array.from({ length: 8 }, (_, i) =>
@@ -595,6 +595,44 @@ describe("TimelineScrubber (hover tooltip deduplication)", () => {
     const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
     // 3 kills (capped) + 1 connect = 4, not 8+1=9
     expect(tooltipEvents.length).toBe(4);
+  });
+
+  it("enforces hard cap of 8 total entries across all types", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Attacker", side: "EAST", endFrame: 99 }),
+      ...Array.from({ length: 3 }, (_, i) =>
+        unitDef({ id: 10 + i, name: `KillVictim${i}`, side: "WEST", endFrame: 99 }),
+      ),
+      ...Array.from({ length: 3 }, (_, i) =>
+        unitDef({ id: 20 + i, name: `HitVictim${i}`, side: "WEST", endFrame: 99 }),
+      ),
+    ];
+    // 3 kills (at cap) + 3 hits (at cap) + 3 connects = 9, should be capped at 8
+    const events = [
+      ...Array.from({ length: 3 }, (_, i) =>
+        killedEvent(50, 10 + i, 1, "AK-47", 100),
+      ),
+      ...Array.from({ length: 3 }, (_, i) =>
+        hitEvent(50, 20 + i, 1, "AK-47", 50),
+      ),
+      connectEvent(50, "connected", "Player1"),
+      connectEvent(50, "connected", "Player2"),
+      connectEvent(50, "connected", "Player3"),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    expect(tooltipEvents.length).toBe(8);
   });
 
   it("shows different victims as separate entries", () => {
