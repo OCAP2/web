@@ -736,6 +736,39 @@ func TestEditOperation_PreservesFocusRange(t *testing.T) {
 	assert.Equal(t, int64(100), *updated.FocusEnd)
 }
 
+func TestEditOperation_InvalidFieldTypes(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"invalid missionName type", `{"missionName": 123}`},
+		{"invalid tag type", `{"tag": []}`},
+		{"invalid date type", `{"date": {"nested": true}}`},
+		{"invalid focusStart type", `{"focusStart": "not-a-number"}`},
+		{"invalid focusEnd type", `{"focusEnd": ["array"]}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hdlr, op := setupAdminTest(t)
+			token, err := hdlr.jwt.Create("")
+			require.NoError(t, err)
+
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+token)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("id")
+			c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+			err = hdlr.EditOperation(c)
+			assert.Error(t, err, "expected error for %s", tt.name)
+		})
+	}
+}
+
 func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")

@@ -328,3 +328,86 @@ describe("TimelineScrubber", () => {
     expect(track.querySelector('[class*="hoverLine"]')).toBeNull();
   });
 });
+
+function renderConstrainedScrubber(
+  focusRange: FocusRange,
+  entities = [unitDef({ id: 1, name: "V", side: "WEST", endFrame: 99 }), unitDef({ id: 2, name: "K", side: "EAST", endFrame: 99 })],
+  events: Parameters<typeof makeManifest>[1] = [],
+  frameCount = 100,
+) {
+  const { engine, renderer } = createTestEngine();
+  engine.loadRecording(makeManifest(entities, events, frameCount));
+
+  const [focusSignal] = createSignal<FocusRange | null>(focusRange);
+  const [editingFocus] = createSignal(false);
+  const [focusDraft] = createSignal<FocusRange | null>(null);
+  const onDraftChange = vi.fn();
+
+  const result = render(() => (
+    <TestProviders engine={engine} renderer={renderer}>
+      <TimelineScrubber
+        focusRange={focusSignal}
+        editingFocus={editingFocus}
+        focusDraft={focusDraft}
+        onDraftChange={onDraftChange}
+        constrainToFocus={() => true}
+      />
+    </TestProviders>
+  ));
+
+  return { engine, renderer, ...result };
+}
+
+describe("TimelineScrubber (constrained mode)", () => {
+  it("progress maps to focus range when constrained", () => {
+    // Focus range 20-80 on 100-frame recording, seek to frame 50 = midpoint = 50%
+    const { engine } = renderConstrainedScrubber({ inFrame: 20, outFrame: 80 });
+    engine.seekTo(50);
+
+    const progress = screen.getByTestId("scrubber-progress");
+    const width = parseFloat(progress.style.width);
+    // (50-20)/(80-20)*100 = 50%
+    expect(width).toBeCloseTo(50, 0);
+  });
+
+  it("progress at focus inFrame is 0%", () => {
+    const { engine } = renderConstrainedScrubber({ inFrame: 20, outFrame: 80 });
+    engine.seekTo(20);
+
+    const progress = screen.getByTestId("scrubber-progress");
+    const width = parseFloat(progress.style.width);
+    expect(width).toBeCloseTo(0, 0);
+  });
+
+  it("progress at focus outFrame is 100%", () => {
+    const { engine } = renderConstrainedScrubber({ inFrame: 20, outFrame: 80 });
+    engine.seekTo(80);
+
+    const progress = screen.getByTestId("scrubber-progress");
+    const width = parseFloat(progress.style.width);
+    expect(width).toBeCloseTo(100, 0);
+  });
+
+  it("does not render focus dim overlays when constrained", () => {
+    renderConstrainedScrubber({ inFrame: 20, outFrame: 80 });
+    const track = screen.getByTestId("scrubber-track");
+    expect(track.querySelector('[class*="focusDimOverlay"]')).toBeNull();
+  });
+
+  it("filters kill markers outside focus range", () => {
+    const entities = [
+      unitDef({ id: 1, name: "V", side: "WEST", endFrame: 99 }),
+      unitDef({ id: 2, name: "K", side: "EAST", endFrame: 99 }),
+    ];
+    const events = [
+      killedEvent(10, 1, 2, "AK", 100),  // outside range (before 20)
+      killedEvent(50, 2, 1, "M4", 200),   // inside range
+    ];
+
+    renderConstrainedScrubber({ inFrame: 20, outFrame: 80 }, entities, events, 100);
+
+    // Only the event at frame 50 should render (frame 10 is outside 20-80)
+    const markers = screen.queryAllByTestId("event-marker");
+    expect(markers.length).toBe(1);
+  });
+});
