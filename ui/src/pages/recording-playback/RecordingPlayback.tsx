@@ -114,12 +114,27 @@ export function RecordingPlayback(): JSX.Element {
 
   useRenderBridge(engine, renderer, markerManager);
 
+  // ─── Focus editing callbacks (defined before onMount so shortcuts can reference them) ───
+
+  const setFocusIn = () => {
+    setFocusDraft((d) => d ? { ...d, inFrame: Math.min(engine.currentFrame(), d.outFrame - 1) } : d);
+  };
+
+  const setFocusOut = () => {
+    setFocusDraft((d) => d ? { ...d, outFrame: Math.max(engine.currentFrame(), d.inFrame + 1) } : d);
+  };
+
+  const cancelFocus = () => {
+    setEditingFocus(false);
+    setFocusDraft(null);
+  };
+
   onMount(() => {
     registerShortcuts(engine);
     setFocusShortcutCallbacks({
-      onSetIn: () => setFocusDraft((d) => d ? { ...d, inFrame: Math.min(engine.currentFrame(), d.outFrame - 1) } : d),
-      onSetOut: () => setFocusDraft((d) => d ? { ...d, outFrame: Math.max(engine.currentFrame(), d.inFrame + 1) } : d),
-      onCancel: () => { setEditingFocus(false); setFocusDraft(null); },
+      onSetIn: setFocusIn,
+      onSetOut: setFocusOut,
+      onCancel: cancelFocus,
     });
 
     const id = decodeURIComponent(params.id);
@@ -194,18 +209,20 @@ export function RecordingPlayback(): JSX.Element {
   createEffect(() => {
     if (!focusConstrained()) return;
     const frame = engine.currentFrame();
-    const range = focusRange()!;
+    const range = focusRange();
+    if (!range) return;
     if (frame >= range.outFrame && engine.isPlaying()) {
       engine.pause();
       engine.seekTo(range.outFrame);
     }
   });
 
-  // ─── Focus editing callbacks ───
+  // ─── Focus editing actions (start / save / clear) ───
 
   const startFocusEdit = () => {
     setEditingFocus(true);
-    setFocusDraft(focusRange() ? { ...focusRange()! } : { inFrame: 0, outFrame: engine.endFrame() });
+    const current = focusRange();
+    setFocusDraft(current ? { ...current } : { inFrame: 0, outFrame: engine.endFrame() });
   };
 
   const saveFocus = async () => {
@@ -223,11 +240,6 @@ export function RecordingPlayback(): JSX.Element {
     setFocusDraft(null);
   };
 
-  const cancelFocus = () => {
-    setEditingFocus(false);
-    setFocusDraft(null);
-  };
-
   const clearFocus = async () => {
     const rid = recordingId();
     if (!rid) return;
@@ -240,14 +252,6 @@ export function RecordingPlayback(): JSX.Element {
     }
     setEditingFocus(false);
     setFocusDraft(null);
-  };
-
-  const setFocusIn = () => {
-    setFocusDraft((d) => d ? { ...d, inFrame: Math.min(engine.currentFrame(), d.outFrame - 1) } : d);
-  };
-
-  const setFocusOut = () => {
-    setFocusDraft((d) => d ? { ...d, outFrame: Math.max(engine.currentFrame(), d.inFrame + 1) } : d);
   };
 
   return (

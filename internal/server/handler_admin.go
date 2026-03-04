@@ -126,6 +126,11 @@ func (h *Handler) EditOperation(c echo.Context) error {
 		focusEnd = val
 	}
 
+	// Validate focus range ordering: start must be before end
+	if focusStart != nil && focusEnd != nil && *focusStart >= *focusEnd {
+		return echo.ErrBadRequest
+	}
+
 	if err := h.repoOperation.UpdateOperation(c.Request().Context(), id, name, tag, date, focusStart, focusEnd); err != nil {
 		return err
 	}

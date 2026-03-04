@@ -362,6 +362,11 @@ func (h *Handler) StoreOperation(c echo.Context) error {
 		op.FocusEnd = &v
 	}
 
+	// Validate focus range ordering: start must be before end
+	if op.FocusStart != nil && op.FocusEnd != nil && *op.FocusStart >= *op.FocusEnd {
+		return echo.ErrBadRequest
+	}
+
 	if err = h.repoOperation.Store(ctx, &op); err != nil {
 		return err
 	}

@@ -736,6 +736,26 @@ func TestEditOperation_PreservesFocusRange(t *testing.T) {
 	assert.Equal(t, int64(100), *updated.FocusEnd)
 }
 
+func TestEditOperation_InvertedFocusRange(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+	token, err := hdlr.jwt.Create("")
+	require.NoError(t, err)
+
+	e := echo.New()
+	// focusStart > focusEnd — this is an invalid range
+	body := `{"focusStart":420,"focusEnd":50}`
+	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+	err = hdlr.EditOperation(c)
+	assert.Error(t, err, "inverted focus range should be rejected")
+}
+
 func TestEditOperation_InvalidFieldTypes(t *testing.T) {
 	tests := []struct {
 		name string
