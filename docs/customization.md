@@ -42,6 +42,7 @@ Return ALL of these keys with appropriate values:
 --accent-success          Success/positive state color
 --accent-success-dark     Darker success variant
 --accent-warning          Warning/caution color
+--accent-focus            Focus range accent (handles, toolbar, toggle)
 --text-primary            Brightest text (headings, body)
 --text-secondary          Slightly dimmer text
 --text-muted              Muted labels, placeholders
@@ -70,6 +71,7 @@ This is the built-in blue theme. Your output should differ from this:
   "--accent-success": "#2DD4A0",
   "--accent-success-dark": "#1a9a74",
   "--accent-warning": "#FFB84A",
+  "--accent-focus": "#D4A843",
   "--text-primary": "#e5ebf1",
   "--text-secondary": "#cfd9e4",
   "--text-muted": "#96a7b8",
@@ -183,7 +185,8 @@ You only need to override the variables you want to change — everything else k
       "--bg-surface-hover": "#3a4a3a",
       "--bg-interactive": "rgba(255, 255, 255, 0.04)",
       "--bg-interactive-hover": "rgba(255, 255, 255, 0.08)",
-      "--bg-modal-header": "rgba(107, 142, 35, 0.9)"
+      "--bg-modal-header": "rgba(107, 142, 35, 0.9)",
+      "--accent-focus": "#B8962E"
     }
   }
 }
@@ -217,7 +220,8 @@ You only need to override the variables you want to change — everything else k
       "--bg-surface-hover": "#2A2A2F",
       "--bg-interactive": "rgba(212, 106, 46, 0.06)",
       "--bg-interactive-hover": "rgba(212, 106, 46, 0.12)",
-      "--bg-modal-header": "rgba(180, 80, 30, 0.85)"
+      "--bg-modal-header": "rgba(180, 80, 30, 0.85)",
+      "--accent-focus": "#C44040"
     }
   }
 }
@@ -265,6 +269,7 @@ Every field can also be set via environment variables with the `OCAP_` prefix. E
 | `--accent-warning` | `#FFB84A` | Warning indicators |
 | `--accent-danger` | `#FF4A4A` | Error states, delete actions |
 | `--accent-danger-dark` | `#CC3333` | Hover states for danger elements |
+| `--accent-focus` | `#D4A843` | Focus range UI (handles, toolbar, toggle) |
 
 ### CSS Variables — Text Colors
 
