@@ -258,9 +258,9 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 
 	query := `
 		INSERT INTO operations
-			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count)
+			(world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`
 	result, err := r.db.ExecContext(
 		ctx,
@@ -279,6 +279,8 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		operation.KillCount,
 		sideJSON,
 		operation.PlayerKillCount,
+		operation.FocusStart,
+		operation.FocusEnd,
 	)
 	if err != nil {
 		return err
@@ -307,7 +309,7 @@ func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation,
 
 	query := `
 		SELECT
-			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+			id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		FROM
 			operations
 		WHERE
@@ -355,6 +357,8 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 			&o.KillCount,
 			&sideRaw,
 			&o.PlayerKillCount,
+			&o.FocusStart,
+			&o.FocusEnd,
 		)
 		if err != nil {
 			return nil, err
@@ -368,14 +372,14 @@ func (*RepoOperation) scan(ctx context.Context, rows *sql.Rows) ([]Operation, er
 // GetByID retrieves a single operation by its ID
 func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations WHERE id = ?`, id)
 
 	var op Operation
 	var sideRaw string
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
 		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount,
-		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount)
+		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount, &op.FocusStart, &op.FocusEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -386,14 +390,14 @@ func (r *RepoOperation) GetByID(ctx context.Context, id string) (*Operation, err
 // GetByFilename retrieves a single operation by its filename
 func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Operation, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations WHERE filename = ?`, filename)
 
 	var op Operation
 	var sideRaw string
 	err := row.Scan(&op.ID, &op.WorldName, &op.MissionName, &op.MissionDuration,
 		&op.Filename, &op.Date, &op.Tag, &op.StorageFormat, &op.ConversionStatus, &op.SchemaVersion, &op.ChunkCount,
-		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount)
+		&op.PlayerCount, &op.KillCount, &sideRaw, &op.PlayerKillCount, &op.FocusStart, &op.FocusEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +408,7 @@ func (r *RepoOperation) GetByFilename(ctx context.Context, filename string) (*Op
 // SelectPending returns operations with pending conversion status
 func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations
 		 WHERE conversion_status = 'pending'
 		 ORDER BY id ASC
@@ -420,7 +424,7 @@ func (r *RepoOperation) SelectPending(ctx context.Context, limit int) ([]Operati
 // SelectAll returns all operations for conversion
 func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations
 		 ORDER BY id ASC`)
 	if err != nil {
@@ -434,7 +438,7 @@ func (r *RepoOperation) SelectAll(ctx context.Context) ([]Operation, error) {
 // SelectByStatus returns operations with a specific conversion status
 func (r *RepoOperation) SelectByStatus(ctx context.Context, status string) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations
 		 WHERE conversion_status = ?
 		 ORDER BY id ASC`, status)
@@ -560,7 +564,7 @@ func unmarshalSideComposition(raw string) SideComposition {
 // SelectStatsBackfill returns completed protobuf operations that have no stats yet
 func (r *RepoOperation) SelectStatsBackfill(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count
+		`SELECT id, world_name, mission_name, mission_duration, filename, date, tag, storage_format, conversion_status, schema_version, chunk_count, player_count, kill_count, side_composition, player_kill_count, focus_start, focus_end
 		 FROM operations
 		 WHERE conversion_status = 'completed' AND player_count = 0
 		 ORDER BY id ASC`)
