@@ -170,6 +170,8 @@ export interface Recording {
   killCount?: number;
   playerKillCount?: number;
   sideComposition?: Record<string, { players: number; units: number; dead: number; kills: number }>;
+  focusStart?: number;
+  focusEnd?: number;
 }
 
 /** Per-world map configuration (from map.json). */

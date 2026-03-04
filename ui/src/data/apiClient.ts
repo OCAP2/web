@@ -57,6 +57,8 @@ interface RawRecording {
   kill_count?: number;
   player_kill_count?: number;
   side_composition?: Record<string, { players: number; units: number; dead: number; kills: number }>;
+  focusStart?: number;
+  focusEnd?: number;
 }
 
 function mapRecording(raw: RawRecording): Recording {
@@ -76,6 +78,8 @@ function mapRecording(raw: RawRecording): Recording {
     killCount: raw.kill_count,
     playerKillCount: raw.player_kill_count,
     sideComposition: raw.side_composition,
+    focusStart: raw.focusStart ?? undefined,
+    focusEnd: raw.focusEnd ?? undefined,
   };
 }
 
@@ -351,7 +355,7 @@ export class ApiClient {
 
   async editRecording(
     id: string,
-    data: { missionName?: string; tag?: string; date?: string },
+    data: { missionName?: string; tag?: string; date?: string; focusStart?: number | null; focusEnd?: number | null },
   ): Promise<Recording> {
     const response = await fetch(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
