@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import { BottomBar } from "../components/BottomBar";
+import type { FocusRange } from "../components/FocusToolbar";
 import type { TimeMode } from "../../../playback/time";
 import {
   createTestEngine,
@@ -21,10 +22,32 @@ function renderBottomBar(frameCount = 200) {
   const [panelOpen, setPanelOpen] = createSignal(true);
   const onTogglePanel = vi.fn(() => setPanelOpen((v) => !v));
   const [timeMode] = createSignal<TimeMode>("elapsed");
+  const [focusRange] = createSignal<FocusRange | null>(null);
+  const [editingFocus] = createSignal(false);
+  const [focusDraft] = createSignal<FocusRange | null>(null);
+  const [showFullTimeline] = createSignal(false);
+  const [isAdmin] = createSignal(false);
 
   const result = render(() => (
     <TestProviders engine={engine} renderer={renderer}>
-      <BottomBar panelOpen={panelOpen} onTogglePanel={onTogglePanel} timeMode={timeMode} />
+      <BottomBar
+        panelOpen={panelOpen}
+        onTogglePanel={onTogglePanel}
+        timeMode={timeMode}
+        focusRange={focusRange}
+        editingFocus={editingFocus}
+        focusDraft={focusDraft}
+        onDraftChange={vi.fn()}
+        showFullTimeline={showFullTimeline}
+        onToggleFullTimeline={vi.fn()}
+        isAdmin={isAdmin}
+        onStartFocusEdit={vi.fn()}
+        onSetIn={vi.fn()}
+        onSetOut={vi.fn()}
+        onClearFocus={vi.fn()}
+        onCancelFocus={vi.fn()}
+        onSaveFocus={vi.fn()}
+      />
     </TestProviders>
   ));
 

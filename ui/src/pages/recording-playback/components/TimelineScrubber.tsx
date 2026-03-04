@@ -1,8 +1,9 @@
 import { createSignal, createMemo, For, Show } from "solid-js";
-import type { JSX } from "solid-js";
+import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { formatElapsedTime } from "../../../playback/time";
+import type { FocusRange } from "./FocusToolbar";
 import styles from "./BottomBar.module.css";
 
 const BUCKET_COUNT = 120;
@@ -16,13 +17,31 @@ interface HeatmapBucket {
   other: number;
 }
 
-export function TimelineScrubber(): JSX.Element {
+export interface TimelineScrubberProps {
+  focusRange: Accessor<FocusRange | null>;
+  editingFocus: Accessor<boolean>;
+  focusDraft: Accessor<FocusRange | null>;
+  onDraftChange: (draft: FocusRange) => void;
+}
+
+export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
   const engine = useEngine();
 
   const [dragging, setDragging] = createSignal(false);
   const [hoverFrame, setHoverFrame] = createSignal<number | null>(null);
+  const [draggingHandle, setDraggingHandle] = createSignal<"in" | "out" | null>(null);
   let trackRef: HTMLDivElement | undefined;
   let wasPlaying = false;
+
+  const activeFocus = () => props.editingFocus() ? props.focusDraft() : props.focusRange();
+  const focusInPct = () => {
+    const f = activeFocus();
+    return f ? (f.inFrame / engine.endFrame()) * 100 : 0;
+  };
+  const focusOutPct = () => {
+    const f = activeFocus();
+    return f ? (f.outFrame / engine.endFrame()) * 100 : 100;
+  };
 
   const killEvents = createMemo(() => {
     engine.endFrame(); // reactive dependency
@@ -86,12 +105,27 @@ export function TimelineScrubber(): JSX.Element {
   const onPointerMove: JSX.EventHandler<HTMLDivElement, PointerEvent> = (e) => {
     const frame = frameFromEvent(e);
     setHoverFrame(frame);
+
+    if (draggingHandle() && props.focusDraft()) {
+      const d = props.focusDraft()!;
+      if (draggingHandle() === "in") {
+        props.onDraftChange({ ...d, inFrame: Math.max(0, Math.min(frame, d.outFrame - 5)) });
+      } else {
+        props.onDraftChange({ ...d, outFrame: Math.min(engine.endFrame(), Math.max(frame, d.inFrame + 5)) });
+      }
+      return;
+    }
+
     if (dragging()) {
       engine.seekTo(frame);
     }
   };
 
   const onPointerUp: JSX.EventHandler<HTMLDivElement, PointerEvent> = () => {
+    if (draggingHandle()) {
+      setDraggingHandle(null);
+      return;
+    }
     setDragging(false);
     if (wasPlaying) {
       wasPlaying = false;
@@ -126,10 +160,16 @@ export function TimelineScrubber(): JSX.Element {
               const hitH = (bucket.hits / total) * h;
               const otherH = h - killH - hitH;
               const isPast = () => bucket.frameEnd <= engine.currentFrame();
+              const isOutsideFocus = () => {
+                const focus = activeFocus();
+                if (!focus) return false;
+                const bucketMid = (bucket.frameStart + bucket.frameEnd) / 2;
+                return bucketMid < focus.inFrame || bucketMid > focus.outFrame;
+              };
               return (
                 <div
                   class={styles.heatmapBucket}
-                  classList={{ [styles.heatmapBucketPast]: isPast() }}
+                  classList={{ [styles.heatmapBucketPast]: isPast(), [styles.heatmapBucketDimmed]: isOutsideFocus() }}
                   style={{ height: `${h}px` }}
                   data-testid="heatmap-bucket"
                 >
@@ -189,6 +229,71 @@ export function TimelineScrubber(): JSX.Element {
             style={{ left: `${(hoverFrame()! / engine.endFrame()) * 100}%` }}
           >
             {formatElapsedTime(hoverFrame()!, engine.captureDelayMs())}
+          </div>
+        </Show>
+
+        {/* Focus dim overlays */}
+        <Show when={activeFocus()}>
+          {(_focus) => (<>
+            <Show when={focusInPct() > 0}>
+              <div
+                class={styles.focusDimOverlay}
+                style={{ left: "0", width: `${focusInPct()}%` }}
+              />
+            </Show>
+            <Show when={focusOutPct() < 100}>
+              <div
+                class={styles.focusDimOverlay}
+                style={{ right: "0", width: `${100 - focusOutPct()}%` }}
+              />
+            </Show>
+
+            {/* Gold accent line or dashed border in edit mode */}
+            <Show when={props.editingFocus()} fallback={
+              <div
+                class={styles.focusAccentLine}
+                style={{ left: `${focusInPct()}%`, width: `${focusOutPct() - focusInPct()}%` }}
+              />
+            }>
+              <div
+                class={styles.focusBorderEditing}
+                style={{ left: `${focusInPct()}%`, width: `${focusOutPct() - focusInPct()}%` }}
+              />
+            </Show>
+
+            {/* Focus tick marks (view mode) */}
+            <Show when={!props.editingFocus()}>
+              <div class={styles.focusTick} style={{ left: `${focusInPct()}%` }} />
+              <div class={styles.focusTick} style={{ left: `${focusOutPct()}%` }} />
+            </Show>
+          </>)}
+        </Show>
+
+        {/* Focus handles (edit mode) */}
+        <Show when={props.editingFocus() && props.focusDraft()}>
+          <div
+            class={styles.focusHandle}
+            style={{ left: `${focusInPct()}%` }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setDraggingHandle("in");
+              (e.currentTarget.parentElement as HTMLElement)?.setPointerCapture(e.pointerId);
+            }}
+          />
+          <div
+            class={styles.focusHandle}
+            style={{ left: `${focusOutPct()}%` }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setDraggingHandle("out");
+              (e.currentTarget.parentElement as HTMLElement)?.setPointerCapture(e.pointerId);
+            }}
+          />
+          <div class={styles.focusHandleLabel} style={{ left: `${focusInPct()}%` }}>
+            {formatElapsedTime(props.focusDraft()!.inFrame, engine.captureDelayMs())}
+          </div>
+          <div class={styles.focusHandleLabel} style={{ left: `${focusOutPct()}%` }}>
+            {formatElapsedTime(props.focusDraft()!.outFrame, engine.captureDelayMs())}
           </div>
         </Show>
       </div>

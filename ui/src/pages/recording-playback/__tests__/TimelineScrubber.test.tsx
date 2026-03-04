@@ -1,6 +1,8 @@
+import { createSignal } from "solid-js";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
 import { TimelineScrubber } from "../components/TimelineScrubber";
+import type { FocusRange } from "../components/FocusToolbar";
 import {
   createTestEngine,
   TestProviders,
@@ -24,9 +26,19 @@ function renderScrubber(
   const { engine, renderer } = createTestEngine();
   engine.loadRecording(makeManifest(entities, events, frameCount));
 
+  const [focusRange] = createSignal<FocusRange | null>(null);
+  const [editingFocus] = createSignal(false);
+  const [focusDraft] = createSignal<FocusRange | null>(null);
+  const onDraftChange = vi.fn();
+
   const result = render(() => (
     <TestProviders engine={engine} renderer={renderer}>
-      <TimelineScrubber />
+      <TimelineScrubber
+        focusRange={focusRange}
+        editingFocus={editingFocus}
+        focusDraft={focusDraft}
+        onDraftChange={onDraftChange}
+      />
     </TestProviders>
   ));
 

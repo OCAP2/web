@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createSignal, createMemo, Show } from "solid-js";
+import { onMount, onCleanup, createSignal, createMemo, createEffect, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import { useParams, useNavigate, useLocation } from "@solidjs/router";
 import type { WorldConfig } from "../../data/types";
@@ -27,6 +27,7 @@ import { CounterDisplay } from "./components/CounterDisplay";
 import { FollowIndicator } from "./components/FollowIndicator";
 import { Hint, showHint, hintMessage, hintVisible } from "./components/Hint";
 import { BlacklistIndicator } from "./components/BlacklistIndicator";
+import type { FocusRange } from "./components/FocusToolbar";
 import {
   registerShortcuts,
   unregisterShortcuts,
@@ -34,6 +35,8 @@ import {
   activePanelTab,
   setActivePanelTab,
   setLeftPanelVisible,
+  setEditingFocusForShortcuts,
+  setFocusShortcutCallbacks,
 } from "./shortcuts";
 import { loadRecording } from "./loadRecording";
 import { useRenderBridge } from "./useRenderBridge";
@@ -70,6 +73,10 @@ export function RecordingPlayback(): JSX.Element {
   const [blacklist, setBlacklist] = createSignal<Set<number>>(new Set());
   const [markerCounts, setMarkerCounts] = createSignal<Map<number, number>>(new Map());
   const [timeMode, setTimeMode] = createSignal<TimeMode>("elapsed");
+  const [focusRange, setFocusRange] = createSignal<FocusRange | null>(null);
+  const [editingFocus, setEditingFocus] = createSignal(false);
+  const [focusDraft, setFocusDraft] = createSignal<FocusRange | null>(null);
+  const [showFullTimeline, setShowFullTimeline] = createSignal(false);
 
   const locState = () => location.state as LocationState | undefined;
 
@@ -109,6 +116,11 @@ export function RecordingPlayback(): JSX.Element {
 
   onMount(() => {
     registerShortcuts(engine);
+    setFocusShortcutCallbacks({
+      onSetIn: () => setFocusDraft((d) => d ? { ...d, inFrame: Math.min(engine.currentFrame(), d.outFrame - 1) } : d),
+      onSetOut: () => setFocusDraft((d) => d ? { ...d, outFrame: Math.max(engine.currentFrame(), d.inFrame + 1) } : d),
+      onCancel: () => { setEditingFocus(false); setFocusDraft(null); },
+    });
 
     const id = decodeURIComponent(params.id);
     void (async () => {
@@ -131,6 +143,12 @@ export function RecordingPlayback(): JSX.Element {
         setRecordingFilename(result.recordingFilename);
         setExtensionVersion(result.extensionVersion);
         setAddonVersion(result.addonVersion);
+
+        // Initialize focus range from recording metadata
+        if (rec.focusStart != null && rec.focusEnd != null) {
+          setFocusRange({ inFrame: rec.focusStart, outFrame: rec.focusEnd });
+          engine.seekTo(rec.focusStart);
+        }
 
         // Fetch marker blacklist (non-fatal)
         try {
@@ -157,6 +175,58 @@ export function RecordingPlayback(): JSX.Element {
     engine.dispose();
     renderer.dispose();
   });
+
+  // Sync editing state to shortcuts module
+  createEffect(() => {
+    setEditingFocusForShortcuts(editingFocus());
+  });
+
+  // ─── Focus editing callbacks ───
+
+  const startFocusEdit = () => {
+    setEditingFocus(true);
+    setFocusDraft(focusRange() ? { ...focusRange()! } : { inFrame: 0, outFrame: engine.endFrame() });
+  };
+
+  const saveFocus = async () => {
+    const draft = focusDraft();
+    const rid = recordingId();
+    if (!draft || !rid) return;
+    try {
+      await api.editRecording(rid, { focusStart: draft.inFrame, focusEnd: draft.outFrame });
+      setFocusRange({ ...draft });
+    } catch {
+      return;
+    }
+    setEditingFocus(false);
+    setFocusDraft(null);
+  };
+
+  const cancelFocus = () => {
+    setEditingFocus(false);
+    setFocusDraft(null);
+  };
+
+  const clearFocus = async () => {
+    const rid = recordingId();
+    if (!rid) return;
+    try {
+      await api.editRecording(rid, { focusStart: null, focusEnd: null });
+      setFocusRange(null);
+    } catch {
+      return;
+    }
+    setEditingFocus(false);
+    setFocusDraft(null);
+  };
+
+  const setFocusIn = () => {
+    setFocusDraft((d) => d ? { ...d, inFrame: Math.min(engine.currentFrame(), d.outFrame - 1) } : d);
+  };
+
+  const setFocusOut = () => {
+    setFocusDraft((d) => d ? { ...d, outFrame: Math.max(engine.currentFrame(), d.inFrame + 1) } : d);
+  };
 
   return (
     <EngineProvider engine={engine}>
@@ -188,6 +258,19 @@ export function RecordingPlayback(): JSX.Element {
           panelOpen={leftPanelVisible}
           onTogglePanel={() => setLeftPanelVisible((v) => !v)}
           timeMode={timeMode}
+          focusRange={focusRange}
+          editingFocus={editingFocus}
+          focusDraft={focusDraft}
+          onDraftChange={setFocusDraft}
+          showFullTimeline={showFullTimeline}
+          onToggleFullTimeline={() => setShowFullTimeline((v) => !v)}
+          isAdmin={authenticated}
+          onStartFocusEdit={startFocusEdit}
+          onSetIn={setFocusIn}
+          onSetOut={setFocusOut}
+          onClearFocus={clearFocus}
+          onCancelFocus={cancelFocus}
+          onSaveFocus={saveFocus}
         />
         <MapControls />
         <CounterDisplay />

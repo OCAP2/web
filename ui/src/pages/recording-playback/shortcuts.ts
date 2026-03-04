@@ -13,6 +13,19 @@ export const [activePanelTab, setActivePanelTab] = createSignal("units");
 /** Currently selected side in the units tab — drives briefing marker filtering. */
 export const [activeSide, setActiveSide] = createSignal<Side>("WEST");
 
+// ─── Focus editing state (synced from RecordingPlayback, read by shortcut handler) ───
+
+export const [editingFocusForShortcuts, setEditingFocusForShortcuts] = createSignal(false);
+let focusCallbacks: {
+  onSetIn?: () => void;
+  onSetOut?: () => void;
+  onCancel?: () => void;
+} = {};
+
+export function setFocusShortcutCallbacks(cbs: typeof focusCallbacks): void {
+  focusCallbacks = cbs;
+}
+
 // ─── Shortcut handler ───
 
 let handler: ((e: KeyboardEvent) => void) | null = null;
@@ -127,6 +140,21 @@ export function registerShortcuts(engine: PlaybackEngine): void {
     }
 
     switch (e.key) {
+      case "i":
+        if (editingFocusForShortcuts()) {
+          focusCallbacks.onSetIn?.();
+        }
+        break;
+      case "o":
+        if (editingFocusForShortcuts()) {
+          focusCallbacks.onSetOut?.();
+        }
+        break;
+      case "Escape":
+        if (editingFocusForShortcuts()) {
+          focusCallbacks.onCancel?.();
+        }
+        break;
       case " ":
         e.preventDefault();
         engine.togglePlayPause();
