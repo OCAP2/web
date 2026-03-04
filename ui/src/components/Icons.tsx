@@ -427,6 +427,32 @@ export const PaletteIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const StepBackIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+export const StepForwardIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+export const SkipToKillBackIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size) - 3} height={s(p.size) - 3}>
+    <polyline points="11 17 6 12 11 7" />
+    <polyline points="18 17 13 12 18 7" />
+  </svg>
+);
+
+export const SkipToKillIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size) - 3} height={s(p.size) - 3}>
+    <polyline points="13 17 18 12 13 7" />
+    <polyline points="6 17 11 12 6 7" />
+  </svg>
+);
+
 export const SquareIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="currentColor" width={s(p.size)} height={s(p.size)}>
     <rect x="4" y="4" width="16" height="16" rx="2" />

@@ -35,59 +35,49 @@ describe("BottomBar", () => {
     const { engine } = renderBottomBar();
     const spy = vi.spyOn(engine, "togglePlayPause");
 
-    // The play button is the middle button in the center controls group.
-    // Find all buttons, the play button is identifiable by its classList or position.
     const allButtons = screen.getAllByRole("button");
-    // The play/pause button is in the center group, between skip-back and skip-forward.
-    // We can identify it: it's the one that is NOT the Panel button, NOT a skip button,
-    // NOT the speed button, NOT a dropdown button.
-    // Easiest: find buttons and identify by the panel text, speed text, etc.
-    // The play button is the only one with the playBtn class - but we can't query by class.
-    // Instead, find the panel button and skip it; the center has 3 buttons (skip-back, play, skip-forward).
     const panelButton = screen.getByText("Panel").closest("button")!;
     const nonPanelButtons = allButtons.filter((b) => b !== panelButton);
 
-    // Among center buttons: skip-back (index 0), play (index 1), skip-forward (index 2)
-    // But we also have speed, time mode, and names buttons on the right.
-    // The center buttons come after the panel button in DOM order.
-    // Let's just find all buttons and pick the second one after panel (skip-back is first, play is second).
-    // Actually, let's get them from the container more reliably.
-    // Panel is in controlsLeft. Next group is controlsCenter with 3 buttons. Then controlsRight with speed + dropdowns.
-
-    // The simplest: the play button is the 2nd button in the container after the panel button.
-    const playButton = nonPanelButtons[1]; // skip-back=0, play=1
+    // Center: prev-kill=0, step-back=1, play=2, step-forward=3, next-kill=4
+    const playButton = nonPanelButtons[2];
     fireEvent.click(playButton);
 
     expect(spy).toHaveBeenCalledOnce();
   });
 
-  it("skip back button calls seekTo(0)", () => {
+  it("step back button pauses and steps back one frame", () => {
     const { engine } = renderBottomBar();
-    engine.seekTo(50); // move away from 0
-    const spy = vi.spyOn(engine, "seekTo");
+    engine.seekTo(50);
+    const seekSpy = vi.spyOn(engine, "seekTo");
+    const pauseSpy = vi.spyOn(engine, "pause");
 
     const allButtons = screen.getAllByRole("button");
     const panelButton = screen.getByText("Panel").closest("button")!;
     const nonPanelButtons = allButtons.filter((b) => b !== panelButton);
 
-    const skipBackButton = nonPanelButtons[0];
-    fireEvent.click(skipBackButton);
+    const stepBackButton = nonPanelButtons[1];
+    fireEvent.click(stepBackButton);
 
-    expect(spy).toHaveBeenCalledWith(0);
+    expect(pauseSpy).toHaveBeenCalled();
+    expect(seekSpy).toHaveBeenCalledWith(49);
   });
 
-  it("skip forward button calls seekTo(endFrame)", () => {
+  it("step forward button pauses and steps forward one frame", () => {
     const { engine } = renderBottomBar(200);
-    const spy = vi.spyOn(engine, "seekTo");
+    engine.seekTo(50);
+    const seekSpy = vi.spyOn(engine, "seekTo");
+    const pauseSpy = vi.spyOn(engine, "pause");
 
     const allButtons = screen.getAllByRole("button");
     const panelButton = screen.getByText("Panel").closest("button")!;
     const nonPanelButtons = allButtons.filter((b) => b !== panelButton);
 
-    const skipForwardButton = nonPanelButtons[2];
-    fireEvent.click(skipForwardButton);
+    const stepForwardButton = nonPanelButtons[3];
+    fireEvent.click(stepForwardButton);
 
-    expect(spy).toHaveBeenCalledWith(engine.endFrame());
+    expect(pauseSpy).toHaveBeenCalled();
+    expect(seekSpy).toHaveBeenCalledWith(51);
   });
 
   it("panel toggle button calls onTogglePanel", () => {

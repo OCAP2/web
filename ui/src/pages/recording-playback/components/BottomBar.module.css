@@ -38,7 +38,7 @@
 .controlsCenter {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .controlsRight {

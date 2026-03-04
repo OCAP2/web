@@ -7,11 +7,19 @@ import { formatTime } from "../../../playback/time";
 import type { TimeMode } from "../../../playback/time";
 import {
   MapIcon,
-  SkipBackIcon,
   PlayIcon,
   PauseIcon,
-  SkipForwardIcon,
+  StepBackIcon,
+  StepForwardIcon,
+  SkipToKillBackIcon,
+  SkipToKillIcon,
 } from "../../../components/Icons";
+import {
+  stepBack,
+  stepForward,
+  seekToPrevKill,
+  seekToNextKill,
+} from "../shortcuts";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { SelectDropdown } from "../../../components/SelectDropdown";
 import styles from "./BottomBar.module.css";
@@ -104,13 +112,22 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           </span>
         </div>
 
-        {/* Center: Playback controls */}
+        {/* Center: Transport controls */}
         <div class={styles.controlsCenter}>
           <button
             class={styles.skipBtn}
-            onClick={() => engine.seekTo(0)}
+            title={t("prev_kill") + "  [ , ]"}
+            onClick={() => seekToPrevKill(engine)}
           >
-            <SkipBackIcon size={16} />
+            <SkipToKillBackIcon size={16} />
+          </button>
+
+          <button
+            class={styles.skipBtn}
+            title={t("step_back") + "  [ \u2190 ]"}
+            onClick={() => stepBack(engine)}
+          >
+            <StepBackIcon size={16} />
           </button>
 
           <button
@@ -128,9 +145,18 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
 
           <button
             class={styles.skipBtn}
-            onClick={() => engine.seekTo(engine.endFrame())}
+            title={t("step_forward") + "  [ \u2192 ]"}
+            onClick={() => stepForward(engine)}
           >
-            <SkipForwardIcon size={16} />
+            <StepForwardIcon size={16} />
+          </button>
+
+          <button
+            class={styles.skipBtn}
+            title={t("next_kill") + "  [ . ]"}
+            onClick={() => seekToNextKill(engine)}
+          >
+            <SkipToKillIcon size={16} />
           </button>
         </div>
 
