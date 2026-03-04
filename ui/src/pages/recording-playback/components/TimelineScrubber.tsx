@@ -8,6 +8,14 @@ import styles from "./BottomBar.module.css";
 const BUCKET_COUNT = 120;
 const HEATMAP_HEIGHT = 28;
 
+interface HeatmapBucket {
+  frameStart: number;
+  frameEnd: number;
+  kills: number;
+  hits: number;
+  other: number;
+}
+
 export function TimelineScrubber(): JSX.Element {
   const engine = useEngine();
 
@@ -27,7 +35,7 @@ export function TimelineScrubber(): JSX.Element {
 
   const heatmapData = createMemo(() => {
     const total = engine.endFrame();
-    if (total === 0) return { buckets: [] as Array<{ frameStart: number; frameEnd: number; kills: number; hits: number; other: number }>, maxVal: 1 };
+    if (total === 0) return { buckets: [] as HeatmapBucket[], maxVal: 1 };
 
     const buckets = Array.from({ length: BUCKET_COUNT }, (_, i) => ({
       frameStart: (i / BUCKET_COUNT) * total,

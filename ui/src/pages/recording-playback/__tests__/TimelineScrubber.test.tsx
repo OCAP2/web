@@ -8,6 +8,7 @@ import {
   makeManifest,
   killedEvent,
   hitEvent,
+  connectEvent,
 } from "./testHelpers";
 
 afterEach(() => {
@@ -237,6 +238,45 @@ describe("TimelineScrubber", () => {
 
     const buckets = screen.getAllByTestId("heatmap-bucket");
     expect(buckets.length).toBeGreaterThan(0);
+  });
+
+  it("renders heatmap with other event segments", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Player1", side: "WEST" }),
+    ];
+    const events = [
+      connectEvent(10, "connected", "Player1"),
+      connectEvent(20, "connected", "Player1"),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const buckets = screen.getAllByTestId("heatmap-bucket");
+    expect(buckets.length).toBeGreaterThan(0);
+    // "other" segments should be rendered (connect events are not HitKilledEvent)
+    const otherSegment = buckets[0].querySelector('[class*="heatmapOther"]');
+    expect(otherSegment).not.toBeNull();
+  });
+
+  it("applies past class to buckets before current frame", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Victim", side: "WEST", endFrame: 99 }),
+      unitDef({ id: 2, name: "Killer", side: "EAST", endFrame: 99 }),
+    ];
+    // Events spread across the timeline
+    const events = [
+      killedEvent(10, 1, 2, "AK-47", 100),
+      killedEvent(80, 2, 1, "M4A1", 200),
+    ];
+
+    const { engine } = renderScrubber(entities, events, 100);
+    engine.seekTo(50);
+
+    const buckets = screen.getAllByTestId("heatmap-bucket");
+    const pastBuckets = buckets.filter(b => b.className.includes("heatmapBucketPast"));
+    const futureBuckets = buckets.filter(b => !b.className.includes("heatmapBucketPast"));
+    expect(pastBuckets.length).toBeGreaterThan(0);
+    expect(futureBuckets.length).toBeGreaterThan(0);
   });
 
   it("renders no heatmap buckets when no events exist", () => {
