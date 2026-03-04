@@ -756,6 +756,36 @@ func TestEditOperation_InvertedFocusRange(t *testing.T) {
 	assert.Error(t, err, "inverted focus range should be rejected")
 }
 
+func TestEditOperation_PartialFocusRange(t *testing.T) {
+	hdlr, op := setupAdminTest(t)
+	token, err := hdlr.jwt.Create("")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"focusStart without focusEnd", `{"focusStart":50}`},
+		{"focusEnd without focusStart", `{"focusEnd":100}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+token)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("id")
+			c.SetParamValues(fmt.Sprintf("%d", op.ID))
+
+			err := hdlr.EditOperation(c)
+			assert.Error(t, err, "partial focus range should be rejected: %s", tc.name)
+		})
+	}
+}
+
 func TestEditOperation_InvalidFieldTypes(t *testing.T) {
 	tests := []struct {
 		name string

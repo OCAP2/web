@@ -32,6 +32,7 @@ vi.mock("../useRenderBridge", () => ({
 
 // We need to import the component AFTER mocks are declared
 import { RecordingPlayback } from "../RecordingPlayback";
+import type { PlaybackEngine } from "../../../playback/engine";
 import { setLeftPanelVisible } from "../shortcuts";
 
 // ─── Helpers ───
@@ -936,6 +937,95 @@ describe("RecordingPlayback", () => {
 
     await vi.waitFor(() => {
       expect(apiCalls.some(c => c.body.focusStart === null && c.body.focusEnd === null)).toBe(true);
+    });
+  });
+
+  it("clamps frame to inFrame when seeking below focus range", async () => {
+    let capturedEngine: PlaybackEngine;
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      capturedEngine = args[1];
+      capturedEngine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: null, framesFired: null }],
+        events: [], markers: [], times: [],
+      });
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
+          id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600,
+          filename: "test-42", date: "2024-01-15", storageFormat: "json",
+          focusStart: 20, focusEnd: 80,
+        })});
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+    await vi.waitFor(() => expect(screen.getByText("FOCUS")).toBeTruthy());
+
+    // Focus range is [20, 80], engine should be at 20 (seeked to focusStart on init)
+    expect(capturedEngine!.currentFrame()).toBe(20);
+
+    // Seek below inFrame — should be clamped back to 20
+    capturedEngine!.seekTo(5);
+    await vi.waitFor(() => {
+      expect(capturedEngine!.currentFrame()).toBe(20);
+    });
+  });
+
+  it("clamps frame to outFrame when seeking above focus range while paused", async () => {
+    let capturedEngine: PlaybackEngine;
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      capturedEngine = args[1];
+      capturedEngine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: null, framesFired: null }],
+        events: [], markers: [], times: [],
+      });
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
+          id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600,
+          filename: "test-42", date: "2024-01-15", storageFormat: "json",
+          focusStart: 20, focusEnd: 80,
+        })});
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+    await vi.waitFor(() => expect(screen.getByText("FOCUS")).toBeTruthy());
+
+    // Seek above outFrame while paused — should be clamped back to 80
+    capturedEngine!.seekTo(95);
+    await vi.waitFor(() => {
+      expect(capturedEngine!.currentFrame()).toBe(80);
     });
   });
 

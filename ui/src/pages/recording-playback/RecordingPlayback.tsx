@@ -213,7 +213,10 @@ export function RecordingPlayback(): JSX.Element {
     if (!range) return;
     if (frame >= range.outFrame && engine.isPlaying()) {
       engine.pause();
-      engine.seekTo(range.outFrame);
+    }
+    const clamped = Math.max(range.inFrame, Math.min(range.outFrame, frame));
+    if (clamped !== frame) {
+      engine.seekTo(clamped);
     }
   });
 
@@ -290,6 +293,7 @@ export function RecordingPlayback(): JSX.Element {
           onDraftChange={setFocusDraft}
           showFullTimeline={showFullTimeline}
           onToggleFullTimeline={() => setShowFullTimeline((v) => !v)}
+          constrainToFocus={focusConstrained}
           isAdmin={authenticated}
           onStartFocusEdit={startFocusEdit}
           onSetIn={setFocusIn}

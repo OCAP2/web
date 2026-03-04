@@ -55,6 +55,7 @@ function renderBottomBar(frameCount = 200, opts?: {
         onDraftChange={vi.fn()}
         showFullTimeline={showFullTimeline}
         onToggleFullTimeline={onToggleFullTimeline}
+        constrainToFocus={() => !showFullTimeline() && !editingFocus() && !!focusRange()}
         isAdmin={isAdmin}
         onStartFocusEdit={onStartFocusEdit}
         onSetIn={onSetIn}
@@ -252,6 +253,7 @@ describe("BottomBar", () => {
           onDraftChange={vi.fn()}
           showFullTimeline={showFullTimeline}
           onToggleFullTimeline={vi.fn()}
+          constrainToFocus={() => !showFullTimeline() && !editingFocus() && !!focusRange()}
           isAdmin={isAdmin}
           onStartFocusEdit={vi.fn()}
           onSetIn={vi.fn()}
@@ -303,6 +305,7 @@ describe("BottomBar", () => {
           onDraftChange={vi.fn()}
           showFullTimeline={showFullTimeline}
           onToggleFullTimeline={vi.fn()}
+          constrainToFocus={() => !showFullTimeline() && !editingFocus() && !!focusRange()}
           isAdmin={isAdmin}
           onStartFocusEdit={vi.fn()}
           onSetIn={vi.fn()}

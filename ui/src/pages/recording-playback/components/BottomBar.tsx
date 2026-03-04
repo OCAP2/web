@@ -36,6 +36,7 @@ export interface BottomBarProps {
   onDraftChange: (draft: FocusRange) => void;
   showFullTimeline: Accessor<boolean>;
   onToggleFullTimeline: () => void;
+  constrainToFocus: Accessor<boolean>;
   isAdmin: Accessor<boolean>;
   onStartFocusEdit: () => void;
   onSetIn: () => void;
@@ -66,7 +67,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           editingFocus={props.editingFocus}
           focusDraft={props.focusDraft}
           onDraftChange={props.onDraftChange}
-          constrainToFocus={() => !props.showFullTimeline() && !props.editingFocus() && !!props.focusRange()}
+          constrainToFocus={props.constrainToFocus}
         />
       </div>
 

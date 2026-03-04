@@ -126,7 +126,10 @@ func (h *Handler) EditOperation(c echo.Context) error {
 		focusEnd = val
 	}
 
-	// Validate focus range ordering: start must be before end
+	// Validate focus range: both must be present or both absent, and start < end
+	if (focusStart == nil) != (focusEnd == nil) {
+		return echo.ErrBadRequest
+	}
 	if focusStart != nil && focusEnd != nil && *focusStart >= *focusEnd {
 		return echo.ErrBadRequest
 	}

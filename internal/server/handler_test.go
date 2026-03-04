@@ -2597,6 +2597,51 @@ func TestStoreOperation_WithFocusRange(t *testing.T) {
 	assert.Equal(t, int64(420), *ops[0].FocusEnd)
 }
 
+func TestStoreOperation_PartialFocusRange(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, repo.db.Close()) }()
+
+	hdlr := Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Data:   dataDir,
+		},
+	}
+
+	// focusStart without focusEnd
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", "partial_focus")
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Partial Focus Test")
+	writer.WriteField("missionDuration", "300")
+	writer.WriteField("focusStart", "50")
+	fw, err := writer.CreateFormFile("file", "partial_focus.json.gz")
+	require.NoError(t, err)
+	gw := gzip.NewWriter(fw)
+	_, err = gw.Write([]byte("{}"))
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	require.NoError(t, writer.Close())
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = hdlr.StoreOperation(c)
+	assert.Error(t, err, "partial focus range (only focusStart) should be rejected")
+}
+
 func TestStoreOperation_InvertedFocusRange(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
