@@ -1061,6 +1061,163 @@ describe("RecordingPlayback", () => {
     await vi.waitFor(() => expect(screen.getByText("FULL")).toBeTruthy());
   });
 
+  it("setFocusIn updates draft inFrame via keyboard shortcut", async () => {
+    let capturedEngine: PlaybackEngine;
+    setAuthToken("test-token");
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      capturedEngine = args[1];
+      capturedEngine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
+        events: [], markers: [], times: [],
+      });
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) });
+      }
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode — draft starts at { inFrame: 0, outFrame: 100 }
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Focus Range")).toBeTruthy());
+
+    // Seek to frame 30, then press 'i' to set in-point
+    capturedEngine!.seekTo(30);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "i" }));
+
+    // Draft should update: inFrame=30. The FocusToolbar range shows "in → out".
+    // Look for the range span that contains both the new inFrame time and the arrow.
+    await vi.waitFor(() => {
+      const rangeSpan = screen.getByText(/0:00:30\s*→/);
+      expect(rangeSpan).toBeTruthy();
+    });
+  });
+
+  it("setFocusOut updates draft outFrame via keyboard shortcut", async () => {
+    let capturedEngine: PlaybackEngine;
+    setAuthToken("test-token");
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      capturedEngine = args[1];
+      capturedEngine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
+        events: [], markers: [], times: [],
+      });
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) });
+      }
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode — draft starts at { inFrame: 0, outFrame: 100 }
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Focus Range")).toBeTruthy());
+
+    // Seek to frame 70, then press 'o' to set out-point
+    capturedEngine!.seekTo(70);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "o" }));
+
+    // Draft should update: outFrame=70. The FocusToolbar range shows "in → out".
+    // Look for the range span that contains the arrow followed by the new outFrame time.
+    await vi.waitFor(() => {
+      const rangeSpan = screen.getByText(/→\s*0:01:10/);
+      expect(rangeSpan).toBeTruthy();
+    });
+  });
+
+  it("pauses playback when frame reaches outFrame during focus constrained mode", async () => {
+    let capturedEngine: PlaybackEngine;
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      capturedEngine = args[1];
+      capturedEngine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
+        events: [], markers: [], times: [],
+      });
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
+          id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600,
+          filename: "test-42", date: "2024-01-15", storageFormat: "json",
+          focusStart: 20, focusEnd: 80,
+        })});
+      }
+      if (url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+    await vi.waitFor(() => expect(screen.getByText("FOCUS")).toBeTruthy());
+
+    // Engine is at frame 20 (seeked to focusStart). Start playing.
+    capturedEngine!.play();
+    expect(capturedEngine!.isPlaying()).toBe(true);
+
+    // Seek to outFrame — effect should pause playback
+    capturedEngine!.seekTo(80);
+    await vi.waitFor(() => {
+      expect(capturedEngine!.isPlaying()).toBe(false);
+    });
+  });
+
   it("handles getRecording failure gracefully", async () => {
     // Override fetch to return 404 for getRecording
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
