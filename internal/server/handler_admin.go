@@ -105,14 +105,18 @@ func (h *Handler) EditOperation(c echo.Context) error {
 	focusStart := current.FocusStart
 	focusEnd := current.FocusEnd
 	if req.hasFocusStart {
-		if val, ok := parseFocusField(req.FocusStart); ok {
-			focusStart = val
+		val, ok := parseFocusField(req.FocusStart)
+		if !ok {
+			return echo.ErrBadRequest
 		}
+		focusStart = val
 	}
 	if req.hasFocusEnd {
-		if val, ok := parseFocusField(req.FocusEnd); ok {
-			focusEnd = val
+		val, ok := parseFocusField(req.FocusEnd)
+		if !ok {
+			return echo.ErrBadRequest
 		}
+		focusEnd = val
 	}
 
 	if err := h.repoOperation.UpdateOperation(c.Request().Context(), id, name, tag, date, focusStart, focusEnd); err != nil {

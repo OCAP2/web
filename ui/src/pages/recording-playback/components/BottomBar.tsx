@@ -83,20 +83,8 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
 
       {/* Row 2: Controls */}
       <div class={styles.controlsRow}>
-        {/* Left: Panel toggle + time display */}
+        {/* Left: Time display */}
         <div class={styles.controlsLeft}>
-          <button
-            class={styles.panelToggle}
-            classList={{
-              [styles.panelToggleActive]: props.panelOpen(),
-            }}
-            onClick={() => props.onTogglePanel()}
-          >
-            <MapIcon size={12} />
-            {t("panel")}
-            <kbd>E</kbd>
-          </button>
-
           <span class={styles.timeDisplay}>
             {currentTime()}
             <span class={styles.timeSeparator}>/</span>
@@ -188,6 +176,17 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
               <ScissorsIcon size={12} /> Focus
             </button>
           </Show>
+
+          <button
+            class={styles.panelToggle}
+            classList={{
+              [styles.panelToggleActive]: props.panelOpen(),
+            }}
+            onClick={() => props.onTogglePanel()}
+          >
+            <MapIcon size={12} />
+            {t("panel")}
+          </button>
         </div>
       </div>
     </div>

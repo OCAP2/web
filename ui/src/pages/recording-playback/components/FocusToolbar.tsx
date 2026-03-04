@@ -27,43 +27,44 @@ export function FocusToolbar(props: FocusToolbarProps): JSX.Element {
 
   return (
     <div class={styles.focusToolbarRow}>
-      <span class={styles.focusToolbarLabel}>
-        <ScissorsIcon size={12} />
-        Focus Range
-      </span>
+      <div class={styles.focusToolbarLeft}>
+        <span class={styles.focusToolbarLabel}>
+          <ScissorsIcon size={12} />
+          Focus Range
+        </span>
 
-      <Show when={props.draft()}>
-        {(d) => (
-          <span class={styles.focusToolbarRange}>
-            {fmtFrame(d().inFrame)} &rarr; {fmtFrame(d().outFrame)}
-          </span>
-        )}
-      </Show>
+        <Show when={props.draft()}>
+          {(d) => (
+            <span class={styles.focusToolbarRange}>
+              {fmtFrame(d().inFrame)} &rarr; {fmtFrame(d().outFrame)}
+            </span>
+          )}
+        </Show>
+      </div>
 
-      <button class={styles.focusToolbarBtn} onClick={props.onSetIn} title="Set In  [I]">
-        <BracketInIcon size={10} /> In
-      </button>
-      <button class={styles.focusToolbarBtn} onClick={props.onSetOut} title="Set Out  [O]">
-        <BracketOutIcon size={10} /> Out
-      </button>
+      <div class={styles.focusToolbarRight}>
+        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetIn} title="Set In  [I]">
+          <BracketInIcon size={10} /> Set In
+        </button>
+        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetOut} title="Set Out  [O]">
+          <BracketOutIcon size={10} /> Set Out
+        </button>
 
-      <div class={styles.focusToolbarSep} />
+        <div class={styles.focusToolbarSep} />
 
-      <button
-        class={`${styles.focusToolbarBtn} ${styles.focusToolbarDanger}`}
-        onClick={props.onClear}
-      >
-        Clear
-      </button>
-      <button class={styles.focusToolbarBtn} onClick={props.onCancel} title="Cancel  [Esc]">
-        Cancel
-      </button>
-      <button
-        class={`${styles.focusToolbarBtn} ${styles.focusToolbarSave}`}
-        onClick={props.onSave}
-      >
-        <CheckIcon size={12} /> Save
-      </button>
+        <button class={styles.focusToolbarBtn} onClick={props.onClear}>
+          Clear
+        </button>
+        <button class={styles.focusToolbarBtn} onClick={props.onCancel} title="Cancel  [Esc]">
+          Cancel
+        </button>
+        <button
+          class={`${styles.focusToolbarBtn} ${styles.focusToolbarSave}`}
+          onClick={props.onSave}
+        >
+          <CheckIcon size={12} /> Save
+        </button>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@
   left: 0;
   right: 0;
   height: var(--pb-bottom-height);
+  transition: height 0.15s ease;
   background: linear-gradient(0deg, color-mix(in srgb, var(--bg-dark) 97%, transparent) 0%, color-mix(in srgb, var(--bg-dark) 85%, transparent) 100%);
   backdrop-filter: blur(16px);
   border-top: var(--border-subtle);
@@ -398,9 +399,22 @@
 .focusToolbarRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   height: 32px;
-  padding: 0 4px;
+  padding: 4px 4px 6px;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+}
+
+.focusToolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.focusToolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .focusToolbarLabel {
@@ -457,12 +471,15 @@
   background: rgba(212, 168, 67, 0.2);
 }
 
-.focusToolbarDanger {
-  color: var(--accent-danger);
+.focusToolbarGold {
+  background: rgba(212, 168, 67, 0.08);
+  border-color: rgba(212, 168, 67, 0.2);
+  color: #D4A843;
+  font-weight: 600;
 }
 
-.focusToolbarDanger:hover {
-  background: rgba(255, 74, 74, 0.08);
+.focusToolbarGold:hover {
+  background: rgba(212, 168, 67, 0.15);
 }
 
 /* ─── Focus Toggle + Focus Button ─── */

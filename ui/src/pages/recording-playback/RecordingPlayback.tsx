@@ -174,11 +174,17 @@ export function RecordingPlayback(): JSX.Element {
     markerManager.clear();
     engine.dispose();
     renderer.dispose();
+    document.documentElement.style.removeProperty("--pb-bottom-height");
   });
 
-  // Sync editing state to shortcuts module
+  // Sync editing state to shortcuts module + adjust bottom bar height
   createEffect(() => {
-    setEditingFocusForShortcuts(editingFocus());
+    const editing = editingFocus();
+    setEditingFocusForShortcuts(editing);
+    document.documentElement.style.setProperty(
+      "--pb-bottom-height",
+      editing ? "130px" : "94px",
+    );
   });
 
   // ─── Focus editing callbacks ───
