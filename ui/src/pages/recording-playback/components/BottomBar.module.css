@@ -333,7 +333,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  border: 1px dashed rgba(212, 168, 67, 0.4);
+  border: 1px dashed color-mix(in srgb, var(--accent-focus) 40%, transparent);
   border-left: none;
   border-right: none;
   pointer-events: none;
@@ -344,7 +344,7 @@
   position: absolute;
   top: 0;
   height: 2px;
-  background: linear-gradient(90deg, rgba(212, 168, 67, 0.3), rgba(212, 168, 67, 0.5), rgba(212, 168, 67, 0.3));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-focus) 30%, transparent), color-mix(in srgb, var(--accent-focus) 50%, transparent), color-mix(in srgb, var(--accent-focus) 30%, transparent));
   pointer-events: none;
   z-index: 2;
 }
@@ -354,7 +354,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(212, 168, 67, 0.4);
+  background: color-mix(in srgb, var(--accent-focus) 40%, transparent);
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 2;
@@ -365,13 +365,13 @@
   top: -3px;
   bottom: -3px;
   width: 8px;
-  background: #D4A843;
+  background: var(--accent-focus);
   cursor: ew-resize;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 8px rgba(212, 168, 67, 0.4);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-focus) 40%, transparent);
 }
 
 .focusHandleIn {
@@ -391,7 +391,7 @@
 }
 
 .focusHandle:hover {
-  box-shadow: 0 0 12px rgba(212, 168, 67, 0.6);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-focus) 60%, transparent);
 }
 
 .focusHandleLabel {
@@ -400,7 +400,7 @@
   transform: translateX(-50%);
   font-size: var(--font-size-xs, 10px);
   font-family: var(--font-mono);
-  color: #D4A843;
+  color: var(--accent-focus);
   white-space: nowrap;
   pointer-events: none;
   z-index: 6;
@@ -418,7 +418,7 @@
   justify-content: space-between;
   height: 32px;
   padding: 4px 4px 6px;
-  border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-focus) 10%, transparent);
 }
 
 .focusToolbarLeft {
@@ -437,7 +437,7 @@
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   font-weight: 600;
-  color: #D4A843;
+  color: var(--accent-focus);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -446,7 +446,7 @@
 .focusToolbarRange {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  color: #887744;
+  color: color-mix(in srgb, var(--accent-focus) 60%, var(--text-dimmest));
 }
 
 .focusToolbarBtn {
@@ -487,24 +487,24 @@
 }
 
 .focusToolbarSave {
-  background: rgba(212, 168, 67, 0.12);
-  border-color: rgba(212, 168, 67, 0.2);
-  color: #D4A843;
+  background: color-mix(in srgb, var(--accent-focus) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-focus) 20%, transparent);
+  color: var(--accent-focus);
 }
 
 .focusToolbarSave:hover {
-  background: rgba(212, 168, 67, 0.2);
+  background: color-mix(in srgb, var(--accent-focus) 20%, transparent);
 }
 
 .focusToolbarGold {
-  background: rgba(212, 168, 67, 0.08);
-  border-color: rgba(212, 168, 67, 0.2);
-  color: #D4A843;
+  background: color-mix(in srgb, var(--accent-focus) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent-focus) 20%, transparent);
+  color: var(--accent-focus);
   font-weight: 600;
 }
 
 .focusToolbarGold:hover {
-  background: rgba(212, 168, 67, 0.15);
+  background: color-mix(in srgb, var(--accent-focus) 15%, transparent);
 }
 
 /* ─── Focus Toggle + Focus Button ─── */
@@ -512,9 +512,9 @@
 .focusToggle {
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid rgba(212, 168, 67, 0.15);
-  background: rgba(212, 168, 67, 0.08);
-  color: #D4A843;
+  border: 1px solid color-mix(in srgb, var(--accent-focus) 15%, transparent);
+  background: color-mix(in srgb, var(--accent-focus) 8%, transparent);
+  color: var(--accent-focus);
   cursor: pointer;
   font-size: var(--font-size-xs, 10px);
   font-family: var(--font-mono);
@@ -524,7 +524,7 @@
 }
 
 .focusToggle:hover {
-  background: rgba(212, 168, 67, 0.15);
+  background: color-mix(in srgb, var(--accent-focus) 15%, transparent);
 }
 
 .focusBtn {
@@ -544,7 +544,7 @@
 }
 
 .focusBtnActive {
-  background: rgba(212, 168, 67, 0.08);
-  border-color: rgba(212, 168, 67, 0.15);
-  color: #D4A843;
+  background: color-mix(in srgb, var(--accent-focus) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent-focus) 15%, transparent);
+  color: var(--accent-focus);
 }
