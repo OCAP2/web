@@ -637,6 +637,146 @@ describe("RecordingPlayback", () => {
     });
   });
 
+  it("Focus button opens edit mode and Cancel closes it", async () => {
+    setAuthToken("test-token");
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return Promise.resolve({
+          ok: true, status: 200,
+          json: () => Promise.resolve({
+            id: 42, world_name: "Altis", mission_name: "Op Alpha",
+            mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json",
+          }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("loading-screen").style.opacity).toBe("0");
+    });
+
+    // Click Focus to enter edit mode
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+
+    // FocusToolbar should appear with Save and Cancel
+    await vi.waitFor(() => {
+      expect(screen.getByText("Focus Range")).toBeTruthy();
+      expect(screen.getByText("Save")).toBeTruthy();
+      expect(screen.getByText("Cancel")).toBeTruthy();
+    });
+
+    // Click Cancel to exit edit mode
+    fireEvent.click(screen.getByText("Cancel").closest("button")!);
+
+    await vi.waitFor(() => {
+      expect(screen.queryByText("Focus Range")).toBeNull();
+    });
+  });
+
+  it("Focus edit Save calls API and updates focus range", async () => {
+    setAuthToken("test-token");
+    const apiCalls: { url: string; method: string; body: any }[] = [];
+
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/") && init?.method === "PATCH") {
+        const body = JSON.parse(init.body as string);
+        apiCalls.push({ url, method: "PATCH", body });
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, focus_start: body.focusStart, focus_end: body.focusEnd }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) };
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return { ok: true, status: 200, json: () => Promise.resolve([]) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({}) };
+      }
+      return { ok: false, status: 404, statusText: "Not Found" };
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Save")).toBeTruthy());
+
+    // Click Save
+    fireEvent.click(screen.getByText("Save").closest("button")!);
+
+    await vi.waitFor(() => {
+      expect(apiCalls.some(c => c.method === "PATCH" && c.body.focusStart != null)).toBe(true);
+    });
+
+    // Edit mode should close after save
+    await vi.waitFor(() => {
+      expect(screen.queryByText("Focus Range")).toBeNull();
+    });
+  });
+
+  it("Focus edit Clear calls API with null values", async () => {
+    setAuthToken("test-token");
+    const apiCalls: { url: string; method: string; body: any }[] = [];
+
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/") && init?.method === "PATCH") {
+        const body = JSON.parse(init.body as string);
+        apiCalls.push({ url, method: "PATCH", body });
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42 }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) };
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return { ok: true, status: 200, json: () => Promise.resolve([]) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({}) };
+      }
+      return { ok: false, status: 404, statusText: "Not Found" };
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Clear")).toBeTruthy());
+
+    // Click Clear
+    fireEvent.click(screen.getByText("Clear").closest("button")!);
+
+    await vi.waitFor(() => {
+      expect(apiCalls.some(c => c.body.focusStart === null && c.body.focusEnd === null)).toBe(true);
+    });
+  });
+
   it("handles getRecording failure gracefully", async () => {
     // Override fetch to return 404 for getRecording
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {

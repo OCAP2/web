@@ -508,3 +508,94 @@ describe("TimelineScrubber (constrained mode)", () => {
     expect(markers.length).toBe(1);
   });
 });
+
+describe("TimelineScrubber (handle dragging)", () => {
+  function mockPointerCapture(container: HTMLElement) {
+    // jsdom doesn't implement setPointerCapture — mock it on the track (parent of handles)
+    const track = container.querySelector('[data-testid="scrubber-track"]') as HTMLElement;
+    if (track && !track.setPointerCapture) {
+      track.setPointerCapture = vi.fn();
+      track.releasePointerCapture = vi.fn();
+    }
+  }
+
+  it("pointerDown on in-handle sets draggingHandle state", () => {
+    const { container } = renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    mockPointerCapture(container);
+    const handle = container.querySelector('[class*="focusHandleIn"]')!;
+    expect(handle).not.toBeNull();
+
+    fireEvent.pointerDown(handle, { pointerId: 1 });
+    expect(container.querySelector('[class*="focusHandleIn"]')).not.toBeNull();
+  });
+
+  it("pointerDown on out-handle sets draggingHandle state", () => {
+    const { container } = renderScrubberWithFocus({ inFrame: 20, outFrame: 80 }, true);
+    mockPointerCapture(container);
+    const handle = container.querySelector('[class*="focusHandleOut"]')!;
+    expect(handle).not.toBeNull();
+
+    fireEvent.pointerDown(handle, { pointerId: 1 });
+    expect(container.querySelector('[class*="focusHandleOut"]')).not.toBeNull();
+  });
+
+  it("dragging in-handle calls onDraftChange with updated inFrame", () => {
+    const { container, onDraftChange } = renderScrubberWithFocus(
+      { inFrame: 20, outFrame: 80 }, true,
+    );
+    mockPointerCapture(container);
+    const track = screen.getByTestId("scrubber-track");
+    const handle = container.querySelector('[class*="focusHandleIn"]')!;
+
+    fireEvent.pointerDown(handle, { pointerId: 1 });
+
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 100, width: 100, top: 0, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 30 });
+
+    expect(onDraftChange).toHaveBeenCalled();
+    const call = onDraftChange.mock.calls[0][0];
+    expect(call.outFrame).toBe(80);
+    expect(call.inFrame).toBeLessThan(80);
+  });
+
+  it("dragging out-handle calls onDraftChange with updated outFrame", () => {
+    const { container, onDraftChange } = renderScrubberWithFocus(
+      { inFrame: 20, outFrame: 80 }, true,
+    );
+    mockPointerCapture(container);
+    const track = screen.getByTestId("scrubber-track");
+    const handle = container.querySelector('[class*="focusHandleOut"]')!;
+
+    fireEvent.pointerDown(handle, { pointerId: 1 });
+
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 100, width: 100, top: 0, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 60 });
+
+    expect(onDraftChange).toHaveBeenCalled();
+    const call = onDraftChange.mock.calls[0][0];
+    expect(call.inFrame).toBe(20);
+    expect(call.outFrame).toBeGreaterThan(20);
+  });
+
+  it("pointerUp after handle drag resets dragging state", () => {
+    const { container, onDraftChange } = renderScrubberWithFocus(
+      { inFrame: 20, outFrame: 80 }, true,
+    );
+    mockPointerCapture(container);
+    const track = screen.getByTestId("scrubber-track");
+    const handle = container.querySelector('[class*="focusHandleIn"]')!;
+
+    fireEvent.pointerDown(handle, { pointerId: 1 });
+    fireEvent.pointerUp(track);
+
+    onDraftChange.mockClear();
+    fireEvent.pointerMove(track, { clientX: 50 });
+    expect(onDraftChange).not.toHaveBeenCalled();
+  });
+});

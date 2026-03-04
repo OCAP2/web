@@ -8,6 +8,8 @@ import {
   createTestEngine,
   TestProviders,
   makeManifest,
+  unitDef,
+  killedEvent,
 } from "./testHelpers";
 
 afterEach(() => {
@@ -200,5 +202,107 @@ describe("BottomBar", () => {
     renderBottomBar(200, { isAdmin: true, focusRange: { inFrame: 10, outFrame: 100 } });
     const btn = screen.getByText("Focus").closest("button")!;
     expect(btn.className).toMatch(/focusBtnActive/);
+  });
+
+  it("prev-kill button seeks to previous kill event", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "V", side: "WEST", endFrame: 199 }),
+      unitDef({ id: 2, name: "K", side: "EAST", endFrame: 199 }),
+    ];
+    const events = [
+      killedEvent(30, 1, 2, "AK", 100),
+      killedEvent(80, 2, 1, "M4", 200),
+    ];
+    engine.loadRecording(makeManifest(entities, events, 200));
+    engine.seekTo(90); // after both kills
+
+    const [panelOpen] = createSignal(true);
+    const [timeMode] = createSignal<TimeMode>("elapsed");
+    const [focusRange] = createSignal<FocusRange | null>(null);
+    const [editingFocus] = createSignal(false);
+    const [focusDraft] = createSignal<FocusRange | null>(null);
+    const [showFullTimeline] = createSignal(false);
+    const [isAdmin] = createSignal(false);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <BottomBar
+          panelOpen={panelOpen}
+          onTogglePanel={vi.fn()}
+          timeMode={timeMode}
+          focusRange={focusRange}
+          editingFocus={editingFocus}
+          focusDraft={focusDraft}
+          onDraftChange={vi.fn()}
+          showFullTimeline={showFullTimeline}
+          onToggleFullTimeline={vi.fn()}
+          isAdmin={isAdmin}
+          onStartFocusEdit={vi.fn()}
+          onSetIn={vi.fn()}
+          onSetOut={vi.fn()}
+          onClearFocus={vi.fn()}
+          onCancelFocus={vi.fn()}
+          onSaveFocus={vi.fn()}
+        />
+      </TestProviders>
+    ));
+
+    const prevKillBtn = screen.getByTitle(/Previous kill event/i).closest("button")!;
+    fireEvent.click(prevKillBtn);
+
+    // Should seek to frame 80 (the kill just before frame 90)
+    expect(engine.currentFrame()).toBe(80);
+  });
+
+  it("next-kill button seeks to next kill event", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "V", side: "WEST", endFrame: 199 }),
+      unitDef({ id: 2, name: "K", side: "EAST", endFrame: 199 }),
+    ];
+    const events = [
+      killedEvent(30, 1, 2, "AK", 100),
+      killedEvent(80, 2, 1, "M4", 200),
+    ];
+    engine.loadRecording(makeManifest(entities, events, 200));
+    engine.seekTo(10); // before both kills
+
+    const [panelOpen] = createSignal(true);
+    const [timeMode] = createSignal<TimeMode>("elapsed");
+    const [focusRange] = createSignal<FocusRange | null>(null);
+    const [editingFocus] = createSignal(false);
+    const [focusDraft] = createSignal<FocusRange | null>(null);
+    const [showFullTimeline] = createSignal(false);
+    const [isAdmin] = createSignal(false);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <BottomBar
+          panelOpen={panelOpen}
+          onTogglePanel={vi.fn()}
+          timeMode={timeMode}
+          focusRange={focusRange}
+          editingFocus={editingFocus}
+          focusDraft={focusDraft}
+          onDraftChange={vi.fn()}
+          showFullTimeline={showFullTimeline}
+          onToggleFullTimeline={vi.fn()}
+          isAdmin={isAdmin}
+          onStartFocusEdit={vi.fn()}
+          onSetIn={vi.fn()}
+          onSetOut={vi.fn()}
+          onClearFocus={vi.fn()}
+          onCancelFocus={vi.fn()}
+          onSaveFocus={vi.fn()}
+        />
+      </TestProviders>
+    ));
+
+    const nextKillBtn = screen.getByTitle(/Next kill event/i).closest("button")!;
+    fireEvent.click(nextKillBtn);
+
+    // Should seek to frame 30 (the first kill after frame 10)
+    expect(engine.currentFrame()).toBe(30);
   });
 });
