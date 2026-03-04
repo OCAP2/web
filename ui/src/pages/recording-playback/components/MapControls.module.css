@@ -33,6 +33,7 @@
 .styleSwitcher {
   position: absolute;
   bottom: calc(var(--pb-bottom-height, 90px) + 8px);
+  transition: bottom 0.15s ease;
   right: 12px;
   display: flex;
   gap: 4px;

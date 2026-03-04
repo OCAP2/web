@@ -1,6 +1,7 @@
 .chip {
   position: absolute;
   bottom: calc(var(--pb-bottom-height) + 8px);
+  transition: bottom 0.15s ease;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;

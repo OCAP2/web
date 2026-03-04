@@ -13,6 +13,7 @@
 
 .leaflet-bottom {
   bottom: calc(var(--pb-bottom-height, 90px) + 8px);
+  transition: bottom 0.15s ease;
 }
 
 

@@ -16,6 +16,7 @@
   top: 56px;
   left: 8px;
   bottom: calc(var(--pb-bottom-height, 90px) + 8px);
+  transition: bottom 0.15s ease;
   width: var(--pb-panel-width, 370px);
   display: flex;
   flex-direction: column;
