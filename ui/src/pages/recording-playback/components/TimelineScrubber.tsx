@@ -6,6 +6,7 @@ import { formatElapsedTime } from "../../../playback/time";
 import styles from "./BottomBar.module.css";
 
 const BUCKET_COUNT = 120;
+const HEATMAP_HEIGHT = 28;
 
 export function TimelineScrubber(): JSX.Element {
   const engine = useEngine();
@@ -112,7 +113,7 @@ export function TimelineScrubber(): JSX.Element {
             {(bucket) => {
               const total = bucket.kills + bucket.hits + bucket.other;
               if (total === 0) return <div class={styles.heatmapBucketEmpty} />;
-              const h = Math.max(2, (total / heatmapData().maxVal) * 28);
+              const h = Math.max(2, (total / heatmapData().maxVal) * HEATMAP_HEIGHT);
               const killH = (bucket.kills / total) * h;
               const hitH = (bucket.hits / total) * h;
               const otherH = h - killH - hitH;

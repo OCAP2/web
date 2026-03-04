@@ -8,7 +8,6 @@ import {
   makeManifest,
   killedEvent,
   hitEvent,
-  connectEvent,
 } from "./testHelpers";
 
 afterEach(() => {
