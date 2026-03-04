@@ -13,7 +13,7 @@ import {
   seekToNextKill,
   invalidateKillFrames,
 } from "../shortcuts";
-import { makeManifest, unitDef, killedEvent } from "./testHelpers";
+import { makeManifest, unitDef, killedEvent, hitEvent } from "./testHelpers";
 
 function createEngine(): PlaybackEngine {
   return new PlaybackEngine(new MockRenderer());
@@ -344,6 +344,45 @@ describe("seekToPrevKill / seekToNextKill", () => {
     seekToPrevKill(engine);
 
     expect(engine.currentFrame()).toBe(50);
+  });
+
+  it("getKillFrames uses cache on repeated calls with same engine", () => {
+    const engine = createEngine();
+    loadWithKills(engine, [100, 200]);
+    engine.seekTo(50);
+    invalidateKillFrames();
+
+    seekToNextKill(engine);
+    expect(engine.currentFrame()).toBe(100);
+
+    // Second call without invalidating — should use cached frames
+    engine.seekTo(50);
+    seekToNextKill(engine);
+    expect(engine.currentFrame()).toBe(100);
+  });
+
+  it("getKillFrames filters out non-killed events", () => {
+    const engine = createEngine();
+    const entities = [
+      unitDef({ id: 1, name: "A", endFrame: 499 }),
+      unitDef({ id: 2, name: "B", endFrame: 499 }),
+    ];
+    const events = [
+      hitEvent(50, 2, 1),
+      killedEvent(100, 2, 1),
+      hitEvent(150, 2, 1),
+      killedEvent(200, 2, 1),
+    ];
+    engine.loadRecording(makeManifest(entities, events, 500));
+    engine.seekTo(0);
+    invalidateKillFrames();
+
+    // Should skip hit events at 50 and 150, jump to killed at 100
+    seekToNextKill(engine);
+    expect(engine.currentFrame()).toBe(100);
+
+    seekToNextKill(engine);
+    expect(engine.currentFrame()).toBe(200);
   });
 
   it("invalidateKillFrames forces rebuild from current events", () => {
