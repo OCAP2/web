@@ -12,6 +12,10 @@ import {
   killedEvent,
   hitEvent,
   connectEvent,
+  endMissionEvent,
+  generalEvent,
+  capturedEvent,
+  terminalHackEvent,
 } from "./testHelpers";
 
 afterEach(() => {
@@ -662,6 +666,36 @@ describe("TimelineScrubber (hover tooltip deduplication)", () => {
     const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
     // Should show HMMWV (deduped) + Driver = 2 entries, not 3
     expect(tooltipEvents.length).toBe(2);
+  });
+
+  it("renders all event types in tooltip", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Attacker", side: "EAST", endFrame: 99 }),
+      unitDef({ id: 2, name: "Victim", side: "WEST", endFrame: 99 }),
+    ];
+    const events = [
+      killedEvent(50, 2, 1, "AK-47", 100),
+      hitEvent(50, 2, 1, "AK-47", 50),
+      connectEvent(50, "connected", "NewPlayer"),
+      endMissionEvent(50, "WEST", "BLUFOR wins"),
+      generalEvent(50, "Custom event"),
+      capturedEvent(50, "Hacker", "Flag"),
+      terminalHackEvent(50, "terminalHackStarted", "Hacker"),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    expect(tooltipEvents.length).toBe(7);
   });
 });
 

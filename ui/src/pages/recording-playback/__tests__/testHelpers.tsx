@@ -147,3 +147,29 @@ export function endMissionEvent(
 ): EventDef {
   return { type: "endMission", frameNum, side, message } as EventDef;
 }
+
+/** Create a generalEvent definition. */
+export function generalEvent(
+  frameNum: number,
+  message: string,
+): EventDef {
+  return { type: "generalEvent", frameNum, message } as EventDef;
+}
+
+/** Create a captured event definition. */
+export function capturedEvent(
+  frameNum: number,
+  unitName: string,
+  objectType: string,
+): EventDef {
+  return { type: "captured", frameNum, unitName, objectType } as EventDef;
+}
+
+/** Create a terminalHack event definition. */
+export function terminalHackEvent(
+  frameNum: number,
+  type: "terminalHackStarted" | "terminalHackCanceled",
+  unitName: string,
+): EventDef {
+  return { type, frameNum, unitName } as EventDef;
+}
