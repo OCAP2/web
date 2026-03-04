@@ -45,23 +45,31 @@ export function invalidateKillFrames(): void {
   killFrames = null;
 }
 
-/** Seek to the previous kill event before the current frame (binary search). */
-export function seekToPrevKill(engine: PlaybackEngine): void {
-  const frames = getKillFrames(engine);
-  const cur = engine.currentFrame();
-
+/**
+ * Binary search for the first index where `predicate` returns true.
+ * Returns `arr.length` if no element satisfies the predicate.
+ */
+function findFirst(arr: number[], predicate: (el: number) => boolean): number {
   let low = 0;
-  let high = frames.length;
+  let high = arr.length;
   while (low < high) {
     const mid = low + Math.floor((high - low) / 2);
-    if (frames[mid] >= cur) {
+    if (predicate(arr[mid])) {
       high = mid;
     } else {
       low = mid + 1;
     }
   }
+  return low;
+}
 
-  const prevIndex = low - 1;
+/** Seek to the previous kill event before the current frame (binary search). */
+export function seekToPrevKill(engine: PlaybackEngine): void {
+  const frames = getKillFrames(engine);
+  const cur = engine.currentFrame();
+
+  const index = findFirst(frames, (f) => f >= cur);
+  const prevIndex = index - 1;
   if (prevIndex >= 0) {
     engine.seekTo(frames[prevIndex]);
   }
@@ -72,19 +80,9 @@ export function seekToNextKill(engine: PlaybackEngine): void {
   const frames = getKillFrames(engine);
   const cur = engine.currentFrame();
 
-  let low = 0;
-  let high = frames.length;
-  while (low < high) {
-    const mid = low + Math.floor((high - low) / 2);
-    if (frames[mid] > cur) {
-      high = mid;
-    } else {
-      low = mid + 1;
-    }
-  }
-
-  if (low < frames.length) {
-    engine.seekTo(frames[low]);
+  const index = findFirst(frames, (f) => f > cur);
+  if (index < frames.length) {
+    engine.seekTo(frames[index]);
   }
 }
 
