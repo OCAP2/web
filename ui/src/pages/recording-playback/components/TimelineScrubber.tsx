@@ -1,7 +1,13 @@
 import { createSignal, createMemo, For, Show } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
+import type { GameEvent } from "../../../playback/events/gameEvent";
 import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
+import { ConnectEvent } from "../../../playback/events/connectEvent";
+import { EndMissionEvent } from "../../../playback/events/endMissionEvent";
+import { GeneralMissionEvent } from "../../../playback/events/generalEvent";
+import { CapturedEvent } from "../../../playback/events/capturedEvent";
+import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import { formatElapsedTime } from "../../../playback/time";
 import type { FocusRange } from "./FocusToolbar";
 import styles from "./BottomBar.module.css";
@@ -106,6 +112,55 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
 
     const maxVal = Math.max(1, ...buckets.map(b => b.kills + b.hits + b.other));
     return { buckets, maxVal };
+  });
+
+  /** Events in the heatmap bucket under the cursor (deduplicated, capped per type). */
+  const hoverEvents = createMemo(() => {
+    const frame = hoverFrame();
+    if (frame === null) return [];
+    const start = rangeStart();
+    const span = rangeSpan();
+    const idx = Math.min(
+      Math.floor(((frame - start) / span) * BUCKET_COUNT),
+      BUCKET_COUNT - 1,
+    );
+    const { buckets } = heatmapData();
+    if (idx < 0 || idx >= buckets.length) return [];
+    const bucket = buckets[idx];
+    const nearby = engine.eventManager
+      .getAll()
+      .filter((e) => e.frameNum >= bucket.frameStart && e.frameNum < bucket.frameEnd);
+
+    // Deduplicate HitKilledEvents, then sort by priority: other > killed > hit
+    const seen = new Set<string>();
+    const deduped: typeof nearby = [];
+    for (const ev of nearby) {
+      if (ev instanceof HitKilledEvent) {
+        const dedupKey = `${ev.type}:${ev.victimId}`;
+        if (seen.has(dedupKey)) continue;
+        seen.add(dedupKey);
+      }
+      deduped.push(ev);
+    }
+
+    const priority = (ev: GameEvent) =>
+      ev instanceof HitKilledEvent ? (ev.type === "killed" ? 1 : 2) : 0;
+    deduped.sort((a, b) => priority(a) - priority(b));
+
+    // Cap at 3 per event type, 8 total
+    const MAX_PER_TYPE = 3;
+    const MAX_TOTAL = 8;
+    const typeCounts = new Map<string, number>();
+    const result: typeof deduped = [];
+    for (const ev of deduped) {
+      if (result.length >= MAX_TOTAL) break;
+      const count = typeCounts.get(ev.type) ?? 0;
+      if (count >= MAX_PER_TYPE) continue;
+      typeCounts.set(ev.type, count + 1);
+      result.push(ev);
+    }
+
+    return result;
   });
 
   const progress = createMemo(() => {
@@ -270,7 +325,33 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
             class={styles.hoverTooltip}
             style={{ left: `${frameToPct(hoverFrame()!)}%` }}
           >
-            {formatElapsedTime(hoverFrame()!, engine.captureDelayMs())}
+            <div class={styles.hoverTooltipTime}>
+              {formatElapsedTime(hoverFrame()!, engine.captureDelayMs())}
+            </div>
+            <Show when={hoverEvents().length > 0}>
+              <div class={styles.hoverTooltipEvents}>
+                <For each={hoverEvents()}>
+                  {(ev) => (
+                    <div
+                      data-testid="hover-tooltip-event"
+                      class={styles.hoverTooltipEvent}
+                      classList={{
+                        [styles.hoverEventKill]: ev instanceof HitKilledEvent && ev.type === "killed",
+                        [styles.hoverEventHit]: ev instanceof HitKilledEvent && ev.type === "hit",
+                      }}
+                    >
+                      {ev instanceof HitKilledEvent && ev.type === "killed" && `\u2620 ${ev.victimName ?? "Unknown"}`}
+                      {ev instanceof HitKilledEvent && ev.type === "hit" && `\u26A1 ${ev.victimName ?? "Unknown"}`}
+                      {ev instanceof ConnectEvent && `${ev.type === "connected" ? "+" : "-"} ${ev.unitName}`}
+                      {ev instanceof EndMissionEvent && ev.message}
+                      {ev instanceof GeneralMissionEvent && ev.message}
+                      {ev instanceof CapturedEvent && `\u2691 ${ev.unitName}`}
+                      {ev instanceof TerminalHackEvent && `\u2328 ${ev.unitName}`}
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </Show>
 

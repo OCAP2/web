@@ -7,6 +7,7 @@ import {
   createTestEngine,
   TestProviders,
   unitDef,
+  vehicleDef,
   makeManifest,
   killedEvent,
   hitEvent,
@@ -506,6 +507,123 @@ describe("TimelineScrubber (constrained mode)", () => {
     // Only the event at frame 50 should render (frame 10 is outside 20-80)
     const markers = screen.queryAllByTestId("event-marker");
     expect(markers.length).toBe(1);
+  });
+});
+
+describe("TimelineScrubber (hover tooltip deduplication)", () => {
+  it("deduplicates vehicle hit events at the same frame", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Gunner", side: "EAST", endFrame: 99 }),
+      vehicleDef({ id: 50, name: "HMMWV", endFrame: 99 }),
+    ];
+    // Three hit events on the same vehicle at the same frame (one per crew member affected)
+    const events = [
+      hitEvent(50, 50, 1, "RPG-7", 200),
+      hitEvent(50, 50, 1, "RPG-7", 200),
+      hitEvent(50, 50, 1, "RPG-7", 200),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // Hover near frame 50 (clientX=100 on a 200px-wide track with 100 frames ≈ frame 50)
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    expect(tooltipEvents.length).toBe(1);
+  });
+
+  it("deduplicates same-victim hits at nearby frames", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Gunner", side: "EAST", endFrame: 99 }),
+      vehicleDef({ id: 50, name: "HMMWV", endFrame: 99 }),
+    ];
+    // Multiple hits on same vehicle at nearby (but not identical) frames
+    const events = [
+      hitEvent(49, 50, 1, "RPG-7", 200),
+      hitEvent(50, 50, 1, "RPG-7", 200),
+      hitEvent(51, 50, 1, "RPG-7", 200),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    expect(tooltipEvents.length).toBe(1);
+  });
+
+  it("caps each event type at 5 so other types remain visible", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Attacker", side: "EAST", endFrame: 99 }),
+      ...Array.from({ length: 8 }, (_, i) =>
+        unitDef({ id: 10 + i, name: `Victim${i}`, side: "WEST", endFrame: 99 }),
+      ),
+    ];
+    // 8 unique kills + 1 connect, all at frame 50
+    const events = [
+      ...Array.from({ length: 8 }, (_, i) =>
+        killedEvent(50, 10 + i, 1, "AK-47", 100),
+      ),
+      connectEvent(50, "connected", "NewPlayer"),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    // 3 kills (capped) + 1 connect = 4, not 8+1=9
+    expect(tooltipEvents.length).toBe(4);
+  });
+
+  it("shows different victims as separate entries", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Gunner", side: "EAST", endFrame: 99 }),
+      unitDef({ id: 2, name: "Driver", side: "WEST", endFrame: 99 }),
+      vehicleDef({ id: 50, name: "HMMWV", endFrame: 99 }),
+    ];
+    // Hit on vehicle AND hit on a different unit at the same frame
+    const events = [
+      hitEvent(50, 50, 1, "RPG-7", 200),
+      hitEvent(50, 50, 1, "RPG-7", 200),
+      hitEvent(50, 2, 1, "RPG-7", 200),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(track, { clientX: 100 });
+
+    const tooltipEvents = track.querySelectorAll('[data-testid="hover-tooltip-event"]');
+    // Should show HMMWV (deduped) + Driver = 2 entries, not 3
+    expect(tooltipEvents.length).toBe(2);
   });
 });
 
