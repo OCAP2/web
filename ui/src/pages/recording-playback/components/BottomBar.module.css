@@ -55,16 +55,12 @@
 .scrubberWrap {
   position: relative;
   width: 100%;
-  height: 32px;
-  display: flex;
-  align-items: center;
+  height: 36px;
 }
 
 .scrubberTrack {
   width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  height: 100%;
   cursor: pointer;
   position: relative;
 }
@@ -74,7 +70,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   background: linear-gradient(90deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 80%, white));
   pointer-events: none;
 }
@@ -85,36 +81,48 @@
 
 .eventMarker {
   position: absolute;
-  top: -3px;
-  width: 4px;
-  height: 12px;
+  bottom: 0;
+  width: 2px;
+  height: 7px;
   border-radius: 1px;
   background: var(--accent-danger);
-  opacity: 0.7;
+  opacity: 0.6;
   transform: translateX(-50%);
   pointer-events: none;
 }
 
-.playhead {
+.playheadLine {
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
   background: var(--accent-primary);
-  border: 2px solid var(--bg-dark);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  border-radius: 1px;
   pointer-events: none;
 }
 
+.playheadKnob {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-dark);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent-primary) 50%, transparent);
+}
+
 .playheadSmooth {
-  transition: left 0.1s linear;
+  transition: left 80ms linear;
 }
 
 .hoverTooltip {
   position: absolute;
-  bottom: 16px;
+  bottom: 44px;
   transform: translateX(-50%);
   background: var(--bg-surface-hover);
   color: var(--text-secondary);
@@ -125,6 +133,72 @@
   pointer-events: none;
   white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.heatmapContainer {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.heatmapBucketEmpty {
+  flex: 1;
+  min-width: 0;
+}
+
+.heatmapBucket {
+  flex: 1;
+  min-width: 0;
+  border-radius: 1px 1px 0 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.heatmapBucketPast {
+  opacity: 0.8;
+}
+
+.heatmapKill {
+  background: var(--accent-danger);
+}
+
+.heatmapHit {
+  background: var(--accent-warning);
+}
+
+.heatmapOther {
+  background: #445566;
+  border-radius: 1px 1px 0 0;
+}
+
+.trackBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.hoverLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 /* ─── Playback Controls ─── */

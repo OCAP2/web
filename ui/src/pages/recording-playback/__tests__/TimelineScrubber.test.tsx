@@ -7,6 +7,8 @@ import {
   unitDef,
   makeManifest,
   killedEvent,
+  hitEvent,
+  connectEvent,
 } from "./testHelpers";
 
 afterEach(() => {
@@ -220,5 +222,57 @@ describe("TimelineScrubber", () => {
     // Leave clears tooltip
     fireEvent.pointerLeave(track);
     expect(track.querySelector('[class*="hoverTooltip"]')).toBeNull();
+  });
+
+  it("renders heatmap buckets when events exist", () => {
+    const entities = [
+      unitDef({ id: 1, name: "Victim", side: "WEST" }),
+      unitDef({ id: 2, name: "Killer", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(10, 1, 2, "AK-47", 100),
+      hitEvent(20, 1, 2, "AK-47", 50),
+    ];
+
+    renderScrubber(entities, events, 100);
+
+    const buckets = screen.getAllByTestId("heatmap-bucket");
+    expect(buckets.length).toBeGreaterThan(0);
+  });
+
+  it("renders no heatmap buckets when no events exist", () => {
+    renderScrubber([unitDef()], [], 100);
+
+    expect(screen.queryAllByTestId("heatmap-bucket").length).toBe(0);
+  });
+
+  it("renders playhead line", () => {
+    renderScrubber();
+
+    const track = screen.getByTestId("scrubber-track");
+    const playheadLine = track.querySelector('[class*="playheadLine"]');
+    expect(playheadLine).not.toBeNull();
+  });
+
+  it("renders hover line on pointer move and hides on leave", () => {
+    renderScrubber([unitDef({ endFrame: 99 })], [], 100);
+
+    const track = screen.getByTestId("scrubber-track");
+    vi.spyOn(track, "getBoundingClientRect").mockReturnValue({
+      left: 0, right: 200, width: 200,
+      top: 0, bottom: 20, height: 20,
+      x: 0, y: 0, toJSON: () => {},
+    });
+
+    // No hover line initially
+    expect(track.querySelector('[class*="hoverLine"]')).toBeNull();
+
+    // Pointer move shows hover line
+    fireEvent.pointerMove(track, { clientX: 100 });
+    expect(track.querySelector('[class*="hoverLine"]')).not.toBeNull();
+
+    // Pointer leave hides hover line
+    fireEvent.pointerLeave(track);
+    expect(track.querySelector('[class*="hoverLine"]')).toBeNull();
   });
 });
