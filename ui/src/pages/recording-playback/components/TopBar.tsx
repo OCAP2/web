@@ -162,11 +162,6 @@ export function TopBar(props: TopBarProps): JSX.Element {
 
       {/* ── Right: actions ── */}
       <div class={styles.right}>
-        {/* Auth badge */}
-        <AuthBadge />
-
-        <div class={styles.divider} />
-
         {/* View Settings (layers + time/name/marker modes) */}
         <ViewSettings
           timeMode={props.timeMode}
@@ -206,6 +201,11 @@ export function TopBar(props: TopBarProps): JSX.Element {
         >
           <InfoIcon size={16} />
         </button>
+
+        <div class={styles.divider} />
+
+        {/* Auth badge */}
+        <AuthBadge />
       </div>
     </div>
   );

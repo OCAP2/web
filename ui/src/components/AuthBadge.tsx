@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import type { JSX } from "solid-js";
 import { useAuth } from "../hooks/useAuth";
+import { useI18n } from "../hooks/useLocale";
 import { SteamIcon, ShieldIcon, LogOutIcon } from "./Icons";
 import styles from "./AuthBadge.module.css";
 
@@ -11,13 +12,14 @@ import styles from "./AuthBadge.module.css";
  */
 export function AuthBadge(): JSX.Element {
   const { authenticated, steamName, steamId, steamAvatar, loginWithSteam, logout } = useAuth();
+  const { t } = useI18n();
 
   return (
     <Show
       when={authenticated()}
       fallback={
         <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-          <SteamIcon /> Sign in
+          <SteamIcon /> {t("sign_in")}
         </button>
       }
     >
@@ -33,7 +35,7 @@ export function AuthBadge(): JSX.Element {
             <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
           </div>
         </div>
-        <button class={styles.adminIconButton} onClick={() => logout()} title="Sign out">
+        <button class={styles.adminIconButton} onClick={() => logout()} title={t("sign_out")}>
           <LogOutIcon />
         </button>
       </>
