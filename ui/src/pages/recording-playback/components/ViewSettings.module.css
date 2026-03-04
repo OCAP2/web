@@ -49,7 +49,7 @@
 
 .sectionLabel {
   font-size: var(--font-size-sm);
-  color: var(--text-dimmest);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
   font-weight: 700;
@@ -179,5 +179,5 @@
 }
 
 .itemTextInactive {
-  color: var(--text-dimmer);
+  color: var(--text-muted);
 }
