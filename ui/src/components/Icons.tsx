@@ -481,3 +481,25 @@ export const XCircleIcon = (p: IconProps): JSX.Element => (
     <line x1="9" y1="9" x2="15" y2="15" />
   </svg>
 );
+
+export const ScissorsIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size)} height={s(p.size)}>
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <line x1="20" y1="4" x2="8.12" y2="15.88" />
+    <line x1="14.47" y1="14.48" x2="20" y2="20" />
+    <line x1="8.12" y1="8.12" x2="12" y2="12" />
+  </svg>
+);
+
+export const BracketInIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width={s(p.size)} height={s(p.size)}>
+    <polyline points="8 4 4 4 4 20 8 20" />
+  </svg>
+);
+
+export const BracketOutIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width={s(p.size)} height={s(p.size)}>
+    <polyline points="16 4 20 4 20 20 16 20" />
+  </svg>
+);

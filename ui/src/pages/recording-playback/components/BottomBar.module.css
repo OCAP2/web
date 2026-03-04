@@ -310,3 +310,199 @@
   color: var(--accent-primary);
   font-weight: 700;
 }
+
+/* ─── Focus Range ─── */
+
+.focusDimOverlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.04) 3px,
+    rgba(255, 255, 255, 0.04) 6px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.focusBorderEditing {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 1px dashed rgba(212, 168, 67, 0.4);
+  border-left: none;
+  border-right: none;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.focusAccentLine {
+  position: absolute;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(212, 168, 67, 0.3), rgba(212, 168, 67, 0.5), rgba(212, 168, 67, 0.3));
+  pointer-events: none;
+  z-index: 2;
+}
+
+.focusTick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(212, 168, 67, 0.4);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.focusHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #D4A843;
+  border-radius: 2px;
+  cursor: ew-resize;
+  transform: translateX(-50%);
+  z-index: 5;
+  opacity: 0.85;
+  transition: opacity 0.12s;
+}
+
+.focusHandle:hover {
+  opacity: 1;
+}
+
+.focusHandleLabel {
+  position: absolute;
+  top: -22px;
+  transform: translateX(-50%);
+  font-size: var(--font-size-xs, 10px);
+  font-family: var(--font-mono);
+  color: #D4A843;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.heatmapBucketDimmed {
+  opacity: 0.1 !important;
+}
+
+/* ─── Focus Toolbar ─── */
+
+.focusToolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 4px;
+}
+
+.focusToolbarLabel {
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #D4A843;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.focusToolbarRange {
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
+}
+
+.focusToolbarBtn {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-interactive);
+  color: var(--text-dimmer);
+  transition: all 0.12s;
+}
+
+.focusToolbarBtn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+}
+
+.focusToolbarSep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 2px;
+}
+
+.focusToolbarSave {
+  background: rgba(212, 168, 67, 0.12);
+  border-color: rgba(212, 168, 67, 0.2);
+  color: #D4A843;
+}
+
+.focusToolbarSave:hover {
+  background: rgba(212, 168, 67, 0.2);
+}
+
+.focusToolbarDanger {
+  color: var(--accent-danger);
+}
+
+.focusToolbarDanger:hover {
+  background: rgba(255, 74, 74, 0.08);
+}
+
+/* ─── Focus Toggle + Focus Button ─── */
+
+.focusToggle {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 168, 67, 0.15);
+  background: rgba(212, 168, 67, 0.08);
+  color: #D4A843;
+  cursor: pointer;
+  font-size: var(--font-size-xs, 10px);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: all 0.12s;
+}
+
+.focusToggle:hover {
+  background: rgba(212, 168, 67, 0.15);
+}
+
+.focusBtn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dimmest);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.12s;
+}
+
+.focusBtnActive {
+  background: rgba(212, 168, 67, 0.08);
+  border-color: rgba(212, 168, 67, 0.15);
+  color: #D4A843;
+}
