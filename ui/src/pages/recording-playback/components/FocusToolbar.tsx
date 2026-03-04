@@ -43,11 +43,11 @@ export function FocusToolbar(props: FocusToolbarProps): JSX.Element {
       </div>
 
       <div class={styles.focusToolbarRight}>
-        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetIn} title="Set In  [I]">
-          <BracketInIcon size={10} /> Set In
+        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetIn} title="Set in-point to playhead  [I]">
+          <BracketInIcon size={10} /> Set In <kbd>I</kbd>
         </button>
-        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetOut} title="Set Out  [O]">
-          <BracketOutIcon size={10} /> Set Out
+        <button class={`${styles.focusToolbarBtn} ${styles.focusToolbarGold}`} onClick={props.onSetOut} title="Set out-point to playhead  [O]">
+          <BracketOutIcon size={10} /> Set Out <kbd>O</kbd>
         </button>
 
         <div class={styles.focusToolbarSep} />
@@ -56,7 +56,7 @@ export function FocusToolbar(props: FocusToolbarProps): JSX.Element {
           Clear
         </button>
         <button class={styles.focusToolbarBtn} onClick={props.onCancel} title="Cancel  [Esc]">
-          Cancel
+          Cancel <kbd>Esc</kbd>
         </button>
         <button
           class={`${styles.focusToolbarBtn} ${styles.focusToolbarSave}`}

@@ -186,6 +186,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           >
             <MapIcon size={12} />
             {t("panel")}
+            <kbd>E</kbd>
           </button>
         </div>
       </div>

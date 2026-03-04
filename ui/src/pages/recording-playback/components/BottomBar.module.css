@@ -362,20 +362,36 @@
 
 .focusHandle {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 4px;
+  top: -3px;
+  bottom: -3px;
+  width: 8px;
   background: #D4A843;
-  border-radius: 2px;
   cursor: ew-resize;
-  transform: translateX(-50%);
-  z-index: 5;
-  opacity: 0.85;
-  transition: opacity 0.12s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(212, 168, 67, 0.4);
+}
+
+.focusHandleIn {
+  transform: translateX(-100%);
+  border-radius: 3px 0 0 3px;
+}
+
+.focusHandleOut {
+  border-radius: 0 3px 3px 0;
+}
+
+.focusHandleGrip {
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .focusHandle:hover {
-  opacity: 1;
+  box-shadow: 0 0 12px rgba(212, 168, 67, 0.6);
 }
 
 .focusHandleLabel {
@@ -430,11 +446,12 @@
 .focusToolbarRange {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  color: var(--text-dimmer);
+  color: #887744;
 }
 
 .focusToolbarBtn {
-  padding: 3px 8px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
@@ -447,6 +464,14 @@
   background: var(--bg-interactive);
   color: var(--text-dimmer);
   transition: all 0.12s;
+}
+
+.focusToolbarBtn kbd {
+  font-size: 9px;
+  min-width: auto;
+  padding: 0 3px;
+  line-height: 1;
+  opacity: 0.5;
 }
 
 .focusToolbarBtn:hover {

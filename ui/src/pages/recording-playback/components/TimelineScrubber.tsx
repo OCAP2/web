@@ -109,9 +109,9 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
     if (draggingHandle() && props.focusDraft()) {
       const d = props.focusDraft()!;
       if (draggingHandle() === "in") {
-        props.onDraftChange({ ...d, inFrame: Math.max(0, Math.min(frame, d.outFrame - 5)) });
+        props.onDraftChange({ ...d, inFrame: Math.max(0, Math.min(frame, d.outFrame - 1)) });
       } else {
-        props.onDraftChange({ ...d, outFrame: Math.min(engine.endFrame(), Math.max(frame, d.inFrame + 5)) });
+        props.onDraftChange({ ...d, outFrame: Math.min(engine.endFrame(), Math.max(frame, d.inFrame + 1)) });
       }
       return;
     }
@@ -272,23 +272,27 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
         {/* Focus handles (edit mode) */}
         <Show when={props.editingFocus() && props.focusDraft()}>
           <div
-            class={styles.focusHandle}
+            class={`${styles.focusHandle} ${styles.focusHandleIn}`}
             style={{ left: `${focusInPct()}%` }}
             onPointerDown={(e) => {
               e.stopPropagation();
               setDraggingHandle("in");
               (e.currentTarget.parentElement as HTMLElement)?.setPointerCapture(e.pointerId);
             }}
-          />
+          >
+            <div class={styles.focusHandleGrip} />
+          </div>
           <div
-            class={styles.focusHandle}
+            class={`${styles.focusHandle} ${styles.focusHandleOut}`}
             style={{ left: `${focusOutPct()}%` }}
             onPointerDown={(e) => {
               e.stopPropagation();
               setDraggingHandle("out");
               (e.currentTarget.parentElement as HTMLElement)?.setPointerCapture(e.pointerId);
             }}
-          />
+          >
+            <div class={styles.focusHandleGrip} />
+          </div>
           <div class={styles.focusHandleLabel} style={{ left: `${focusInPct()}%` }}>
             {formatElapsedTime(props.focusDraft()!.inFrame, engine.captureDelayMs())}
           </div>
