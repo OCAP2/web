@@ -47,6 +47,8 @@ type Operation struct {
 	KillCount        int             `json:"kill_count"`
 	SideComposition  SideComposition `json:"side_composition"`
 	PlayerKillCount  int             `json:"player_kill_count"`
+	FocusStart       *int64          `json:"focusStart"`
+	FocusEnd         *int64          `json:"focusEnd"`
 }
 
 type Filter struct {
@@ -197,6 +199,15 @@ func (r *RepoOperation) migration() (err error) {
 				player_entity_id INTEGER NOT NULL,
 				PRIMARY KEY (operation_id, player_entity_id)
 			)`,
+		); err != nil {
+			return err
+		}
+	}
+
+	if version < 9 {
+		if err = r.runMigration(9,
+			`ALTER TABLE operations ADD COLUMN focus_start INTEGER DEFAULT NULL`,
+			`ALTER TABLE operations ADD COLUMN focus_end INTEGER DEFAULT NULL`,
 		); err != nil {
 			return err
 		}
