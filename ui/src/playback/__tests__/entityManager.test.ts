@@ -265,14 +265,14 @@ describe("Unit", () => {
   });
 
   describe("firedOnFrame", () => {
-    it("returns target position when unit fired on the given frame", () => {
+    it("returns target positions when unit fired on the given frame", () => {
       const framesFired: Array<[number, [number, number]]> = [
         [5, [500, 600]],
         [10, [700, 800]],
       ];
       const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
-      expect(u.firedOnFrame(5)).toEqual([500, 600]);
-      expect(u.firedOnFrame(10)).toEqual([700, 800]);
+      expect(u.firedOnFrame(5)).toEqual([[500, 600]]);
+      expect(u.firedOnFrame(10)).toEqual([[700, 800]]);
     });
 
     it("returns null when unit did not fire on the given frame", () => {
@@ -286,6 +286,18 @@ describe("Unit", () => {
     it("returns null when framesFired is null", () => {
       const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", null);
       expect(u.firedOnFrame(5)).toBeNull();
+    });
+
+    it("returns all targets when multiple projectiles fired on the same frame", () => {
+      const framesFired: Array<[number, [number, number]]> = [
+        [5, [500, 600]],
+        [5, [510, 620]],
+        [5, [520, 640]],
+        [10, [700, 800]],
+      ];
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
+      expect(u.firedOnFrame(5)).toEqual([[500, 600], [510, 620], [520, 640]]);
+      expect(u.firedOnFrame(10)).toEqual([[700, 800]]);
     });
   });
 });

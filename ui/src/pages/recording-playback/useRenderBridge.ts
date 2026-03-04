@@ -101,15 +101,17 @@ export function useRenderBridge(
         crew,
       });
 
-      if (snap.firedTarget) {
+      if (snap.firedTargets) {
         const color = snap.side ? SIDE_COLORS_DARK[snap.side] : "#FFFFFF";
-        firelineHandles.push(
-          renderer.addLine(snap.position, snap.firedTarget, {
-            color,
-            weight: 2,
-            opacity: 0.4,
-          }),
-        );
+        for (const target of snap.firedTargets) {
+          firelineHandles.push(
+            renderer.addLine(snap.position, target, {
+              color,
+              weight: 2,
+              opacity: 0.4,
+            }),
+          );
+        }
       }
     }
   });

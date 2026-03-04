@@ -1162,7 +1162,7 @@ describe("PlaybackEngine", () => {
   // ─── Unit firedOnFrame ───
 
   describe("unit firedOnFrame in snapshots", () => {
-    it("includes firedTarget in snapshot when unit fired on the current frame", () => {
+    it("includes firedTargets in snapshot when unit fired on the current frame", () => {
       const entityStates = new Map<number, any[]>();
       const states: any[] = [];
       for (let i = 0; i < 300; i++) {
@@ -1192,10 +1192,10 @@ describe("PlaybackEngine", () => {
 
       const snap = engine.entitySnapshots().get(1);
       expect(snap).toBeDefined();
-      expect(snap!.firedTarget).toEqual([500, 600]);
+      expect(snap!.firedTargets).toEqual([[500, 600]]);
     });
 
-    it("does not include firedTarget when unit did not fire on current frame", () => {
+    it("does not include firedTargets when unit did not fire on current frame", () => {
       const entityStates = new Map<number, any[]>();
       const states: any[] = [];
       for (let i = 0; i < 300; i++) {
@@ -1225,7 +1225,7 @@ describe("PlaybackEngine", () => {
 
       const snap = engine.entitySnapshots().get(1);
       expect(snap).toBeDefined();
-      expect(snap!.firedTarget).toBeUndefined();
+      expect(snap!.firedTargets).toBeUndefined();
     });
   });
 

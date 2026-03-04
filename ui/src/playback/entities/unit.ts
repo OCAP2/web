@@ -44,13 +44,17 @@ export class Unit extends Entity {
     this._framesFired = framesFired;
   }
 
-  /** Return projectile target position if this unit fired on the given absolute frame. */
-  firedOnFrame(frame: number): ArmaCoord | null {
+  /** Return all projectile target positions if this unit fired on the given absolute frame. */
+  firedOnFrame(frame: number): ArmaCoord[] | null {
     if (!this._framesFired) return null;
+    let targets: ArmaCoord[] | null = null;
     for (const [f, pos] of this._framesFired) {
-      if (f === frame) return pos;
+      if (f === frame) {
+        if (!targets) targets = [];
+        targets.push(pos);
+      }
     }
-    return null;
+    return targets;
   }
 
   /** CSS class for the unit's side: WEST->'blufor', EAST->'opfor', etc. */

@@ -479,8 +479,8 @@ export class PlaybackEngine {
             isInVehicle: state.isInVehicle ?? false,
           };
           if (entity instanceof Unit) {
-            const target = entity.firedOnFrame(frame);
-            if (target) snapshot.firedTarget = target;
+            const targets = entity.firedOnFrame(frame);
+            if (targets) snapshot.firedTargets = targets;
           }
           snapshots.set(entity.id, snapshot);
           continue;
@@ -504,8 +504,8 @@ export class PlaybackEngine {
           }
         }
         if (entity instanceof Unit) {
-          const target = entity.firedOnFrame(frame);
-          if (target) snap.firedTarget = target;
+          const targets = entity.firedOnFrame(frame);
+          if (targets) snap.firedTargets = targets;
         }
         snapshots.set(entity.id, snap);
       }
