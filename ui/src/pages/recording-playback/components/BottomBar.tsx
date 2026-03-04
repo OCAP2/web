@@ -66,6 +66,7 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
           editingFocus={props.editingFocus}
           focusDraft={props.focusDraft}
           onDraftChange={props.onDraftChange}
+          constrainToFocus={() => !props.showFullTimeline() && !props.editingFocus() && !!props.focusRange()}
         />
       </div>
 

@@ -38,6 +38,7 @@ function renderScrubber(
         editingFocus={editingFocus}
         focusDraft={focusDraft}
         onDraftChange={onDraftChange}
+        constrainToFocus={() => false}
       />
     </TestProviders>
   ));

@@ -187,6 +187,20 @@ export function RecordingPlayback(): JSX.Element {
     );
   });
 
+  // Clamp playback to focus range when constrained (not editing, not full timeline)
+  const focusConstrained = () =>
+    !editingFocus() && !showFullTimeline() && !!focusRange();
+
+  createEffect(() => {
+    if (!focusConstrained()) return;
+    const frame = engine.currentFrame();
+    const range = focusRange()!;
+    if (frame >= range.outFrame && engine.isPlaying()) {
+      engine.pause();
+      engine.seekTo(range.outFrame);
+    }
+  });
+
   // ─── Focus editing callbacks ───
 
   const startFocusEdit = () => {

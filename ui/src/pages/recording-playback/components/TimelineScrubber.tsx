@@ -22,6 +22,8 @@ export interface TimelineScrubberProps {
   editingFocus: Accessor<boolean>;
   focusDraft: Accessor<FocusRange | null>;
   onDraftChange: (draft: FocusRange) => void;
+  /** When true, scrubber zooms into the focus range (0–100% = inFrame–outFrame). */
+  constrainToFocus: Accessor<boolean>;
 }
 
 export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
@@ -33,14 +35,39 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
   let trackRef: HTMLDivElement | undefined;
   let wasPlaying = false;
 
+  // Effective frame range: constrained = focus range, otherwise = full recording
+  const rangeStart = () => {
+    if (props.constrainToFocus()) {
+      const f = props.focusRange();
+      return f ? f.inFrame : 0;
+    }
+    return 0;
+  };
+  const rangeEnd = () => {
+    if (props.constrainToFocus()) {
+      const f = props.focusRange();
+      return f ? f.outFrame : engine.endFrame();
+    }
+    return engine.endFrame();
+  };
+  const rangeSpan = () => rangeEnd() - rangeStart() || 1;
+
+  /** Map a frame to 0–100% within the effective range. */
+  const frameToPct = (frame: number) =>
+    ((frame - rangeStart()) / rangeSpan()) * 100;
+
+  /** Map a 0–1 fraction from a pointer event to a frame in the effective range. */
+  const pctToFrame = (pct: number) =>
+    Math.round(rangeStart() + pct * rangeSpan());
+
   const activeFocus = () => props.editingFocus() ? props.focusDraft() : props.focusRange();
   const focusInPct = () => {
     const f = activeFocus();
-    return f ? (f.inFrame / engine.endFrame()) * 100 : 0;
+    return f ? frameToPct(f.inFrame) : 0;
   };
   const focusOutPct = () => {
     const f = activeFocus();
-    return f ? (f.outFrame / engine.endFrame()) * 100 : 100;
+    return f ? frameToPct(f.outFrame) : 100;
   };
 
   const killEvents = createMemo(() => {
@@ -53,19 +80,22 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
   });
 
   const heatmapData = createMemo(() => {
-    const total = engine.endFrame();
-    if (total === 0) return { buckets: [] as HeatmapBucket[], maxVal: 1 };
+    const start = rangeStart();
+    const end = rangeEnd();
+    const span = end - start;
+    if (span === 0) return { buckets: [] as HeatmapBucket[], maxVal: 1 };
 
     const buckets = Array.from({ length: BUCKET_COUNT }, (_, i) => ({
-      frameStart: (i / BUCKET_COUNT) * total,
-      frameEnd: ((i + 1) / BUCKET_COUNT) * total,
+      frameStart: start + (i / BUCKET_COUNT) * span,
+      frameEnd: start + ((i + 1) / BUCKET_COUNT) * span,
       kills: 0,
       hits: 0,
       other: 0,
     }));
 
     for (const ev of engine.eventManager.getAll()) {
-      const idx = Math.min(Math.floor((ev.frameNum / total) * BUCKET_COUNT), BUCKET_COUNT - 1);
+      if (ev.frameNum < start || ev.frameNum > end) continue;
+      const idx = Math.min(Math.floor(((ev.frameNum - start) / span) * BUCKET_COUNT), BUCKET_COUNT - 1);
       if (ev instanceof HitKilledEvent) {
         if (ev.type === "killed") buckets[idx].kills++;
         else buckets[idx].hits++;
@@ -78,17 +108,18 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
     return { buckets, maxVal };
   });
 
-  const progress = createMemo(() =>
-    engine.endFrame() > 0
-      ? (engine.currentFrame() / engine.endFrame()) * 100
-      : 0,
-  );
+  const progress = createMemo(() => {
+    const span = rangeSpan();
+    return span > 0
+      ? Math.max(0, Math.min(100, frameToPct(engine.currentFrame())))
+      : 0;
+  });
 
   const frameFromEvent = (e: PointerEvent): number => {
-    if (!trackRef) return 0;
+    if (!trackRef) return rangeStart();
     const rect = trackRef.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    return Math.round(pct * engine.endFrame());
+    return pctToFrame(pct);
   };
 
   const onPointerDown: JSX.EventHandler<HTMLDivElement, PointerEvent> = (e) => {
@@ -137,6 +168,8 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
     setHoverFrame(null);
   };
 
+  const constrained = () => props.constrainToFocus();
+
   return (
     <div class={styles.scrubberWrap}>
       <div
@@ -161,6 +194,7 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
               const otherH = h - killH - hitH;
               const isPast = () => bucket.frameEnd <= engine.currentFrame();
               const isOutsideFocus = () => {
+                if (constrained()) return false; // everything visible IS the focus
                 const focus = activeFocus();
                 if (!focus) return false;
                 const bucketMid = (bucket.frameStart + bucket.frameEnd) / 2;
@@ -200,13 +234,21 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
 
         {/* Kill tick marks */}
         <For each={killEvents()}>
-          {(ev) => (
-            <div
-              data-testid="event-marker"
-              class={styles.eventMarker}
-              style={{ left: `${(ev.frameNum / engine.endFrame()) * 100}%` }}
-            />
-          )}
+          {(ev) => {
+            const pct = () => frameToPct(ev.frameNum);
+            // Hide markers outside the visible range
+            if (constrained()) {
+              const f = props.focusRange();
+              if (f && (ev.frameNum < f.inFrame || ev.frameNum > f.outFrame)) return null;
+            }
+            return (
+              <div
+                data-testid="event-marker"
+                class={styles.eventMarker}
+                style={{ left: `${pct()}%` }}
+              />
+            );
+          }}
         </For>
 
         {/* Playhead: full-height vertical line + bottom knob */}
@@ -222,18 +264,18 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
         <Show when={hoverFrame() !== null}>
           <div
             class={styles.hoverLine}
-            style={{ left: `${(hoverFrame()! / engine.endFrame()) * 100}%` }}
+            style={{ left: `${frameToPct(hoverFrame()!)}%` }}
           />
           <div
             class={styles.hoverTooltip}
-            style={{ left: `${(hoverFrame()! / engine.endFrame()) * 100}%` }}
+            style={{ left: `${frameToPct(hoverFrame()!)}%` }}
           >
             {formatElapsedTime(hoverFrame()!, engine.captureDelayMs())}
           </div>
         </Show>
 
-        {/* Focus dim overlays */}
-        <Show when={activeFocus()}>
+        {/* Focus dim overlays (only in unconstrained mode) */}
+        <Show when={!constrained() && activeFocus()}>
           {(_focus) => (<>
             <Show when={focusInPct() > 0}>
               <div
