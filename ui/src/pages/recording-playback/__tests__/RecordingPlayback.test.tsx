@@ -637,6 +637,168 @@ describe("RecordingPlayback", () => {
     });
   });
 
+  it("toggleBlacklist un-blacklists a previously blacklisted player", async () => {
+    const apiCalls: { url: string; method: string }[] = [];
+    setAuthToken("test-token");
+
+    mockLoadRecording.mockImplementation(async (...args: any[]) => {
+      const engine = args[1];
+      const markerManager = args[2];
+      engine.loadRecording({
+        version: 1, worldName: "Altis", missionName: "Op Alpha",
+        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        entities: [{
+          id: 7, name: "TestPlayer", type: "man", startFrame: 0, endFrame: 100,
+          side: "WEST", isPlayer: true, groupName: "Alpha", role: "Rifleman",
+          positions: null, framesFired: null,
+        }],
+        events: [], markers: [], times: [],
+      });
+      markerManager.loadMarkers([{
+        type: "hd_dot", text: "marker1", side: "WEST", color: "ColorBlue",
+        positions: [[0, "100,200,0", "ICON", 1, 0.8]], player: 7, alpha: 1,
+        startFrame: 0, endFrame: 100,
+      }]);
+      return {
+        worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+        missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        extensionVersion: "1.0.0", addonVersion: "2.0.0",
+      };
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist/") && (init?.method === "PUT" || init?.method === "DELETE")) {
+        apiCalls.push({ url, method: init!.method! });
+        return Promise.resolve({ ok: true, status: 204 });
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        // Return player 7 as already blacklisted
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([7]) });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) });
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: false, status: 404, statusText: "Not Found" });
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Player should be visible
+    await vi.waitFor(() => expect(screen.getByText("TestPlayer")).toBeTruthy());
+    fireEvent.click(screen.getByText("TestPlayer"));
+
+    // Click blacklist button to UN-blacklist (player 7 is already in blacklist)
+    await vi.waitFor(() => expect(screen.getByTitle("Toggle marker blacklist")).toBeTruthy());
+    fireEvent.click(screen.getByTitle("Toggle marker blacklist"));
+
+    // Verify DELETE API call was made (remove from blacklist)
+    await vi.waitFor(() => {
+      expect(apiCalls.some(c => c.method === "DELETE" && c.url.includes("/marker-blacklist/7"))).toBe(true);
+    });
+  });
+
+  it("saveFocus handles API error gracefully", async () => {
+    setAuthToken("test-token");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/") && init?.method === "PATCH") {
+        return { ok: false, status: 500, statusText: "Internal Server Error" };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) };
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return { ok: true, status: 200, json: () => Promise.resolve([]) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({}) };
+      }
+      return { ok: false, status: 404, statusText: "Not Found" };
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Save")).toBeTruthy());
+
+    // Click Save — API will fail
+    fireEvent.click(screen.getByText("Save").closest("button")!);
+
+    // Error should be logged
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to save focus range:", expect.anything());
+    });
+
+    // Edit mode should remain open (save failed)
+    expect(screen.getByText("Focus Range")).toBeTruthy();
+  });
+
+  it("clearFocus handles API error gracefully", async () => {
+    setAuthToken("test-token");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    let patchCallCount = 0;
+
+    globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/v1/auth/me")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ authenticated: true, steamId: "12345", steamName: "Admin" }) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/") && init?.method === "PATCH") {
+        patchCallCount++;
+        if (patchCallCount === 1) {
+          // First PATCH (Save) succeeds
+          return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, focus_start: 0, focus_end: 99 }) };
+        }
+        // Second PATCH (Clear) fails
+        return { ok: false, status: 500, statusText: "Internal Server Error" };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/operations/")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({ id: 42, world_name: "Altis", mission_name: "Op Alpha", mission_duration: 3600, filename: "test-42", date: "2024-01-15", storageFormat: "json" }) };
+      }
+      if (typeof url === "string" && url.includes("/marker-blacklist")) {
+        return { ok: true, status: 200, json: () => Promise.resolve([]) };
+      }
+      if (typeof url === "string" && url.includes("/api/v1/customize")) {
+        return { ok: true, status: 200, json: () => Promise.resolve({}) };
+      }
+      return { ok: false, status: 404, statusText: "Not Found" };
+    });
+
+    renderPlayback();
+    await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+    // Enter edit mode, save first to establish a focus range
+    await vi.waitFor(() => expect(screen.getByText("Focus")).toBeTruthy());
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Save")).toBeTruthy());
+    fireEvent.click(screen.getByText("Save").closest("button")!);
+
+    // Wait for save to complete and edit mode to close
+    await vi.waitFor(() => expect(screen.queryByText("Focus Range")).toBeNull());
+
+    // Re-enter edit mode and Clear — API will fail
+    fireEvent.click(screen.getByText("Focus").closest("button")!);
+    await vi.waitFor(() => expect(screen.getByText("Clear")).toBeTruthy());
+    fireEvent.click(screen.getByText("Clear").closest("button")!);
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to clear focus range:", expect.anything());
+    });
+  });
+
   it("Focus button opens edit mode and Cancel closes it", async () => {
     setAuthToken("test-token");
 
