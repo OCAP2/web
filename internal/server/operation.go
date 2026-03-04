@@ -477,10 +477,10 @@ func (r *RepoOperation) Delete(ctx context.Context, id int64) error {
 }
 
 // UpdateOperation updates the editable metadata fields of an operation.
-func (r *RepoOperation) UpdateOperation(ctx context.Context, id int64, missionName, tag, date string) error {
+func (r *RepoOperation) UpdateOperation(ctx context.Context, id int64, missionName, tag, date string, focusStart, focusEnd *int64) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE operations SET mission_name = ?, tag = ?, date = ? WHERE id = ?`,
-		missionName, tag, date, id)
+		`UPDATE operations SET mission_name = ?, tag = ?, date = ?, focus_start = ?, focus_end = ? WHERE id = ?`,
+		missionName, tag, date, focusStart, focusEnd, id)
 	return err
 }
 

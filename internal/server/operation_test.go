@@ -609,7 +609,7 @@ func TestUpdateOperation(t *testing.T) {
 	}
 	require.NoError(t, repo.Store(ctx, op))
 
-	err = repo.UpdateOperation(ctx, op.ID, "Renamed", "COOP", "2026-02-01")
+	err = repo.UpdateOperation(ctx, op.ID, "Renamed", "COOP", "2026-02-01", nil, nil)
 	require.NoError(t, err)
 
 	updated, err := repo.GetByID(ctx, fmt.Sprintf("%d", op.ID))
@@ -993,7 +993,7 @@ func TestDBClosedErrors(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("UpdateOperation", func(t *testing.T) {
-		err := repo.UpdateOperation(ctx, 1, "x", "x", "x")
+		err := repo.UpdateOperation(ctx, 1, "x", "x", "x", nil, nil)
 		assert.Error(t, err)
 	})
 	t.Run("UpdateConversionStatus", func(t *testing.T) {
