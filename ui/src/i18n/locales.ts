@@ -1939,4 +1939,22 @@ export const translations: Record<string, Record<Locale, string>> = {
     fr: "Annuler l'importation",
     fi: "Peruuta tuonti",
   },
+  sign_in: {
+    en: "Sign in",
+    ru: "Войти",
+    de: "Anmelden",
+    cs: "Přihlásit se",
+    it: "Accedi",
+    fr: "Se connecter",
+    fi: "Kirjaudu sisään",
+  },
+  sign_out: {
+    en: "Sign out",
+    ru: "Выйти",
+    de: "Abmelden",
+    cs: "Odhlásit se",
+    it: "Disconnetti",
+    fr: "Se déconnecter",
+    fi: "Kirjaudu ulos",
+  },
 };

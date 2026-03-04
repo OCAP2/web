@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { AuthBadge } from "../AuthBadge";
+import { I18nProvider } from "../../hooks/useLocale";
 
 // ─── Mock useAuth ───
 
@@ -35,12 +36,12 @@ describe("AuthBadge", () => {
   });
 
   it("shows sign-in button when not authenticated", () => {
-    const { getByText } = render(() => <AuthBadge />);
+    const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("Sign in")).toBeDefined();
   });
 
   it("calls loginWithSteam on sign-in click", async () => {
-    const { getByText } = render(() => <AuthBadge />);
+    const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     fireEvent.click(getByText("Sign in"));
     expect(mockLoginWithSteam).toHaveBeenCalledOnce();
   });
@@ -49,7 +50,7 @@ describe("AuthBadge", () => {
     authState.authenticated.mockReturnValue(true);
     authState.steamName.mockReturnValue("TestPlayer");
 
-    const { getByText, queryByText } = render(() => <AuthBadge />);
+    const { getByText, queryByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("TestPlayer")).toBeDefined();
     expect(getByText("ADMIN")).toBeDefined();
     expect(queryByText("Sign in")).toBeNull();
@@ -59,14 +60,14 @@ describe("AuthBadge", () => {
     authState.authenticated.mockReturnValue(true);
     authState.steamId.mockReturnValue("76561198012345678");
 
-    const { getByText } = render(() => <AuthBadge />);
+    const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("76561198012345678")).toBeDefined();
   });
 
   it("shows fallback 'Admin' when no name or id", () => {
     authState.authenticated.mockReturnValue(true);
 
-    const { getByText } = render(() => <AuthBadge />);
+    const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("Admin")).toBeDefined();
   });
 
@@ -74,7 +75,7 @@ describe("AuthBadge", () => {
     authState.authenticated.mockReturnValue(true);
     authState.steamAvatar.mockReturnValue("https://avatars.steamstatic.com/abc.jpg");
 
-    const { getByTestId } = render(() => <AuthBadge />);
+    const { getByTestId } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     const img = getByTestId("admin-avatar") as HTMLImageElement;
     expect(img.src).toBe("https://avatars.steamstatic.com/abc.jpg");
   });
@@ -82,7 +83,7 @@ describe("AuthBadge", () => {
   it("shows placeholder when no avatar", () => {
     authState.authenticated.mockReturnValue(true);
 
-    const { getByText, queryByTestId } = render(() => <AuthBadge />);
+    const { getByText, queryByTestId } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("A")).toBeDefined();
     expect(queryByTestId("admin-avatar")).toBeNull();
   });
@@ -90,7 +91,7 @@ describe("AuthBadge", () => {
   it("calls logout on sign-out click", async () => {
     authState.authenticated.mockReturnValue(true);
 
-    const { getByTitle } = render(() => <AuthBadge />);
+    const { getByTitle } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     fireEvent.click(getByTitle("Sign out"));
     expect(mockLogout).toHaveBeenCalledOnce();
   });
