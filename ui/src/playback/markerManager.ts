@@ -15,6 +15,12 @@ interface ParsedMarkerPosition {
   direction: number;
   alpha: number;
   linePoints?: ArmaCoord[];
+  /** Style overrides from state update entries (JSON extended format). */
+  text?: string;
+  color?: string;
+  size?: [number, number];
+  type?: string;
+  brush?: string;
 }
 
 /**
@@ -55,12 +61,23 @@ export function parseMarkerPosition(
       };
     }
 
-    return {
+    const result: ParsedMarkerPosition = {
       frameNum,
       position: [pos[0], pos[1]] as ArmaCoord,
       direction,
       alpha,
     };
+
+    // Extended JSON format: [frame, pos, dir, alpha, text, color, size, type, brush, shape]
+    if (entry.length > 4) {
+      if (entry[4] !== undefined && entry[4] !== "") result.text = entry[4];
+      if (entry[5] !== undefined) result.color = entry[5];
+      if (entry[6] !== undefined) result.size = entry[6];
+      if (entry[7] !== undefined && entry[7] !== "") result.type = entry[7];
+      if (entry[8] !== undefined) result.brush = entry[8];
+    }
+
+    return result;
   }
 
   // Protobuf/FB format: [frameNum, posX, posY, posZ, direction, alpha, ...lineCoords]
@@ -216,6 +233,11 @@ interface TrackedMarker {
   lastPosIndex: number;
   /** Last frame for which an interpolated update was sent (projectiles only). */
   lastInterpFrame: number;
+  /** Active style — updated from position entries, used for create/recreate. */
+  activeType: string;
+  activeColor: string;
+  activeBrush?: string;
+  activeSize?: [number, number];
 }
 
 /**
@@ -333,7 +355,10 @@ export class MarkerManager {
 
       const popupText = buildMarkerPopupText(def, lookup);
       const layer = classifyMarkerLayer(def);
-      this.markers.push({ def, popupText, layer, handle: null, lastPosIndex: -1, lastInterpFrame: -1 });
+      this.markers.push({
+        def, popupText, layer, handle: null, lastPosIndex: -1, lastInterpFrame: -1,
+        activeType: def.type, activeColor: def.color, activeBrush: def.brush, activeSize: def.size,
+      });
     }
 
     console.log(
@@ -400,16 +425,39 @@ export class MarkerManager {
           parsed = parseMarkerPosition(tracked.def.positions[posIndex]);
         }
 
+        // Check if position entry carries style overrides that differ from active style
+        if (parsed.type || parsed.color || parsed.brush) {
+          const typeChanged = parsed.type && parsed.type !== tracked.activeType;
+          const colorChanged = parsed.color && parsed.color !== tracked.activeColor;
+          const brushChanged = parsed.brush && parsed.brush !== tracked.activeBrush;
+          const sizeChanged = parsed.size && (
+            parsed.size[0] !== tracked.activeSize?.[0] || parsed.size[1] !== tracked.activeSize?.[1]
+          );
+
+          if (typeChanged || colorChanged || brushChanged || sizeChanged) {
+            if (parsed.type) tracked.activeType = parsed.type;
+            if (parsed.color) tracked.activeColor = parsed.color;
+            if (parsed.brush) tracked.activeBrush = parsed.brush;
+            if (parsed.size) tracked.activeSize = parsed.size;
+
+            // Destroy existing handle so it's recreated with new style
+            if (tracked.handle) {
+              this.renderer.removeBriefingMarker(tracked.handle);
+              tracked.handle = null;
+            }
+          }
+        }
+
         if (!tracked.handle) {
-          // Create the marker
+          // Create the marker with current active style
           const briefingDef: BriefingMarkerDef = {
             shape: tracked.def.shape,
-            type: tracked.def.type,
-            color: tracked.def.color,
+            type: tracked.activeType,
+            color: tracked.activeColor,
             text: tracked.popupText || undefined,
             side: tracked.def.side,
-            size: tracked.def.size,
-            brush: tracked.def.brush,
+            size: tracked.activeSize,
+            brush: tracked.activeBrush,
             layer: tracked.layer,
           };
           tracked.handle = this.renderer.createBriefingMarker(briefingDef);
