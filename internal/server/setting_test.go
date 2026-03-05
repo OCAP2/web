@@ -379,14 +379,14 @@ func TestNewSetting_EnvVars(t *testing.T) {
 	})
 }
 
-func TestSetting_AdminSessionTTL(t *testing.T) {
+func TestSetting_AuthSessionTTL(t *testing.T) {
 	defer viper.Reset()
 
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "setting.json")
 	err := os.WriteFile(configPath, []byte(`{
 		"secret": "test-secret-value",
-		"admin": {
+		"auth": {
 			"sessionTTL": "2h"
 		}
 	}`), 0644)
@@ -397,10 +397,10 @@ func TestSetting_AdminSessionTTL(t *testing.T) {
 	setting, err := NewSetting()
 	require.NoError(t, err)
 
-	assert.Equal(t, 2*time.Hour, setting.Admin.SessionTTL)
+	assert.Equal(t, 2*time.Hour, setting.Auth.SessionTTL)
 }
 
-func TestSetting_AdminSessionTTL_Default(t *testing.T) {
+func TestSetting_AuthSessionTTL_Default(t *testing.T) {
 	defer viper.Reset()
 
 	dir := t.TempDir()
@@ -413,18 +413,18 @@ func TestSetting_AdminSessionTTL_Default(t *testing.T) {
 	setting, err := NewSetting()
 	require.NoError(t, err)
 
-	assert.Equal(t, 24*time.Hour, setting.Admin.SessionTTL)
+	assert.Equal(t, 24*time.Hour, setting.Auth.SessionTTL)
 }
 
-func TestSetting_AdminAllowedSteamIDs(t *testing.T) {
+func TestSetting_AuthAdminSteamIDs(t *testing.T) {
 	defer viper.Reset()
 
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "setting.json")
 	err := os.WriteFile(configPath, []byte(`{
 		"secret": "test-secret-value",
-		"admin": {
-			"allowedSteamIds": ["76561198012345678", "76561198087654321"]
+		"auth": {
+			"adminSteamIds": ["76561198012345678", "76561198087654321"]
 		}
 	}`), 0644)
 	require.NoError(t, err)
@@ -434,17 +434,17 @@ func TestSetting_AdminAllowedSteamIDs(t *testing.T) {
 	setting, err := NewSetting()
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"76561198012345678", "76561198087654321"}, setting.Admin.AllowedSteamIDs)
+	assert.Equal(t, []string{"76561198012345678", "76561198087654321"}, setting.Auth.AdminSteamIDs)
 }
 
-func TestSetting_AdminSteamAPIKey(t *testing.T) {
+func TestSetting_AuthSteamAPIKey(t *testing.T) {
 	defer viper.Reset()
 
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "setting.json")
 	err := os.WriteFile(configPath, []byte(`{
 		"secret": "test-secret-value",
-		"admin": {
+		"auth": {
 			"steamApiKey": "ABCDEF0123456789"
 		}
 	}`), 0644)
@@ -455,7 +455,7 @@ func TestSetting_AdminSteamAPIKey(t *testing.T) {
 	setting, err := NewSetting()
 	require.NoError(t, err)
 
-	assert.Equal(t, "ABCDEF0123456789", setting.Admin.SteamAPIKey)
+	assert.Equal(t, "ABCDEF0123456789", setting.Auth.SteamAPIKey)
 }
 
 func TestSplitCSV(t *testing.T) {

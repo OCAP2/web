@@ -32,9 +32,9 @@
 		"pingInterval": "30s",
 		"pingTimeout": "10s"
 	},
-	"admin": {
+	"auth": {
 		"sessionTTL": "24h",
-		"allowedSteamIds": [],
+		"adminSteamIds": [],
 		"steamApiKey": ""
 	}
 }

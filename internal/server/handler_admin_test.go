@@ -323,7 +323,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	setting := Setting{
 		Secret: "test-secret",
 		Data:   dir,
-		Admin:  Admin{SessionTTL: time.Hour},
+		Auth:  Auth{SessionTTL: time.Hour},
 	}
 	jwtMgr := NewJWTManager("test-secret", time.Hour)
 

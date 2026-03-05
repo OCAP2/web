@@ -28,13 +28,13 @@ func (m mockVerifier) Verify(string, openid.DiscoveryCache, openid.NonceStore) (
 	return m.claimedID, m.err
 }
 
-func newSteamAuthHandler(allowedIDs []string) Handler {
+func newSteamAuthHandler(adminIDs []string) Handler {
 	return Handler{
 		setting: Setting{
 			Secret: "test-secret",
-			Admin: Admin{
-				SessionTTL:      time.Hour,
-				AllowedSteamIDs: allowedIDs,
+			Auth: Auth{
+				SessionTTL:    time.Hour,
+				AdminSteamIDs: adminIDs,
 			},
 		},
 		jwt:              NewJWTManager("test-secret", time.Hour),
@@ -428,7 +428,7 @@ func TestSteamCallback_SteamAPIError(t *testing.T) {
 	defer srv.Close()
 
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
-	hdlr.setting.Admin.SteamAPIKey = "TESTKEY"
+	hdlr.setting.Auth.SteamAPIKey = "TESTKEY"
 	hdlr.steamAPIBaseURL = srv.URL
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
@@ -464,7 +464,7 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 	defer srv.Close()
 
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
-	hdlr.setting.Admin.SteamAPIKey = "TESTKEY"
+	hdlr.setting.Auth.SteamAPIKey = "TESTKEY"
 	hdlr.steamAPIBaseURL = srv.URL
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)

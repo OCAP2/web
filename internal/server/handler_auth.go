@@ -111,19 +111,19 @@ func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check allowlist
-	if !isSteamIDAllowed(steamID, h.setting.Admin.AllowedSteamIDs) {
+	if !isSteamIDAllowed(steamID, h.setting.Auth.AdminSteamIDs) {
 		h.authRedirect(w, r, "auth_error=steam_denied")
 		return
 	}
 
 	// Fetch Steam profile data if API key is configured
 	var claimOpts []ClaimOption
-	if h.setting.Admin.SteamAPIKey != "" {
+	if h.setting.Auth.SteamAPIKey != "" {
 		baseURL := steamAPIBaseURL
 		if h.steamAPIBaseURL != "" {
 			baseURL = h.steamAPIBaseURL
 		}
-		if name, avatar, err := fetchSteamProfileFrom(baseURL, steamID, h.setting.Admin.SteamAPIKey); err == nil {
+		if name, avatar, err := fetchSteamProfileFrom(baseURL, steamID, h.setting.Auth.SteamAPIKey); err == nil {
 			claimOpts = append(claimOpts, WithSteamProfile(name, avatar))
 		} else {
 			log.Printf("WARN: failed to fetch Steam profile for %s: %v", steamID, err)

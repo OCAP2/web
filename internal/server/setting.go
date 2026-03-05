@@ -25,7 +25,7 @@ type Setting struct {
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
 	Streaming  Streaming  `json:"streaming" yaml:"streaming"`
-	Admin      Admin      `json:"admin" yaml:"admin"`
+	Auth      Auth      `json:"auth" yaml:"auth"`
 }
 
 type Conversion struct {
@@ -47,10 +47,10 @@ type Customize struct {
 	CSSOverrides     map[string]string `json:"cssOverrides,omitempty" yaml:"cssOverrides"`
 }
 
-type Admin struct {
-	SessionTTL      time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
-	AllowedSteamIDs []string      `json:"allowedSteamIds" yaml:"allowedSteamIds"`
-	SteamAPIKey     string        `json:"steamApiKey" yaml:"steamApiKey"`
+type Auth struct {
+	SessionTTL    time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
+	AdminSteamIDs []string      `json:"adminSteamIds" yaml:"adminSteamIds"`
+	SteamAPIKey   string        `json:"steamApiKey" yaml:"steamApiKey"`
 }
 
 type Streaming struct {
@@ -94,13 +94,13 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("streaming.enabled", false)
 	viper.SetDefault("streaming.pingInterval", "30s")
 	viper.SetDefault("streaming.pingTimeout", "10s")
-	viper.SetDefault("admin.sessionTTL", "24h")
-	viper.SetDefault("admin.allowedSteamIds", []string{})
-	viper.SetDefault("admin.steamApiKey", "")
+	viper.SetDefault("auth.sessionTTL", "24h")
+	viper.SetDefault("auth.adminSteamIds", []string{})
+	viper.SetDefault("auth.steamApiKey", "")
 
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "admin.sessionTTL", "admin.allowedSteamIds", "admin.steamApiKey"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
@@ -121,7 +121,7 @@ func NewSetting() (setting Setting, err error) {
 
 	// Viper doesn't split comma-separated env var strings into slices,
 	// so a value like "id1,id2" ends up as ["id1,id2"]. Expand it.
-	setting.Admin.AllowedSteamIDs = splitCSV(setting.Admin.AllowedSteamIDs)
+	setting.Auth.AdminSteamIDs = splitCSV(setting.Auth.AdminSteamIDs)
 
 	// Viper can't unmarshal a JSON string env var into map[string]string,
 	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set. Env var takes

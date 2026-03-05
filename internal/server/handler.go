@@ -127,7 +127,7 @@ func NewHandler(
 		opt(&hdlr)
 	}
 
-	hdlr.jwt = NewJWTManager(setting.Secret, setting.Admin.SessionTTL)
+	hdlr.jwt = NewJWTManager(setting.Secret, setting.Auth.SessionTTL)
 	hdlr.openIDCache = openid.NewSimpleDiscoveryCache()
 	hdlr.openIDNonceStore = openid.NewSimpleNonceStore()
 	hdlr.openIDVerifier = defaultOpenIDVerifier{}
