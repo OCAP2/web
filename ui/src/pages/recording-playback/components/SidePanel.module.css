@@ -672,6 +672,14 @@
   text-align: right;
 }
 
+.leaderboardVehicleKills {
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  min-width: 20px;
+  text-align: right;
+}
+
 /* ── Scrollable content ── */
 
 .tabContent {

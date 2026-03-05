@@ -5,6 +5,7 @@ import {
   createTestEngine,
   TestProviders,
   unitDef,
+  vehicleDef,
   makeManifest,
   killedEvent,
 } from "./testHelpers";
@@ -323,6 +324,67 @@ describe("StatsTab", () => {
     // Kills and Deaths labels should be present (AI kill still counted in force card)
     expect(screen.getAllByText("Kills").length).toBe(2);
     expect(screen.getAllByText("Deaths").length).toBe(2);
+  });
+
+  it("shows vehicle kills in leaderboard", () => {
+    const { engine, renderer } = createTestEngine();
+    const positions = Array.from({ length: 20 }, () => ({
+      position: [100, 200] as [number, number],
+      direction: 0,
+      alive: 1 as const,
+    }));
+    const entities = [
+      unitDef({ id: 1, name: "TankHunter", side: "WEST", isPlayer: true, positions, endFrame: 19 }),
+      unitDef({ id: 2, name: "Victim", side: "EAST", isPlayer: true, positions, endFrame: 19 }),
+      vehicleDef({ id: 50, name: "BTR-80", type: "apc", positions, endFrame: 19 }),
+      vehicleDef({ id: 51, name: "T-72", type: "tank", positions, endFrame: 19 }),
+    ];
+    const events = [
+      killedEvent(3, 50, 1, "RPG-7", 200),  // TankHunter destroys BTR-80
+      killedEvent(5, 51, 1, "RPG-7", 150),  // TankHunter destroys T-72
+      killedEvent(7, 2, 1, "M4A1", 100),    // TankHunter kills Victim
+    ];
+    engine.loadRecording(makeManifest(entities, events, 20));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    // Leaderboard should show VK column header
+    expect(screen.getByText("VK")).toBeTruthy();
+    // TankHunter should appear with vehicle kills
+    expect(screen.getByText("TankHunter")).toBeTruthy();
+  });
+
+  it("shows player in leaderboard when they only have vehicle kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const positions = Array.from({ length: 20 }, () => ({
+      position: [100, 200] as [number, number],
+      direction: 0,
+      alive: 1 as const,
+    }));
+    const entities = [
+      unitDef({ id: 1, name: "ATGunner", side: "WEST", isPlayer: true, positions, endFrame: 19 }),
+      vehicleDef({ id: 50, name: "BMP-2", type: "apc", positions, endFrame: 19 }),
+    ];
+    const events = [
+      killedEvent(5, 50, 1, "Javelin", 500),  // ATGunner destroys BMP-2
+    ];
+    engine.loadRecording(makeManifest(entities, events, 20));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    // Player with only vehicle kills should still appear in leaderboard
+    expect(screen.getByText("Leaderboard")).toBeTruthy();
+    expect(screen.getByText("ATGunner")).toBeTruthy();
   });
 
   it("shows multiple side cards when multiple sides have units", () => {
