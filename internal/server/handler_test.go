@@ -1102,6 +1102,27 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
+	t.Run("viewer JWT token is rejected", func(t *testing.T) {
+		token, err := jwtMgr.Create("some-steam-id", WithRole("viewer"))
+		require.NoError(t, err)
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Viewer Upload Test"))
+		require.NoError(t, writer.WriteField("missionDuration", "1800"))
+		require.NoError(t, writer.WriteField("filename", "viewer_upload_test"))
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
 	t.Run("no secret and no token fails", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -1658,7 +1679,8 @@ func TestStoreOperation_JWTAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	jwt := NewJWTManager("test-secret", time.Hour)
-	token, _ := jwt.Create("", WithRole("admin"))
+	token, err := jwt.Create("", WithRole("admin"))
+	require.NoError(t, err)
 	h := &Handler{
 		repoOperation: repo,
 		setting:       Setting{Secret: "actual-secret", Data: dataDir},
