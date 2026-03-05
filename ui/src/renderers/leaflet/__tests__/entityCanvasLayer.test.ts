@@ -994,6 +994,76 @@ describe("EntityCanvasLayer — render paths", () => {
     expect(mockCtx.drawImage).not.toHaveBeenCalled();
   });
 
+  it("advances projectile interpolation progress during render", () => {
+    layer.setSmoothingEnabled(true, 1);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    // First update snaps (large distance from origin)
+    layer.updateProjectile(1, { position: [1000, 1000], direction: 0, alpha: 1 });
+    // Second update starts interpolation (small distance)
+    layer.updateProjectile(1, { position: [1005, 1005], direction: 0, alpha: 1 });
+    const p = (layer as any).projectiles.get(1);
+    expect(p.interpProgress).toBe(0);
+
+    // Render advances interpolation
+    render();
+    expect(p.interpProgress).toBeGreaterThan(0);
+  });
+
+  it("uses cached projectile positions during zoom", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render(); // Cache positions
+
+    const p = (layer as any).projectiles.get(1);
+    const cachedPx = p.cachedPx;
+    const cachedPy = p.cachedPy;
+
+    // Simulate zoom
+    (layer as any).zooming = true;
+    (layer as any).zoomScale = 2;
+    render();
+
+    // During zoom, cached positions should be used (not recalculated)
+    expect(p.cachedPx).toBe(cachedPx);
+    expect(p.cachedPy).toBe(cachedPy);
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("culls off-screen projectiles", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    // Place projectile far off-screen (projection maps to way outside viewport)
+    layer.updateProjectile(1, { position: [-999999, -999999], direction: 0, alpha: 1 });
+    mockCtx.drawImage.mockClear();
+    render();
+    // drawImage is NOT called for entity icons when projectile is culled
+    // (entities may still draw, so check setTransform calls for rotation —
+    // the projectile's rotation setTransform should not appear)
+    // Since no entities exist, drawImage should not be called at all
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("skips projectiles whose icon has not loaded yet", () => {
+    // Override getOrLoad to return null (icon loading)
+    (layer as any).config.iconCache.getOrLoad = () => null;
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render();
+    // No drawImage since icon isn't loaded
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
   it("renders projectiles between fire lines and entities", () => {
     layer.setFireLines([{
       fromX: 100, fromY: 100, toX: 200, toY: 200,
