@@ -63,6 +63,7 @@ function makeConfig(overrides?: Partial<EntityCanvasConfig>): EntityCanvasConfig
     isMapLibreMode: false,
     nameDisplayMode: () => "all",
     layerVisible: () => true,
+    projectileLayerVisible: () => true,
     worldSize: 30720,
     latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
     ...overrides,
@@ -406,6 +407,89 @@ describe("EntityCanvasLayer", () => {
     });
   });
 
+  describe("projectiles", () => {
+    it("adds a projectile at the given position", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      const p = (layer as any).projectiles.get(1);
+      expect(p).toBeDefined();
+      expect(p.iconUrl).toBe("http://example.com/grenade.png");
+      expect(p.iconSize).toEqual([35, 35]);
+      expect(p.opacity).toBe(1);
+    });
+
+    it("updates projectile position and opacity", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      layer.updateProjectile(1, {
+        position: [500, 600],
+        direction: 45,
+        alpha: 0.5,
+      });
+      const p = (layer as any).projectiles.get(1);
+      expect(p.targetX).toBe(500);
+      expect(p.targetY).toBe(600);
+      expect(p.targetDir).toBe(45);
+      expect(p.opacity).toBe(0.5);
+    });
+
+    it("removes a projectile", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      layer.removeProjectile(1);
+      expect((layer as any).projectiles.get(1)).toBeUndefined();
+    });
+
+    it("ignores updates for non-existent projectile", () => {
+      expect(() =>
+        layer.updateProjectile(999, { position: [0, 0], direction: 0, alpha: 1 }),
+      ).not.toThrow();
+    });
+
+    it("ignores remove for non-existent projectile", () => {
+      expect(() => layer.removeProjectile(999)).not.toThrow();
+    });
+
+    it("clears projectiles on dispose", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      layer.dispose();
+      expect((layer as any).projectiles.size).toBe(0);
+    });
+
+    it("snaps position when smoothing is off", () => {
+      layer.setSmoothingEnabled(false);
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      layer.updateProjectile(1, { position: [500, 600], direction: 45, alpha: 1 });
+      const p = (layer as any).projectiles.get(1);
+      expect(p.interpProgress).toBe(1);
+      expect(p.prevX).toBe(500);
+      expect(p.prevY).toBe(600);
+    });
+
+    it("interpolates position when smoothing is on", () => {
+      layer.setSmoothingEnabled(true, 1);
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      layer.updateProjectile(1, { position: [10, 10], direction: 45, alpha: 1 });
+      const p = (layer as any).projectiles.get(1);
+      expect(p.interpProgress).toBe(0);
+    });
+  });
+
   describe("dispose", () => {
     it("cancels animation frame", () => {
       const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
@@ -541,6 +625,7 @@ describe("EntityCanvasLayer — render paths", () => {
       iconCache: {
         resolveType: (t: string) => t,
         get: () => fakeImg as any,
+        getOrLoad: () => fakeImg as any,
         getSize: () => [24, 24] as [number, number],
         preloadAll: () => Promise.resolve(),
       } as unknown as CanvasIconCache,
@@ -548,6 +633,7 @@ describe("EntityCanvasLayer — render paths", () => {
       isMapLibreMode: false,
       nameDisplayMode: () => "all" as const,
       layerVisible: () => true,
+      projectileLayerVisible: () => true,
       worldSize: 30720,
       latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
     };
@@ -820,6 +906,53 @@ describe("EntityCanvasLayer — render paths", () => {
     (layer as any).zoomScale = 2;
     render();
     expect((layer as any).projAx).toBe(prevAx);
+  });
+
+  // --- Projectiles ---
+
+  it("renders projectile icons", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("skips projectiles with opacity 0", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 0 });
+    render();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("skips projectiles when projectile layer is hidden", () => {
+    (layer as any).config.projectileLayerVisible = () => false;
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    render();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("renders projectiles between fire lines and entities", () => {
+    layer.setFireLines([{
+      fromX: 100, fromY: 100, toX: 200, toY: 200,
+      color: "#f00", weight: 2, opacity: 0.8,
+      cachedFromPx: 0, cachedFromPy: 0, cachedToPx: 0, cachedToPy: 0,
+    }]);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    layer.addEntity(2, DEFAULT_OPTS);
+    render();
+    expect(mockCtx.stroke).toHaveBeenCalled();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
   });
 
   // --- Snapshot ---

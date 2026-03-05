@@ -62,6 +62,34 @@ interface CanvasEntity {
   cachedLabelFontSize: number;
 }
 
+interface CanvasProjectile {
+  id: number;
+  prevX: number;
+  prevY: number;
+  prevDir: number;
+  targetX: number;
+  targetY: number;
+  targetDir: number;
+  interpProgress: number;
+  iconUrl: string;
+  iconSize: [number, number];
+  opacity: number;
+  cachedPx: number;
+  cachedPy: number;
+  cachedDir: number;
+}
+
+export interface ProjectileOpts {
+  iconUrl: string;
+  iconSize: [number, number];
+}
+
+export interface ProjectileState {
+  position: ArmaCoord;
+  direction: number;
+  alpha: number;
+}
+
 export interface FireLine {
   // Arma coordinate space (meters)
   fromX: number;
@@ -90,6 +118,7 @@ export interface EntityCanvasConfig {
   isMapLibreMode: boolean;
   nameDisplayMode: () => "players" | "all" | "none";
   layerVisible: () => boolean;
+  projectileLayerVisible: () => boolean;
   // Grid
   worldSize: number;
   latLngToArma: (latlng: L.LatLng) => ArmaCoord;
@@ -105,6 +134,7 @@ export class EntityCanvasLayer {
   private dpr = 1;
 
   private entities = new Map<number, CanvasEntity>();
+  private projectiles = new Map<number, CanvasProjectile>();
 
   private smoothing = false;
   private interpDurationSec = 1;
@@ -286,6 +316,50 @@ export class EntityCanvasLayer {
     this.gridVisible = visible;
   }
 
+  addProjectile(id: number, opts: ProjectileOpts): void {
+    this.projectiles.set(id, {
+      id,
+      prevX: 0, prevY: 0, prevDir: 0,
+      targetX: 0, targetY: 0, targetDir: 0,
+      interpProgress: 1,
+      iconUrl: opts.iconUrl,
+      iconSize: opts.iconSize,
+      opacity: 1,
+      cachedPx: 0, cachedPy: 0, cachedDir: 0,
+    });
+  }
+
+  updateProjectile(id: number, state: ProjectileState): void {
+    const p = this.projectiles.get(id);
+    if (!p) return;
+
+    const t = p.interpProgress;
+    p.prevX = p.prevX + (p.targetX - p.prevX) * t;
+    p.prevY = p.prevY + (p.targetY - p.prevY) * t;
+    p.prevDir = p.prevDir + (p.targetDir - p.prevDir) * t;
+
+    p.targetX = state.position[0];
+    p.targetY = state.position[1];
+    p.targetDir = closestEquivalentAngle(p.prevDir, state.direction);
+    p.opacity = state.alpha;
+
+    const dx = p.targetX - p.prevX;
+    const dy = p.targetY - p.prevY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > SKIP_ANIMATION_DISTANCE || !this.smoothing) {
+      p.prevX = p.targetX;
+      p.prevY = p.targetY;
+      p.prevDir = p.targetDir;
+      p.interpProgress = 1;
+    } else {
+      p.interpProgress = 0;
+    }
+  }
+
+  removeProjectile(id: number): void {
+    this.projectiles.delete(id);
+  }
+
   dispose(): void {
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
@@ -297,6 +371,7 @@ export class EntityCanvasLayer {
     this.resizeObserver = null;
     this.canvas.remove();
     this.entities.clear();
+    this.projectiles.clear();
     this.fireLines = [];
   }
 
@@ -373,8 +448,10 @@ export class EntityCanvasLayer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    if (!this.config.layerVisible() && !this.gridVisible) return;
-    if (this.entities.size === 0 && this.fireLines.length === 0 && !this.gridVisible) return;
+    const entityLayerVisible = this.config.layerVisible();
+    const projectileLayerVisible = this.config.projectileLayerVisible();
+    if (!entityLayerVisible && !projectileLayerVisible && !this.gridVisible) return;
+    if (this.entities.size === 0 && this.fireLines.length === 0 && this.projectiles.size === 0 && !this.gridVisible) return;
 
     // During zoom the CSS transform scales the canvas — counter-scale so
     // lines and text stay at their true pixel size.
@@ -382,7 +459,8 @@ export class EntityCanvasLayer {
 
     if (this.gridVisible) this.renderGrid(cs);
     this.renderFireLines(cs, w, h);
-    this.renderEntities(dt, cs, w, h);
+    if (projectileLayerVisible) this.renderProjectiles(dt, cs, w, h);
+    if (entityLayerVisible) this.renderEntities(dt, cs, w, h);
 
     // Snapshot the current map center/zoom so the next zoom transform
     // has the correct baseline (matching Leaflet's _center / _zoom pattern).
@@ -528,6 +606,66 @@ export class EntityCanvasLayer {
       ctx.lineTo(toPx, toPy);
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
+  }
+
+  private renderProjectiles(dt: number, cs: number, w: number, h: number): void {
+    const ctx = this.ctx;
+    const dpr = this.dpr;
+    const iconCache = this.config.iconCache;
+    const interpDur = this.interpDurationSec;
+
+    for (const p of this.projectiles.values()) {
+      if (p.opacity === 0) continue;
+
+      if (this.smoothing && p.interpProgress < 1) {
+        p.interpProgress = interpDur > 0
+          ? Math.min(1, p.interpProgress + dt / interpDur)
+          : 1;
+      }
+
+      let px: number;
+      let py: number;
+      let dir: number;
+
+      if (this.zooming) {
+        px = p.cachedPx;
+        py = p.cachedPy;
+        dir = p.cachedDir;
+      } else {
+        const t = p.interpProgress;
+        const x = p.prevX + (p.targetX - p.prevX) * t;
+        const y = p.prevY + (p.targetY - p.prevY) * t;
+        dir = p.prevDir + (p.targetDir - p.prevDir) * t;
+
+        px = this.projAx * x + this.projBx * y + this.projCx;
+        py = this.projAy * x + this.projBy * y + this.projCy;
+
+        p.cachedPx = px;
+        p.cachedPy = py;
+        p.cachedDir = dir;
+      }
+
+      if (px < -40 || px > w + 40 || py < -40 || py > h + 40) continue;
+
+      const img = iconCache.getOrLoad(p.iconUrl);
+      if (!img) continue;
+
+      const [iw, ih] = p.iconSize;
+      const dw = iw * cs;
+      const dh = ih * cs;
+
+      const rad = (dir * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      ctx.setTransform(
+        dpr * cos, dpr * sin, -dpr * sin, dpr * cos, dpr * px, dpr * py,
+      );
+      ctx.globalAlpha = p.opacity;
+      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalAlpha = 1;
   }
 
