@@ -339,7 +339,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 
 	// Register routes manually (like NewHandler does)
 	fuego.Get(s, "/api/v1/auth/me", hdlr.GetMe)
-	fuego.Post(s, "/api/v1/auth/logout", hdlr.Logout)
+	fuego.PostStd(s, "/api/v1/auth/logout", hdlr.LogoutStd)
 	admin := fuego.Group(s, "")
 	fuego.Use(admin, hdlr.requireAdmin)
 	fuego.Patch(admin, "/api/v1/operations/{id}", hdlr.EditOperation)

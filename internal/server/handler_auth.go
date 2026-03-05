@@ -179,10 +179,11 @@ func (h *Handler) GetMe(c ContextNoBody) (MeResponse, error) {
 	return resp, nil
 }
 
-// Logout is a no-op for stateless JWT — the frontend discards the token.
-func (h *Handler) Logout(c ContextNoBody) (any, error) {
-	c.SetStatus(http.StatusNoContent)
-	return nil, nil
+// LogoutStd is a no-op for stateless JWT — the frontend discards the token.
+// Uses raw http.HandlerFunc to avoid Fuego's Trailer header on 204 responses,
+// which crashes Node.js v24's http-proxy (ERR_HTTP_TRAILER_INVALID).
+func (h *Handler) LogoutStd(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // requireAdmin is middleware that checks for a valid JWT Bearer token with admin role.
