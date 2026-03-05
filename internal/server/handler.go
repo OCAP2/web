@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -453,7 +454,11 @@ func (h *Handler) GetMarker(w http.ResponseWriter, r *http.Request) {
 
 	img, ct, err := h.repoMarker.Get(ctx, filepath.Base(name), color)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, ErrNotFound) {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -575,7 +580,11 @@ func (h *Handler) GetAmmo(w http.ResponseWriter, r *http.Request) {
 
 	upath, err := h.repoAmmo.GetPath(ctx, filepath.Base(name))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, ErrNotFound) {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 

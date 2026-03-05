@@ -657,7 +657,7 @@ func TestIntegration_MarkerServing(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		hdlr.GetMarker(rec, req)
-		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 
 	t.Run("GET marker with color extension stripped", func(t *testing.T) {
@@ -759,7 +759,7 @@ func TestIntegration_AmmoServing(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		hdlr.GetAmmo(rec, req)
-		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
 

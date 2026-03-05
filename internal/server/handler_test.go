@@ -1646,7 +1646,7 @@ func TestGetAmmo_NotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	hdlr.GetAmmo(rec, req)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
 func TestStoreOperation_JWTAuth(t *testing.T) {
