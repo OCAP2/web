@@ -80,6 +80,18 @@ func TestSteamCallback_MissingNonce(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
+func TestSteamCallback_EmptyNonceCookie(t *testing.T) {
+	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: ""})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "missing auth nonce")
+}
+
 func TestSteamCallback_NonceMismatch(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 

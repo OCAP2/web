@@ -713,6 +713,107 @@ func TestEditOperation_InvalidFieldTypes(t *testing.T) {
 	}
 }
 
+func TestEditOperation_UpdateOperationWriteError(t *testing.T) {
+	// Cover L138-140: UpdateOperation returns an error.
+	// Use PRAGMA query_only to make reads succeed but writes fail.
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { repo.db.Close() })
+
+	tctx := context.Background()
+	op := &Operation{
+		WorldName: "altis", MissionName: "Test",
+		MissionDuration: 300, Filename: "test_update_err",
+		Date: "2026-01-01", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(tctx, op))
+
+	// Make DB read-only: GetByID succeeds, UpdateOperation fails
+	_, err = repo.db.Exec("PRAGMA query_only = ON")
+	require.NoError(t, err)
+
+	jwt := NewJWTManager("secret", time.Hour)
+	h := &Handler{repoOperation: repo, jwt: jwt}
+
+	body := `{"missionName":"New Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": strconv.FormatInt(op.ID, 10)}
+	ctx.SetRequest(req)
+
+	_, err = h.EditOperation(ctx)
+	assert.Error(t, err, "should fail with read-only DB on UpdateOperation")
+}
+
+func TestRetryConversion_DBUpdateStatusError(t *testing.T) {
+	// Cover L178-180: UpdateConversionStatus returns an error after removing files.
+	// Use PRAGMA query_only to make reads succeed but writes fail.
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { repo.db.Close() })
+
+	tctx := context.Background()
+	op := &Operation{
+		WorldName: "altis", MissionName: "Test",
+		MissionDuration: 300, Filename: "test_retry_dberr",
+		Date: "2026-01-01", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(tctx, op))
+	require.NoError(t, repo.UpdateConversionStatus(tctx, op.ID, ConversionStatusFailed))
+
+	// Make DB read-only: GetByID succeeds, UpdateConversionStatus fails
+	_, err = repo.db.Exec("PRAGMA query_only = ON")
+	require.NoError(t, err)
+
+	jwt := NewJWTManager("secret", time.Hour)
+	h := &Handler{repoOperation: repo, setting: Setting{Data: dir}, jwt: jwt}
+
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": strconv.FormatInt(op.ID, 10)}
+
+	_, err = h.RetryConversion(ctx)
+	assert.Error(t, err, "should fail with read-only DB on UpdateConversionStatus")
+}
+
+func TestDeleteOperation_DBDeleteClosedDB(t *testing.T) {
+	// Cover L204-206: Delete returns an error other than ErrNotFound.
+	// Use PRAGMA query_only to make reads succeed but writes fail.
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		repo.db.Exec("PRAGMA query_only = OFF")
+		repo.db.Close()
+	})
+
+	tctx := context.Background()
+	op := &Operation{
+		WorldName: "altis", MissionName: "Test",
+		MissionDuration: 300, Filename: "test_delete_dberr",
+		Date: "2026-01-01", Tag: "coop",
+	}
+	require.NoError(t, repo.Store(tctx, op))
+
+	// Make DB read-only: GetByID succeeds, Delete fails
+	_, err = repo.db.Exec("PRAGMA query_only = ON")
+	require.NoError(t, err)
+
+	jwt := NewJWTManager("secret", time.Hour)
+	h := &Handler{repoOperation: repo, setting: Setting{Data: dataDir}, jwt: jwt}
+
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": strconv.FormatInt(op.ID, 10)}
+
+	_, err = h.DeleteOperation(ctx)
+	assert.Error(t, err, "should fail with read-only DB on Delete")
+}
+
 func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")

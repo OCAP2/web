@@ -2084,6 +2084,148 @@ func TestStoreOperation_PlainJSONUpload(t *testing.T) {
 	assert.JSONEq(t, `{"entities":[],"events":[]}`, decompressed.String())
 }
 
+func TestGetWorlds(t *testing.T) {
+	t.Run("returns worlds from maps directory", func(t *testing.T) {
+		dir := t.TempDir()
+		mapsDir := filepath.Join(dir, "maps")
+		require.NoError(t, os.MkdirAll(filepath.Join(mapsDir, "altis"), 0755))
+		require.NoError(t, os.MkdirAll(filepath.Join(mapsDir, "stratis"), 0755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(mapsDir, "altis", "meta.json"),
+			[]byte(`{"displayName":"Altis"}`), 0644))
+
+		hdlr := Handler{setting: Setting{Maps: mapsDir}}
+
+		mockCtx := fuego.NewMockContextNoBody()
+		result, err := hdlr.GetWorlds(mockCtx)
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+
+		lookup := make(map[string]string)
+		for _, w := range result {
+			lookup[w.Name] = w.DisplayName
+		}
+		assert.Equal(t, "Altis", lookup["altis"])
+		assert.Equal(t, "stratis", lookup["stratis"])
+	})
+
+	t.Run("non-existent maps dir returns empty", func(t *testing.T) {
+		hdlr := Handler{setting: Setting{Maps: "/tmp/nonexistent-maps-dir-99999"}}
+
+		mockCtx := fuego.NewMockContextNoBody()
+		result, err := hdlr.GetWorlds(mockCtx)
+		assert.NoError(t, err)
+		assert.Empty(t, result)
+	})
+
+	t.Run("error when maps path is a file", func(t *testing.T) {
+		f, err := os.CreateTemp(t.TempDir(), "not-a-dir")
+		require.NoError(t, err)
+		f.Close()
+
+		hdlr := Handler{setting: Setting{Maps: f.Name()}}
+
+		mockCtx := fuego.NewMockContextNoBody()
+		_, err = hdlr.GetWorlds(mockCtx)
+		assert.Error(t, err)
+	})
+}
+
+func TestStoreOperation_FocusFields(t *testing.T) {
+	// storeHelper builds a multipart form with the given focus fields and
+	// returns the HTTP response recorder.
+	storeHelper := func(t *testing.T, focusStart, focusEnd string, setStart, setEnd bool) *httptest.ResponseRecorder {
+		t.Helper()
+		dir := t.TempDir()
+		dataDir := filepath.Join(dir, "data")
+		require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+		repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+		require.NoError(t, err)
+		defer repo.db.Close()
+
+		hdlr := Handler{
+			repoOperation: repo,
+			setting: Setting{
+				Secret: "test-secret",
+				Data:   dataDir,
+			},
+		}
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		writer.WriteField("secret", "test-secret")
+		writer.WriteField("worldName", "altis")
+		writer.WriteField("missionName", "Focus Test")
+		writer.WriteField("missionDuration", "3600")
+		writer.WriteField("filename", "focus_test")
+		writer.WriteField("tag", "coop")
+		if setStart {
+			writer.WriteField("focusStart", focusStart)
+		}
+		if setEnd {
+			writer.WriteField("focusEnd", focusEnd)
+		}
+
+		fileWriter, err := writer.CreateFormFile("file", "focus_test.json.gz")
+		require.NoError(t, err)
+		gw := gzip.NewWriter(fileWriter)
+		gw.Write([]byte(`{"test":"focus"}`))
+		gw.Close()
+		writer.Close()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		return rec
+	}
+
+	t.Run("invalid focusStart non-numeric", func(t *testing.T) {
+		rec := storeHelper(t, "abc", "100", true, true)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("invalid focusEnd non-numeric", func(t *testing.T) {
+		rec := storeHelper(t, "10", "xyz", true, true)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("focusStart present but focusEnd absent", func(t *testing.T) {
+		rec := storeHelper(t, "10", "", true, false)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("focusStart >= focusEnd", func(t *testing.T) {
+		rec := storeHelper(t, "100", "100", true, true)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("focusStart > focusEnd", func(t *testing.T) {
+		rec := storeHelper(t, "200", "100", true, true)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("valid focus range", func(t *testing.T) {
+		rec := storeHelper(t, "10", "100", true, true)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+func TestGetSprite_InitError(t *testing.T) {
+	h := &Handler{spriteInitErr: fmt.Errorf("test sprite error")}
+	h.spriteOnce.Do(func() {}) // mark Once as done so it won't re-run
+
+	req := httptest.NewRequest(http.MethodGet, "/images/maps/sprites/sprite.json", nil)
+	req.SetPathValue("name", "sprite.json")
+	rec := httptest.NewRecorder()
+
+	h.GetSprite(rec, req)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "generate sprites")
+}
+
 func TestStoreOperation_GzippedCopyError(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
@@ -2138,3 +2280,36 @@ func TestStoreOperation_GzippedCopyError(t *testing.T) {
 	assert.Equal(t, byte(0x1f), magic[0])
 	assert.Equal(t, byte(0x8b), magic[1])
 }
+
+func TestStoreOperation_EmptyFile(t *testing.T) {
+	// Covers L350-352: br.Peek(2) fails on empty file
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	h := &Handler{
+		repoOperation: repo,
+		setting:       Setting{Secret: "s", Data: dataDir},
+	}
+
+	body := new(bytes.Buffer)
+	w := multipart.NewWriter(body)
+	w.WriteField("secret", "s")
+	w.WriteField("worldName", "altis")
+	w.WriteField("missionName", "Empty")
+	w.WriteField("missionDuration", "100")
+	w.WriteField("filename", "empty_test")
+	part, _ := w.CreateFormFile("file", "empty.json")
+	_ = part // write nothing
+	w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/", body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	rec := httptest.NewRecorder()
+	h.StoreOperation(rec, req)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+

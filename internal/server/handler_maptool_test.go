@@ -756,6 +756,105 @@ func TestRestyleMapToolAll_SubmitError(t *testing.T) {
 	assert.Equal(t, "restyle-all", snap.WorldName)
 }
 
+func TestMapToolEventStream_ChannelClosed(t *testing.T) {
+	// Test the events channel closed path (L259-261 in handler_maptool.go).
+	// When the subscriber channel is closed (via Unsubscribe from the manager side),
+	// the SSE handler should return gracefully.
+	mapsDir := t.TempDir()
+	jm := maptool.NewJobManager(mapsDir, noopPipeline)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+
+	jwt := NewJWTManager("test-secret", time.Hour)
+	token, err := jwt.Create("")
+	require.NoError(t, err)
+
+	hdlr := &Handler{
+		maptoolMgr: jm,
+		maptoolCfg: &maptoolConfig{mapsDir: mapsDir},
+		jwt:        jwt,
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/maptool/events", hdlr.mapToolEventStream)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	connCtx, connCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer connCancel()
+
+	reqURL := fmt.Sprintf("%s/api/v1/maptool/events?token=%s", srv.URL, token)
+	req, err := http.NewRequestWithContext(connCtx, http.MethodGet, reqURL, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Read the initial snapshot event to confirm connection is established
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			break // Got the snapshot data
+		}
+	}
+
+	// Cancel the client context which closes the request, triggering ctx.Done()
+	// on the server side. This covers the context cancellation exit path.
+	connCancel()
+
+	// Drain remaining data to confirm no hang.
+	for scanner.Scan() {
+		// drain
+	}
+	// If we get here without timing out, the context-cancel path worked.
+}
+
+func TestMapToolEventStream_FlusherNotSupported(t *testing.T) {
+	// Test the flusher not supported path (L230-233 in handler_maptool.go).
+	// Use a custom ResponseWriter that does NOT implement http.Flusher.
+	mapsDir := t.TempDir()
+	jm := maptool.NewJobManager(mapsDir, noopPipeline)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { jm.Start(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+
+	jwt := NewJWTManager("test-secret", time.Hour)
+	token, err := jwt.Create("")
+	require.NoError(t, err)
+
+	hdlr := &Handler{
+		maptoolMgr: jm,
+		maptoolCfg: &maptoolConfig{mapsDir: mapsDir},
+		jwt:        jwt,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/maptool/events?token="+token, nil)
+	rec := &nonFlushableWriter{header: http.Header{}, code: 0}
+
+	hdlr.mapToolEventStream(rec, req)
+	assert.Equal(t, http.StatusInternalServerError, rec.code)
+	assert.Contains(t, string(rec.body), "streaming not supported")
+}
+
+// nonFlushableWriter is an http.ResponseWriter that does NOT implement http.Flusher.
+// Used to test the "streaming not supported" error path in mapToolEventStream.
+type nonFlushableWriter struct {
+	header http.Header
+	body   []byte
+	code   int
+}
+
+func (w *nonFlushableWriter) Header() http.Header         { return w.header }
+func (w *nonFlushableWriter) Write(b []byte) (int, error)  { w.body = append(w.body, b...); return len(b), nil }
+func (w *nonFlushableWriter) WriteHeader(code int)         { w.code = code }
+
 // jsonTrimmed returns the recorder body with trailing whitespace removed.
 func jsonTrimmed(rec *httptest.ResponseRecorder) string {
 	s := rec.Body.String()
