@@ -26,7 +26,7 @@ export function RecordingSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { authenticated, authError, dismissAuthError } = useAuth();
+  const { authenticated, isAdmin, authError, dismissAuthError } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -338,7 +338,7 @@ export function RecordingSelector(): JSX.Element {
 
               <div class={styles.adminArea}>
                 <AuthBadge />
-                <Show when={authenticated()}>
+                <Show when={isAdmin()}>
                   <Show when={mapToolEnabled()}>
                     <button
                       class={styles.adminIconButton}
@@ -431,7 +431,7 @@ export function RecordingSelector(): JSX.Element {
         </header>
 
         {/* ── Upload Dialog (modal) ── */}
-        <Show when={showUpload() && authenticated()}>
+        <Show when={showUpload() && isAdmin()}>
           <UploadDialog
             maps={uniqueMaps()}
             tags={uniqueTags()}
@@ -566,7 +566,7 @@ export function RecordingSelector(): JSX.Element {
                 rec={rec()}
                 onLaunch={handleLaunch}
                 onClose={() => setSelectedId(null)}
-                isAdmin={authenticated()}
+                isAdmin={isAdmin()}
                 onEdit={setEditingRec}
                 onDelete={setDeletingRec}
                 onRetry={handleRetry}

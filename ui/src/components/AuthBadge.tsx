@@ -11,7 +11,7 @@ import styles from "./AuthBadge.module.css";
  * Calls useAuth() internally; no props needed.
  */
 export function AuthBadge(): JSX.Element {
-  const { authenticated, steamName, steamId, steamAvatar, loginWithSteam, logout } = useAuth();
+  const { authenticated, isAdmin, steamName, steamId, steamAvatar, loginWithSteam, logout } = useAuth();
   const { t } = useI18n();
 
   return (
@@ -25,14 +25,16 @@ export function AuthBadge(): JSX.Element {
     >
       <>
         <div class={styles.adminBadge}>
-          <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>A</div>}>
+          <Show when={steamAvatar()} fallback={<div class={styles.adminAvatar}>{(steamName() || "U")[0].toUpperCase()}</div>}>
             {(url) => <img src={url()} class={styles.adminAvatarImg} alt="" data-testid="admin-avatar" />}
           </Show>
           <div>
             <div class={styles.adminName}>
-              {steamName() || steamId() || "Admin"}
+              {steamName() || steamId() || "User"}
             </div>
-            <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
+            <Show when={isAdmin()}>
+              <div class={styles.adminLabel}><ShieldIcon /> ADMIN</div>
+            </Show>
           </div>
         </div>
         <button class={styles.adminIconButton} onClick={() => logout()} title={t("sign_out")}>

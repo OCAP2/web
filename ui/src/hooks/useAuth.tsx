@@ -17,6 +17,7 @@ export interface Auth {
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   steam_error: "Steam login failed. Please try again.",
+  steam_denied: "Your Steam account is not authorized for admin access.",
 };
 
 const AuthContext = createContext<Auth>();

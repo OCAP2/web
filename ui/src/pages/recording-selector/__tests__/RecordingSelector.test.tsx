@@ -825,7 +825,7 @@ function mockAdminFetch(ops: Recording[]) {
     if (u.includes("/api/v1/auth/me")) {
       return Promise.resolve({
         ok: true, status: 200, statusText: "OK",
-        json: () => Promise.resolve({ authenticated: true, steamId: "76561198012345678", steamName: "TestPlayer", steamAvatar: "https://avatars.steamstatic.com/test.jpg" }),
+        json: () => Promise.resolve({ authenticated: true, role: "admin", steamId: "76561198012345678", steamName: "TestPlayer", steamAvatar: "https://avatars.steamstatic.com/test.jpg" }),
       } as Response);
     }
 

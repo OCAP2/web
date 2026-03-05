@@ -10,6 +10,8 @@ const mockLogout = vi.fn();
 
 const authState = {
   authenticated: vi.fn(() => false),
+  role: vi.fn(() => null as string | null),
+  isAdmin: vi.fn(() => false),
   steamName: vi.fn(() => null as string | null),
   steamId: vi.fn(() => null as string | null),
   steamAvatar: vi.fn(() => null as string | null),
@@ -30,6 +32,8 @@ describe("AuthBadge", () => {
     cleanup();
     vi.clearAllMocks();
     authState.authenticated.mockReturnValue(false);
+    authState.role.mockReturnValue(null);
+    authState.isAdmin.mockReturnValue(false);
     authState.steamName.mockReturnValue(null);
     authState.steamId.mockReturnValue(null);
     authState.steamAvatar.mockReturnValue(null);
@@ -46,13 +50,25 @@ describe("AuthBadge", () => {
     expect(mockLoginWithSteam).toHaveBeenCalledOnce();
   });
 
-  it("shows admin badge when authenticated", () => {
+  it("shows admin badge when authenticated as admin", () => {
     authState.authenticated.mockReturnValue(true);
+    authState.isAdmin.mockReturnValue(true);
     authState.steamName.mockReturnValue("TestPlayer");
 
     const { getByText, queryByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     expect(getByText("TestPlayer")).toBeDefined();
     expect(getByText("ADMIN")).toBeDefined();
+    expect(queryByText("Sign in")).toBeNull();
+  });
+
+  it("hides ADMIN label for non-admin authenticated users", () => {
+    authState.authenticated.mockReturnValue(true);
+    authState.isAdmin.mockReturnValue(false);
+    authState.steamName.mockReturnValue("RegularUser");
+
+    const { getByText, queryByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByText("RegularUser")).toBeDefined();
+    expect(queryByText("ADMIN")).toBeNull();
     expect(queryByText("Sign in")).toBeNull();
   });
 
@@ -64,11 +80,11 @@ describe("AuthBadge", () => {
     expect(getByText("76561198012345678")).toBeDefined();
   });
 
-  it("shows fallback 'Admin' when no name or id", () => {
+  it("shows fallback 'User' when no name or id", () => {
     authState.authenticated.mockReturnValue(true);
 
     const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
-    expect(getByText("Admin")).toBeDefined();
+    expect(getByText("User")).toBeDefined();
   });
 
   it("shows avatar image when steamAvatar is set", () => {
@@ -84,7 +100,7 @@ describe("AuthBadge", () => {
     authState.authenticated.mockReturnValue(true);
 
     const { getByText, queryByTestId } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
-    expect(getByText("A")).toBeDefined();
+    expect(getByText("U")).toBeDefined();
     expect(queryByTestId("admin-avatar")).toBeNull();
   });
 
