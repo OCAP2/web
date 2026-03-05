@@ -465,8 +465,8 @@ describe("EntityCanvasLayer", () => {
       expect((layer as any).projectiles.size).toBe(0);
     });
 
-    it("snaps position when smoothing is off", () => {
-      layer.setSmoothingEnabled(false);
+    it("always snaps projectile position (MarkerManager handles interpolation)", () => {
+      layer.setSmoothingEnabled(true, 1);
       layer.addProjectile(1, {
         iconUrl: "http://example.com/grenade.png",
         iconSize: [35, 35],
@@ -476,17 +476,8 @@ describe("EntityCanvasLayer", () => {
       expect(p.interpProgress).toBe(1);
       expect(p.prevX).toBe(500);
       expect(p.prevY).toBe(600);
-    });
-
-    it("interpolates position when smoothing is on", () => {
-      layer.setSmoothingEnabled(true, 1);
-      layer.addProjectile(1, {
-        iconUrl: "http://example.com/grenade.png",
-        iconSize: [35, 35],
-      });
-      layer.updateProjectile(1, { position: [10, 10], direction: 45, alpha: 1 });
-      const p = (layer as any).projectiles.get(1);
-      expect(p.interpProgress).toBe(0);
+      expect(p.targetX).toBe(500);
+      expect(p.targetY).toBe(600);
     });
   });
 

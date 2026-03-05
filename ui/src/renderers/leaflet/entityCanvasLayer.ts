@@ -333,27 +333,15 @@ export class EntityCanvasLayer {
     const p = this.projectiles.get(id);
     if (!p) return;
 
-    const t = p.interpProgress;
-    p.prevX = p.prevX + (p.targetX - p.prevX) * t;
-    p.prevY = p.prevY + (p.targetY - p.prevY) * t;
-    p.prevDir = p.prevDir + (p.targetDir - p.prevDir) * t;
-
-    p.targetX = state.position[0];
-    p.targetY = state.position[1];
-    p.targetDir = closestEquivalentAngle(p.prevDir, state.direction);
+    // Snap directly — MarkerManager already interpolates between keyframes,
+    // so adding canvas-level interpolation would cause the projectile to
+    // permanently lag behind its true position and vanish before reaching
+    // its target.
+    p.prevX = p.targetX = state.position[0];
+    p.prevY = p.targetY = state.position[1];
+    p.prevDir = p.targetDir = state.direction;
     p.opacity = state.alpha;
-
-    const dx = p.targetX - p.prevX;
-    const dy = p.targetY - p.prevY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > SKIP_ANIMATION_DISTANCE || !this.smoothing) {
-      p.prevX = p.targetX;
-      p.prevY = p.targetY;
-      p.prevDir = p.targetDir;
-      p.interpProgress = 1;
-    } else {
-      p.interpProgress = 0;
-    }
+    p.interpProgress = 1;
   }
 
   removeProjectile(id: number): void {
