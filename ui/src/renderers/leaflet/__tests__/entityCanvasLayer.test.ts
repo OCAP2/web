@@ -664,6 +664,34 @@ describe("EntityCanvasLayer — render paths", () => {
     expect(mockCtx.stroke).not.toHaveBeenCalled();
   });
 
+  it("renders when only projectiles exist (no entities)", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("early returns when entity layer hidden and no projectiles or grid", () => {
+    (layer as any).config.layerVisible = () => false;
+    (layer as any).config.projectileLayerVisible = () => false;
+    layer.addEntity(1, DEFAULT_OPTS);
+    render();
+    expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("renders projectiles even when entity layer is hidden", () => {
+    (layer as any).config.layerVisible = () => false;
+    (layer as any).config.projectileLayerVisible = () => true;
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
   it("continues when layer hidden but grid visible", () => {
     (layer as any).config.layerVisible = () => false;
     layer.setGridVisible(true);
