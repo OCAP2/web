@@ -16,6 +16,7 @@ import (
 	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/OCAP2/web/internal/server"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-fuego/fuego"
 )
 
@@ -72,6 +73,19 @@ func app() error {
 	s := fuego.NewServer(
 		fuego.WithAddr(setting.Listen),
 		fuego.WithLogHandler(logHandler),
+		fuego.WithEngineOptions(
+			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
+				SwaggerURL:       "/swagger",
+				SpecURL:          "/swagger/openapi.json",
+				PrettyFormatJSON: true,
+				DisableLocalSave: true,
+				Info: &openapi3.Info{
+					Title:       "OCAP2 Web API",
+					Description: "Operation Capture And Playback — mission recording and replay API",
+					Version:     server.BuildVersion,
+				},
+			}),
+		),
 	)
 
 	// Create conversion worker if enabled (before handler so we can pass it)
