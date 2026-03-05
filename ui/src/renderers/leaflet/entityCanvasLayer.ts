@@ -457,6 +457,23 @@ export class EntityCanvasLayer {
     // lines and text stay at their true pixel size.
     const cs = this.zooming ? 1 / this.zoomScale : 1;
 
+    // Precompute affine projection: Arma [x,y] → container [px,py].
+    // Both CRS modes are linear over the map extent (EPSG:3857 distortion
+    // is <0.001% at equator), so 3 reference points give exact coefficients.
+    // Avoids per-entity L.LatLng allocation and Leaflet CRS projection calls.
+    if (!this.zooming) {
+      const d = 10000;
+      const p0 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, 0]));
+      const p1 = this.map.latLngToContainerPoint(this.config.armaToLatLng([d, 0]));
+      const p2 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, d]));
+      this.projAx = (p1.x - p0.x) / d;
+      this.projBx = (p2.x - p0.x) / d;
+      this.projCx = p0.x;
+      this.projAy = (p1.y - p0.y) / d;
+      this.projBy = (p2.y - p0.y) / d;
+      this.projCy = p0.y;
+    }
+
     if (this.gridVisible) this.renderGrid(cs);
     this.renderFireLines(cs, w, h);
     if (projectileLayerVisible) this.renderProjectiles(dt, cs, w, h);
@@ -683,23 +700,6 @@ export class EntityCanvasLayer {
       `${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
     const fontBold =
       `bold ${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-
-    // Precompute affine projection: Arma [x,y] → container [px,py].
-    // Both CRS modes are linear over the map extent (EPSG:3857 distortion
-    // is <0.001% at equator), so 3 reference points give exact coefficients.
-    // Avoids per-entity L.LatLng allocation and Leaflet CRS projection calls.
-    if (!this.zooming) {
-      const d = 10000;
-      const p0 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, 0]));
-      const p1 = this.map.latLngToContainerPoint(this.config.armaToLatLng([d, 0]));
-      const p2 = this.map.latLngToContainerPoint(this.config.armaToLatLng([0, d]));
-      this.projAx = (p1.x - p0.x) / d;
-      this.projBx = (p2.x - p0.x) / d;
-      this.projCx = p0.x;
-      this.projAy = (p1.y - p0.y) / d;
-      this.projBy = (p2.y - p0.y) / d;
-      this.projCy = p0.y;
-    }
 
     for (const e of this.entities.values()) {
       // Skip hidden (in vehicle) entities
