@@ -3,11 +3,15 @@ import type { ArmaCoord } from "../../utils/coordinates";
 import type {
   MarkerHandle,
   LineHandle,
+  BriefingMarkerHandle,
+  BriefingMarkerDef,
+  BriefingMarkerState,
   EntityMarkerOpts,
   EntityMarkerState,
   LineOpts,
   RenderLayer,
 } from "../renderer.types";
+import { basePath } from "../../data/basePath";
 import { LeafletRenderer } from "./leafletRenderer";
 import { EntityCanvasLayer, type FireLine } from "./entityCanvasLayer";
 import { CanvasIconCache } from "./canvasIcons";
@@ -33,6 +37,23 @@ function wrapLineHandle(index: number): LineHandle {
   return { _brand: undefined as any, _internal: index } as unknown as LineHandle;
 }
 
+const PROJECTILE_MARKER = Symbol("canvasProjectile");
+
+function wrapProjectileHandle(id: number): BriefingMarkerHandle {
+  return {
+    _brand: undefined as any,
+    _internal: { [PROJECTILE_MARKER]: true, canvasProjectileId: id } as any,
+  } as unknown as BriefingMarkerHandle;
+}
+
+function isCanvasProjectile(handle: BriefingMarkerHandle): boolean {
+  return !!(handle as any)?._internal?.[PROJECTILE_MARKER];
+}
+
+function unwrapProjectileHandle(handle: BriefingMarkerHandle): number {
+  return (handle as any)._internal.canvasProjectileId;
+}
+
 // --------------- Canvas-backed Leaflet renderer ---------------
 
 /**
@@ -44,6 +65,7 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
   private canvasLayer!: EntityCanvasLayer;
   private iconCache = new CanvasIconCache();
   private pendingFireLines: FireLine[] = [];
+  private nextProjectileId = 1;
 
   override init(container: HTMLElement, world: WorldConfig): void {
     super.init(container, world);
@@ -61,6 +83,7 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
       isMapLibreMode: this.useMapLibreMode,
       nameDisplayMode: () => this.nameDisplayMode(),
       layerVisible: () => this.layerVisibility().entities ?? true,
+      projectileLayerVisible: () => this.layerVisibility().projectileMarkers ?? true,
       worldSize: world.worldSize,
       latLngToArma: (ll) => this.latLngToArma(ll),
     });
@@ -126,6 +149,49 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
       this.pendingFireLines = [];
       this.canvasLayer?.clearFireLines();
     }
+  }
+
+  override createBriefingMarker(def: BriefingMarkerDef): BriefingMarkerHandle {
+    if (def.layer === "projectileMarkers" && def.shape === "ICON") {
+      const isMagIcon = def.type.indexOf("magIcons") > -1;
+      const b = basePath;
+      const iconUrl = isMagIcon
+        ? `${b}images/markers/${def.type.toLowerCase()}.png`
+        : `${b}images/markers/${def.type}/${def.color}.png`;
+      const iconSize: [number, number] = def.size
+        ? [def.size[0] * 35, def.size[1] * 35]
+        : [35, 35];
+
+      const id = this.nextProjectileId++;
+      this.canvasLayer.addProjectile(id, { iconUrl, iconSize });
+      return wrapProjectileHandle(id);
+    }
+    return super.createBriefingMarker(def);
+  }
+
+  override updateBriefingMarker(
+    handle: BriefingMarkerHandle,
+    state: BriefingMarkerState,
+  ): void {
+    if (isCanvasProjectile(handle)) {
+      const id = unwrapProjectileHandle(handle);
+      this.canvasLayer.updateProjectile(id, {
+        position: state.position,
+        direction: state.direction,
+        alpha: state.alpha,
+      });
+      return;
+    }
+    super.updateBriefingMarker(handle, state);
+  }
+
+  override removeBriefingMarker(handle: BriefingMarkerHandle): void {
+    if (isCanvasProjectile(handle)) {
+      const id = unwrapProjectileHandle(handle);
+      this.canvasLayer.removeProjectile(id);
+      return;
+    }
+    super.removeBriefingMarker(handle);
   }
 
   override setLayerVisible(layer: RenderLayer, visible: boolean): void {

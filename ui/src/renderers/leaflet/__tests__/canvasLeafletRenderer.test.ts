@@ -19,6 +19,9 @@ function makeMockCanvasLayer() {
     setFireLines: vi.fn(),
     clearFireLines: vi.fn(),
     setGridVisible: vi.fn(),
+    addProjectile: vi.fn(),
+    updateProjectile: vi.fn(),
+    removeProjectile: vi.fn(),
   };
 }
 
@@ -350,6 +353,189 @@ describe("CanvasLeafletRenderer", () => {
 
       (renderer as any).canvasLayer = null;
       expect(() => renderer.setLayerVisible("grid", true)).not.toThrow();
+    });
+  });
+
+  // ---- Projectile briefing markers ----
+
+  describe("createBriefingMarker (projectile routing)", () => {
+    let superCreate: ReturnType<typeof vi.fn>;
+    let superUpdate: ReturnType<typeof vi.fn>;
+    let superRemove: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      superCreate = vi.fn(() => ({
+        _brand: undefined,
+        _internal: { layer: {}, shape: "ICON", layerKey: "projectileMarkers" },
+      }));
+      superUpdate = vi.fn();
+      superRemove = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).createBriefingMarker = superCreate;
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).updateBriefingMarker = superUpdate;
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).removeBriefingMarker = superRemove;
+      (renderer as any).nextProjectileId = 1;
+    });
+
+    it("routes projectile ICON markers to canvas", () => {
+      const handle = renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      expect(mockCanvasLayer.addProjectile).toHaveBeenCalledOnce();
+      expect(superCreate).not.toHaveBeenCalled();
+      expect(handle).toBeDefined();
+    });
+
+    it("falls through to super for non-projectile briefing markers", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "mil_dot",
+        color: "0000FF",
+        side: "WEST",
+        layer: "briefingMarkers",
+      });
+      expect(mockCanvasLayer.addProjectile).not.toHaveBeenCalled();
+      expect(superCreate).toHaveBeenCalledOnce();
+    });
+
+    it("falls through to super for non-ICON projectile shapes", () => {
+      renderer.createBriefingMarker({
+        shape: "ELLIPSE",
+        type: "something",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      expect(mockCanvasLayer.addProjectile).not.toHaveBeenCalled();
+      expect(superCreate).toHaveBeenCalledOnce();
+    });
+
+    it("builds correct icon URL for magIcons type", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].iconUrl).toContain("images/markers/magicons/gear_m67.paa.png");
+    });
+
+    it("builds correct icon URL for non-magIcons type", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "mil_triangle",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].iconUrl).toContain("images/markers/mil_triangle/FF0000.png");
+    });
+
+    it("uses default icon size [35, 35] when size not specified", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].iconSize).toEqual([35, 35]);
+    });
+
+    it("scales icon size by 35 when size is specified", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+        size: [2, 2],
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].iconSize).toEqual([70, 70]);
+    });
+  });
+
+  describe("updateBriefingMarker (projectile routing)", () => {
+    let superUpdate: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      superUpdate = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).createBriefingMarker = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).updateBriefingMarker = superUpdate;
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).removeBriefingMarker = vi.fn();
+      (renderer as any).nextProjectileId = 1;
+    });
+
+    it("routes canvas projectile updates to canvasLayer", () => {
+      const handle = renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      renderer.updateBriefingMarker(handle, {
+        position: [100, 200] as ArmaCoord,
+        direction: 45,
+        alpha: 0.8,
+      });
+      expect(mockCanvasLayer.updateProjectile).toHaveBeenCalledOnce();
+      expect(mockCanvasLayer.updateProjectile).toHaveBeenCalledWith(
+        expect.any(Number),
+        { position: [100, 200], direction: 45, alpha: 0.8 },
+      );
+      expect(superUpdate).not.toHaveBeenCalled();
+    });
+
+    it("falls through to super for non-canvas handles", () => {
+      const fakeHandle = { _brand: undefined, _internal: {} } as any;
+      renderer.updateBriefingMarker(fakeHandle, {
+        position: [0, 0] as ArmaCoord,
+        direction: 0,
+        alpha: 1,
+      });
+      expect(mockCanvasLayer.updateProjectile).not.toHaveBeenCalled();
+      expect(superUpdate).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("removeBriefingMarker (projectile routing)", () => {
+    let superRemove: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      superRemove = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).createBriefingMarker = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).updateBriefingMarker = vi.fn();
+      Object.getPrototypeOf(CanvasLeafletRenderer.prototype).removeBriefingMarker = superRemove;
+      (renderer as any).nextProjectileId = 1;
+    });
+
+    it("routes canvas projectile removal to canvasLayer", () => {
+      const handle = renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      renderer.removeBriefingMarker(handle);
+      expect(mockCanvasLayer.removeProjectile).toHaveBeenCalledOnce();
+      expect(superRemove).not.toHaveBeenCalled();
+    });
+
+    it("falls through to super for non-canvas handles", () => {
+      const fakeHandle = { _brand: undefined, _internal: {} } as any;
+      renderer.removeBriefingMarker(fakeHandle);
+      expect(mockCanvasLayer.removeProjectile).not.toHaveBeenCalled();
+      expect(superRemove).toHaveBeenCalledOnce();
     });
   });
 });
