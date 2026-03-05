@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-fuego/fuego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,267 +16,170 @@ import (
 func TestGetMarkerBlacklist_Empty(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(fmt.Sprintf("%d", op.ID))
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": fmt.Sprintf("%d", op.ID)}
 
-	err := hdlr.GetMarkerBlacklist(c)
+	ids, err := hdlr.GetMarkerBlacklist(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	var ids []int
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
 	assert.Equal(t, []int{}, ids)
 }
 
 func TestAddAndGetBlacklist(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create("")
-	require.NoError(t, err)
-
-	e := echo.New()
 	opID := fmt.Sprintf("%d", op.ID)
 
 	// PUT to add player 42
-	req := httptest.NewRequest(http.MethodPut, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(opID, "42")
-
-	err = hdlr.AddMarkerBlacklist(c)
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": opID, "playerId": "42"}
+	_, err := hdlr.AddMarkerBlacklist(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusNoContent, rec.Code)
 
 	// GET should return [42]
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(opID)
-
-	err = hdlr.GetMarkerBlacklist(c)
+	ctx2 := fuego.NewMockContextNoBody()
+	ctx2.PathParams = map[string]string{"id": opID}
+	ids, err := hdlr.GetMarkerBlacklist(ctx2)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	var ids []int
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
 	assert.Equal(t, []int{42}, ids)
 }
 
 func TestAddBlacklist_Idempotent(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create("")
-	require.NoError(t, err)
-
-	e := echo.New()
 	opID := fmt.Sprintf("%d", op.ID)
 
 	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest(http.MethodPut, "/", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("id", "playerId")
-		c.SetParamValues(opID, "10")
-
-		err = hdlr.AddMarkerBlacklist(c)
+		ctx := fuego.NewMockContextNoBody()
+		ctx.PathParams = map[string]string{"id": opID, "playerId": "10"}
+		_, err := hdlr.AddMarkerBlacklist(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusNoContent, rec.Code)
 	}
 
 	// GET should return single entry
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(opID)
-
-	err = hdlr.GetMarkerBlacklist(c)
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": opID}
+	ids, err := hdlr.GetMarkerBlacklist(ctx)
 	require.NoError(t, err)
-
-	var ids []int
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
 	assert.Equal(t, []int{10}, ids)
 }
 
 func TestRemoveBlacklist(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	token, err := hdlr.jwt.Create("")
-	require.NoError(t, err)
-
-	e := echo.New()
 	opID := fmt.Sprintf("%d", op.ID)
 
 	// Add player 5
-	req := httptest.NewRequest(http.MethodPut, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(opID, "5")
-	require.NoError(t, hdlr.AddMarkerBlacklist(c))
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": opID, "playerId": "5"}
+	_, err := hdlr.AddMarkerBlacklist(ctx)
+	require.NoError(t, err)
 
 	// DELETE player 5
-	req = httptest.NewRequest(http.MethodDelete, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(opID, "5")
-
-	err = hdlr.RemoveMarkerBlacklist(c)
+	ctx2 := fuego.NewMockContextNoBody()
+	ctx2.PathParams = map[string]string{"id": opID, "playerId": "5"}
+	_, err = hdlr.RemoveMarkerBlacklist(ctx2)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusNoContent, rec.Code)
 
 	// GET should be empty
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(opID)
-	require.NoError(t, hdlr.GetMarkerBlacklist(c))
-
-	var ids []int
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
+	ctx3 := fuego.NewMockContextNoBody()
+	ctx3.PathParams = map[string]string{"id": opID}
+	ids, err := hdlr.GetMarkerBlacklist(ctx3)
+	require.NoError(t, err)
 	assert.Equal(t, []int{}, ids)
 }
 
 func TestAddBlacklist_Unauthorized(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
 
-	e := echo.New()
+	// Test via HTTP with requireAdmin middleware
 	req := httptest.NewRequest(http.MethodPut, "/", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(fmt.Sprintf("%d", op.ID), "1")
 
-	handler := hdlr.requireAdmin(hdlr.AddMarkerBlacklist)
-	err := handler(c)
-	assert.Equal(t, echo.ErrUnauthorized, err)
+	// Wrap a dummy handler with requireAdmin
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	hdlr.requireAdmin(inner).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	_ = op // use op to avoid unused warning
 }
 
 func TestRemoveBlacklist_Unauthorized(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(fmt.Sprintf("%d", op.ID), "1")
 
-	handler := hdlr.requireAdmin(hdlr.RemoveMarkerBlacklist)
-	err := handler(c)
-	assert.Equal(t, echo.ErrUnauthorized, err)
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	hdlr.requireAdmin(inner).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	_ = op
 }
 
 func TestBlacklist_MultipleEntries(t *testing.T) {
 	hdlr, op := setupAdminTest(t)
-	e := echo.New()
 	opID := fmt.Sprintf("%d", op.ID)
 
 	// Add players 1, 2, 3
 	for _, pid := range []string{"1", "2", "3"} {
-		req := httptest.NewRequest(http.MethodPut, "/", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("id", "playerId")
-		c.SetParamValues(opID, pid)
-		require.NoError(t, hdlr.AddMarkerBlacklist(c))
+		ctx := fuego.NewMockContextNoBody()
+		ctx.PathParams = map[string]string{"id": opID, "playerId": pid}
+		_, err := hdlr.AddMarkerBlacklist(ctx)
+		require.NoError(t, err)
 	}
 
 	// GET should return [1, 2, 3]
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(opID)
-	require.NoError(t, hdlr.GetMarkerBlacklist(c))
-
-	var ids []int
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": opID}
+	ids, err := hdlr.GetMarkerBlacklist(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, []int{1, 2, 3}, ids)
 
 	// Remove player 2
-	req = httptest.NewRequest(http.MethodDelete, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues(opID, "2")
-	require.NoError(t, hdlr.RemoveMarkerBlacklist(c))
+	ctx2 := fuego.NewMockContextNoBody()
+	ctx2.PathParams = map[string]string{"id": opID, "playerId": "2"}
+	_, err = hdlr.RemoveMarkerBlacklist(ctx2)
+	require.NoError(t, err)
 
 	// GET should return [1, 3]
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues(opID)
-	require.NoError(t, hdlr.GetMarkerBlacklist(c))
-
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ids))
+	ctx3 := fuego.NewMockContextNoBody()
+	ctx3.PathParams = map[string]string{"id": opID}
+	ids, err = hdlr.GetMarkerBlacklist(ctx3)
+	require.NoError(t, err)
 	assert.Equal(t, []int{1, 3}, ids)
 }
 
 func TestBlacklist_BadID(t *testing.T) {
 	hdlr, _ := setupAdminTest(t)
 
-	e := echo.New()
-
 	// Bad operation ID for GET
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("abc")
-
-	err := hdlr.GetMarkerBlacklist(c)
-	assert.Equal(t, echo.ErrBadRequest, err)
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": "abc"}
+	_, err := hdlr.GetMarkerBlacklist(ctx)
+	assert.IsType(t, fuego.BadRequestError{}, err)
 
 	// Bad operation ID for PUT
-	req = httptest.NewRequest(http.MethodPut, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("abc", "1")
-
-	err = hdlr.AddMarkerBlacklist(c)
-	assert.Equal(t, echo.ErrBadRequest, err)
+	ctx2 := fuego.NewMockContextNoBody()
+	ctx2.PathParams = map[string]string{"id": "abc", "playerId": "1"}
+	_, err = hdlr.AddMarkerBlacklist(ctx2)
+	assert.IsType(t, fuego.BadRequestError{}, err)
 
 	// Bad player ID for PUT
-	req = httptest.NewRequest(http.MethodPut, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("1", "xyz")
-
-	err = hdlr.AddMarkerBlacklist(c)
-	assert.Equal(t, echo.ErrBadRequest, err)
+	ctx3 := fuego.NewMockContextNoBody()
+	ctx3.PathParams = map[string]string{"id": "1", "playerId": "xyz"}
+	_, err = hdlr.AddMarkerBlacklist(ctx3)
+	assert.IsType(t, fuego.BadRequestError{}, err)
 
 	// Bad operation ID for DELETE
-	req = httptest.NewRequest(http.MethodDelete, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("abc", "1")
-
-	err = hdlr.RemoveMarkerBlacklist(c)
-	assert.Equal(t, echo.ErrBadRequest, err)
+	ctx4 := fuego.NewMockContextNoBody()
+	ctx4.PathParams = map[string]string{"id": "abc", "playerId": "1"}
+	_, err = hdlr.RemoveMarkerBlacklist(ctx4)
+	assert.IsType(t, fuego.BadRequestError{}, err)
 
 	// Bad player ID for DELETE
-	req = httptest.NewRequest(http.MethodDelete, "/", nil)
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("1", "xyz")
-
-	err = hdlr.RemoveMarkerBlacklist(c)
-	assert.Equal(t, echo.ErrBadRequest, err)
+	ctx5 := fuego.NewMockContextNoBody()
+	ctx5.PathParams = map[string]string{"id": "1", "playerId": "xyz"}
+	_, err = hdlr.RemoveMarkerBlacklist(ctx5)
+	assert.IsType(t, fuego.BadRequestError{}, err)
 }
 
 func TestGetMarkerBlacklist_DBError(t *testing.T) {
@@ -287,19 +189,12 @@ func TestGetMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close() // Force DB errors
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, err := jwt.Create("")
-	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id")
-	c.SetParamValues("1")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": "1"}
 
-	err = h.GetMarkerBlacklist(c)
+	_, err = h.GetMarkerBlacklist(ctx)
 	assert.Error(t, err)
 }
 
@@ -310,19 +205,12 @@ func TestAddMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close()
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, err := jwt.Create("")
-	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("1", "5")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": "1", "playerId": "5"}
 
-	err = h.AddMarkerBlacklist(c)
+	_, err = h.AddMarkerBlacklist(ctx)
 	assert.Error(t, err)
 }
 
@@ -333,18 +221,11 @@ func TestRemoveMarkerBlacklist_DBError(t *testing.T) {
 	repo.db.Close()
 
 	jwt := NewJWTManager("secret", time.Hour)
-	token, err := jwt.Create("")
-	require.NoError(t, err)
 	h := &Handler{repoOperation: repo, jwt: jwt}
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("id", "playerId")
-	c.SetParamValues("1", "5")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.PathParams = map[string]string{"id": "1", "playerId": "5"}
 
-	err = h.RemoveMarkerBlacklist(c)
+	_, err = h.RemoveMarkerBlacklist(ctx)
 	assert.Error(t, err)
 }

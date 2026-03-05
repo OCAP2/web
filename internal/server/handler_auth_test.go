@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yohcop/openid-go"
+
+	"github.com/go-fuego/fuego"
 )
 
 // mockVerifier implements openIDVerifier for testing.
@@ -46,13 +47,10 @@ func newSteamAuthHandler(allowedIDs []string) Handler {
 func TestSteamLogin_Redirects(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamLogin(c)
-	require.NoError(t, err)
+	hdlr.SteamLogin(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
 	loc := rec.Header().Get("Location")
@@ -74,45 +72,34 @@ func TestSteamLogin_Redirects(t *testing.T) {
 func TestSteamCallback_MissingNonce(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	// No cookie set
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	he, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-	assert.Equal(t, http.StatusBadRequest, he.Code)
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestSteamCallback_NonceMismatch(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "xyz"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	he, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-	assert.Equal(t, http.StatusBadRequest, he.Code)
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestSteamCallback_UnauthorizedSteamID(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198099999999"}) // different ID
 	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_denied")
 }
@@ -120,14 +107,11 @@ func TestSteamCallback_UnauthorizedSteamID(t *testing.T) {
 func TestSteamCallback_Success(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
 	// Token should be in the redirect URL query param
@@ -148,17 +132,15 @@ func TestGetMe_WithSteamID(t *testing.T) {
 	token, err := hdlr.jwt.Create("76561198012345678")
 	require.NoError(t, err)
 
-	e := echo.New()
+	ctx := fuego.NewMockContextNoBody()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	ctx.SetRequest(req)
 
-	err = hdlr.GetMe(c)
+	resp, err := hdlr.GetMe(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), `"authenticated":true`)
-	assert.Contains(t, rec.Body.String(), `"steamId":"76561198012345678"`)
+	assert.True(t, resp.Authenticated)
+	assert.Equal(t, "76561198012345678", resp.SteamID)
 }
 
 func TestGetMe_WithSteamProfile(t *testing.T) {
@@ -166,45 +148,37 @@ func TestGetMe_WithSteamProfile(t *testing.T) {
 	token, err := hdlr.jwt.Create("76561198012345678", WithSteamProfile("TestPlayer", "https://avatars.steamstatic.com/test.jpg"))
 	require.NoError(t, err)
 
-	e := echo.New()
+	ctx := fuego.NewMockContextNoBody()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	ctx.SetRequest(req)
 
-	err = hdlr.GetMe(c)
+	resp, err := hdlr.GetMe(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-	body := rec.Body.String()
-	assert.Contains(t, body, `"steamName":"TestPlayer"`)
-	assert.Contains(t, body, `"steamAvatar":"https://avatars.steamstatic.com/test.jpg"`)
+	assert.True(t, resp.Authenticated)
+	assert.Equal(t, "TestPlayer", resp.SteamName)
+	assert.Equal(t, "https://avatars.steamstatic.com/test.jpg", resp.SteamAvatar)
 }
 
 func TestGetMe_NotAuthenticated(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
-	e := echo.New()
 
+	ctx := fuego.NewMockContextNoBody()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	ctx.SetRequest(req)
 
-	err := hdlr.GetMe(c)
+	resp, err := hdlr.GetMe(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), `"authenticated":false`)
+	assert.False(t, resp.Authenticated)
 }
 
 func TestLogout(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
 
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	ctx := fuego.NewMockContextNoBody()
 
-	err := hdlr.Logout(c)
+	_, err := hdlr.Logout(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusNoContent, rec.Code)
 }
 
 func TestIsSteamIDAllowed(t *testing.T) {
@@ -230,19 +204,16 @@ func TestGetMe_WithSteamID_NoProfile(t *testing.T) {
 	token, err := hdlr.jwt.Create("76561198012345678")
 	require.NoError(t, err)
 
-	e := echo.New()
+	ctx := fuego.NewMockContextNoBody()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	ctx.SetRequest(req)
 
-	err = hdlr.GetMe(c)
+	resp, err := hdlr.GetMe(ctx)
 	require.NoError(t, err)
-
-	body := rec.Body.String()
-	assert.Contains(t, body, `"steamId":"76561198012345678"`)
-	assert.NotContains(t, body, `"steamName"`)
-	assert.NotContains(t, body, `"steamAvatar"`)
+	assert.Equal(t, "76561198012345678", resp.SteamID)
+	assert.Empty(t, resp.SteamName)
+	assert.Empty(t, resp.SteamAvatar)
 }
 
 func TestFetchSteamProfile_Success(t *testing.T) {
@@ -267,7 +238,6 @@ func TestFetchSteamProfile_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Use the test server URL instead of the real Steam API
 	name, avatar, err := fetchSteamProfileFrom(srv.URL, "76561198012345678", "TESTKEY")
 	require.NoError(t, err)
 	assert.Equal(t, "TestPlayer", name)
@@ -305,56 +275,44 @@ func TestFetchSteamProfile_InvalidJSON(t *testing.T) {
 }
 
 func TestFetchSteamProfile_ConnectionError(t *testing.T) {
-	// Use an address that immediately refuses connections
 	_, _, err := fetchSteamProfileFrom("http://127.0.0.1:1/", "76561198012345678", "TESTKEY")
 	assert.Error(t, err)
 }
 
 func TestRequestHost_WithForwardedHost(t *testing.T) {
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-Forwarded-Host", "proxy.example.com")
-	c := e.NewContext(req, httptest.NewRecorder())
 
-	assert.Equal(t, "proxy.example.com", requestHost(c))
+	assert.Equal(t, "proxy.example.com", requestHost(req))
 }
 
 func TestRequestHost_WithoutForwardedHost(t *testing.T) {
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "http://direct.example.com/", nil)
-	c := e.NewContext(req, httptest.NewRecorder())
 
-	assert.Equal(t, "direct.example.com", requestHost(c))
+	assert.Equal(t, "direct.example.com", requestHost(req))
 }
 
 func TestRequestScheme_Default(t *testing.T) {
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-	c := e.NewContext(req, httptest.NewRecorder())
 
-	assert.Equal(t, "http", requestScheme(c))
+	assert.Equal(t, "http", requestScheme(req))
 }
 
 func TestRequestScheme_ForwardedProto(t *testing.T) {
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
 	req.Header.Set("X-Forwarded-Proto", "https")
-	c := e.NewContext(req, httptest.NewRecorder())
 
-	assert.Equal(t, "https", requestScheme(c))
+	assert.Equal(t, "https", requestScheme(req))
 }
 
 func TestAuthRedirect_WithPrefix(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
 	hdlr.setting.PrefixURL = "/ocap/"
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.authRedirect(c, "")
-	require.NoError(t, err)
+	hdlr.authRedirect(rec, req, "")
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Equal(t, "/ocap/", rec.Header().Get("Location"))
 }
@@ -363,13 +321,10 @@ func TestAuthRedirect_WithPrefixAndError(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
 	hdlr.setting.PrefixURL = "/ocap/"
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.authRedirect(c, "auth_error=steam_denied")
-	require.NoError(t, err)
+	hdlr.authRedirect(rec, req, "auth_error=steam_denied")
 	assert.Equal(t, "/ocap/?auth_error=steam_denied", rec.Header().Get("Location"))
 }
 
@@ -377,14 +332,11 @@ func TestSteamCallback_VerifyError(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 	hdlr.openIDVerifier = mockVerifier{err: fmt.Errorf("verify failed")}
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_error")
 }
@@ -393,39 +345,31 @@ func TestSteamCallback_InvalidClaimedID(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 	hdlr.openIDVerifier = mockVerifier{claimedID: "https://example.com/not-steam"}
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_error")
 }
 
 func TestRequestScheme_HTTPS(t *testing.T) {
-	e := echo.New()
 	// httptest.NewRequest with https:// URL sets TLS field on the request
 	req := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c := e.NewContext(req, httptest.NewRecorder())
 
-	assert.Equal(t, "https", requestScheme(c))
+	assert.Equal(t, "https", requestScheme(req))
 }
 
 func TestSteamLogin_WithXForwardedProto(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam", nil)
 	req.Header.Set("X-Forwarded-Proto", "https")
 	req.Host = "proxy.example.com"
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamLogin(c)
-	require.NoError(t, err)
+	hdlr.SteamLogin(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
 	loc := rec.Header().Get("Location")
@@ -456,21 +400,16 @@ func TestRandomHex(t *testing.T) {
 func TestSteamCallback_AllowedEmptyList(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{}) // empty allowed list
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_denied")
 }
 
 func TestSteamCallback_SteamAPIError(t *testing.T) {
-	// Steam API returns an error — the callback should still succeed
-	// (profile fetch failure is logged as a warning, not a hard error)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
@@ -480,14 +419,11 @@ func TestSteamCallback_SteamAPIError(t *testing.T) {
 	hdlr.setting.Admin.SteamAPIKey = "TESTKEY"
 	hdlr.steamAPIBaseURL = srv.URL
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
 	// Should still get auth_token (just no profile data)
@@ -496,7 +432,6 @@ func TestSteamCallback_SteamAPIError(t *testing.T) {
 }
 
 func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
-	// Mock Steam API server
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		json.NewEncoder(w).Encode(steamProfileResponse{
 			Response: struct {
@@ -520,14 +455,11 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 	hdlr.setting.Admin.SteamAPIKey = "TESTKEY"
 	hdlr.steamAPIBaseURL = srv.URL
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	err := hdlr.SteamCallback(c)
-	require.NoError(t, err)
+	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
 	// Extract token from redirect URL and verify profile claims

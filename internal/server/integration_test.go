@@ -19,7 +19,7 @@ import (
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/OCAP2/web/internal/storage"
-	"github.com/labstack/echo/v4"
+	"github.com/go-fuego/fuego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -126,15 +126,12 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 
 	// Test 1: Serve legacy JSON via GetData
 	t.Run("GetDataJSON", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/test_integration.json.gz", nil)
+		req.SetPathValue("path", "test_integration.json.gz")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("test_integration.json.gz")
 
-		err := hdlr.GetData(c)
-		assert.NoError(t, err)
+		hdlr.GetData(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
 		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	})
@@ -157,15 +154,11 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 
 	// Test 3: Serve manifest via static path
 	t.Run("GetDataManifest", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/manifest.pb", nil)
+		req.SetPathValue("path", "test_integration/manifest.pb")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("test_integration/manifest.pb")
 
-		err := hdlr.GetData(c)
-		assert.NoError(t, err)
+		hdlr.GetData(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		data := rec.Body.Bytes()
@@ -182,15 +175,11 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 
 	// Test 4: Serve chunk 0
 	t.Run("GetDataChunk0", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/0000.pb", nil)
+		req.SetPathValue("path", "test_integration/chunks/0000.pb")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("test_integration/chunks/0000.pb")
 
-		err := hdlr.GetData(c)
-		assert.NoError(t, err)
+		hdlr.GetData(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		data := rec.Body.Bytes()
@@ -210,15 +199,11 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 
 	// Test 5: Serve chunk 1
 	t.Run("GetDataChunk1", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/0001.pb", nil)
+		req.SetPathValue("path", "test_integration/chunks/0001.pb")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("test_integration/chunks/0001.pb")
 
-		err := hdlr.GetData(c)
-		assert.NoError(t, err)
+		hdlr.GetData(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		data := rec.Body.Bytes()
@@ -233,15 +218,12 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 
 	// Test 6: Nonexistent chunk returns 404
 	t.Run("GetDataChunkNotFound", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/test_integration/chunks/9999.pb", nil)
+		req.SetPathValue("path", "test_integration/chunks/9999.pb")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("test_integration/chunks/9999.pb")
 
-		err := hdlr.GetData(c)
-		assert.Equal(t, echo.ErrNotFound, err)
+		hdlr.GetData(rec, req)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
 
@@ -346,30 +328,20 @@ func TestIntegration_UploadWithoutConversion(t *testing.T) {
 
 	// Step 1: Upload
 	t.Run("Upload", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
 
-		err := hdlr.StoreOperation(c)
-		require.NoError(t, err)
+		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	// Step 2: Query operations API and verify the operation is completed
 	t.Run("QueryShowsCompleted", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/operations", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		mockCtx := fuego.NewMockContextNoBody()
 
-		err := hdlr.GetOperations(c)
+		ops, err := hdlr.GetOperations(mockCtx)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var ops []Operation
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ops))
 		require.Len(t, ops, 1)
 		assert.Equal(t, "No Conversion Upload", ops[0].MissionName)
 		assert.Equal(t, ConversionStatusCompleted, ops[0].ConversionStatus)
@@ -432,28 +404,21 @@ func TestIntegration_UploadAndServeGzippedJSON(t *testing.T) {
 
 	// Upload
 	t.Run("Upload", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
 
-		err := hdlr.StoreOperation(c)
-		require.NoError(t, err)
+		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	// Fetch and verify
 	t.Run("Fetch", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/upload_gz_test.json.gz", nil)
+		req.SetPathValue("path", "upload_gz_test.json.gz")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("upload_gz_test.json.gz")
 
-		err := hdlr.GetData(c)
-		require.NoError(t, err)
+		hdlr.GetData(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
 		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
@@ -515,28 +480,21 @@ func TestIntegration_UploadAndServeRawJSON(t *testing.T) {
 
 	// Upload
 	t.Run("Upload", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
 
-		err := hdlr.StoreOperation(c)
-		require.NoError(t, err)
+		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	// Fetch — raw JSON was gzip-compressed during upload, so it decompresses correctly
 	t.Run("Fetch", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/data/upload_raw_test.json.gz", nil)
+		req.SetPathValue("path", "upload_raw_test.json.gz")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("*")
-		c.SetParamValues("upload_raw_test.json.gz")
 
-		err := hdlr.GetData(c)
-		require.NoError(t, err)
+		hdlr.GetData(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"))
 		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
@@ -578,15 +536,11 @@ func TestIntegration_ServeLegacyRawJSONAsGz(t *testing.T) {
 		setting: Setting{Data: dataDir},
 	}
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/data/legacy_raw.json.gz", nil)
+	req.SetPathValue("path", "legacy_raw.json.gz")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetParamNames("*")
-	c.SetParamValues("legacy_raw.json.gz")
 
-	err = hdlr.GetData(c)
-	require.NoError(t, err)
+	hdlr.GetData(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.Empty(t, rec.Header().Get("Content-Encoding"), "must not claim gzip for raw JSON content")
@@ -641,15 +595,12 @@ func TestIntegration_MarkerServing(t *testing.T) {
 	}
 
 	t.Run("GET SVG marker with named color", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/blufor", nil)
+		req.SetPathValue("name", "man")
+		req.SetPathValue("color", "blufor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("man", "blufor")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "image/svg+xml", rec.Header().Get("Content-Type"))
 
@@ -659,15 +610,12 @@ func TestIntegration_MarkerServing(t *testing.T) {
 	})
 
 	t.Run("GET SVG marker with hex color", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/ff0000", nil)
+		req.SetPathValue("name", "man")
+		req.SetPathValue("color", "ff0000")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("man", "ff0000")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		body := rec.Body.String()
@@ -675,15 +623,12 @@ func TestIntegration_MarkerServing(t *testing.T) {
 	})
 
 	t.Run("GET PNG marker (unknown fallback)", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/unknown/dead", nil)
+		req.SetPathValue("name", "unknown")
+		req.SetPathValue("color", "dead")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("unknown", "dead")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
 
@@ -694,57 +639,45 @@ func TestIntegration_MarkerServing(t *testing.T) {
 	})
 
 	t.Run("GET nonexistent marker falls back to unknown", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/nonexistent/blufor", nil)
+		req.SetPathValue("name", "nonexistent")
+		req.SetPathValue("color", "blufor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("nonexistent", "blufor")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		// Falls back to unknown.png
 		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
 	})
 
 	t.Run("GET marker with invalid color", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/invalidcolor", nil)
+		req.SetPathValue("name", "man")
+		req.SetPathValue("color", "invalidcolor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("man", "invalidcolor")
 
-		err := hdlr.GetMarker(c)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrNotFound)
+		hdlr.GetMarker(rec, req)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 
 	t.Run("GET marker with color extension stripped", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/man/blufor.png", nil)
+		req.SetPathValue("name", "man")
+		req.SetPathValue("color", "blufor.png")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("man", "blufor.png")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		// Should work after stripping .png
 	})
 
 	t.Run("GET marker case insensitive", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/MAN/BLUFOR", nil)
+		req.SetPathValue("name", "MAN")
+		req.SetPathValue("color", "BLUFOR")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("MAN", "BLUFOR")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 }
@@ -776,81 +709,57 @@ func TestIntegration_AmmoServing(t *testing.T) {
 	}
 
 	t.Run("GET ammo icon", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade", nil)
+		req.SetPathValue("name", "grenade")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("grenade")
 
-		err := hdlr.GetAmmo(c)
-		assert.NoError(t, err)
+		hdlr.GetAmmo(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("GET ammo from subdirectory", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/ace_m84_x_ca", nil)
+		req.SetPathValue("name", "ace_m84_x_ca")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("ace_m84_x_ca")
 
-		err := hdlr.GetAmmo(c)
-		assert.NoError(t, err)
+		hdlr.GetAmmo(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("GET ammo case insensitive", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/GRENADE", nil)
+		req.SetPathValue("name", "GRENADE")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("GRENADE")
 
-		err := hdlr.GetAmmo(c)
-		assert.NoError(t, err)
+		hdlr.GetAmmo(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("GET ammo with extension stripped", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade.png", nil)
+		req.SetPathValue("name", "grenade.png")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("grenade.png")
 
-		err := hdlr.GetAmmo(c)
-		assert.NoError(t, err)
+		hdlr.GetAmmo(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("GET ammo with .paa.png format", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/grenade.paa.png", nil)
+		req.SetPathValue("name", "grenade.paa.png")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("grenade.paa.png")
 
-		err := hdlr.GetAmmo(c)
-		assert.NoError(t, err)
+		hdlr.GetAmmo(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("GET nonexistent ammo", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/magicons/nonexistent", nil)
+		req.SetPathValue("name", "nonexistent")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name")
-		c.SetParamValues("nonexistent")
 
-		err := hdlr.GetAmmo(c)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrNotFound)
+		hdlr.GetAmmo(rec, req)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }
 
@@ -884,16 +793,13 @@ func TestIntegration_MarkerColorVariants(t *testing.T) {
 
 	for _, colorName := range colors {
 		t.Run("color_"+colorName, func(t *testing.T) {
-			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/images/markers/test/"+colorName, nil)
+			req.SetPathValue("name", "test")
+			req.SetPathValue("color", colorName)
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
-			c.SetParamNames("name", "color")
-			c.SetParamValues("test", colorName)
 
-			err := hdlr.GetMarker(c)
-			assert.NoError(t, err, "color %s should be valid", colorName)
-			assert.Equal(t, http.StatusOK, rec.Code)
+			hdlr.GetMarker(rec, req)
+			assert.Equal(t, http.StatusOK, rec.Code, "color %s should be valid", colorName)
 		})
 	}
 }
@@ -929,43 +835,34 @@ func TestIntegration_FullMarkerFlow(t *testing.T) {
 	}
 
 	t.Run("access marker from subdirectory", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/infantry/blufor", nil)
+		req.SetPathValue("name", "infantry")
+		req.SetPathValue("color", "blufor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("infantry", "blufor")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "image/svg+xml", rec.Header().Get("Content-Type"))
 	})
 
 	t.Run("access mod marker", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/special_unit/opfor", nil)
+		req.SetPathValue("name", "special_unit")
+		req.SetPathValue("color", "opfor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("special_unit", "opfor")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
 	})
 
 	t.Run("fallback to unknown for missing marker", func(t *testing.T) {
-		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/images/markers/does_not_exist/blufor", nil)
+		req.SetPathValue("name", "does_not_exist")
+		req.SetPathValue("color", "blufor")
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("name", "color")
-		c.SetParamValues("does_not_exist", "blufor")
 
-		err := hdlr.GetMarker(c)
-		assert.NoError(t, err)
+		hdlr.GetMarker(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		// Falls back to unknown.png at root level
 		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
