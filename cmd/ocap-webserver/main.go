@@ -79,6 +79,7 @@ func app() error {
 				SpecURL:          "/swagger/openapi.json",
 				PrettyFormatJSON: true,
 				DisableLocalSave: true,
+				UIHandler:        server.OpenAPIUIHandler,
 				Info: &openapi3.Info{
 					Title:       "OCAP2 Web API",
 					Description: "Operation Capture And Playback — mission recording and replay API",
