@@ -161,11 +161,11 @@ export function StatsTab(): JSX.Element {
                 <span class={styles.leaderboardKills} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   K
                 </span>
-                <span class={styles.leaderboardDeaths} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
-                  D
-                </span>
                 <span class={styles.leaderboardVehicleKills} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
                   VK
+                </span>
+                <span class={styles.leaderboardDeaths} style={{ color: "var(--text-dimmer)", "font-size": "9px" }}>
+                  D
                 </span>
               </div>
               <For each={leaderboard()}>
@@ -182,8 +182,8 @@ export function StatsTab(): JSX.Element {
                       {entry.name}
                     </span>
                     <span class={styles.leaderboardKills}>{entry.kills}</span>
-                    <span class={styles.leaderboardDeaths}>{entry.deaths}</span>
                     <span class={styles.leaderboardVehicleKills}>{entry.vehicleKills}</span>
+                    <span class={styles.leaderboardDeaths}>{entry.deaths}</span>
                   </div>
                 )}
               </For>
