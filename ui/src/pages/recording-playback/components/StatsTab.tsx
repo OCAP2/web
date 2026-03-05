@@ -67,7 +67,11 @@ export function StatsTab(): JSX.Element {
         (deaths.get(u.id) ?? 0) > 0 ||
         (vehicleKills.get(u.id) ?? 0) > 0
       ))
-      .sort((a, b) => (kills.get(b.id) ?? 0) - (kills.get(a.id) ?? 0))
+      .sort((a, b) => {
+        const diff = (kills.get(b.id) ?? 0) - (kills.get(a.id) ?? 0);
+        if (diff !== 0) return diff;
+        return (vehicleKills.get(b.id) ?? 0) - (vehicleKills.get(a.id) ?? 0);
+      })
       .map((u) => ({
         name: u.name || `Unit ${u.id}`,
         side: u.side,
