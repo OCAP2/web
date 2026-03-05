@@ -21,6 +21,7 @@ export interface BuildInfo {
 
 export interface AuthState {
   authenticated: boolean;
+  role?: string;
   steamId?: string;
   steamName?: string;
   steamAvatar?: string;

@@ -1,9 +1,11 @@
-import { createContext, useContext, createSignal, onMount } from "solid-js";
+import { createContext, useContext, createSignal, createMemo, onMount } from "solid-js";
 import type { JSX, Accessor } from "solid-js";
 import { ApiClient, getAuthToken } from "../data/apiClient";
 
 export interface Auth {
   authenticated: Accessor<boolean>;
+  role: Accessor<string | null>;
+  isAdmin: Accessor<boolean>;
   steamId: Accessor<string | null>;
   steamName: Accessor<string | null>;
   steamAvatar: Accessor<string | null>;
@@ -14,7 +16,6 @@ export interface Auth {
 }
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  steam_denied: "Your Steam account is not authorized for admin access.",
   steam_error: "Steam login failed. Please try again.",
 };
 
@@ -25,6 +26,8 @@ const AuthContext = createContext<Auth>();
  */
 export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const [authenticated, setAuthenticated] = createSignal(false);
+  const [role, setRole] = createSignal<string | null>(null);
+  const isAdmin = createMemo(() => role() === "admin");
   const [steamId, setSteamId] = createSignal<string | null>(null);
   const [steamName, setSteamName] = createSignal<string | null>(null);
   const [steamAvatar, setSteamAvatar] = createSignal<string | null>(null);
@@ -64,6 +67,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
     try {
       const state = await api.getMe();
       setAuthenticated(state.authenticated);
+      setRole(state.role ?? null);
       setSteamId(state.steamId ?? null);
       setSteamName(state.steamName ?? null);
       setSteamAvatar(state.steamAvatar ?? null);
@@ -86,6 +90,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
       await api.logout();
     } finally {
       setAuthenticated(false);
+      setRole(null);
       setSteamId(null);
       setSteamName(null);
       setSteamAvatar(null);
@@ -93,7 +98,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   };
 
   return (
-    <AuthContext.Provider value={{ authenticated, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout }}>
+    <AuthContext.Provider value={{ authenticated, role, isAdmin, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout }}>
       {props.children}
     </AuthContext.Provider>
   );

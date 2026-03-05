@@ -154,7 +154,7 @@ describe("useAuth", () => {
 
   it("reads auth_error from URL and sets authError signal", async () => {
     Object.defineProperty(window, "location", {
-      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      value: { ...window.location, search: "?auth_error=steam_error", href: window.location.origin + "/?auth_error=steam_error", pathname: "/" },
       writable: true,
       configurable: true,
     });
@@ -164,7 +164,7 @@ describe("useAuth", () => {
 
     await vi.waitFor(() => {
       expect(authRef).toBeDefined();
-      expect(authRef.authError()).toBe("Your Steam account is not authorized for admin access.");
+      expect(authRef.authError()).toBe("Steam login failed. Please try again.");
     });
   });
 
@@ -228,5 +228,60 @@ describe("useAuth", () => {
     expect(authRef.steamName()).toBeNull();
     expect(authRef.steamAvatar()).toBeNull();
     expect(mockLogout).toHaveBeenCalledOnce();
+  });
+
+  it("exposes role and isAdmin from getMe", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      role: "admin",
+      steamId: "76561198012345678",
+    });
+
+    let authRef!: Auth;
+    renderAuth((a) => { authRef = a; });
+
+    await vi.waitFor(() => {
+      expect(authRef.role()).toBe("admin");
+      expect(authRef.isAdmin()).toBe(true);
+    });
+  });
+
+  it("viewer role sets isAdmin to false", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      role: "viewer",
+      steamId: "76561198012345678",
+    });
+
+    let authRef!: Auth;
+    renderAuth((a) => { authRef = a; });
+
+    await vi.waitFor(() => {
+      expect(authRef.role()).toBe("viewer");
+      expect(authRef.isAdmin()).toBe(false);
+    });
+  });
+
+  it("logout clears role", async () => {
+    setAuthToken("stored-jwt");
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      role: "admin",
+      steamId: "76561198012345678",
+    });
+    mockLogout.mockResolvedValue(undefined);
+
+    let authRef!: Auth;
+    const { findByText } = renderAuth((a) => { authRef = a; });
+
+    await findByText("true");
+    expect(authRef.role()).toBe("admin");
+    expect(authRef.isAdmin()).toBe(true);
+
+    await authRef.logout();
+    expect(authRef.role()).toBeNull();
+    expect(authRef.isAdmin()).toBe(false);
   });
 });
