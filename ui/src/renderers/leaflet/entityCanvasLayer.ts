@@ -324,7 +324,10 @@ export class EntityCanvasLayer {
       interpProgress: 1,
       iconUrl: opts.iconUrl,
       iconSize: opts.iconSize,
-      opacity: 1,
+      // Start invisible — renderProjectiles skips opacity===0.
+      // First updateProjectile sets real alpha and snaps position
+      // (distance from origin triggers SKIP_ANIMATION_DISTANCE).
+      opacity: 0,
       cachedPx: 0, cachedPy: 0, cachedDir: 0,
     });
   }

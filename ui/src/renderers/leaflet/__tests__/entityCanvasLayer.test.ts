@@ -417,7 +417,7 @@ describe("EntityCanvasLayer", () => {
       expect(p).toBeDefined();
       expect(p.iconUrl).toBe("http://example.com/grenade.png");
       expect(p.iconSize).toEqual([35, 35]);
-      expect(p.opacity).toBe(1);
+      expect(p.opacity).toBe(0);
     });
 
     it("updates projectile position and opacity", () => {
@@ -478,18 +478,25 @@ describe("EntityCanvasLayer", () => {
       expect(p.prevY).toBe(600);
     });
 
-    it("interpolates projectile position when smoothing is on", () => {
+    it("snaps on first update then interpolates subsequent small moves", () => {
       layer.setSmoothingEnabled(true, 1);
       layer.addProjectile(1, {
         iconUrl: "http://example.com/grenade.png",
         iconSize: [35, 35],
       });
-      // Small move — within SKIP_ANIMATION_DISTANCE
-      layer.updateProjectile(1, { position: [10, 10], direction: 45, alpha: 1 });
+
+      // First update — distance from (0,0) is large, snaps
+      layer.updateProjectile(1, { position: [1000, 1000], direction: 45, alpha: 1 });
       const p = (layer as any).projectiles.get(1);
+      expect(p.interpProgress).toBe(1);
+      expect(p.prevX).toBe(1000);
+      expect(p.prevY).toBe(1000);
+
+      // Second update — small move, interpolates
+      layer.updateProjectile(1, { position: [1005, 1005], direction: 46, alpha: 1 });
       expect(p.interpProgress).toBe(0);
-      expect(p.targetX).toBe(10);
-      expect(p.targetY).toBe(10);
+      expect(p.targetX).toBe(1005);
+      expect(p.targetY).toBe(1005);
     });
 
     it("snaps projectile on teleport (large distance)", () => {
@@ -686,6 +693,7 @@ describe("EntityCanvasLayer — render paths", () => {
       iconUrl: "http://example.com/grenade.png",
       iconSize: [35, 35],
     });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
     render();
     expect(mockCtx.drawImage).toHaveBeenCalled();
   });
@@ -705,6 +713,7 @@ describe("EntityCanvasLayer — render paths", () => {
       iconUrl: "http://example.com/grenade.png",
       iconSize: [35, 35],
     });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
     render();
     expect(mockCtx.drawImage).toHaveBeenCalled();
   });
@@ -960,6 +969,7 @@ describe("EntityCanvasLayer — render paths", () => {
       iconUrl: "http://example.com/grenade.png",
       iconSize: [35, 35],
     });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
     render();
     expect(mockCtx.drawImage).toHaveBeenCalled();
   });
