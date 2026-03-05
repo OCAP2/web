@@ -103,20 +103,7 @@ func TestSteamCallback_NonceMismatch(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
-func TestSteamCallback_UnauthorizedSteamID(t *testing.T) {
-	hdlr := newSteamAuthHandler([]string{"76561198099999999"}) // different ID
-	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
-	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
-	rec := httptest.NewRecorder()
-
-	hdlr.SteamCallback(rec, req)
-	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
-	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_denied")
-}
-
-func TestSteamCallback_Success(t *testing.T) {
+func TestSteamCallback_AdminGetsAdminRole(t *testing.T) {
 	hdlr := newSteamAuthHandler([]string{"76561198012345678"})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
@@ -126,17 +113,42 @@ func TestSteamCallback_Success(t *testing.T) {
 	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 
-	// Token should be in the redirect URL query param
 	loc := rec.Header().Get("Location")
 	assert.Contains(t, loc, "auth_token=")
 
 	u, err := url.Parse(loc)
 	require.NoError(t, err)
 	tokenValue := u.Query().Get("auth_token")
-	assert.NotEmpty(t, tokenValue)
 
-	assert.NoError(t, hdlr.jwt.Validate(tokenValue))
-	assert.Equal(t, "76561198012345678", hdlr.jwt.Subject(tokenValue))
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "76561198012345678", claims.Subject)
+	assert.Equal(t, "admin", claims.Role)
+}
+
+func TestSteamCallback_NonAdminGetsViewerRole(t *testing.T) {
+	hdlr := newSteamAuthHandler([]string{"76561198099999999"}) // different ID than the mock verifier
+	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "76561198012345678", claims.Subject)
+	assert.Equal(t, "viewer", claims.Role)
 }
 
 func TestGetMe_WithSteamID(t *testing.T) {
@@ -191,17 +203,6 @@ func TestLogout(t *testing.T) {
 
 	_, err := hdlr.Logout(ctx)
 	require.NoError(t, err)
-}
-
-func TestIsSteamIDAllowed(t *testing.T) {
-	allowed := []string{"76561198012345678", "76561198087654321"}
-
-	assert.True(t, isSteamIDAllowed("76561198012345678", allowed))
-	assert.True(t, isSteamIDAllowed("76561198087654321", allowed))
-	assert.False(t, isSteamIDAllowed("76561198000000000", allowed))
-	assert.False(t, isSteamIDAllowed("", allowed))
-	assert.False(t, isSteamIDAllowed("76561198012345678", nil))
-	assert.False(t, isSteamIDAllowed("76561198012345678", []string{}))
 }
 
 func TestExtractSteamID(t *testing.T) {
@@ -409,8 +410,8 @@ func TestRandomHex(t *testing.T) {
 	assert.NotEqual(t, result, result2)
 }
 
-func TestSteamCallback_AllowedEmptyList(t *testing.T) {
-	hdlr := newSteamAuthHandler([]string{}) // empty allowed list
+func TestSteamCallback_EmptyAdminList_GetsViewerRole(t *testing.T) {
+	hdlr := newSteamAuthHandler([]string{}) // empty admin list
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
 	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
@@ -418,7 +419,17 @@ func TestSteamCallback_AllowedEmptyList(t *testing.T) {
 
 	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
-	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_denied")
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "viewer", claims.Role)
 }
 
 func TestSteamCallback_SteamAPIError(t *testing.T) {
@@ -441,6 +452,13 @@ func TestSteamCallback_SteamAPIError(t *testing.T) {
 	// Should still get auth_token (just no profile data)
 	loc := rec.Header().Get("Location")
 	assert.Contains(t, loc, "auth_token=")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "admin", claims.Role)
 }
 
 func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
@@ -484,6 +502,57 @@ func TestSteamCallback_WithSteamAPIKey(t *testing.T) {
 	claims := hdlr.jwt.Claims(tokenValue)
 	require.NotNil(t, claims)
 	assert.Equal(t, "76561198012345678", claims.Subject)
+	assert.Equal(t, "admin", claims.Role)
 	assert.Equal(t, "TestPlayer", claims.SteamName)
 	assert.Equal(t, "https://avatars.steamstatic.com/abc.jpg", claims.SteamAvatar)
+}
+
+func TestRequireAdmin_RejectsViewerRole(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	token, err := hdlr.jwt.Create("76561198012345678", WithRole("viewer"))
+	require.NoError(t, err)
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireAdmin(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.False(t, called)
+}
+
+func TestRequireAdmin_AllowsAdminRole(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	token, err := hdlr.jwt.Create("76561198012345678", WithRole("admin"))
+	require.NoError(t, err)
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireAdmin(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, called)
+}
+
+func TestGetMe_ReturnsRole(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	token, err := hdlr.jwt.Create("76561198012345678", WithRole("viewer"))
+	require.NoError(t, err)
+
+	ctx := fuego.NewMockContextNoBody()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	ctx.SetRequest(req)
+
+	resp, err := hdlr.GetMe(ctx)
+	require.NoError(t, err)
+	assert.True(t, resp.Authenticated)
+	assert.Equal(t, "viewer", resp.Role)
 }

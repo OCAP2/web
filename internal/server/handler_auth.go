@@ -110,14 +110,14 @@ func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check allowlist
-	if !isSteamIDAllowed(steamID, h.setting.Auth.AdminSteamIDs) {
-		h.authRedirect(w, r, "auth_error=steam_denied")
-		return
+	// Determine role based on admin allowlist
+	role := "viewer"
+	if slices.Contains(h.setting.Auth.AdminSteamIDs, steamID) {
+		role = "admin"
 	}
 
 	// Fetch Steam profile data if API key is configured
-	var claimOpts []ClaimOption
+	claimOpts := []ClaimOption{WithRole(role)}
 	if h.setting.Auth.SteamAPIKey != "" {
 		baseURL := steamAPIBaseURL
 		if h.steamAPIBaseURL != "" {
@@ -157,6 +157,7 @@ func (h *Handler) authRedirect(w http.ResponseWriter, r *http.Request, query str
 // MeResponse describes the authentication status returned by GetMe.
 type MeResponse struct {
 	Authenticated bool   `json:"authenticated"`
+	Role          string `json:"role,omitempty"`
 	SteamID       string `json:"steamId,omitempty"`
 	SteamName     string `json:"steamName,omitempty"`
 	SteamAvatar   string `json:"steamAvatar,omitempty"`
@@ -170,6 +171,7 @@ func (h *Handler) GetMe(c ContextNoBody) (MeResponse, error) {
 	}
 	resp := MeResponse{Authenticated: true}
 	if claims := h.jwt.Claims(token); claims != nil {
+		resp.Role = claims.Role
 		resp.SteamID = claims.Subject
 		resp.SteamName = claims.SteamName
 		resp.SteamAvatar = claims.SteamAvatar
@@ -183,11 +185,16 @@ func (h *Handler) Logout(c ContextNoBody) (any, error) {
 	return nil, nil
 }
 
-// requireAdmin is middleware that checks for a valid JWT Bearer token.
+// requireAdmin is middleware that checks for a valid JWT Bearer token with admin role.
 func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		if token == "" || h.jwt.Validate(token) != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		claims := h.jwt.Claims(token)
+		if claims == nil || claims.Role != "admin" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -202,11 +209,6 @@ func extractSteamID(claimedID string) string {
 		return after
 	}
 	return ""
-}
-
-// isSteamIDAllowed checks if a Steam ID is in the allowlist.
-func isSteamIDAllowed(steamID string, allowed []string) bool {
-	return slices.Contains(allowed, steamID)
 }
 
 // requestHost returns the original client-facing host, respecting X-Forwarded-Host
