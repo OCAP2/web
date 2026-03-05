@@ -199,11 +199,10 @@ func TestGetMe_NotAuthenticated(t *testing.T) {
 func TestLogout(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
-	rec := httptest.NewRecorder()
+	ctx := fuego.NewMockContextNoBody()
 
-	hdlr.LogoutStd(rec, req)
-	assert.Equal(t, http.StatusNoContent, rec.Code)
+	_, err := hdlr.Logout(ctx)
+	require.NoError(t, err)
 }
 
 func TestExtractSteamID(t *testing.T) {
