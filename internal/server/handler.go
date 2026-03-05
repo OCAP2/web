@@ -282,7 +282,9 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 
 	if secret != h.setting.Secret {
 		// Fall back to JWT Bearer token auth (admin UI uploads)
-		if token := bearerToken(r); token == "" || h.jwt.Validate(token) != nil {
+		token := bearerToken(r)
+		claims := h.jwt.Claims(token)
+		if claims == nil || claims.Role != "admin" {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}

@@ -189,10 +189,6 @@ func (h *Handler) Logout(c ContextNoBody) (any, error) {
 func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
-		if token == "" || h.jwt.Validate(token) != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
 		claims := h.jwt.Claims(token)
 		if claims == nil || claims.Role != "admin" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

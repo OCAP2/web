@@ -1052,7 +1052,7 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 	}
 
 	t.Run("valid JWT token without secret succeeds", func(t *testing.T) {
-		token, err := jwtMgr.Create("")
+		token, err := jwtMgr.Create("", WithRole("admin"))
 		require.NoError(t, err)
 
 		body := &bytes.Buffer{}
@@ -1658,7 +1658,7 @@ func TestStoreOperation_JWTAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	jwt := NewJWTManager("test-secret", time.Hour)
-	token, _ := jwt.Create("")
+	token, _ := jwt.Create("", WithRole("admin"))
 	h := &Handler{
 		repoOperation: repo,
 		setting:       Setting{Secret: "actual-secret", Data: dataDir},
