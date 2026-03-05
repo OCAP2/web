@@ -623,7 +623,7 @@ describe("RecordingSelector", () => {
     vi.useFakeTimers();
 
     Object.defineProperty(window, "location", {
-      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      value: { ...window.location, search: "?auth_error=steam_error", href: window.location.origin + "/?auth_error=steam_error", pathname: "/" },
       writable: true,
       configurable: true,
     });
@@ -633,7 +633,7 @@ describe("RecordingSelector", () => {
     // Wait for toast to appear
     await vi.waitFor(() => {
       expect(screen.getByTestId("auth-toast")).toBeDefined();
-      expect(screen.getByText(/not authorized for admin access/)).toBeDefined();
+      expect(screen.getByText(/Steam login failed/)).toBeDefined();
     });
 
     // Advance past the 5s auto-dismiss timeout
@@ -649,7 +649,7 @@ describe("RecordingSelector", () => {
   it("shows auth error toast and dismisses on click", async () => {
     // Mock location with auth_error param so AuthProvider picks it up
     Object.defineProperty(window, "location", {
-      value: { ...window.location, search: "?auth_error=steam_denied", href: window.location.origin + "/?auth_error=steam_denied", pathname: "/" },
+      value: { ...window.location, search: "?auth_error=steam_error", href: window.location.origin + "/?auth_error=steam_error", pathname: "/" },
       writable: true,
       configurable: true,
     });
