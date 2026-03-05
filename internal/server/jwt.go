@@ -18,6 +18,7 @@ type SteamClaims struct {
 	jwt.RegisteredClaims
 	SteamName   string `json:"steam_name,omitempty"`
 	SteamAvatar string `json:"steam_avatar,omitempty"`
+	Role        string `json:"role,omitempty"`
 }
 
 func NewJWTManager(secret string, ttl time.Duration) *JWTManager {
@@ -52,6 +53,13 @@ func WithSteamProfile(name, avatar string) ClaimOption {
 	return func(c *SteamClaims) {
 		c.SteamName = name
 		c.SteamAvatar = avatar
+	}
+}
+
+// WithRole sets the user's role in the token.
+func WithRole(role string) ClaimOption {
+	return func(c *SteamClaims) {
+		c.Role = role
 	}
 }
 
