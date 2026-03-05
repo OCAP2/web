@@ -479,6 +479,44 @@ describe("EntityCanvasLayer", () => {
       expect(p.targetX).toBe(500);
       expect(p.targetY).toBe(600);
     });
+
+    it("snaps projectile on consecutive updates without lag", () => {
+      layer.setSmoothingEnabled(true, 1);
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+
+      // Simulate several per-frame updates like MarkerManager would send
+      layer.updateProjectile(1, { position: [10, 10], direction: 0, alpha: 1 });
+      layer.updateProjectile(1, { position: [20, 20], direction: 10, alpha: 1 });
+      layer.updateProjectile(1, { position: [30, 30], direction: 20, alpha: 1 });
+
+      const p = (layer as any).projectiles.get(1);
+      // Should be at the last update, not lagging behind
+      expect(p.prevX).toBe(30);
+      expect(p.prevY).toBe(30);
+      expect(p.targetX).toBe(30);
+      expect(p.targetY).toBe(30);
+      expect(p.prevDir).toBe(20);
+      expect(p.interpProgress).toBe(1);
+    });
+
+    it("snaps projectile direction without closestEquivalentAngle", () => {
+      layer.setSmoothingEnabled(true, 1);
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+
+      layer.updateProjectile(1, { position: [0, 0], direction: 350, alpha: 1 });
+      layer.updateProjectile(1, { position: [0, 0], direction: 10, alpha: 1 });
+
+      const p = (layer as any).projectiles.get(1);
+      // Direction should be exactly what was passed, no angle unwrapping
+      expect(p.prevDir).toBe(10);
+      expect(p.targetDir).toBe(10);
+    });
   });
 
   describe("dispose", () => {

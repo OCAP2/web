@@ -369,6 +369,203 @@ describe("MarkerManager.updateFrame keyframe skipping", () => {
     mgr.updateFrame(5);
     expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
   });
+
+  it("interpolates alpha between keyframes for projectiles", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 100, 100, 0, 0, 1.0],
+          [10, 200, 200, 0, 0, 0.0],
+        ],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    mgr.updateFrame(5);
+    const update = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(update.alpha).toBeCloseTo(0.5);
+  });
+
+  it("does not interpolate projectile with only one keyframe", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Single keyframe — no next keyframe to interpolate toward
+    mgr.loadMarkers([
+      makeDef("Minefield", {
+        positions: [[0, 100, 200, 0, 0, 1]],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Frame 5 — still same posIndex, no next keyframe, should skip
+    mgr.updateFrame(5);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("interpolates magIcons projectiles the same as mil_triangle", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("magIcons/gear_M67.paa", {
+        player: 1,
+        positions: [
+          [0, 0, 0, 0, 0, 1],
+          [20, 100, 100, 0, 0, 1],
+        ],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    mgr.updateFrame(10); // midpoint
+    const update = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(update.position[0]).toBeCloseTo(50);
+    expect(update.position[1]).toBeCloseTo(50);
+  });
+
+  it("projectile reaches exact keyframe position when posIndex advances", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 0, 0, 0, 0, 1],
+          [10, 100, 200, 0, 90, 1],
+          [20, 300, 400, 0, 180, 1],
+        ],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    // At frame 10, posIndex advances to 1 — position should be exact keyframe 1
+    mgr.updateFrame(10);
+    const update = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(update.position[0]).toBeCloseTo(100);
+    expect(update.position[1]).toBeCloseTo(200);
+    expect(update.direction).toBeCloseTo(90);
+  });
+
+  it("projectile at last keyframe shows exact position (no interpolation)", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 0, 0, 0, 0, 1],
+          [10, 500, 500, 0, 90, 1],
+        ],
+        endFrame: 15,
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    // At frame 10, posIndex=1 (last keyframe), no next keyframe
+    mgr.updateFrame(10);
+    const atKeyframe = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(atKeyframe.position[0]).toBeCloseTo(500);
+    expect(atKeyframe.position[1]).toBeCloseTo(500);
+
+    // At frame 12, still at last keyframe, no interpolation — should skip
+    mgr.updateFrame(12);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(2);
+  });
+
+  it("interpolates across three keyframes sequentially", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 0, 0, 0, 0, 1],
+          [10, 100, 0, 0, 0, 1],
+          [20, 100, 100, 0, 0, 1],
+        ],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+
+    // Between keyframes 0 and 1: X moves, Y stays 0
+    mgr.updateFrame(5);
+    const seg1 = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(seg1.position[0]).toBeCloseTo(50);
+    expect(seg1.position[1]).toBeCloseTo(0);
+
+    // At keyframe 1 boundary
+    mgr.updateFrame(10);
+    const atKf1 = (renderer.updateBriefingMarker as any).mock.calls[2][1];
+    expect(atKf1.position[0]).toBeCloseTo(100);
+    expect(atKf1.position[1]).toBeCloseTo(0);
+
+    // Between keyframes 1 and 2: X stays 100, Y moves
+    mgr.updateFrame(15);
+    const seg2 = (renderer.updateBriefingMarker as any).mock.calls[3][1];
+    expect(seg2.position[0]).toBeCloseTo(100);
+    expect(seg2.position[1]).toBeCloseTo(50);
+  });
+
+  it("clamps interpolation t to [0, 1]", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Two keyframes with a span of 0 frames (same frame number)
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [5, 100, 100, 0, 0, 1],
+          [5, 200, 200, 0, 90, 1],
+        ],
+        startFrame: 5,
+      }),
+    ]);
+
+    // span is 0, so t = Infinity — should be clamped to 1, giving position B
+    mgr.updateFrame(5);
+    const update = (renderer.updateBriefingMarker as any).mock.calls[0][1];
+    expect(update.position[0]).toBeCloseTo(200);
+    expect(update.position[1]).toBeCloseTo(200);
+  });
+
+  it("interpolation resets after projectile is removed and re-created", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 0, 0, 0, 0, 1],
+          [10, 100, 100, 0, 0, 1],
+        ],
+        startFrame: 0,
+        endFrame: 10,
+      }),
+    ]);
+
+    mgr.updateFrame(5);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+    const mid = (renderer.updateBriefingMarker as any).mock.calls[0][1];
+    expect(mid.position[0]).toBeCloseTo(50);
+
+    // Remove
+    mgr.updateFrame(15);
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Seek back — should re-create and interpolate fresh
+    mgr.updateFrame(2);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+    const rewind = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(rewind.position[0]).toBeCloseTo(20);
+    expect(rewind.position[1]).toBeCloseTo(20);
+  });
 });
 
 // ─── MarkerManager.setSideFilter ───
