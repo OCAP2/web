@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { resolveVariant, CanvasIconCache } from "../canvasIcons";
 
 // --------------- resolveVariant ---------------
@@ -299,5 +299,87 @@ describe("CanvasIconCache.preloadAll", () => {
     } finally {
       globalThis.Image = OriginalImage;
     }
+  });
+});
+
+// --------------- CanvasIconCache.getOrLoad ---------------
+
+describe("CanvasIconCache.getOrLoad", () => {
+  let cache: CanvasIconCache;
+  let OriginalImage: typeof globalThis.Image;
+
+  beforeEach(() => {
+    cache = new CanvasIconCache();
+    OriginalImage = globalThis.Image;
+  });
+
+  afterEach(() => {
+    globalThis.Image = OriginalImage;
+  });
+
+  it("returns null on first call (image not yet loaded)", () => {
+    globalThis.Image = class MockImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private _src = "";
+      get src() { return this._src; }
+      set src(val: string) { this._src = val; }
+    } as any;
+
+    expect(cache.getOrLoad("http://example.com/icon.png")).toBeNull();
+  });
+
+  it("returns image after async load completes", async () => {
+    globalThis.Image = class MockImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private _src = "";
+      get src() { return this._src; }
+      set src(val: string) {
+        this._src = val;
+        queueMicrotask(() => this.onload?.());
+      }
+    } as any;
+
+    cache.getOrLoad("http://example.com/icon.png");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(cache.getOrLoad("http://example.com/icon.png")).not.toBeNull();
+  });
+
+  it("does not trigger duplicate loads for the same URL", () => {
+    let loadCount = 0;
+    globalThis.Image = class MockImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private _src = "";
+      get src() { return this._src; }
+      set src(val: string) {
+        this._src = val;
+        loadCount++;
+        queueMicrotask(() => this.onload?.());
+      }
+    } as any;
+
+    cache.getOrLoad("http://example.com/icon.png");
+    cache.getOrLoad("http://example.com/icon.png");
+    cache.getOrLoad("http://example.com/icon.png");
+    expect(loadCount).toBe(1);
+  });
+
+  it("returns null permanently for failed loads", async () => {
+    globalThis.Image = class MockImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private _src = "";
+      get src() { return this._src; }
+      set src(val: string) {
+        this._src = val;
+        queueMicrotask(() => this.onerror?.());
+      }
+    } as any;
+
+    cache.getOrLoad("http://example.com/bad.png");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(cache.getOrLoad("http://example.com/bad.png")).toBeNull();
   });
 });

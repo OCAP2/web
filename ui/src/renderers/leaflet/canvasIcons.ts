@@ -112,4 +112,23 @@ export class CanvasIconCache {
   resolveType(iconType: string): string {
     return ICON_SIZES[iconType] ? iconType : "unknown";
   }
+
+  private loading = new Set<string>();
+
+  /**
+   * Get a cached image by URL, or trigger an async load on first request.
+   * Returns null until the image finishes loading. Failed loads are silently
+   * ignored (returns null forever). Does not re-trigger loads for the same URL.
+   */
+  getOrLoad(url: string): HTMLImageElement | null {
+    const existing = this.cache.get(url);
+    if (existing) return existing;
+    if (this.loading.has(url)) return null;
+    this.loading.add(url);
+    loadImage(url).then(
+      (img) => { this.cache.set(url, img); },
+      () => { /* Failed to load — skip silently */ },
+    );
+    return null;
+  }
 }
