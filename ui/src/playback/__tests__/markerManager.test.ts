@@ -304,6 +304,71 @@ describe("MarkerManager.updateFrame keyframe skipping", () => {
     mgr.updateFrame(1);
     expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(2);
   });
+
+  it("interpolates projectile markers between keyframes", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Projectile with two keyframes: frame 0 at (100,200), frame 10 at (200,400)
+    mgr.loadMarkers([
+      makeDef("mil_triangle", {
+        positions: [
+          [0, 100, 200, 0, 0, 1],
+          [10, 200, 400, 0, 90, 1],
+        ],
+      }),
+    ]);
+
+    // Frame 0 — creates + updates at first keyframe
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
+    const firstUpdate = (renderer.updateBriefingMarker as any).mock.calls[0][1];
+    expect(firstUpdate.position[0]).toBeCloseTo(100);
+    expect(firstUpdate.position[1]).toBeCloseTo(200);
+
+    // Frame 5 — midpoint, should interpolate (150, 300)
+    mgr.updateFrame(5);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(2);
+    const midUpdate = (renderer.updateBriefingMarker as any).mock.calls[1][1];
+    expect(midUpdate.position[0]).toBeCloseTo(150);
+    expect(midUpdate.position[1]).toBeCloseTo(300);
+    expect(midUpdate.direction).toBeCloseTo(45);
+
+    // Frame 5 again — same frame, should skip
+    mgr.updateFrame(5);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Frame 7 — different frame, should interpolate (170, 340)
+    mgr.updateFrame(7);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(3);
+    const lateUpdate = (renderer.updateBriefingMarker as any).mock.calls[2][1];
+    expect(lateUpdate.position[0]).toBeCloseTo(170);
+    expect(lateUpdate.position[1]).toBeCloseTo(340);
+  });
+
+  it("does not interpolate non-projectile markers between keyframes", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Regular briefing marker with two keyframes
+    mgr.loadMarkers([
+      makeDef("mil_dot", {
+        side: "WEST",
+        positions: [
+          [0, 100, 200, 0, 0, 1],
+          [10, 200, 400, 0, 90, 1],
+        ],
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Frame 5 — same keyframe index, non-projectile should skip
+    mgr.updateFrame(5);
+    expect(renderer.updateBriefingMarker).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─── MarkerManager.setSideFilter ───

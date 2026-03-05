@@ -214,6 +214,28 @@ interface TrackedMarker {
   handle: BriefingMarkerHandle | null;
   /** Last applied position index — skip update when unchanged. */
   lastPosIndex: number;
+  /** Last frame for which an interpolated update was sent (projectiles only). */
+  lastInterpFrame: number;
+}
+
+/**
+ * Linearly interpolate between two parsed marker positions.
+ * `t` should be in [0, 1].
+ */
+function lerpMarkerPosition(
+  a: ParsedMarkerPosition,
+  b: ParsedMarkerPosition,
+  t: number,
+): ParsedMarkerPosition {
+  return {
+    frameNum: a.frameNum,
+    position: [
+      a.position[0] + (b.position[0] - a.position[0]) * t,
+      a.position[1] + (b.position[1] - a.position[1]) * t,
+    ],
+    direction: a.direction + (b.direction - a.direction) * t,
+    alpha: a.alpha + (b.alpha - a.alpha) * t,
+  };
 }
 
 /**
@@ -245,6 +267,7 @@ export class MarkerManager {
         this.renderer.removeBriefingMarker(tracked.handle);
         tracked.handle = null;
         tracked.lastPosIndex = -1;
+        tracked.lastInterpFrame = -1;
       }
     }
   }
@@ -266,6 +289,7 @@ export class MarkerManager {
         this.renderer.removeBriefingMarker(tracked.handle);
         tracked.handle = null;
         tracked.lastPosIndex = -1;
+        tracked.lastInterpFrame = -1;
       }
     }
   }
@@ -309,7 +333,7 @@ export class MarkerManager {
 
       const popupText = buildMarkerPopupText(def, lookup);
       const layer = classifyMarkerLayer(def);
-      this.markers.push({ def, popupText, layer, handle: null, lastPosIndex: -1 });
+      this.markers.push({ def, popupText, layer, handle: null, lastPosIndex: -1, lastInterpFrame: -1 });
     }
 
     console.log(
@@ -336,6 +360,7 @@ export class MarkerManager {
             this.renderer.removeBriefingMarker(tracked.handle);
             tracked.handle = null;
             tracked.lastPosIndex = -1;
+            tracked.lastInterpFrame = -1;
           }
           continue;
         }
@@ -346,16 +371,34 @@ export class MarkerManager {
             this.renderer.removeBriefingMarker(tracked.handle);
             tracked.handle = null;
             tracked.lastPosIndex = -1;
+            tracked.lastInterpFrame = -1;
           }
           continue;
         }
 
-        // Skip update if the marker is already showing this keyframe
+        // For projectile markers with a next keyframe, interpolate every frame.
+        // Other markers skip update when the keyframe index hasn't changed.
+        const isProjectile = tracked.layer === "projectileMarkers";
+        const hasNextKeyframe = posIndex + 1 < tracked.def.positions.length;
         if (tracked.handle && posIndex === tracked.lastPosIndex) {
-          continue;
+          if (!isProjectile || !hasNextKeyframe || frame === tracked.lastInterpFrame) {
+            continue;
+          }
         }
 
-        const parsed = parseMarkerPosition(tracked.def.positions[posIndex]);
+        let parsed: ParsedMarkerPosition;
+        if (
+          isProjectile &&
+          posIndex + 1 < tracked.def.positions.length
+        ) {
+          const a = parseMarkerPosition(tracked.def.positions[posIndex]);
+          const b = parseMarkerPosition(tracked.def.positions[posIndex + 1]);
+          const span = b.frameNum - a.frameNum;
+          const t = span > 0 ? (frame - a.frameNum) / span : 1;
+          parsed = lerpMarkerPosition(a, b, Math.min(1, Math.max(0, t)));
+        } else {
+          parsed = parseMarkerPosition(tracked.def.positions[posIndex]);
+        }
 
         if (!tracked.handle) {
           // Create the marker
@@ -381,12 +424,14 @@ export class MarkerManager {
         };
         this.renderer.updateBriefingMarker(tracked.handle, state);
         tracked.lastPosIndex = posIndex;
+        tracked.lastInterpFrame = frame;
       } else {
         // Marker should not be visible at this frame
         if (tracked.handle) {
           this.renderer.removeBriefingMarker(tracked.handle);
           tracked.handle = null;
           tracked.lastPosIndex = -1;
+          tracked.lastInterpFrame = -1;
         }
       }
     }
