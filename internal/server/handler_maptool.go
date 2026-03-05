@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
-	"github.com/labstack/echo/v4"
+	"github.com/go-fuego/fuego"
 )
 
 // maptoolConfig holds the maptool-specific configuration for the handler.
@@ -22,9 +22,17 @@ type maptoolConfig struct {
 	mapsDir string
 }
 
+// MapToolHealthCheck represents a single health check result.
+type MapToolHealthCheck struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
 // getMapToolHealth returns a health check for the maptool environment.
-func (h *Handler) getMapToolHealth(c echo.Context) error {
-	checks := []map[string]any{}
+func (h *Handler) getMapToolHealth(c ContextNoBody) ([]MapToolHealthCheck, error) {
+	checks := []MapToolHealthCheck{}
 
 	// Check maps directory writability
 	writable := true
@@ -38,120 +46,124 @@ func (h *Handler) getMapToolHealth(c echo.Context) error {
 		f.Close()
 		os.Remove(name)
 	}
-	check := map[string]any{
-		"id":    "maps_writable",
-		"label": "Maps directory writable",
-		"ok":    writable,
+	check := MapToolHealthCheck{
+		ID:    "maps_writable",
+		Label: "Maps directory writable",
+		OK:    writable,
 	}
 	if !writable {
-		check["error"] = writeErr
+		check.Error = writeErr
 	}
 	checks = append(checks, check)
 
-	return c.JSON(http.StatusOK, checks)
+	return checks, nil
 }
 
 // getMapToolTools returns detected tool availability.
-func (h *Handler) getMapToolTools(c echo.Context) error {
-	return c.JSON(http.StatusOK, h.maptoolCfg.tools)
+func (h *Handler) getMapToolTools(c ContextNoBody) (maptool.ToolSet, error) {
+	return h.maptoolCfg.tools, nil
 }
 
 // getMapToolMaps returns the list of installed maps.
-func (h *Handler) getMapToolMaps(c echo.Context) error {
+func (h *Handler) getMapToolMaps(c ContextNoBody) ([]maptool.MapInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return nil, fuego.InternalServerError{Err: err}
 	}
-	return c.JSON(http.StatusOK, maps)
+	return maps, nil
 }
 
 // deleteMapToolMap removes a map directory.
-func (h *Handler) deleteMapToolMap(c echo.Context) error {
-	name := c.Param("name")
+func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
+	name := c.PathParam("name")
 	if name == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
+		return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid map name")}
 	}
 	dir := filepath.Join(h.maptoolCfg.mapsDir, filepath.Clean(name))
 	absDir, _ := filepath.Abs(dir)
 	absMaps, _ := filepath.Abs(h.maptoolCfg.mapsDir)
 	if !strings.HasPrefix(absDir, absMaps+string(filepath.Separator)) {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid map name"})
+		return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid map name")}
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return nil, fuego.InternalServerError{Err: err}
 	}
-	return c.NoContent(http.StatusNoContent)
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }
 
 // importMapToolZip handles ZIP upload, extraction, and pipeline submission.
-func (h *Handler) importMapToolZip(c echo.Context) error {
-	file, err := c.FormFile("file")
+func (h *Handler) importMapToolZip(w http.ResponseWriter, r *http.Request) {
+	file, header, err := r.FormFile("file")
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "file field is required"})
+		writeJSONError(w, http.StatusBadRequest, "file field is required")
+		return
 	}
-	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "only .zip files are accepted"})
-	}
+	defer file.Close()
 
-	src, err := file.Open()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to read upload"})
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".zip") {
+		writeJSONError(w, http.StatusBadRequest, "only .zip files are accepted")
+		return
 	}
-	defer src.Close()
 
 	tmpFile, err := os.CreateTemp("", "ocap-maptool-upload-*.zip")
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create temp file"})
+		writeJSONError(w, http.StatusInternalServerError, "failed to create temp file")
+		return
 	}
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	if _, err := io.Copy(tmpFile, src); err != nil {
+	if _, err := io.Copy(tmpFile, file); err != nil {
 		tmpFile.Close()
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save upload"})
+		writeJSONError(w, http.StatusInternalServerError, "failed to save upload")
+		return
 	}
 	if err := tmpFile.Close(); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save upload"})
+		writeJSONError(w, http.StatusInternalServerError, "failed to save upload")
+		return
 	}
 
 	extractDir, err := os.MkdirTemp("", "ocap-maptool-uploads-")
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create extraction dir"})
+		writeJSONError(w, http.StatusInternalServerError, "failed to create extraction dir")
+		return
 	}
 
 	if err := maptool.ExtractZip(tmpPath, extractDir); err != nil {
 		os.RemoveAll(extractDir)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": fmt.Sprintf("failed to extract zip: %v", err),
-		})
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to extract zip: %v", err))
+		return
 	}
 
 	gradMehDir, err := maptool.FindGradMehDir(extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": fmt.Sprintf("not a valid grad_meh export: %v", err),
-		})
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("not a valid grad_meh export: %v", err))
+		return
 	}
 
 	worldName := maptool.WorldNameFromDir(gradMehDir)
 	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 
-	return c.JSON(http.StatusAccepted, snap)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(snap)
 }
 
 // restyleMapToolAll restyles all existing maps.
-func (h *Handler) restyleMapToolAll(c echo.Context) error {
+func (h *Handler) restyleMapToolAll(c ContextNoBody) (maptool.JobInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err}
 	}
 	if len(maps) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "no maps found"})
+		return maptool.JobInfo{}, fuego.BadRequestError{Err: fmt.Errorf("no maps found")}
 	}
 
 	id := fmt.Sprintf("restyle-%d", time.Now().UnixMilli())
@@ -175,47 +187,56 @@ func (h *Handler) restyleMapToolAll(c echo.Context) error {
 		return nil
 	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err}
 	}
 
-	return c.JSON(http.StatusAccepted, snap)
+	c.SetStatus(http.StatusAccepted)
+	return snap, nil
 }
 
 // getMapToolJobs returns all job snapshots.
-func (h *Handler) getMapToolJobs(c echo.Context) error {
-	return c.JSON(http.StatusOK, h.maptoolMgr.ListJobs())
+func (h *Handler) getMapToolJobs(c ContextNoBody) ([]maptool.JobInfo, error) {
+	return h.maptoolMgr.ListJobs(), nil
 }
 
 // cancelMapToolJob cancels a running job.
-func (h *Handler) cancelMapToolJob(c echo.Context) error {
-	id := c.Param("id")
+func (h *Handler) cancelMapToolJob(c ContextNoBody) (any, error) {
+	id := c.PathParam("id")
 	if err := h.maptoolMgr.CancelJob(id); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return nil, fuego.BadRequestError{Err: err}
 	}
-	return c.NoContent(http.StatusNoContent)
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }
 
 // mapToolEventStream is an SSE endpoint that streams all job events.
-func (h *Handler) mapToolEventStream(c echo.Context) error {
+func (h *Handler) mapToolEventStream(w http.ResponseWriter, r *http.Request) {
 	// Auth: EventSource cannot set headers, so accept token via query param
-	token := bearerToken(c)
+	token := bearerToken(r)
 	if token == "" {
-		token = c.QueryParam("token")
+		token = r.URL.Query().Get("token")
 	}
 	if token == "" || h.jwt.Validate(token) != nil {
-		return echo.ErrUnauthorized
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
-	c.Response().Header().Set("Content-Type", "text/event-stream")
-	c.Response().Header().Set("Cache-Control", "no-cache")
-	c.Response().Header().Set("Connection", "keep-alive")
-	c.Response().Header().Set("X-Accel-Buffering", "no") // disable nginx buffering
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no") // disable nginx buffering
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
 
 	// Send initial snapshot of all jobs
 	jobs := h.maptoolMgr.ListJobs()
 	snapData, _ := json.Marshal(jobs)
-	fmt.Fprintf(c.Response(), "event: snapshot\ndata: %s\n\n", snapData)
-	c.Response().Flush()
+	fmt.Fprintf(w, "event: snapshot\ndata: %s\n\n", snapData)
+	flusher.Flush()
 
 	// Subscribe to live events
 	subID, events := h.maptoolMgr.Subscribe()
@@ -225,22 +246,29 @@ func (h *Handler) mapToolEventStream(c echo.Context) error {
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 
-	ctx := c.Request().Context()
+	ctx := r.Context()
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case <-heartbeat.C:
 			// SSE comment line — ignored by EventSource, flushes proxy buffers
-			fmt.Fprintf(c.Response(), ": keepalive\n\n")
-			c.Response().Flush()
+			fmt.Fprintf(w, ": keepalive\n\n")
+			flusher.Flush()
 		case evt, ok := <-events:
 			if !ok {
-				return nil
+				return
 			}
 			data, _ := json.Marshal(evt)
-			fmt.Fprintf(c.Response(), "event: %s\ndata: %s\n\n", evt.Type, data)
-			c.Response().Flush()
+			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", evt.Type, data)
+			flusher.Flush()
 		}
 	}
+}
+
+// writeJSONError writes a JSON error response.
+func writeJSONError(w http.ResponseWriter, code int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

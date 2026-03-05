@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/labstack/echo/v4"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,22 +17,23 @@ var upgrader = websocket.Upgrader{
 }
 
 // HandleStream upgrades to WebSocket and processes streaming mission data.
-func (h *Handler) HandleStream(c echo.Context) error {
+func (h *Handler) HandleStream(w http.ResponseWriter, r *http.Request) {
 	if !h.setting.Streaming.Enabled {
-		return c.NoContent(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	if c.QueryParam("secret") != h.setting.Secret {
-		return c.NoContent(http.StatusForbidden)
+	if r.URL.Query().Get("secret") != h.setting.Secret {
+		w.WriteHeader(http.StatusForbidden)
+		return
 	}
 
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		return err
+		return
 	}
 	defer ws.Close()
 
 	h.streamLoop(ws)
-	return nil
 }
 
 func (h *Handler) streamLoop(ws *websocket.Conn) {

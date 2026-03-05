@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,8 +16,7 @@ import (
 	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/OCAP2/web/internal/server"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/go-fuego/fuego"
 )
 
 func main() {
@@ -54,7 +51,8 @@ func app() error {
 	}
 
 	// Set up slog with JSON handler for consistent logging
-	slog.SetDefault(slog.New(slog.NewJSONHandler(logOutput, nil)))
+	logHandler := slog.NewJSONHandler(logOutput, nil)
+	slog.SetDefault(slog.New(logHandler))
 
 	operation, err := server.NewRepoOperation(setting.DB)
 	if err != nil {
@@ -71,13 +69,9 @@ func app() error {
 		return fmt.Errorf("ammo: %w", err)
 	}
 
-	e := echo.New()
-
-	loggerConfig := middleware.DefaultLoggerConfig
-	loggerConfig.Output = logOutput
-
-	e.Use(
-		middleware.LoggerWithConfig(loggerConfig),
+	s := fuego.NewServer(
+		fuego.WithAddr(setting.Listen),
+		fuego.WithLogHandler(logHandler),
 	)
 
 	// Create conversion worker if enabled (before handler so we can pass it)
@@ -144,7 +138,7 @@ func app() error {
 		handlerOpts = append(handlerOpts, server.WithMapTool(jm, tools, setting.Maps))
 	}
 
-	server.NewHandler(e, operation, marker, ammo, setting, handlerOpts...)
+	server.NewHandler(s, operation, marker, ammo, setting, handlerOpts...)
 
 	// Handle graceful shutdown
 	go func() {
@@ -152,12 +146,8 @@ func app() error {
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		<-quit
 		cancel()
-		e.Shutdown(context.Background())
+		s.Shutdown(context.Background())
 	}()
 
-	if err = e.Start(setting.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("start server: %w", err)
-	}
-
-	return nil
+	return s.Run()
 }

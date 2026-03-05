@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/yohcop/openid-go"
 )
 
@@ -33,8 +33,8 @@ func (defaultOpenIDVerifier) Verify(discoveryURL string, cache openid.DiscoveryC
 }
 
 // bearerToken extracts the token from the Authorization: Bearer <token> header.
-func bearerToken(c echo.Context) string {
-	auth := c.Request().Header.Get("Authorization")
+func bearerToken(r *http.Request) string {
+	auth := r.Header.Get("Authorization")
 	if after, ok := strings.CutPrefix(auth, "Bearer "); ok {
 		return after
 	}
@@ -42,13 +42,14 @@ func bearerToken(c echo.Context) string {
 }
 
 // SteamLogin redirects the user to Steam's OpenID login page.
-func (h *Handler) SteamLogin(c echo.Context) error {
+func (h *Handler) SteamLogin(w http.ResponseWriter, r *http.Request) {
 	nonce, err := randomHex(16)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	c.SetCookie(&http.Cookie{
+	http.SetCookie(w, &http.Cookie{
 		Name:     cookieNonce,
 		Value:    nonce,
 		MaxAge:   300,
@@ -58,32 +59,35 @@ func (h *Handler) SteamLogin(c echo.Context) error {
 	})
 
 	prefix := strings.TrimRight(h.setting.PrefixURL, "/")
-	host := requestHost(c)
-	callbackURL := requestScheme(c) + "://" + host + prefix + "/api/v1/auth/steam/callback?nonce=" + nonce
-	realm := requestScheme(c) + "://" + host + prefix + "/"
+	host := requestHost(r)
+	callbackURL := requestScheme(r) + "://" + host + prefix + "/api/v1/auth/steam/callback?nonce=" + nonce
+	realm := requestScheme(r) + "://" + host + prefix + "/"
 
 	redirectURL, err := openid.RedirectURL(steamOpenIDURL, callbackURL, realm)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }
 
 // SteamCallback handles the return from Steam OpenID, verifies the response,
 // checks the allowlist, issues a JWT, and redirects to the frontend.
-func (h *Handler) SteamCallback(c echo.Context) error {
+func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 	// Verify nonce for CSRF protection
-	cookie, err := c.Cookie(cookieNonce)
+	cookie, err := r.Cookie(cookieNonce)
 	if err != nil || cookie.Value == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "missing auth nonce")
+		http.Error(w, "missing auth nonce", http.StatusBadRequest)
+		return
 	}
-	if c.QueryParam("nonce") != cookie.Value {
-		return echo.NewHTTPError(http.StatusBadRequest, "nonce mismatch")
+	if r.URL.Query().Get("nonce") != cookie.Value {
+		http.Error(w, "nonce mismatch", http.StatusBadRequest)
+		return
 	}
 
 	// Clear nonce cookie
-	c.SetCookie(&http.Cookie{
+	http.SetCookie(w, &http.Cookie{
 		Name:   cookieNonce,
 		MaxAge: -1,
 		Path:   "/",
@@ -91,22 +95,25 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 
 	// Verify OpenID response with Steam — use forwarded host so the URL
 	// matches the return_to that was sent to Steam via the proxy.
-	fullURL := requestScheme(c) + "://" + requestHost(c) + c.Request().RequestURI
+	fullURL := requestScheme(r) + "://" + requestHost(r) + r.RequestURI
 	claimedID, err := h.openIDVerifier.Verify(fullURL, h.openIDCache, h.openIDNonceStore)
 	if err != nil {
-		return h.authRedirect(c, "auth_error=steam_error")
+		h.authRedirect(w, r, "auth_error=steam_error")
+		return
 	}
 
 	// Extract Steam64 ID from claimed ID URL
 	// Format: https://steamcommunity.com/openid/id/76561198012345678
 	steamID := extractSteamID(claimedID)
 	if steamID == "" {
-		return h.authRedirect(c, "auth_error=steam_error")
+		h.authRedirect(w, r, "auth_error=steam_error")
+		return
 	}
 
 	// Check allowlist
 	if !isSteamIDAllowed(steamID, h.setting.Admin.AllowedSteamIDs) {
-		return h.authRedirect(c, "auth_error=steam_denied")
+		h.authRedirect(w, r, "auth_error=steam_denied")
+		return
 	}
 
 	// Fetch Steam profile data if API key is configured
@@ -126,14 +133,15 @@ func (h *Handler) SteamCallback(c echo.Context) error {
 	// Create JWT with Steam ID as subject and optional profile data
 	token, err := h.jwt.Create(steamID, claimOpts...)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	return h.authRedirect(c, "auth_token="+token)
+	h.authRedirect(w, r, "auth_token="+token)
 }
 
 // authRedirect redirects to the frontend root, optionally appending a raw query string.
-func (h *Handler) authRedirect(c echo.Context, query string) error {
+func (h *Handler) authRedirect(w http.ResponseWriter, r *http.Request, query string) {
 	prefix := strings.TrimRight(h.setting.PrefixURL, "/")
 	if prefix == "" {
 		prefix = "/"
@@ -143,44 +151,48 @@ func (h *Handler) authRedirect(c echo.Context, query string) error {
 	if query != "" {
 		prefix += "?" + query
 	}
-	return c.Redirect(http.StatusTemporaryRedirect, prefix)
+	http.Redirect(w, r, prefix, http.StatusTemporaryRedirect)
+}
+
+// MeResponse describes the authentication status returned by GetMe.
+type MeResponse struct {
+	Authenticated bool   `json:"authenticated"`
+	SteamID       string `json:"steamId,omitempty"`
+	SteamName     string `json:"steamName,omitempty"`
+	SteamAvatar   string `json:"steamAvatar,omitempty"`
 }
 
 // GetMe returns the current authentication status.
-func (h *Handler) GetMe(c echo.Context) error {
-	token := bearerToken(c)
+func (h *Handler) GetMe(c ContextNoBody) (MeResponse, error) {
+	token := bearerToken(c.Request())
 	if token == "" || h.jwt.Validate(token) != nil {
-		return c.JSON(http.StatusOK, map[string]any{"authenticated": false})
+		return MeResponse{Authenticated: false}, nil
 	}
-	resp := map[string]any{"authenticated": true}
+	resp := MeResponse{Authenticated: true}
 	if claims := h.jwt.Claims(token); claims != nil {
-		if claims.Subject != "" {
-			resp["steamId"] = claims.Subject
-		}
-		if claims.SteamName != "" {
-			resp["steamName"] = claims.SteamName
-		}
-		if claims.SteamAvatar != "" {
-			resp["steamAvatar"] = claims.SteamAvatar
-		}
+		resp.SteamID = claims.Subject
+		resp.SteamName = claims.SteamName
+		resp.SteamAvatar = claims.SteamAvatar
 	}
-	return c.JSON(http.StatusOK, resp)
+	return resp, nil
 }
 
 // Logout is a no-op for stateless JWT — the frontend discards the token.
-func (h *Handler) Logout(c echo.Context) error {
-	return c.NoContent(http.StatusNoContent)
+func (h *Handler) Logout(c ContextNoBody) (any, error) {
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }
 
 // requireAdmin is middleware that checks for a valid JWT Bearer token.
-func (h *Handler) requireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		token := bearerToken(c)
+func (h *Handler) requireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
 		if token == "" || h.jwt.Validate(token) != nil {
-			return echo.ErrUnauthorized
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
-		return next(c)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // extractSteamID extracts the Steam64 ID from a claimed OpenID URL.
@@ -199,20 +211,20 @@ func isSteamIDAllowed(steamID string, allowed []string) bool {
 
 // requestHost returns the original client-facing host, respecting X-Forwarded-Host
 // from reverse proxies (including Vite dev proxy).
-func requestHost(c echo.Context) string {
-	if fh := c.Request().Header.Get("X-Forwarded-Host"); fh != "" {
+func requestHost(r *http.Request) string {
+	if fh := r.Header.Get("X-Forwarded-Host"); fh != "" {
 		return fh
 	}
-	return c.Request().Host
+	return r.Host
 }
 
 // requestScheme returns "https" or "http" based on the request.
-func requestScheme(c echo.Context) string {
-	if c.Scheme() == "https" {
+func requestScheme(r *http.Request) string {
+	if r.TLS != nil {
 		return "https"
 	}
 	// Check common reverse proxy headers
-	if c.Request().Header.Get("X-Forwarded-Proto") == "https" {
+	if r.Header.Get("X-Forwarded-Proto") == "https" {
 		return "https"
 	}
 	return "http"
@@ -242,7 +254,7 @@ func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", echo.NewHTTPError(resp.StatusCode, "Steam API error")
+		return "", "", fmt.Errorf("steam API error: status %d", resp.StatusCode)
 	}
 
 	var data steamProfileResponse
@@ -251,7 +263,7 @@ func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string
 	}
 
 	if len(data.Response.Players) == 0 {
-		return "", "", echo.NewHTTPError(http.StatusNotFound, "Steam profile not found")
+		return "", "", fmt.Errorf("steam profile not found")
 	}
 
 	p := data.Response.Players[0]

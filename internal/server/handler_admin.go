@@ -3,12 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-fuego/fuego"
 )
 
 type editOperationRequest struct {
@@ -41,12 +42,12 @@ func parseFocusField(raw json.RawMessage) (*int64, bool) {
 
 // decodeEditRequest decodes the JSON body into an editOperationRequest,
 // tracking whether focusStart/focusEnd keys were present.
-func decodeEditRequest(c echo.Context) (editOperationRequest, error) {
+func decodeEditRequest(r *http.Request) (editOperationRequest, error) {
 	var req editOperationRequest
 
 	// Decode into a raw map to detect key presence
 	var rawMap map[string]json.RawMessage
-	if err := json.NewDecoder(c.Request().Body).Decode(&rawMap); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&rawMap); err != nil {
 		return req, err
 	}
 
@@ -81,21 +82,21 @@ func decodeEditRequest(c echo.Context) (editOperationRequest, error) {
 }
 
 // EditOperation updates the editable metadata of an operation.
-func (h *Handler) EditOperation(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func (h *Handler) EditOperation(c ContextNoBody) (*Operation, error) {
+	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: err}
 	}
 
-	req, err := decodeEditRequest(c)
+	req, err := decodeEditRequest(c.Request())
 	if err != nil {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: err}
 	}
 
 	// Fetch current to fill in any fields not provided
-	current, err := h.repoOperation.GetByID(c.Request().Context(), c.Param("id"))
+	current, err := h.repoOperation.GetByID(c.Context(), c.PathParam("id"))
 	if err != nil {
-		return echo.ErrNotFound
+		return nil, fuego.NotFoundError{Err: err}
 	}
 
 	name := req.MissionName
@@ -114,28 +115,28 @@ func (h *Handler) EditOperation(c echo.Context) error {
 	if req.hasFocusStart {
 		val, ok := parseFocusField(req.FocusStart)
 		if !ok {
-			return echo.ErrBadRequest
+			return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid focusStart")}
 		}
 		focusStart = val
 	}
 	if req.hasFocusEnd {
 		val, ok := parseFocusField(req.FocusEnd)
 		if !ok {
-			return echo.ErrBadRequest
+			return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid focusEnd")}
 		}
 		focusEnd = val
 	}
 
 	// Validate focus range: both must be present or both absent, and start < end
 	if (focusStart == nil) != (focusEnd == nil) {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: fmt.Errorf("focusStart and focusEnd must both be present or both absent")}
 	}
 	if focusStart != nil && focusEnd != nil && *focusStart >= *focusEnd {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: fmt.Errorf("focusStart must be less than focusEnd")}
 	}
 
-	if err := h.repoOperation.UpdateOperation(c.Request().Context(), id, name, tag, date, focusStart, focusEnd); err != nil {
-		return err
+	if err := h.repoOperation.UpdateOperation(c.Context(), id, name, tag, date, focusStart, focusEnd); err != nil {
+		return nil, err
 	}
 
 	current.MissionName = name
@@ -144,24 +145,29 @@ func (h *Handler) EditOperation(c echo.Context) error {
 	current.FocusStart = focusStart
 	current.FocusEnd = focusEnd
 
-	return c.JSON(http.StatusOK, current)
+	return current, nil
+}
+
+// RetryResponse is the response for a retry conversion request.
+type RetryResponse struct {
+	Status string `json:"status"`
 }
 
 // RetryConversion resets a failed operation to pending and removes partial output.
-func (h *Handler) RetryConversion(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func (h *Handler) RetryConversion(c ContextNoBody) (RetryResponse, error) {
+	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return echo.ErrBadRequest
+		return RetryResponse{}, fuego.BadRequestError{Err: err}
 	}
 
-	ctx := c.Request().Context()
-	op, err := h.repoOperation.GetByID(ctx, c.Param("id"))
+	ctx := c.Context()
+	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return echo.ErrNotFound
+		return RetryResponse{}, fuego.NotFoundError{Err: err}
 	}
 
 	if op.ConversionStatus != ConversionStatusFailed {
-		return echo.NewHTTPError(http.StatusConflict, "operation is not in failed state")
+		return RetryResponse{}, fuego.ConflictError{Err: fmt.Errorf("operation is not in failed state")}
 	}
 
 	// Remove partial protobuf output
@@ -170,7 +176,7 @@ func (h *Handler) RetryConversion(c echo.Context) error {
 
 	// Reset to pending so the conversion worker picks it up
 	if err := h.repoOperation.UpdateConversionStatus(ctx, id, ConversionStatusPending); err != nil {
-		return err
+		return RetryResponse{}, err
 	}
 
 	// Trigger immediate conversion if available
@@ -178,37 +184,38 @@ func (h *Handler) RetryConversion(c echo.Context) error {
 		h.conversionTrigger.TriggerConversion(id, op.Filename)
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"status": ConversionStatusPending})
+	return RetryResponse{Status: ConversionStatusPending}, nil
 }
 
 // DeleteOperation removes an operation from DB and cleans up data files.
-func (h *Handler) DeleteOperation(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func (h *Handler) DeleteOperation(c ContextNoBody) (any, error) {
+	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: err}
 	}
 
-	ctx := c.Request().Context()
-	op, err := h.repoOperation.GetByID(ctx, c.Param("id"))
+	ctx := c.Context()
+	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return echo.ErrNotFound
+		return nil, fuego.NotFoundError{Err: err}
 	}
 
 	// Delete DB record first
 	if err := h.repoOperation.Delete(ctx, id); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Clean up files (best-effort, don't fail the request)
 	jsonGzPath := filepath.Join(h.setting.Data, op.Filename+".json.gz")
 	if err := os.Remove(jsonGzPath); err != nil && !os.IsNotExist(err) {
-		c.Logger().Warnf("failed to remove %s: %v", jsonGzPath, err)
+		slog.Warn("failed to remove file", "path", jsonGzPath, "error", err)
 	}
 
 	pbDir := filepath.Join(h.setting.Data, op.Filename)
 	if err := os.RemoveAll(pbDir); err != nil {
-		c.Logger().Warnf("failed to remove %s: %v", pbDir, err)
+		slog.Warn("failed to remove directory", "path", pbDir, "error", err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }

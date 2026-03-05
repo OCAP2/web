@@ -1,64 +1,67 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-fuego/fuego"
 )
 
 // GetMarkerBlacklist returns the blacklisted player entity IDs for a recording.
-func (h *Handler) GetMarkerBlacklist(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func (h *Handler) GetMarkerBlacklist(c ContextNoBody) ([]int, error) {
+	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return echo.ErrBadRequest
+		return nil, fuego.BadRequestError{Err: err}
 	}
 
-	ids, err := h.repoOperation.GetBlacklist(c.Request().Context(), id)
+	ids, err := h.repoOperation.GetBlacklist(c.Context(), id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(http.StatusOK, ids)
+	return ids, nil
 }
 
 // AddMarkerBlacklist adds a player entity ID to the marker blacklist.
-func (h *Handler) AddMarkerBlacklist(c echo.Context) error {
+func (h *Handler) AddMarkerBlacklist(c ContextNoBody) (any, error) {
 	id, playerID, err := parseBlacklistIDs(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := h.repoOperation.AddBlacklist(c.Request().Context(), id, playerID); err != nil {
-		return err
+	if err := h.repoOperation.AddBlacklist(c.Context(), id, playerID); err != nil {
+		return nil, err
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }
 
 // RemoveMarkerBlacklist removes a player entity ID from the marker blacklist.
-func (h *Handler) RemoveMarkerBlacklist(c echo.Context) error {
+func (h *Handler) RemoveMarkerBlacklist(c ContextNoBody) (any, error) {
 	id, playerID, err := parseBlacklistIDs(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := h.repoOperation.RemoveBlacklist(c.Request().Context(), id, playerID); err != nil {
-		return err
+	if err := h.repoOperation.RemoveBlacklist(c.Context(), id, playerID); err != nil {
+		return nil, err
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }
 
-func parseBlacklistIDs(c echo.Context) (int64, int, error) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func parseBlacklistIDs(c ContextNoBody) (int64, int, error) {
+	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return 0, 0, echo.ErrBadRequest
+		return 0, 0, fuego.BadRequestError{Err: fmt.Errorf("invalid id: %w", err)}
 	}
 
-	playerID, err := strconv.Atoi(c.Param("playerId"))
+	playerID, err := strconv.Atoi(c.PathParam("playerId"))
 	if err != nil {
-		return 0, 0, echo.ErrBadRequest
+		return 0, 0, fuego.BadRequestError{Err: fmt.Errorf("invalid playerId: %w", err)}
 	}
 
 	return id, playerID, nil
