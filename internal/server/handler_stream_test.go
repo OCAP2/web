@@ -251,7 +251,7 @@ func TestNewHandler_StreamRouteRegistered(t *testing.T) {
 	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
 	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 	NewHandler(s, repo, repoMarker, repoAmmo, Setting{PrefixURL: "/sub/"})
 
 	// Verify the stream route is accessible by making a request

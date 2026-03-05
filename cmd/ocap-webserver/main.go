@@ -73,6 +73,8 @@ func app() error {
 	s := fuego.NewServer(
 		fuego.WithAddr(setting.Listen),
 		fuego.WithLogHandler(logHandler),
+		fuego.WithoutAutoGroupTags(),
+		fuego.WithSecurity(server.OpenAPISecuritySchemes),
 		fuego.WithEngineOptions(
 			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
 				SwaggerURL:       "/swagger",

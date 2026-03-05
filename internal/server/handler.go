@@ -18,12 +18,24 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-fuego/fuego"
 	"github.com/yohcop/openid-go"
 )
 
 // ContextNoBody is the Fuego context type used by typed handlers that take no request body.
 type ContextNoBody = fuego.ContextNoBody
+
+// OpenAPISecuritySchemes defines the security schemes for the OpenAPI spec.
+var OpenAPISecuritySchemes = openapi3.SecuritySchemes{
+	"bearerAuth": &openapi3.SecuritySchemeRef{
+		Value: openapi3.NewSecurityScheme().
+			WithType("http").
+			WithScheme("bearer").
+			WithBearerFormat("JWT").
+			WithDescription("JWT token obtained via Steam OpenID login"),
+	},
+}
 
 const CacheDuration = 7 * 24 * time.Hour
 
@@ -122,53 +134,58 @@ func NewHandler(
 	prefixURL := strings.TrimRight(hdlr.setting.PrefixURL, "/")
 	g := fuego.Group(s, prefixURL)
 
-	fuego.Get(g, "/api/healthcheck", hdlr.GetHealthcheck)
+	bearerAuth := openapi3.SecurityRequirement{"bearerAuth": {}}
 
-	fuego.Get(g, "/api/v1/operations", hdlr.GetOperations)
-	fuego.Get(g, "/api/v1/operations/{id}", hdlr.GetOperation)
-	fuego.Get(g, "/api/v1/operations/{id}/marker-blacklist", hdlr.GetMarkerBlacklist)
-	fuego.PostStd(g, "/api/v1/operations/add", hdlr.StoreOperation)
-	fuego.Get(g, "/api/v1/worlds", hdlr.GetWorlds)
-	fuego.Get(g, "/api/v1/customize", hdlr.GetCustomize)
-	fuego.GetStd(g, "/api/v1/stream", hdlr.HandleStream)
-	fuego.Get(g, "/api/version", hdlr.GetVersion)
+	// Health & info
+	fuego.Get(g, "/api/healthcheck", hdlr.GetHealthcheck, fuego.OptionTags("Health"))
+	fuego.Get(g, "/api/version", hdlr.GetVersion, fuego.OptionTags("Health"))
 
+	// Recordings (public read)
+	fuego.Get(g, "/api/v1/operations", hdlr.GetOperations, fuego.OptionTags("Recordings"))
+	fuego.Get(g, "/api/v1/operations/{id}", hdlr.GetOperation, fuego.OptionTags("Recordings"))
+	fuego.Get(g, "/api/v1/operations/{id}/marker-blacklist", hdlr.GetMarkerBlacklist, fuego.OptionTags("Recordings"))
+	fuego.PostStd(g, "/api/v1/operations/add", hdlr.StoreOperation, fuego.OptionTags("Recordings"))
+	fuego.Get(g, "/api/v1/worlds", hdlr.GetWorlds, fuego.OptionTags("Recordings"))
+	fuego.Get(g, "/api/v1/customize", hdlr.GetCustomize, fuego.OptionTags("Recordings"))
+	fuego.GetStd(g, "/api/v1/stream", hdlr.HandleStream, fuego.OptionTags("Recordings"))
+
+	// Assets (static file serving)
 	cacheMiddleware := hdlr.cacheControl(CacheDuration)
-	fuego.GetStd(g, "/data/{path...}", hdlr.GetData, fuego.OptionMiddleware(cacheMiddleware))
-	fuego.GetStd(g, "/images/markers/{name}/{color}", hdlr.GetMarker, fuego.OptionMiddleware(cacheMiddleware))
-	fuego.GetStd(g, "/images/markers/magicons/{name}", hdlr.GetAmmo, fuego.OptionMiddleware(cacheMiddleware))
-	fuego.GetStd(g, "/images/maps/fonts/{fontstack}/{range}", hdlr.GetFont, fuego.OptionMiddleware(cacheMiddleware))
-	fuego.GetStd(g, "/images/maps/sprites/{name}", hdlr.GetSprite, fuego.OptionMiddleware(cacheMiddleware))
-	fuego.GetStd(g, "/images/maps/{path...}", hdlr.GetMapTile, fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/data/{path...}", hdlr.GetData, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/images/markers/{name}/{color}", hdlr.GetMarker, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/images/markers/magicons/{name}", hdlr.GetAmmo, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/images/maps/fonts/{fontstack}/{range}", hdlr.GetFont, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/images/maps/sprites/{name}", hdlr.GetSprite, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
+	fuego.GetStd(g, "/images/maps/{path...}", hdlr.GetMapTile, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
 
-	// Auth endpoints
-	fuego.GetStd(g, "/api/v1/auth/steam", hdlr.SteamLogin)
-	fuego.GetStd(g, "/api/v1/auth/steam/callback", hdlr.SteamCallback)
-	fuego.Get(g, "/api/v1/auth/me", hdlr.GetMe)
-	fuego.Post(g, "/api/v1/auth/logout", hdlr.Logout)
+	// Auth
+	fuego.GetStd(g, "/api/v1/auth/steam", hdlr.SteamLogin, fuego.OptionTags("Auth"))
+	fuego.GetStd(g, "/api/v1/auth/steam/callback", hdlr.SteamCallback, fuego.OptionTags("Auth"))
+	fuego.Get(g, "/api/v1/auth/me", hdlr.GetMe, fuego.OptionTags("Auth"))
+	fuego.Post(g, "/api/v1/auth/logout", hdlr.Logout, fuego.OptionTags("Auth"), fuego.OptionSecurity(bearerAuth))
 
-	// Admin routes (require JWT)
+	// Admin (require JWT)
 	admin := fuego.Group(g, "")
 	fuego.Use(admin, hdlr.requireAdmin)
-	fuego.Patch(admin, "/api/v1/operations/{id}", hdlr.EditOperation)
-	fuego.Delete(admin, "/api/v1/operations/{id}", hdlr.DeleteOperation)
-	fuego.Post(admin, "/api/v1/operations/{id}/retry", hdlr.RetryConversion)
-	fuego.Put(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.AddMarkerBlacklist)
-	fuego.Delete(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.RemoveMarkerBlacklist)
+	fuego.Patch(admin, "/api/v1/operations/{id}", hdlr.EditOperation, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
+	fuego.Delete(admin, "/api/v1/operations/{id}", hdlr.DeleteOperation, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
+	fuego.Post(admin, "/api/v1/operations/{id}/retry", hdlr.RetryConversion, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
+	fuego.Put(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.AddMarkerBlacklist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
+	fuego.Delete(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.RemoveMarkerBlacklist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 
-	// MapTool routes (require admin JWT; SSE endpoint handles its own auth via query param)
+	// MapTool (require admin JWT; SSE endpoint handles its own auth via query param)
 	if hdlr.maptoolMgr != nil {
 		mt := fuego.Group(admin, "/api/v1/maptool")
-		fuego.Get(mt, "/health", hdlr.getMapToolHealth)
-		fuego.Get(mt, "/tools", hdlr.getMapToolTools)
-		fuego.Get(mt, "/maps", hdlr.getMapToolMaps)
-		fuego.Delete(mt, "/maps/{name}", hdlr.deleteMapToolMap)
-		fuego.PostStd(mt, "/maps/import", hdlr.importMapToolZip)
-		fuego.Post(mt, "/maps/restyle", hdlr.restyleMapToolAll)
-		fuego.Get(mt, "/jobs", hdlr.getMapToolJobs)
-		fuego.Post(mt, "/jobs/{id}/cancel", hdlr.cancelMapToolJob)
+		fuego.Get(mt, "/health", hdlr.getMapToolHealth, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Get(mt, "/tools", hdlr.getMapToolTools, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Get(mt, "/maps", hdlr.getMapToolMaps, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Delete(mt, "/maps/{name}", hdlr.deleteMapToolMap, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.PostStd(mt, "/maps/import", hdlr.importMapToolZip, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Post(mt, "/maps/restyle", hdlr.restyleMapToolAll, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Get(mt, "/jobs", hdlr.getMapToolJobs, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Post(mt, "/jobs/{id}/cancel", hdlr.cancelMapToolJob, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		// SSE endpoint — registered on the prefix group (not admin) so it can do its own auth via query token
-		fuego.GetStd(g, "/api/v1/maptool/events", hdlr.mapToolEventStream)
+		fuego.GetStd(g, "/api/v1/maptool/events", hdlr.mapToolEventStream, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 	}
 
 	if hdlr.staticFS != nil {

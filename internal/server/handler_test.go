@@ -416,7 +416,7 @@ func TestStaticFileServing(t *testing.T) {
 	repoAmmo, err := NewRepoAmmo(filepath.Join(dir, "ammo"))
 	require.NoError(t, err)
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 	NewHandler(s, repo, repoMarker, repoAmmo, Setting{}, WithStaticFS(os.DirFS(staticDir)))
 
 	ts := httptest.NewServer(s.Mux)
@@ -467,7 +467,7 @@ func TestStaticFileServingWithPrefix(t *testing.T) {
 	repoAmmo, err := NewRepoAmmo(filepath.Join(dir, "ammo"))
 	require.NoError(t, err)
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 	NewHandler(s, repo, repoMarker, repoAmmo, Setting{PrefixURL: "/sub/"}, WithStaticFS(os.DirFS(staticDir)))
 
 	ts := httptest.NewServer(s.Mux)
@@ -833,7 +833,7 @@ func TestNewHandler(t *testing.T) {
 		Ammo:      ammoDir,
 	}
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 
 	// Should not panic
 	NewHandler(s, repo, repoMarker, repoAmmo, setting, WithStaticFS(os.DirFS(dir)))
@@ -875,7 +875,7 @@ func TestNewHandlerWithOptions(t *testing.T) {
 	}
 
 	trigger := &mockConversionTrigger{}
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 
 	// Should apply options
 	NewHandler(s, repo, repoMarker, repoAmmo, setting, WithConversionTrigger(trigger), WithStaticFS(os.DirFS(dir)))
@@ -1402,7 +1402,7 @@ func TestNewHandler_WithMapTool(t *testing.T) {
 	})
 	tools := maptool.ToolSet{{Name: "pmtiles", Found: true}}
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 	NewHandler(s, repo, repoMarker, repoAmmo, Setting{
 		Data: filepath.Join(dir, "data"),
 		Maps: filepath.Join(dir, "maps"),

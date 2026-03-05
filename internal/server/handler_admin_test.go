@@ -330,7 +330,7 @@ func TestAdminFlow_LoginEditDelete(t *testing.T) {
 	repoMarker, _ := NewRepoMarker(filepath.Join(dir, "markers"))
 	repoAmmo, _ := NewRepoAmmo(filepath.Join(dir, "ammo"))
 
-	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags())
+	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))
 	hdlr := &Handler{
 		repoOperation: repo,
 		setting:       setting,
