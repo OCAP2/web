@@ -9,8 +9,7 @@ import (
 )
 
 func TestOpenAPIUIHandler(t *testing.T) {
-	specURL := "/swagger/openapi.json"
-	handler := OpenAPIUIHandler(specURL)
+	handler := OpenAPIUIHandler("/ignored/absolute/path")
 
 	req := httptest.NewRequest(http.MethodGet, "/swagger", nil)
 	rec := httptest.NewRecorder()
@@ -21,7 +20,8 @@ func TestOpenAPIUIHandler(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))
 
 	body := rec.Body.String()
-	assert.Contains(t, body, specURL, "should embed the spec URL")
+	assert.Contains(t, body, `data-url="openapi.json"`, "should use relative spec URL")
+	assert.NotContains(t, body, "/ignored/absolute/path", "should not use absolute spec URL")
 	assert.Contains(t, body, `"darkMode":true`, "should enable dark mode")
 	assert.Contains(t, body, "OCAP2 Web API", "should have the page title")
 	assert.Contains(t, body, "api-reference", "should include the Scalar script tag")
