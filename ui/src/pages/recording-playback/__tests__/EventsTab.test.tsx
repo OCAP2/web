@@ -23,8 +23,9 @@ function capturedEvent(
   frameNum: number,
   unitName: string,
   objectType: string,
+  position?: [number, number],
 ): EventDef {
-  return { type: "captured", frameNum, unitName, objectType } as EventDef;
+  return { type: "captured", frameNum, unitName, objectType, position } as EventDef;
 }
 
 /** Create a terminalHack event definition. */
@@ -376,6 +377,26 @@ describe("EventsTab", () => {
 
     expect(screen.getByText(/CapGuy/)).toBeTruthy();
     expect(screen.getByText(/flag/)).toBeTruthy();
+  });
+
+  it("clicking a CapturedEvent with position pans the map", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Soldier" })];
+    const events = [capturedEvent(0, "CapGuy", "flag", [5000, 6000])];
+    engine.loadRecording(makeManifest(entities, events));
+
+    const panSpy = vi.spyOn(engine, "panToPosition");
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    const eventRow = screen.getByTestId("event-row-0");
+    fireEvent.click(eventRow);
+
+    expect(panSpy).toHaveBeenCalledWith([5000, 6000]);
   });
 
   it("renders TerminalHackEvent with started message", () => {

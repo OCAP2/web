@@ -1271,4 +1271,16 @@ describe("PlaybackEngine", () => {
       expect(spy).not.toHaveBeenCalled();
     });
   });
+
+  describe("panToPosition", () => {
+    it("calls setView with the given Arma position", () => {
+      const manifest = makeManifest({ frameCount: 10 });
+      engine.loadRecording(manifest);
+
+      const spy = vi.spyOn(renderer, "setView");
+      engine.panToPosition([5000, 6000]);
+
+      expect(spy).toHaveBeenCalledWith([5000, 6000]);
+    });
+  });
 });

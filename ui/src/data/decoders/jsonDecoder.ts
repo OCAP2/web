@@ -280,14 +280,14 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
       };
     }
     case "captured": {
-      // Old format: [frameNum, "captured", [unitName, unitColor, objectType, objectColor, objectPos, unitPos]]
+      // Extension format: [frameNum, "captured", [objectType, unitName, side, color, [posX, posY, posZ]]]
       const capData = raw[2] as unknown[] | undefined;
       const capPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
       return {
         frameNum,
         type,
-        unitName: String(capData?.[0] ?? ""),
-        objectType: String(capData?.[2] ?? ""),
+        unitName: String(capData?.[1] ?? ""),
+        objectType: String(capData?.[0] ?? ""),
         position: capPos ? [capPos[0], capPos[1]] as [number, number] : undefined,
       };
     }

@@ -631,7 +631,8 @@ describe("JsonDecoder.decodeManifest", () => {
       endFrame: 100,
       captureDelay: 1,
       events: [
-        [35, "captured", ["PlayerB", "red", "sector", "blue", [100, 200], [110, 210]]],
+        // Extension format: [objectType, unitName, side, color, [posX, posY, posZ]]
+        [35, "captured", ["flag", "PlayerB", "WEST", "#FF0000", [100, 200, 0]]],
       ],
     };
 
@@ -641,7 +642,7 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(event.type).toBe("captured");
     if (event.type === "captured") {
       expect(event.unitName).toBe("PlayerB");
-      expect(event.objectType).toBe("sector");
+      expect(event.objectType).toBe("flag");
       expect(event.position).toEqual([100, 200]);
     }
   });
