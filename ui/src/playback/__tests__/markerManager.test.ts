@@ -108,6 +108,14 @@ describe("parseMarkerPosition", () => {
       expect(result.text).toBeUndefined();
     });
 
+    it("parses extended format with non-empty text", () => {
+      const result = parseMarkerPosition([
+        10, [100, 200, 0], 0, 1,
+        "Alpha", "000000", [1.5, 1.5], "EmptyIcon", "Solid",
+      ]);
+      expect(result.text).toBe("Alpha");
+    });
+
     it("parses style overrides with empty type (color-only change)", () => {
       const result = parseMarkerPosition([
         66, [14831, 16599.9, 17.843], 0, 1,
@@ -1045,6 +1053,65 @@ describe("MarkerManager.clear", () => {
 // ─── MarkerManager updateFrame side-filter removal ───
 
 describe("MarkerManager updateFrame guard branches", () => {
+  it("removes handle during updateFrame when blacklisted after marker was created in same frame loop", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Two markers: first is player 5, second is player 10
+    mgr.loadMarkers([
+      makeDef("mil_dot", { player: 5, side: "WEST" }),
+      makeDef("mil_dot", { player: 10, side: "WEST" }),
+    ]);
+
+    // Show both
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Blacklist player 5 — setBlacklist eagerly removes the handle
+    mgr.setBlacklist(new Set([5]));
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Re-create the handle by clearing blacklist and updating
+    mgr.setBlacklist(new Set());
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(3);
+
+    // Now blacklist again and call updateFrame — the updateFrame branch removes the handle
+    mgr.setBlacklist(new Set([5]));
+    mgr.updateFrame(0);
+    // No new creates for player 5
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(3);
+  });
+
+  it("removes handle during updateFrame when side filter excludes a visible marker", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([
+      makeDef("mil_dot", {
+        side: "WEST",
+        positions: [[0, 100, 200, 0, 0, 1], [5, 110, 210, 0, 0, 1]],
+      }),
+    ]);
+
+    // Show with no filter
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Set filter to EAST — setSideFilter removes eagerly
+    mgr.setSideFilter("EAST");
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Clear filter and re-create
+    mgr.setSideFilter(null);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    // Set filter again and call updateFrame at new keyframe — updateFrame branch removes
+    mgr.setSideFilter("EAST");
+    mgr.updateFrame(5);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+  });
+
   it("removes handle during updateFrame when side filter changes between frames", () => {
     const renderer = makeStubRenderer();
     const mgr = new MarkerManager(renderer);

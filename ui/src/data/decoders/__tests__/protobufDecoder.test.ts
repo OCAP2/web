@@ -506,6 +506,40 @@ describe("ProtobufDecoder.decodeManifest", () => {
     expect(p1[7]).toBe("b_installation");
   });
 
+  it("converts marker positions with lineCoords to nested arrays", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Op",
+      frameCount: 100,
+      chunkSize: 100,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      markers: [{
+        type: "mil_dot",
+        text: "",
+        startFrame: 0,
+        endFrame: 0,
+        playerId: -1,
+        color: "FF0000",
+        side: 0,
+        positions: [{
+          frameNum: 0, posX: 100, posY: 200, posZ: 0,
+          direction: 45, alpha: 0.8,
+          lineCoords: [10, 20, 30, 40, 50, 60],
+        }],
+        shape: "POLYLINE",
+      }],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    const p = manifest.markers[0].positions[0];
+    // lineCoords should be converted to [[10,20], [30,40], [50,60]]
+    expect(p[1]).toEqual([[10, 20], [30, 40], [50, 60]]);
+    expect(p[2]).toBe(45);
+    expect(p[3]).toBeCloseTo(0.8);
+  });
+
   it("normalizes marker endFrame 0 (protobuf FrameForever) to FRAME_FOREVER", () => {
     const buffer = encodePb(PbManifest, {
       version: 1,
