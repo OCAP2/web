@@ -87,6 +87,7 @@ func NewRepoOperation(pathDB string) (*RepoOperation, error) {
 // runMigration executes a set of SQL statements atomically within a transaction,
 // then records the new version number.
 func (r *RepoOperation) runMigration(version int, statements ...string) error {
+	slog.Info("running database migration", "version", version)
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin v%d migration: %w", version, err)
@@ -103,7 +104,11 @@ func (r *RepoOperation) runMigration(version int, statements ...string) error {
 		return fmt.Errorf("v%d set version: %w", version, err)
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	slog.Info("database migration completed", "version", version)
+	return nil
 }
 
 func (r *RepoOperation) migration() (err error) {
@@ -134,6 +139,7 @@ func (r *RepoOperation) migration() (err error) {
 	} else if err != nil {
 		return err
 	}
+	slog.Info("database schema", "currentVersion", version)
 
 	if version < 1 {
 		if err = r.runMigration(1,
