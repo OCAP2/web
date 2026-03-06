@@ -280,7 +280,7 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
       };
     }
     case "captured": {
-      // [frameNum, "captured", [objectType, unitName, side, color, [posX, posY, posZ]]]
+      // Old format: [frameNum, "captured", [unitName, unitColor, objectType, objectColor, objectPos, unitPos]]
       const capData = raw[2] as unknown[] | undefined;
       const capPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
       return {

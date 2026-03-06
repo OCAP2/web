@@ -186,12 +186,14 @@ func parseEventArray(evtArr []interface{}) *Event {
 			if arr, ok := evtArr[2].([]interface{}); ok {
 				// Build message from string parts, extract position from array elements
 				var parts []string
+				var posFound bool
 				for _, v := range arr {
 					if posArr, ok := v.([]interface{}); ok && len(posArr) >= 2 {
 						// Position array [x, y, z] — take first found as event position
-						if event.PosX == 0 && event.PosY == 0 {
+						if !posFound {
 							event.PosX = float32(toFloat64(posArr[0]))
 							event.PosY = float32(toFloat64(posArr[1]))
+							posFound = true
 						}
 					} else {
 						parts = append(parts, toString(v))
