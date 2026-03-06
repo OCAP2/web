@@ -515,9 +515,21 @@ export class EntityCanvasLayer {
     // --- Minor grid (thin, subtle) ---
     if (minor) {
       const minorLines = computeGridLines(armaBounds, minor);
-      // Filter out lines that coincide with major grid
-      const minorX = minorLines.x.filter((v) => v % major !== 0);
-      const minorY = minorLines.y.filter((v) => v % major !== 0);
+      // Filter out lines that coincide with major grid and pre-compute points
+      const minorXPts: { sx: number; sy: number; ex: number; ey: number }[] = [];
+      for (const x of minorLines.x) {
+        if (x % major === 0) continue;
+        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
+        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
+        minorXPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y });
+      }
+      const minorYPts: { sx: number; sy: number; ex: number; ey: number }[] = [];
+      for (const y of minorLines.y) {
+        if (y % major === 0) continue;
+        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
+        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
+        minorYPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y });
+      }
 
       for (const pass of [
         { color: "rgba(0,0,0,0.15)", width: 1.5 * cs },
@@ -526,18 +538,8 @@ export class EntityCanvasLayer {
         ctx.strokeStyle = pass.color;
         ctx.lineWidth = pass.width;
         ctx.beginPath();
-        for (const x of minorX) {
-          const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
-          const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(e.x, e.y);
-        }
-        for (const y of minorY) {
-          const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
-          const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(e.x, e.y);
-        }
+        for (const p of minorXPts) { ctx.moveTo(p.sx, p.sy); ctx.lineTo(p.ex, p.ey); }
+        for (const p of minorYPts) { ctx.moveTo(p.sx, p.sy); ctx.lineTo(p.ex, p.ey); }
         ctx.stroke();
       }
     }
@@ -551,6 +553,20 @@ export class EntityCanvasLayer {
     };
     const majorLines = computeGridLines(majorBounds, major);
 
+    // Pre-compute major grid points (reused for stroke passes + labels)
+    const majorXPts: { sx: number; sy: number; ex: number; ey: number; val: number }[] = [];
+    for (const x of majorLines.x) {
+      const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
+      const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
+      majorXPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y, val: x });
+    }
+    const majorYPts: { sx: number; sy: number; ex: number; ey: number; val: number }[] = [];
+    for (const y of majorLines.y) {
+      const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
+      const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
+      majorYPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y, val: y });
+    }
+
     for (const pass of [
       { color: "rgba(0,0,0,0.25)", width: 2 * cs },
       { color: "rgba(255,255,255,0.35)", width: 0.75 * cs },
@@ -558,18 +574,8 @@ export class EntityCanvasLayer {
       ctx.strokeStyle = pass.color;
       ctx.lineWidth = pass.width;
       ctx.beginPath();
-      for (const x of majorLines.x) {
-        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
-        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(e.x, e.y);
-      }
-      for (const y of majorLines.y) {
-        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
-        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(e.x, e.y);
-      }
+      for (const p of majorXPts) { ctx.moveTo(p.sx, p.sy); ctx.lineTo(p.ex, p.ey); }
+      for (const p of majorYPts) { ctx.moveTo(p.sx, p.sy); ctx.lineTo(p.ex, p.ey); }
       ctx.stroke();
     }
 
@@ -579,30 +585,24 @@ export class EntityCanvasLayer {
 
     ctx.textBaseline = "top";
     ctx.textAlign = "center";
-    for (const x of majorLines.x) {
-      const pos = this.map.latLngToContainerPoint(
-        this.config.armaToLatLng([x, armaBounds.minY]),
-      );
-      const label = formatCoordLabel(x, major);
+    for (const p of majorXPts) {
+      const label = formatCoordLabel(p.val, major);
       ctx.strokeStyle = "rgba(0,0,0,0.7)";
       ctx.lineWidth = 3 * cs;
-      ctx.strokeText(label, pos.x, pos.y + 2 * cs);
+      ctx.strokeText(label, p.sx, p.sy + 2 * cs);
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillText(label, pos.x, pos.y + 2 * cs);
+      ctx.fillText(label, p.sx, p.sy + 2 * cs);
     }
 
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    for (const y of majorLines.y) {
-      const pos = this.map.latLngToContainerPoint(
-        this.config.armaToLatLng([armaBounds.minX, y]),
-      );
-      const label = formatCoordLabel(y, major);
+    for (const p of majorYPts) {
+      const label = formatCoordLabel(p.val, major);
       ctx.strokeStyle = "rgba(0,0,0,0.7)";
       ctx.lineWidth = 3 * cs;
-      ctx.strokeText(label, pos.x + 3 * cs, pos.y);
+      ctx.strokeText(label, p.sx + 3 * cs, p.sy);
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillText(label, pos.x + 3 * cs, pos.y);
+      ctx.fillText(label, p.sx + 3 * cs, p.sy);
     }
   }
 
