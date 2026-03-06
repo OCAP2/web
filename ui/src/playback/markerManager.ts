@@ -347,8 +347,9 @@ export class MarkerManager {
 
     let skipped = 0;
     for (const def of defs) {
-      // Skip marker types that the old frontend never creates
-      if (def.type.includes("Empty") || def.type.includes("zoneTrigger")) {
+      // Skip marker types that the old frontend never creates.
+      // Allow Empty markers with text — they are text labels (e.g. sector names).
+      if (def.type.includes("zoneTrigger") || (def.type.includes("Empty") && !def.text)) {
         skipped++;
         continue;
       }

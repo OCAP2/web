@@ -897,6 +897,19 @@ export class LeafletRenderer implements MapRenderer {
         layer.addTo(this.layers[layerKey]);
         return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, patternId, shapeOpts });
       }
+    } else if (def.type.includes("Empty") && def.text) {
+      // Empty markers are text-only labels (e.g. sector names).
+      // Offset to the right of the marker position, matching Arma 3 in-game rendering.
+      layer = L.marker([0, 0], {
+        icon: L.divIcon({
+          className: "marker-text-label",
+          html: `<span>${def.text}</span>`,
+          iconSize: [0, 0],
+          iconAnchor: [-30, 0],
+        }),
+        interactive: false,
+        zIndexOffset: 1000,
+      });
     } else {
       // ICON shape — load actual marker image from server
       const isMagIcon = def.type.indexOf("magIcons") > -1;
