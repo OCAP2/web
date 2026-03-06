@@ -7,7 +7,7 @@
  */
 import L from "leaflet";
 import type { ArmaCoord } from "../../utils/coordinates";
-import { getGridInterval, formatCoordLabel, computeGridLines } from "./gridUtils";
+import { getGridLevels, formatCoordLabel, computeGridLines } from "./gridUtils";
 
 // --------------- Types ---------------
 
@@ -100,68 +100,83 @@ export class GridLayer extends L.LayerGroup {
 
     const bounds = map.getBounds();
     const zoom = map.getZoom();
-    const interval = getGridInterval(zoom, useMapLibreMode);
+    const { major, minor } = getGridLevels(zoom, useMapLibreMode);
 
     // Convert map bounds to Arma coordinates
     const sw = latLngToArma(bounds.getSouthWest());
     const ne = latLngToArma(bounds.getNorthEast());
 
-    // Clamp to world bounds
+    const finest = minor ?? major;
     const armaBounds = {
-      minX: Math.max(0, Math.floor(sw[0] / interval) * interval),
-      maxX: Math.min(worldSize, Math.ceil(ne[0] / interval) * interval),
-      minY: Math.max(0, Math.floor(sw[1] / interval) * interval),
-      maxY: Math.min(worldSize, Math.ceil(ne[1] / interval) * interval),
+      minX: Math.max(0, Math.floor(sw[0] / finest) * finest),
+      maxX: Math.min(worldSize, Math.ceil(ne[0] / finest) * finest),
+      minY: Math.max(0, Math.floor(sw[1] / finest) * finest),
+      maxY: Math.min(worldSize, Math.ceil(ne[1] / finest) * finest),
     };
 
-    const gridLines = computeGridLines(armaBounds, interval);
+    const minorWeight = Math.max(0.5, this._gridOpts.lineWeight * 0.5);
+    const majorWeight = this._gridOpts.lineWeight;
 
-    // Draw vertical lines (constant X)
-    for (const x of gridLines.x) {
-      const start = armaToLatLng([x, armaBounds.minY]);
-      const end = armaToLatLng([x, armaBounds.maxY]);
+    // --- Minor grid lines (thinner, no labels) ---
+    if (minor) {
+      const minorLines = computeGridLines(armaBounds, minor);
+      for (const x of minorLines.x) {
+        if (x % major === 0) continue; // skip major positions
+        const line = L.polyline(
+          [armaToLatLng([x, armaBounds.minY]), armaToLatLng([x, armaBounds.maxY])],
+          { color: this._gridOpts.lineColor, weight: minorWeight, opacity: 0.4, interactive: false },
+        );
+        this.addLayer(line);
+        this._gridLines.push(line);
+      }
+      for (const y of minorLines.y) {
+        if (y % major === 0) continue;
+        const line = L.polyline(
+          [armaToLatLng([armaBounds.minX, y]), armaToLatLng([armaBounds.maxX, y])],
+          { color: this._gridOpts.lineColor, weight: minorWeight, opacity: 0.4, interactive: false },
+        );
+        this.addLayer(line);
+        this._gridLines.push(line);
+      }
+    }
 
-      const line = L.polyline([start, end], {
-        color: this._gridOpts.lineColor,
-        weight: this._gridOpts.lineWeight,
-        interactive: false,
-      });
+    // --- Major grid lines (thicker, with labels) ---
+    const majorBounds = {
+      minX: Math.max(0, Math.floor(sw[0] / major) * major),
+      maxX: Math.min(worldSize, Math.ceil(ne[0] / major) * major),
+      minY: Math.max(0, Math.floor(sw[1] / major) * major),
+      maxY: Math.min(worldSize, Math.ceil(ne[1] / major) * major),
+    };
+    const majorLines = computeGridLines(majorBounds, major);
+
+    for (const x of majorLines.x) {
+      const line = L.polyline(
+        [armaToLatLng([x, armaBounds.minY]), armaToLatLng([x, armaBounds.maxY])],
+        { color: this._gridOpts.lineColor, weight: majorWeight, interactive: false },
+      );
       this.addLayer(line);
       this._gridLines.push(line);
 
-      // Add label at bottom
       if (this._gridOpts.showLabels) {
-        const labelPos = armaToLatLng([x, armaBounds.minY]);
         const label = this._createLabel(
-          formatCoordLabel(x, interval),
-          labelPos,
-          "bottom",
+          formatCoordLabel(x, major), armaToLatLng([x, armaBounds.minY]), "bottom",
         );
         this.addLayer(label);
         this._gridLabels.push(label);
       }
     }
 
-    // Draw horizontal lines (constant Y)
-    for (const y of gridLines.y) {
-      const start = armaToLatLng([armaBounds.minX, y]);
-      const end = armaToLatLng([armaBounds.maxX, y]);
-
-      const line = L.polyline([start, end], {
-        color: this._gridOpts.lineColor,
-        weight: this._gridOpts.lineWeight,
-        interactive: false,
-      });
+    for (const y of majorLines.y) {
+      const line = L.polyline(
+        [armaToLatLng([armaBounds.minX, y]), armaToLatLng([armaBounds.maxX, y])],
+        { color: this._gridOpts.lineColor, weight: majorWeight, interactive: false },
+      );
       this.addLayer(line);
       this._gridLines.push(line);
 
-      // Add label at left edge
       if (this._gridOpts.showLabels) {
-        const labelPos = armaToLatLng([armaBounds.minX, y]);
         const label = this._createLabel(
-          formatCoordLabel(y, interval),
-          labelPos,
-          "left",
+          formatCoordLabel(y, major), armaToLatLng([armaBounds.minX, y]), "left",
         );
         this.addLayer(label);
         this._gridLabels.push(label);

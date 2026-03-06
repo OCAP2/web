@@ -4,25 +4,36 @@
  */
 
 /**
- * Get the grid interval (in Arma meters) for a given zoom level.
+ * Major + optional minor grid intervals for a given zoom level.
+ */
+export interface GridLevels {
+  major: number;
+  minor: number | null;
+}
+
+/**
+ * Get major and minor grid intervals for a given zoom level.
  *
- * Matches Arma 3's map grid: 10km → 1km → 100m.
+ * Matches Arma 3's map grid behaviour:
+ * - Zoomed out: only major grid (10km or 1km)
+ * - Zoomed in: major grid (1km, thicker) + minor sub-grid (100m, thinner)
+ *
  * Legacy mode uses zoom levels ~0-8, MapLibre mode uses ~10-20.
  */
-export function getGridInterval(
+export function getGridLevels(
   zoom: number,
   useMapLibreMode: boolean,
-): number {
+): GridLevels {
   if (useMapLibreMode) {
-    if (zoom <= 12) return 10000;
-    if (zoom <= 15) return 1000;
-    return 100;
+    if (zoom <= 12) return { major: 10000, minor: null };
+    if (zoom <= 15) return { major: 10000, minor: 1000 };
+    return { major: 1000, minor: 100 };
   }
 
   // Legacy mode
-  if (zoom <= 2) return 10000;
-  if (zoom <= 5) return 1000;
-  return 100;
+  if (zoom <= 2) return { major: 10000, minor: null };
+  if (zoom <= 5) return { major: 10000, minor: 1000 };
+  return { major: 1000, minor: 100 };
 }
 
 /**

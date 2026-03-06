@@ -1,68 +1,68 @@
 import { describe, it, expect } from "vitest";
 import {
-  getGridInterval,
+  getGridLevels,
   formatGridLabel,
   formatCoordLabel,
   computeGridLines,
 } from "../gridUtils";
 
 // ------------------------------------------------------------------
-// getGridInterval — Legacy mode (zoom levels ~0-8)
+// getGridLevels — Legacy mode (zoom levels ~0-8)
 // ------------------------------------------------------------------
 
-describe("getGridInterval (legacy mode)", () => {
-  it("returns 10000 at zoom 0", () => {
-    expect(getGridInterval(0, false)).toBe(10000);
+describe("getGridLevels (legacy mode)", () => {
+  it("returns major=10000, no minor at zoom 0", () => {
+    expect(getGridLevels(0, false)).toEqual({ major: 10000, minor: null });
   });
 
-  it("returns 10000 at zoom 2 (boundary)", () => {
-    expect(getGridInterval(2, false)).toBe(10000);
+  it("returns major=10000, no minor at zoom 2 (boundary)", () => {
+    expect(getGridLevels(2, false)).toEqual({ major: 10000, minor: null });
   });
 
-  it("returns 1000 at zoom 3", () => {
-    expect(getGridInterval(3, false)).toBe(1000);
+  it("returns major=10000, minor=1000 at zoom 3", () => {
+    expect(getGridLevels(3, false)).toEqual({ major: 10000, minor: 1000 });
   });
 
-  it("returns 1000 at zoom 5 (boundary)", () => {
-    expect(getGridInterval(5, false)).toBe(1000);
+  it("returns major=10000, minor=1000 at zoom 5 (boundary)", () => {
+    expect(getGridLevels(5, false)).toEqual({ major: 10000, minor: 1000 });
   });
 
-  it("returns 100 at zoom 6", () => {
-    expect(getGridInterval(6, false)).toBe(100);
+  it("returns major=1000, minor=100 at zoom 6", () => {
+    expect(getGridLevels(6, false)).toEqual({ major: 1000, minor: 100 });
   });
 
-  it("returns 100 at zoom 8", () => {
-    expect(getGridInterval(8, false)).toBe(100);
+  it("returns major=1000, minor=100 at zoom 8", () => {
+    expect(getGridLevels(8, false)).toEqual({ major: 1000, minor: 100 });
   });
 });
 
 // ------------------------------------------------------------------
-// getGridInterval — MapLibre mode (zoom levels ~10-20)
+// getGridLevels — MapLibre mode (zoom levels ~10-20)
 // ------------------------------------------------------------------
 
-describe("getGridInterval (MapLibre mode)", () => {
-  it("returns 10000 at zoom 10", () => {
-    expect(getGridInterval(10, true)).toBe(10000);
+describe("getGridLevels (MapLibre mode)", () => {
+  it("returns major=10000, no minor at zoom 10", () => {
+    expect(getGridLevels(10, true)).toEqual({ major: 10000, minor: null });
   });
 
-  it("returns 10000 at zoom 12 (boundary)", () => {
-    expect(getGridInterval(12, true)).toBe(10000);
+  it("returns major=10000, no minor at zoom 12 (boundary)", () => {
+    expect(getGridLevels(12, true)).toEqual({ major: 10000, minor: null });
   });
 
-  it("returns 1000 at zoom 13", () => {
-    expect(getGridInterval(13, true)).toBe(1000);
+  it("returns major=10000, minor=1000 at zoom 13", () => {
+    expect(getGridLevels(13, true)).toEqual({ major: 10000, minor: 1000 });
   });
 
-  it("returns 1000 at zoom 15 (boundary)", () => {
-    expect(getGridInterval(15, true)).toBe(1000);
+  it("returns major=10000, minor=1000 at zoom 15 (boundary)", () => {
+    expect(getGridLevels(15, true)).toEqual({ major: 10000, minor: 1000 });
   });
 
-  it("returns 100 at zoom 16", () => {
-    expect(getGridInterval(16, true)).toBe(100);
+  it("returns major=1000, minor=100 at zoom 16", () => {
+    expect(getGridLevels(16, true)).toEqual({ major: 1000, minor: 100 });
   });
 
-  it("returns 100 at zoom 20", () => {
-    expect(getGridInterval(20, true)).toBe(100);
+  it("returns major=1000, minor=100 at zoom 20", () => {
+    expect(getGridLevels(20, true)).toEqual({ major: 1000, minor: 100 });
   });
 });
 
