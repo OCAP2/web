@@ -183,6 +183,11 @@ func (w *ProtobufWriterV1) toProtoMarker(m MarkerDef) *pbv1.MarkerDef {
 			Direction:  p.Direction,
 			Alpha:      p.Alpha,
 			LineCoords: p.LineCoords,
+			Text:       p.Text,
+			Color:      p.Color,
+			Size:       p.Size,
+			Type:       p.Type,
+			Brush:      p.Brush,
 		})
 	}
 

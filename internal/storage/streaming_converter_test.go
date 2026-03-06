@@ -64,7 +64,10 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		"Markers": []interface{}{
 			[]interface{}{"ICON", "Alpha", 0.0, 10.0, 0.0, "ColorBlufor", 0.0,
-				[]interface{}{[]interface{}{100.0, 200.0, 0.0}}, []interface{}{1.0, 1.0}, "ICON", "Solid"},
+				[]interface{}{
+					[]interface{}{0.0, []interface{}{100.0, 200.0, 0.0}, 0.0, 1.0, "Alpha", "004C99", []interface{}{1.5, 1.5}, "b_installation", "Solid", "ICON"},
+				},
+				[]interface{}{1.0, 1.0}, "ICON", "Solid"},
 		},
 		"times": []interface{}{
 			map[string]interface{}{
@@ -94,6 +97,12 @@ func TestConverter_Convert(t *testing.T) {
 	require.Len(t, manifest.Events, 1)
 	assert.Len(t, manifest.Markers, 1)
 	assert.Len(t, manifest.Times, 1)
+
+	// Verify marker position style overrides survived conversion
+	require.Len(t, manifest.Markers[0].Positions, 1)
+	assert.Equal(t, "004C99", manifest.Markers[0].Positions[0].Color)
+	assert.Equal(t, "b_installation", manifest.Markers[0].Positions[0].Type)
+	assert.Equal(t, "Solid", manifest.Markers[0].Positions[0].Brush)
 
 	// Verify entity definitions
 	assert.Equal(t, uint32(0), manifest.Entities[0].Id)

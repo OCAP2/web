@@ -138,6 +138,15 @@ func TestWriteManifest_WithAllFields(t *testing.T) {
 						LineCoords: []float32{1.0, 2.0, 3.0, 4.0}},
 				},
 			},
+			{
+				Type: "u_installation", StartFrame: 20, EndFrame: 0,
+				PlayerID: -1, Color: "000000", Side: "GLOBAL", Shape: "ICON", Brush: "Solid",
+				Size: []float32{1.5, 1.5},
+				Positions: []MarkerPosition{
+					{FrameNum: 20, PosX: 100, PosY: 200, Color: "000000", Type: "u_installation", Brush: "Solid"},
+					{FrameNum: 66, PosX: 100, PosY: 200, Color: "004C99", Type: "b_installation", Brush: "Solid", Size: []float32{1.5, 1.5}},
+				},
+			},
 		},
 		Times: []TimeSample{
 			{FrameNum: 0, SystemTimeUTC: "2024-01-01T12:00:00Z", Date: "2024-01-01", TimeMultiplier: 1.0, Time: 43200.0},
@@ -165,12 +174,23 @@ func TestWriteManifest_WithAllFields(t *testing.T) {
 
 	require.Len(t, manifest.Entities, 2)
 	require.Len(t, manifest.Events, 2)
-	require.Len(t, manifest.Markers, 1)
+	require.Len(t, manifest.Markers, 2)
 	require.Len(t, manifest.Times, 1)
 
 	// Verify marker positions with line coords
 	require.Len(t, manifest.Markers[0].Positions, 2)
 	assert.Equal(t, []float32{1.0, 2.0, 3.0, 4.0}, manifest.Markers[0].Positions[1].LineCoords)
+
+	// Verify marker with style overrides
+	styleMarker := manifest.Markers[1]
+	assert.Equal(t, "u_installation", styleMarker.Type)
+	require.Len(t, styleMarker.Positions, 2)
+	assert.Equal(t, "000000", styleMarker.Positions[0].Color)
+	assert.Equal(t, "u_installation", styleMarker.Positions[0].Type)
+	assert.Equal(t, "004C99", styleMarker.Positions[1].Color)
+	assert.Equal(t, "b_installation", styleMarker.Positions[1].Type)
+	assert.Equal(t, "Solid", styleMarker.Positions[1].Brush)
+	assert.Equal(t, []float32{1.5, 1.5}, styleMarker.Positions[1].Size)
 }
 
 func TestWriteChunks_WithEntityPositions(t *testing.T) {
