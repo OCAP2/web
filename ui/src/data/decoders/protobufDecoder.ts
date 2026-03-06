@@ -166,15 +166,33 @@ function convertEvent(pb: PbEvent): EventDef | null {
 }
 
 function convertMarkerPosition(pb: PbMarkerPosition): [number, ...any] {
-  return [
-    pb.frameNum,
-    pb.posX,
-    pb.posY,
-    pb.posZ,
-    pb.direction,
-    pb.alpha,
-    ...pb.lineCoords,
-  ];
+  // Output JSON-style format: [frame, pos, dir, alpha, text, color, size, type, brush]
+  // so markerManager.parseMarkerPosition handles both JSON and protobuf identically.
+  const pos: any[] = [pb.frameNum];
+
+  if (pb.lineCoords.length > 0) {
+    // Convert flat lineCoords to nested [[x1,y1], [x2,y2], ...]
+    const points: number[][] = [];
+    for (let i = 0; i < pb.lineCoords.length - 1; i += 2) {
+      points.push([pb.lineCoords[i], pb.lineCoords[i + 1]]);
+    }
+    pos.push(points);
+  } else {
+    pos.push([pb.posX, pb.posY, pb.posZ]);
+  }
+
+  pos.push(pb.direction, pb.alpha);
+
+  // Append style overrides if any field is non-default
+  if (pb.text || pb.color || pb.type || pb.brush || pb.size.length > 0) {
+    pos.push(pb.text ?? "");
+    pos.push(pb.color ?? "");
+    pos.push(pb.size.length >= 2 ? [pb.size[0], pb.size[1]] : undefined);
+    pos.push(pb.type ?? "");
+    pos.push(pb.brush ?? "");
+  }
+
+  return pos as [number, ...any];
 }
 
 function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {

@@ -440,9 +440,70 @@ describe("ProtobufDecoder.decodeManifest", () => {
     expect(marker.alpha).toBeCloseTo(0.8);
     expect(marker.brush).toBe("Solid");
     expect(marker.positions).toHaveLength(1);
+    // JSON-style format: [frameNum, [posX, posY, posZ], direction, alpha]
     expect(marker.positions[0][0]).toBe(10);
-    expect(marker.positions[0][1]).toBeCloseTo(500.0);
-    expect(marker.positions[0][2]).toBeCloseTo(600.0);
+    expect(marker.positions[0][1]).toEqual([500, 600, 0]);
+    expect(marker.positions[0][2]).toBeCloseTo(90.0);
+    expect(marker.positions[0][3]).toBeCloseTo(0.8);
+  });
+
+  it("decodes marker position style overrides", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Test",
+      frameCount: 100,
+      captureDelayMs: 1000,
+      entities: [],
+      events: [],
+      times: [],
+      markers: [{
+        type: "u_installation",
+        text: "",
+        startFrame: 20,
+        endFrame: 0,
+        playerId: -1,
+        color: "000000",
+        side: 0,
+        positions: [
+          {
+            frameNum: 20, posX: 100, posY: 200, posZ: 0,
+            direction: 0, alpha: 1, lineCoords: [],
+            text: "", color: "000000", size: [1.5, 1.5],
+            type: "u_installation", brush: "Solid",
+          },
+          {
+            frameNum: 66, posX: 100, posY: 200, posZ: 0,
+            direction: 0, alpha: 1, lineCoords: [],
+            text: "", color: "004C99", size: [1.5, 1.5],
+            type: "b_installation", brush: "Solid",
+          },
+        ],
+        size: [1.5, 1.5],
+        shape: "ICON",
+        brush: "Solid",
+      }],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    const positions = manifest.markers[0].positions;
+
+    expect(positions).toHaveLength(2);
+
+    // JSON-style format: [frame, [x,y,z], dir, alpha, text, color, size, type, brush]
+    const p0 = positions[0];
+    expect(p0[0]).toBe(20);
+    expect(p0[1]).toEqual([100, 200, 0]);
+    expect(p0[4]).toBe("");
+    expect(p0[5]).toBe("000000");
+    expect(p0[6]).toEqual([1.5, 1.5]);
+    expect(p0[7]).toBe("u_installation");
+    expect(p0[8]).toBe("Solid");
+
+    const p1 = positions[1];
+    expect(p1[0]).toBe(66);
+    expect(p1[5]).toBe("004C99");
+    expect(p1[7]).toBe("b_installation");
   });
 
   it("normalizes marker endFrame 0 (protobuf FrameForever) to FRAME_FOREVER", () => {
