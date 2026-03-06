@@ -99,6 +99,8 @@ export function EventsTab(): JSX.Element {
     engine.seekTo(event.frameNum);
     if (event instanceof HitKilledEvent) {
       engine.panToEntity(event.victimId);
+    } else if (event instanceof CapturedEvent && event.position) {
+      engine.panToPosition(event.position);
     }
   };
 

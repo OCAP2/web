@@ -103,6 +103,8 @@ message Event {
   string message = 5;
   float distance = 6;
   string weapon = 7;
+  float pos_x = 8;
+  float pos_y = 9;
 }
 
 message MarkerDef {

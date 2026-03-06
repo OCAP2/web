@@ -156,6 +156,7 @@ function convertEvent(pb: PbEvent): EventDef | null {
         type,
         unitName: pb.message?.split(",")[0] ?? "",
         objectType: pb.message?.split(",")[1] ?? (type === "capturedFlag" ? "flag" : ""),
+        position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
     case "terminalHackStarted":
     case "terminalHackCanceled":

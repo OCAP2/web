@@ -6,6 +6,7 @@ import { GameEvent } from "./gameEvent";
 export class CapturedEvent extends GameEvent {
   readonly unitName: string;
   readonly objectType: string;
+  readonly position?: [number, number];
 
   constructor(
     frameNum: number,
@@ -13,9 +14,11 @@ export class CapturedEvent extends GameEvent {
     id: number,
     unitName: string,
     objectType: string,
+    position?: [number, number],
   ) {
     super(frameNum, type, id);
     this.unitName = unitName;
     this.objectType = objectType;
+    this.position = position;
   }
 }

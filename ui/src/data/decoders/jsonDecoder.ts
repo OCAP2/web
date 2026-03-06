@@ -269,22 +269,26 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
       };
     case "capturedFlag": {
       // deprecated: [frameNum, "capturedFlag", [unitName, unitColor, objectPos, unitPos]]
-      const capData = raw[2] as string[] | undefined;
+      const capData = raw[2] as unknown[] | undefined;
+      const capFlagPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
       return {
         frameNum,
         type,
-        unitName: capData?.[0] ?? "",
+        unitName: String(capData?.[0] ?? ""),
         objectType: "flag",
+        position: capFlagPos ? [capFlagPos[0], capFlagPos[1]] as [number, number] : undefined,
       };
     }
     case "captured": {
-      // [frameNum, "captured", [unitName, unitColor, objectType, objectColor, objectPos, unitPos]]
-      const capData = raw[2] as string[] | undefined;
+      // [frameNum, "captured", [objectType, unitName, side, color, [posX, posY, posZ]]]
+      const capData = raw[2] as unknown[] | undefined;
+      const capPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
       return {
         frameNum,
         type,
-        unitName: capData?.[0] ?? "",
-        objectType: capData?.[2] ?? "",
+        unitName: String(capData?.[0] ?? ""),
+        objectType: String(capData?.[2] ?? ""),
+        position: capPos ? [capPos[0], capPos[1]] as [number, number] : undefined,
       };
     }
     case "terminalHackStarted":

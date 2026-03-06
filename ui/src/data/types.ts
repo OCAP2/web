@@ -92,6 +92,7 @@ export interface CapturedEventDef {
   type: "captured" | "capturedFlag";
   unitName: string;
   objectType: string;
+  position?: [number, number];
 }
 
 export interface TerminalHackEventDef {

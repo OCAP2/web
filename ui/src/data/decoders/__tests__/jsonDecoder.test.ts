@@ -600,6 +600,27 @@ describe("JsonDecoder.decodeManifest", () => {
     if (event.type === "capturedFlag") {
       expect(event.unitName).toBe("PlayerA");
       expect(event.objectType).toBe("flag");
+      expect(event.position).toBeUndefined();
+    }
+  });
+
+  it("decodes capturedFlag event with position", () => {
+    const data = {
+      worldName: "Altis",
+      missionName: "Op",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [40, "capturedFlag", ["PlayerA", "blue", [3000, 4000, 0], [3010, 4010, 0]]],
+      ],
+    };
+
+    const manifest = decoder.decodeManifest(toBuffer(data));
+    const event = manifest.events[0];
+    expect(event.type).toBe("capturedFlag");
+    if (event.type === "capturedFlag") {
+      expect(event.unitName).toBe("PlayerA");
+      expect(event.position).toEqual([3000, 4000]);
     }
   });
 
@@ -621,6 +642,7 @@ describe("JsonDecoder.decodeManifest", () => {
     if (event.type === "captured") {
       expect(event.unitName).toBe("PlayerB");
       expect(event.objectType).toBe("sector");
+      expect(event.position).toEqual([100, 200]);
     }
   });
 

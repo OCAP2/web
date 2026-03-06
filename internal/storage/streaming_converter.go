@@ -143,6 +143,8 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 					Message:  evt.Message,
 					Distance: evt.Distance,
 					Weapon:   evt.Weapon,
+					PosX:     evt.PosX,
+					PosY:     evt.PosY,
 				})
 			}
 			return nil

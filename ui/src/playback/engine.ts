@@ -45,7 +45,7 @@ function createGameEvent(def: EventDef): GameEvent | null {
       return new GeneralMissionEvent(def.frameNum, id, def.message);
     case "captured":
     case "capturedFlag":
-      return new CapturedEvent(def.frameNum, def.type, id, def.unitName, def.objectType);
+      return new CapturedEvent(def.frameNum, def.type, id, def.unitName, def.objectType, def.position);
     case "terminalHackStarted":
     case "terminalHackCanceled":
       return new TerminalHackEvent(def.frameNum, def.type, id, def.unitName);
@@ -259,6 +259,11 @@ export class PlaybackEngine {
     if (snap) {
       this.renderer.setView(snap.position);
     }
+  }
+
+  /** Pan the camera to an Arma world position. */
+  panToPosition(pos: [number, number]): void {
+    this.renderer.setView(pos);
   }
 
   followEntity(id: number): void {

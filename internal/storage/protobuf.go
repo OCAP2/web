@@ -75,6 +75,8 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 			Message:  evt.Message,
 			Distance: evt.Distance,
 			Weapon:   evt.Weapon,
+			PosX:     evt.PosX,
+			PosY:     evt.PosY,
 		})
 	}
 

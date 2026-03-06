@@ -29,6 +29,8 @@ type Event struct {
 	Message  string  `json:"message,omitempty"`
 	Distance float32 `json:"distance,omitempty"`
 	Weapon   string  `json:"weapon,omitempty"`
+	PosX     float32 `json:"posX,omitempty"`
+	PosY     float32 `json:"posY,omitempty"`
 }
 
 // EntityDef defines an entity's metadata

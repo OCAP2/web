@@ -818,6 +818,8 @@ type Event struct {
 	Message       string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
 	Distance      float32                `protobuf:"fixed32,6,opt,name=distance,proto3" json:"distance,omitempty"`
 	Weapon        string                 `protobuf:"bytes,7,opt,name=weapon,proto3" json:"weapon,omitempty"`
+	PosX          float32                `protobuf:"fixed32,8,opt,name=pos_x,json=posX,proto3" json:"pos_x,omitempty"`
+	PosY          float32                `protobuf:"fixed32,9,opt,name=pos_y,json=posY,proto3" json:"pos_y,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -899,6 +901,20 @@ func (x *Event) GetWeapon() string {
 		return x.Weapon
 	}
 	return ""
+}
+
+func (x *Event) GetPosX() float32 {
+	if x != nil {
+		return x.PosX
+	}
+	return 0
+}
+
+func (x *Event) GetPosY() float32 {
+	if x != nil {
+		return x.PosY
+	}
+	return 0
 }
 
 type MarkerDef struct {
@@ -1238,7 +1254,7 @@ const file_ocap_proto_rawDesc = "" +
 	"\n" +
 	"group_name\x18\f \x01(\tR\tgroupName\x12\x12\n" +
 	"\x04side\x18\r \x01(\tR\x04side\x12\x1b\n" +
-	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xc0\x01\n" +
+	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xea\x01\n" +
 	"\x05Event\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1b\n" +
@@ -1246,7 +1262,9 @@ const file_ocap_proto_rawDesc = "" +
 	"\ttarget_id\x18\x04 \x01(\rR\btargetId\x12\x18\n" +
 	"\amessage\x18\x05 \x01(\tR\amessage\x12\x1a\n" +
 	"\bdistance\x18\x06 \x01(\x02R\bdistance\x12\x16\n" +
-	"\x06weapon\x18\a \x01(\tR\x06weapon\"\xbe\x02\n" +
+	"\x06weapon\x18\a \x01(\tR\x06weapon\x12\x13\n" +
+	"\x05pos_x\x18\b \x01(\x02R\x04posX\x12\x13\n" +
+	"\x05pos_y\x18\t \x01(\x02R\x04posY\"\xbe\x02\n" +
 	"\tMarkerDef\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1f\n" +

@@ -820,11 +820,35 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		assert.Equal(t, "Player1,blue,flag_carrier", evt.Message)
 	})
 
+	t.Run("captured with position", func(t *testing.T) {
+		// Current addon format: [objectType, unitName, side, color, [x, y, z]]
+		evt := p.parseEvent([]interface{}{200.0, "captured", []interface{}{
+			"flag", "Player1", "WEST", "#FF0000", []interface{}{5000.0, 6000.0, 0.0},
+		}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "captured", evt.Type)
+		assert.Equal(t, "flag,Player1,WEST,#FF0000", evt.Message)
+		assert.Equal(t, float32(5000.0), evt.PosX)
+		assert.Equal(t, float32(6000.0), evt.PosY)
+	})
+
 	t.Run("capturedFlag with data array", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{210.0, "capturedFlag", []interface{}{"Player1", "blue"}})
 		require.NotNil(t, evt)
 		assert.Equal(t, "capturedFlag", evt.Type)
 		assert.Equal(t, "Player1,blue", evt.Message)
+	})
+
+	t.Run("capturedFlag with position", func(t *testing.T) {
+		// Old format: [unitName, unitColor, objectPos, unitPos]
+		evt := p.parseEvent([]interface{}{210.0, "capturedFlag", []interface{}{
+			"Player1", "blue", []interface{}{3000.0, 4000.0, 0.0}, []interface{}{3010.0, 4010.0, 0.0},
+		}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "capturedFlag", evt.Type)
+		assert.Equal(t, "Player1,blue", evt.Message)
+		assert.Equal(t, float32(3000.0), evt.PosX, "takes first position (objectPos)")
+		assert.Equal(t, float32(4000.0), evt.PosY)
 	})
 
 	// ── terminalHack ──

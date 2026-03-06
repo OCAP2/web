@@ -184,9 +184,18 @@ func parseEventArray(evtArr []interface{}) *Event {
 	if event.Type == "captured" || event.Type == "capturedFlag" || event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
 		if len(evtArr) > 2 {
 			if arr, ok := evtArr[2].([]interface{}); ok {
-				parts := make([]string, len(arr))
-				for i, v := range arr {
-					parts[i] = toString(v)
+				// Build message from string parts, extract position from array elements
+				var parts []string
+				for _, v := range arr {
+					if posArr, ok := v.([]interface{}); ok && len(posArr) >= 2 {
+						// Position array [x, y, z] — take first found as event position
+						if event.PosX == 0 && event.PosY == 0 {
+							event.PosX = float32(toFloat64(posArr[0]))
+							event.PosY = float32(toFloat64(posArr[1]))
+						}
+					} else {
+						parts = append(parts, toString(v))
+					}
 				}
 				event.Message = strings.Join(parts, ",")
 			}

@@ -155,6 +155,8 @@ func (w *ProtobufWriterV1) toProtoEvent(e Event) *pbv1.Event {
 		Message:  e.Message,
 		Distance: e.Distance,
 		Weapon:   e.Weapon,
+		PosX:     e.PosX,
+		PosY:     e.PosY,
 	}
 }
 

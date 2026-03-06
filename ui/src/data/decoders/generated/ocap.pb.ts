@@ -193,6 +193,8 @@ export interface Event {
   message: string;
   distance: number;
   weapon: string;
+  posX: number;
+  posY: number;
 }
 
 export interface MarkerDef {
@@ -1582,7 +1584,7 @@ export const EntityState: MessageFns<EntityState> = {
 };
 
 function createBaseEvent(): Event {
-  return { frameNum: 0, type: "", sourceId: 0, targetId: 0, message: "", distance: 0, weapon: "" };
+  return { frameNum: 0, type: "", sourceId: 0, targetId: 0, message: "", distance: 0, weapon: "", posX: 0, posY: 0 };
 }
 
 export const Event: MessageFns<Event> = {
@@ -1607,6 +1609,12 @@ export const Event: MessageFns<Event> = {
     }
     if (message.weapon !== "") {
       writer.uint32(58).string(message.weapon);
+    }
+    if (message.posX !== 0) {
+      writer.uint32(69).float(message.posX);
+    }
+    if (message.posY !== 0) {
+      writer.uint32(77).float(message.posY);
     }
     return writer;
   },
@@ -1674,6 +1682,22 @@ export const Event: MessageFns<Event> = {
           message.weapon = reader.string();
           continue;
         }
+        case 8: {
+          if (tag !== 69) {
+            break;
+          }
+
+          message.posX = reader.float();
+          continue;
+        }
+        case 9: {
+          if (tag !== 77) {
+            break;
+          }
+
+          message.posY = reader.float();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1704,6 +1728,16 @@ export const Event: MessageFns<Event> = {
       message: isSet(object.message) ? globalThis.String(object.message) : "",
       distance: isSet(object.distance) ? globalThis.Number(object.distance) : 0,
       weapon: isSet(object.weapon) ? globalThis.String(object.weapon) : "",
+      posX: isSet(object.posX)
+        ? globalThis.Number(object.posX)
+        : isSet(object.pos_x)
+        ? globalThis.Number(object.pos_x)
+        : 0,
+      posY: isSet(object.posY)
+        ? globalThis.Number(object.posY)
+        : isSet(object.pos_y)
+        ? globalThis.Number(object.pos_y)
+        : 0,
     };
   },
 
@@ -1730,6 +1764,12 @@ export const Event: MessageFns<Event> = {
     if (message.weapon !== "") {
       obj.weapon = message.weapon;
     }
+    if (message.posX !== 0) {
+      obj.posX = message.posX;
+    }
+    if (message.posY !== 0) {
+      obj.posY = message.posY;
+    }
     return obj;
   },
 
@@ -1745,6 +1785,8 @@ export const Event: MessageFns<Event> = {
     message.message = object.message ?? "";
     message.distance = object.distance ?? 0;
     message.weapon = object.weapon ?? "";
+    message.posX = object.posX ?? 0;
+    message.posY = object.posY ?? 0;
     return message;
   },
 };

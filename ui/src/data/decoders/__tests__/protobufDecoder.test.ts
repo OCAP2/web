@@ -281,7 +281,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       captureDelayMs: 1000,
       chunkCount: 1,
       events: [
-        { frameNum: 30, type: "captured", message: "PlayerA,sector" },
+        { frameNum: 30, type: "captured", message: "PlayerA,sector", posX: 5000, posY: 6000 },
         { frameNum: 40, type: "capturedFlag", message: "PlayerB,flag" },
       ],
     });
@@ -294,6 +294,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
     if (evt0.type === "captured") {
       expect(evt0.unitName).toBe("PlayerA");
       expect(evt0.objectType).toBe("sector");
+      expect(evt0.position).toEqual([5000, 6000]);
     }
 
     const evt1 = manifest.events[1];
@@ -301,6 +302,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
     if (evt1.type === "capturedFlag") {
       expect(evt1.unitName).toBe("PlayerB");
       expect(evt1.objectType).toBe("flag");
+      expect(evt1.position).toBeUndefined();
     }
   });
 
