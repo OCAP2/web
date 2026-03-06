@@ -441,6 +441,68 @@ func TestMigrationRerun(t *testing.T) {
 	assert.Equal(t, 10, version)
 }
 
+func TestMigrationV10NormalizeWorldName(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	// Insert rows with mixed-case world names directly (bypassing Store normalization)
+	for _, wn := range []string{"Altis", "altis", "ENOCH", "enoch", "Cup_Chernarus_A3"} {
+		_, err = repo.db.Exec(
+			`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES (?, 'test', 100, 'f', '2026-01-01', '')`,
+			wn)
+		require.NoError(t, err)
+	}
+	require.NoError(t, repo.db.Close())
+
+	// Re-open to re-run migrations (v10 should normalize)
+	// Reset version so migration 10 runs again
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(`DELETE FROM version WHERE db = 10`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	repo2, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo2.db.Close()) }()
+
+	// All world_name values should now be lowercase
+	rows, err := repo2.db.Query(`SELECT DISTINCT world_name FROM operations ORDER BY world_name`)
+	require.NoError(t, err)
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var n string
+		require.NoError(t, rows.Scan(&n))
+		names = append(names, n)
+	}
+	require.NoError(t, rows.Err())
+	assert.Equal(t, []string{"altis", "cup_chernarus_a3", "enoch"}, names)
+}
+
+func TestStoreNormalizesWorldName(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	ctx := context.Background()
+	err = repo.Store(ctx, &Operation{
+		WorldName: "Altis", MissionName: "Test", Filename: "t", Date: "2026-01-01",
+	})
+	require.NoError(t, err)
+
+	op, err := repo.GetByID(ctx, "1")
+	require.NoError(t, err)
+	assert.Equal(t, "altis", op.WorldName)
+}
+
 func TestGetTypesEmpty(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
