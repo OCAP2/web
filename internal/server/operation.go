@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -217,6 +218,14 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 10 {
+		if err = r.runMigration(10,
+			`UPDATE operations SET world_name = LOWER(world_name) WHERE world_name != LOWER(world_name)`,
+		); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -245,6 +254,7 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 }
 
 func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
+	operation.WorldName = strings.ToLower(operation.WorldName)
 	storageFormat := operation.StorageFormat
 	if storageFormat == "" {
 		storageFormat = "json"
