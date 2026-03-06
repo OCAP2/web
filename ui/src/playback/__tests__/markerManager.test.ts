@@ -91,6 +91,33 @@ describe("parseMarkerPosition", () => {
       expect(result.direction).toBe(0);
       expect(result.alpha).toBe(1);
     });
+
+    it("parses extended format with style overrides", () => {
+      // [frame, [x,y,z], dir, alpha, text, color, size, type, brush]
+      const result = parseMarkerPosition([
+        20, [14831, 16599.9, 17.843], 0, 1,
+        "", "000000", [1.5, 1.5], "u_installation", "Solid",
+      ]);
+      expect(result.frameNum).toBe(20);
+      expect(result.position).toEqual([14831, 16599.9]);
+      expect(result.color).toBe("000000");
+      expect(result.type).toBe("u_installation");
+      expect(result.brush).toBe("Solid");
+      expect(result.size).toEqual([1.5, 1.5]);
+      // empty text should NOT be set
+      expect(result.text).toBeUndefined();
+    });
+
+    it("parses style overrides with empty type (color-only change)", () => {
+      const result = parseMarkerPosition([
+        66, [14831, 16599.9, 17.843], 0, 1,
+        "", "004C99", [1.5, 1.5], "", "Solid",
+      ]);
+      expect(result.color).toBe("004C99");
+      // empty type should NOT be set
+      expect(result.type).toBeUndefined();
+      expect(result.brush).toBe("Solid");
+    });
   });
 });
 
@@ -1039,5 +1066,116 @@ describe("MarkerManager updateFrame guard branches", () => {
     // updateFrame with filter still EAST — marker stays hidden
     mgr.updateFrame(5);
     expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1); // no new creates
+  });
+});
+
+// ─── MarkerManager style overrides (sector control markers) ───
+
+describe("MarkerManager style overrides", () => {
+  it("recreates ICON marker when position type/color change (sector capture)", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Sector control marker: u_installation → b_installation, 000000 → 004C99
+    // Mimics the exact data from 29th-Training recording
+    mgr.loadMarkers([
+      makeDef("u_installation", {
+        shape: "ICON",
+        color: "000000",
+        startFrame: 20,
+        endFrame: -1,
+        positions: [
+          [20, [14831, 16599.9, 17.843], 0, 1, "", "000000", [1.5, 1.5], "u_installation", "Solid"],
+          [66, [14831, 16599.9, 17.843], 0, 1, "", "000000", [1.5, 1.5], "b_installation", "Solid"],
+          [66, [14831, 16599.9, 17.843], 0, 1, "", "004C99", [1.5, 1.5], "b_installation", "Solid"],
+        ] as any,
+      }),
+    ]);
+
+    // Before startFrame — not visible
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).not.toHaveBeenCalled();
+
+    // Frame 20 — first appearance with u_installation / 000000
+    mgr.updateFrame(20);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: "u_installation", color: "000000" }),
+    );
+
+    // Frame 65 — still same keyframe, skip
+    mgr.updateFrame(65);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Frame 66 — style changes: type→b_installation, color→004C99
+    mgr.updateFrame(66);
+    // Old marker removed, new one created
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: "b_installation", color: "004C99" }),
+    );
+  });
+
+  it("recreates ELLIPSE marker when color changes (sector area)", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    mgr.loadMarkers([
+      makeDef("mil_dot", {
+        shape: "ELLIPSE",
+        color: "000000",
+        brush: "grid",
+        size: [50, 50],
+        startFrame: 20,
+        endFrame: -1,
+        positions: [
+          [20, [14831, 16599.9, 17.843], 0, 0.25, "", "000000", [50, 50], "mil_dot", "grid"],
+          [66, [14831, 16599.9, 17.843], 0, 0.25, "", "004C99", [50, 50], "", "grid"],
+          [66, [14831, 16599.9, 17.843], 0, 0.50, "", "004C99", [50, 50], "", "grid"],
+        ] as any,
+      }),
+    ]);
+
+    // Frame 20 — initial appearance with black color
+    mgr.updateFrame(20);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ color: "000000", shape: "ELLIPSE" }),
+    );
+
+    // Frame 66 — color changes to blue
+    mgr.updateFrame(66);
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ color: "004C99" }),
+    );
+  });
+
+  it("does not recreate marker when style fields match active style", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+
+    // Marker with style fields in positions that match the initial style
+    mgr.loadMarkers([
+      makeDef("mil_dot", {
+        color: "FF0000",
+        startFrame: 0,
+        endFrame: -1,
+        positions: [
+          [0, [100, 200], 0, 1, "", "FF0000", undefined, "mil_dot", ""],
+          [10, [110, 210], 0, 1, "", "FF0000", undefined, "mil_dot", ""],
+        ] as any,
+      }),
+    ]);
+
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+
+    // Frame 10 — same style, no recreate
+    mgr.updateFrame(10);
+    expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
   });
 });
