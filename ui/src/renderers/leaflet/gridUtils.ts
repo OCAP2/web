@@ -6,24 +6,22 @@
 /**
  * Get the grid interval (in Arma meters) for a given zoom level.
  *
+ * Matches Arma 3's map grid: 10km → 1km → 100m.
  * Legacy mode uses zoom levels ~0-8, MapLibre mode uses ~10-20.
- * Returns spacing: 5000 (5km), 1000 (1km), 500 (500m), or 100 (100m).
  */
 export function getGridInterval(
   zoom: number,
   useMapLibreMode: boolean,
 ): number {
   if (useMapLibreMode) {
-    if (zoom <= 12) return 5000;
-    if (zoom <= 14) return 1000;
-    if (zoom <= 16) return 500;
+    if (zoom <= 12) return 10000;
+    if (zoom <= 15) return 1000;
     return 100;
   }
 
   // Legacy mode
-  if (zoom <= 2) return 5000;
-  if (zoom <= 4) return 1000;
-  if (zoom <= 6) return 500;
+  if (zoom <= 2) return 10000;
+  if (zoom <= 5) return 1000;
   return 100;
 }
 
@@ -39,15 +37,24 @@ export function formatGridLabel(meters: number): string {
 }
 
 /**
- * Format a grid coordinate label for display on the grid.
- * When the interval is >= 1000m, show km (just the number).
- * Otherwise show meters (just the number).
+ * Format a grid coordinate label using Arma 3's grid reference convention.
+ *
+ * Each grid level adds one digit of precision:
+ * - 10km (10000m): 1 digit  → "0", "1", "2", "3"
+ * - 1km  (1000m):  2 digits → "00", "01", ... "30"
+ * - 100m:          3 digits → "000", "001", ... "307"
  */
 export function formatCoordLabel(value: number, interval: number): string {
-  if (interval >= 1000) {
-    return (value / 1000).toFixed(0);
+  switch (interval) {
+    case 10000:
+      return String(value / 10000);
+    case 1000:
+      return String(value / 1000).padStart(2, "0");
+    case 100:
+      return String(value / 100).padStart(3, "0");
+    default:
+      return String(value);
   }
-  return value.toFixed(0);
 }
 
 /**

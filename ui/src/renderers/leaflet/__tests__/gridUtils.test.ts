@@ -11,40 +11,28 @@ import {
 // ------------------------------------------------------------------
 
 describe("getGridInterval (legacy mode)", () => {
-  it("returns 5000 at zoom 1", () => {
-    expect(getGridInterval(1, false)).toBe(5000);
+  it("returns 10000 at zoom 0", () => {
+    expect(getGridInterval(0, false)).toBe(10000);
   });
 
-  it("returns 5000 at zoom 2 (boundary)", () => {
-    expect(getGridInterval(2, false)).toBe(5000);
+  it("returns 10000 at zoom 2 (boundary)", () => {
+    expect(getGridInterval(2, false)).toBe(10000);
   });
 
   it("returns 1000 at zoom 3", () => {
     expect(getGridInterval(3, false)).toBe(1000);
   });
 
-  it("returns 1000 at zoom 4 (boundary)", () => {
-    expect(getGridInterval(4, false)).toBe(1000);
+  it("returns 1000 at zoom 5 (boundary)", () => {
+    expect(getGridInterval(5, false)).toBe(1000);
   });
 
-  it("returns 500 at zoom 5", () => {
-    expect(getGridInterval(5, false)).toBe(500);
-  });
-
-  it("returns 500 at zoom 6 (boundary)", () => {
-    expect(getGridInterval(6, false)).toBe(500);
-  });
-
-  it("returns 100 at zoom 7", () => {
-    expect(getGridInterval(7, false)).toBe(100);
+  it("returns 100 at zoom 6", () => {
+    expect(getGridInterval(6, false)).toBe(100);
   });
 
   it("returns 100 at zoom 8", () => {
     expect(getGridInterval(8, false)).toBe(100);
-  });
-
-  it("returns 5000 at zoom 0", () => {
-    expect(getGridInterval(0, false)).toBe(5000);
   });
 });
 
@@ -53,40 +41,28 @@ describe("getGridInterval (legacy mode)", () => {
 // ------------------------------------------------------------------
 
 describe("getGridInterval (MapLibre mode)", () => {
-  it("returns 5000 at zoom 11", () => {
-    expect(getGridInterval(11, true)).toBe(5000);
+  it("returns 10000 at zoom 10", () => {
+    expect(getGridInterval(10, true)).toBe(10000);
   });
 
-  it("returns 5000 at zoom 12 (boundary)", () => {
-    expect(getGridInterval(12, true)).toBe(5000);
+  it("returns 10000 at zoom 12 (boundary)", () => {
+    expect(getGridInterval(12, true)).toBe(10000);
   });
 
   it("returns 1000 at zoom 13", () => {
     expect(getGridInterval(13, true)).toBe(1000);
   });
 
-  it("returns 1000 at zoom 14 (boundary)", () => {
-    expect(getGridInterval(14, true)).toBe(1000);
+  it("returns 1000 at zoom 15 (boundary)", () => {
+    expect(getGridInterval(15, true)).toBe(1000);
   });
 
-  it("returns 500 at zoom 15", () => {
-    expect(getGridInterval(15, true)).toBe(500);
-  });
-
-  it("returns 500 at zoom 16 (boundary)", () => {
-    expect(getGridInterval(16, true)).toBe(500);
-  });
-
-  it("returns 100 at zoom 17", () => {
-    expect(getGridInterval(17, true)).toBe(100);
+  it("returns 100 at zoom 16", () => {
+    expect(getGridInterval(16, true)).toBe(100);
   });
 
   it("returns 100 at zoom 20", () => {
     expect(getGridInterval(20, true)).toBe(100);
-  });
-
-  it("returns 5000 at zoom 10", () => {
-    expect(getGridInterval(10, true)).toBe(5000);
   });
 });
 
@@ -125,33 +101,43 @@ describe("formatGridLabel", () => {
 });
 
 // ------------------------------------------------------------------
-// formatCoordLabel — grid coordinate labels
+// formatCoordLabel — Arma grid reference labels
 // ------------------------------------------------------------------
 
 describe("formatCoordLabel", () => {
-  it("shows km value when interval >= 1000", () => {
-    expect(formatCoordLabel(5000, 1000)).toBe("5");
+  // 10km interval: 1 digit
+  it("shows 1-digit label at 10km interval", () => {
+    expect(formatCoordLabel(10000, 10000)).toBe("1");
+    expect(formatCoordLabel(20000, 10000)).toBe("2");
+    expect(formatCoordLabel(30000, 10000)).toBe("3");
   });
 
-  it("shows km value for large coordinates", () => {
-    expect(formatCoordLabel(15000, 5000)).toBe("15");
+  it("shows 0 at origin for 10km interval", () => {
+    expect(formatCoordLabel(0, 10000)).toBe("0");
   });
 
-  it("shows meter value when interval < 1000", () => {
-    expect(formatCoordLabel(500, 500)).toBe("500");
+  // 1km interval: 2 digits zero-padded
+  it("shows 2-digit label at 1km interval", () => {
+    expect(formatCoordLabel(5000, 1000)).toBe("05");
+    expect(formatCoordLabel(15000, 1000)).toBe("15");
+    expect(formatCoordLabel(30000, 1000)).toBe("30");
   });
 
-  it("shows meter value at 100m interval", () => {
-    expect(formatCoordLabel(2300, 100)).toBe("2300");
+  it("shows 00 at origin for 1km interval", () => {
+    expect(formatCoordLabel(0, 1000)).toBe("00");
   });
 
-  it("shows 0 for origin in km mode", () => {
-    expect(formatCoordLabel(0, 1000)).toBe("0");
+  // 100m interval: 3 digits zero-padded
+  it("shows 3-digit label at 100m interval", () => {
+    expect(formatCoordLabel(500, 100)).toBe("005");
+    expect(formatCoordLabel(2300, 100)).toBe("023");
+    expect(formatCoordLabel(30700, 100)).toBe("307");
   });
 
-  it("shows 0 for origin in meter mode", () => {
-    expect(formatCoordLabel(0, 500)).toBe("0");
+  it("shows 000 at origin for 100m interval", () => {
+    expect(formatCoordLabel(0, 100)).toBe("000");
   });
+
 });
 
 // ------------------------------------------------------------------
@@ -162,10 +148,10 @@ describe("computeGridLines", () => {
   it("snaps line positions to interval boundaries", () => {
     const result = computeGridLines(
       { minX: 0, maxX: 10000, minY: 0, maxY: 10000 },
-      5000,
+      10000,
     );
-    expect(result.x).toEqual([0, 5000, 10000]);
-    expect(result.y).toEqual([0, 5000, 10000]);
+    expect(result.x).toEqual([0, 10000]);
+    expect(result.y).toEqual([0, 10000]);
   });
 
   it("snaps bounds that are not on interval boundaries", () => {
@@ -188,7 +174,7 @@ describe("computeGridLines", () => {
     expect(result.y).toEqual([1000, 2000, 3000]);
   });
 
-  it("handles small intervals (100m)", () => {
+  it("handles 100m intervals", () => {
     const result = computeGridLines(
       { minX: 0, maxX: 500, minY: 0, maxY: 500 },
       100,
@@ -197,14 +183,14 @@ describe("computeGridLines", () => {
     expect(result.y).toEqual([0, 100, 200, 300, 400, 500]);
   });
 
-  it("returns single lines when bounds are within one interval", () => {
+  it("returns bounding lines when bounds are within one interval", () => {
     const result = computeGridLines(
       { minX: 100, maxX: 400, minY: 100, maxY: 400 },
-      500,
+      1000,
     );
-    // floor(100/500)*500 = 0, ceil(400/500)*500 = 500
-    expect(result.x).toEqual([0, 500]);
-    expect(result.y).toEqual([0, 500]);
+    // floor(100/1000)*1000 = 0, ceil(400/1000)*1000 = 1000
+    expect(result.x).toEqual([0, 1000]);
+    expect(result.y).toEqual([0, 1000]);
   });
 
   it("handles zero-width bounds", () => {
@@ -219,9 +205,9 @@ describe("computeGridLines", () => {
   it("handles large world (Altis-scale, 30720m)", () => {
     const result = computeGridLines(
       { minX: 0, maxX: 30000, minY: 0, maxY: 30000 },
-      5000,
+      10000,
     );
-    expect(result.x).toEqual([0, 5000, 10000, 15000, 20000, 25000, 30000]);
-    expect(result.y).toEqual([0, 5000, 10000, 15000, 20000, 25000, 30000]);
+    expect(result.x).toEqual([0, 10000, 20000, 30000]);
+    expect(result.y).toEqual([0, 10000, 20000, 30000]);
   });
 });
