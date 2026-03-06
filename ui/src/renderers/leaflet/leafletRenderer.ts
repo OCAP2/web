@@ -1310,7 +1310,8 @@ export class LeafletRenderer implements MapRenderer {
 
   /** Check whether a marker is a text-only label (e.g. sector name). */
   private isTextLabelMarker(marker: L.Marker): boolean {
-    return (marker.options.icon as any)?.options?.className === "marker-text-label";
+    const icon = marker.options.icon;
+    return icon instanceof L.DivIcon && icon.options.className === "marker-text-label";
   }
 
   // ==================== Map styles ====================
