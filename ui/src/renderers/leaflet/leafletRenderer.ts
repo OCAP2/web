@@ -950,6 +950,11 @@ export class LeafletRenderer implements MapRenderer {
     if (def.text && layer instanceof L.Marker && this._markerDisplayMode() === "all") {
       layer.openPopup();
     }
+    // Hide text labels when in "noLabels" mode
+    if (def.type.includes("Empty") && def.text && this._markerDisplayMode() !== "all") {
+      const el = (layer as L.Marker).getElement?.();
+      if (el) el.style.display = "none";
+    }
     return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts });
   }
 
@@ -1260,9 +1265,16 @@ export class LeafletRenderer implements MapRenderer {
       if (!this.map.hasLayer(group)) {
         group.addTo(this.map);
       }
-      // Toggle popups on ICON markers
+      // Toggle popups and text labels on briefing markers
       group.eachLayer((layer) => {
         if (!(layer instanceof L.Marker)) return;
+        // Text-label markers (e.g. sector names) — toggle element visibility
+        if (this.isTextLabelMarker(layer)) {
+          const el = layer.getElement?.();
+          if (el) el.style.display = mode === "all" ? "" : "none";
+          return;
+        }
+        // ICON markers with popups — toggle popup
         if (!layer.getPopup()) return;
         if (mode === "all") {
           layer.openPopup();
@@ -1276,14 +1288,29 @@ export class LeafletRenderer implements MapRenderer {
   /**
    * Reopen popups on briefing-type markers after a layer group is re-added
    * to the map. Leaflet closes popups when layers are removed.
+   * Also restores text label visibility based on current marker display mode.
    */
   private reopenBriefingMarkerPopups(group: L.LayerGroup): void {
-    if (group === this.layers.briefingMarkers && this._markerDisplayMode() !== "all") return;
+    const isBriefing = group === this.layers.briefingMarkers;
+    const mode = this._markerDisplayMode();
     group.eachLayer((layer) => {
-      if (layer instanceof L.Marker && layer.getPopup()) {
+      if (!(layer instanceof L.Marker)) return;
+      // Restore text label visibility when briefing group is re-added
+      if (isBriefing && this.isTextLabelMarker(layer)) {
+        const el = layer.getElement?.();
+        if (el) el.style.display = mode === "all" ? "" : "none";
+        return;
+      }
+      if (isBriefing && mode !== "all") return;
+      if (layer.getPopup()) {
         layer.openPopup();
       }
     });
+  }
+
+  /** Check whether a marker is a text-only label (e.g. sector name). */
+  private isTextLabelMarker(marker: L.Marker): boolean {
+    return (marker.options.icon as any)?.options?.className === "marker-text-label";
   }
 
   // ==================== Map styles ====================
