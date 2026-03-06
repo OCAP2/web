@@ -1026,14 +1026,20 @@ func (x *MarkerDef) GetBrush() string {
 }
 
 type MarkerPosition struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FrameNum      uint32                 `protobuf:"varint,1,opt,name=frame_num,json=frameNum,proto3" json:"frame_num,omitempty"`
-	PosX          float32                `protobuf:"fixed32,2,opt,name=pos_x,json=posX,proto3" json:"pos_x,omitempty"`
-	PosY          float32                `protobuf:"fixed32,3,opt,name=pos_y,json=posY,proto3" json:"pos_y,omitempty"`
-	PosZ          float32                `protobuf:"fixed32,4,opt,name=pos_z,json=posZ,proto3" json:"pos_z,omitempty"`
-	Direction     float32                `protobuf:"fixed32,5,opt,name=direction,proto3" json:"direction,omitempty"`
-	Alpha         float32                `protobuf:"fixed32,6,opt,name=alpha,proto3" json:"alpha,omitempty"`
-	LineCoords    []float32              `protobuf:"fixed32,7,rep,packed,name=line_coords,json=lineCoords,proto3" json:"line_coords,omitempty"` // For POLYLINE: [x1, y1, x2, y2, ...] pairs
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	FrameNum   uint32                 `protobuf:"varint,1,opt,name=frame_num,json=frameNum,proto3" json:"frame_num,omitempty"`
+	PosX       float32                `protobuf:"fixed32,2,opt,name=pos_x,json=posX,proto3" json:"pos_x,omitempty"`
+	PosY       float32                `protobuf:"fixed32,3,opt,name=pos_y,json=posY,proto3" json:"pos_y,omitempty"`
+	PosZ       float32                `protobuf:"fixed32,4,opt,name=pos_z,json=posZ,proto3" json:"pos_z,omitempty"`
+	Direction  float32                `protobuf:"fixed32,5,opt,name=direction,proto3" json:"direction,omitempty"`
+	Alpha      float32                `protobuf:"fixed32,6,opt,name=alpha,proto3" json:"alpha,omitempty"`
+	LineCoords []float32              `protobuf:"fixed32,7,rep,packed,name=line_coords,json=lineCoords,proto3" json:"line_coords,omitempty"` // For POLYLINE: [x1, y1, x2, y2, ...] pairs
+	// Style overrides — present when a marker changes appearance mid-recording
+	Text          string    `protobuf:"bytes,8,opt,name=text,proto3" json:"text,omitempty"`
+	Color         string    `protobuf:"bytes,9,opt,name=color,proto3" json:"color,omitempty"`
+	Size          []float32 `protobuf:"fixed32,10,rep,packed,name=size,proto3" json:"size,omitempty"`
+	Type          string    `protobuf:"bytes,11,opt,name=type,proto3" json:"type,omitempty"`
+	Brush         string    `protobuf:"bytes,12,opt,name=brush,proto3" json:"brush,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1115,6 +1121,41 @@ func (x *MarkerPosition) GetLineCoords() []float32 {
 		return x.LineCoords
 	}
 	return nil
+}
+
+func (x *MarkerPosition) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *MarkerPosition) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *MarkerPosition) GetSize() []float32 {
+	if x != nil {
+		return x.Size
+	}
+	return nil
+}
+
+func (x *MarkerPosition) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *MarkerPosition) GetBrush() string {
+	if x != nil {
+		return x.Brush
+	}
+	return ""
 }
 
 var File_ocap_proto protoreflect.FileDescriptor
@@ -1219,7 +1260,7 @@ const file_ocap_proto_rawDesc = "" +
 	"\x04size\x18\t \x03(\x02R\x04size\x12\x14\n" +
 	"\x05shape\x18\n" +
 	" \x01(\tR\x05shape\x12\x14\n" +
-	"\x05brush\x18\v \x01(\tR\x05brush\"\xc1\x01\n" +
+	"\x05brush\x18\v \x01(\tR\x05brush\"\xa9\x02\n" +
 	"\x0eMarkerPosition\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x13\n" +
 	"\x05pos_x\x18\x02 \x01(\x02R\x04posX\x12\x13\n" +
@@ -1228,7 +1269,13 @@ const file_ocap_proto_rawDesc = "" +
 	"\tdirection\x18\x05 \x01(\x02R\tdirection\x12\x14\n" +
 	"\x05alpha\x18\x06 \x01(\x02R\x05alpha\x12\x1f\n" +
 	"\vline_coords\x18\a \x03(\x02R\n" +
-	"lineCoords*T\n" +
+	"lineCoords\x12\x12\n" +
+	"\x04text\x18\b \x01(\tR\x04text\x12\x14\n" +
+	"\x05color\x18\t \x01(\tR\x05color\x12\x12\n" +
+	"\x04size\x18\n" +
+	" \x03(\x02R\x04size\x12\x12\n" +
+	"\x04type\x18\v \x01(\tR\x04type\x12\x14\n" +
+	"\x05brush\x18\f \x01(\tR\x05brush*T\n" +
 	"\n" +
 	"EntityType\x12\x17\n" +
 	"\x13ENTITY_TYPE_UNKNOWN\x10\x00\x12\x14\n" +
