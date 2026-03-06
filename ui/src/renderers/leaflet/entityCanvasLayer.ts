@@ -147,6 +147,14 @@ export class EntityCanvasLayer {
   private fireLines: FireLine[] = [];
   private gridVisible = false;
 
+  // Cached grid state — frozen during zoom so the CSS transform handles
+  // the animation instead of re-projecting every frame (same as entities).
+  private gridCachedZoom = 0;
+  private gridCachedSwX = 0;
+  private gridCachedSwY = 0;
+  private gridCachedNeX = 0;
+  private gridCachedNeY = 0;
+
   // Precomputed affine projection: px = projAx*arma_x + projBx*arma_y + projCx
   private projAx = 0;
   private projBx = 0;
@@ -494,40 +502,57 @@ export class EntityCanvasLayer {
     }
   }
 
+  /** Project Arma [x,y] → container pixel using the precomputed affine. */
+  private projArma(ax: number, ay: number): { x: number; y: number } {
+    return {
+      x: this.projAx * ax + this.projBx * ay + this.projCx,
+      y: this.projAy * ax + this.projBy * ay + this.projCy,
+    };
+  }
+
   private renderGrid(cs: number): void {
     const ctx = this.ctx;
-    const zoom = this.config.getZoom();
-    const { major, minor } = getGridLevels(zoom, this.config.isMapLibreMode);
-    const bounds = this.map.getBounds();
-    const sw = this.config.latLngToArma(bounds.getSouthWest());
-    const ne = this.config.latLngToArma(bounds.getNorthEast());
     const ws = this.config.worldSize;
+
+    // During zoom, freeze bounds and zoom level so grid positions stay
+    // consistent with the CSS transform (same pattern as entity rendering).
+    if (!this.zooming) {
+      this.gridCachedZoom = this.config.getZoom();
+      const bounds = this.map.getBounds();
+      const sw = this.config.latLngToArma(bounds.getSouthWest());
+      const ne = this.config.latLngToArma(bounds.getNorthEast());
+      this.gridCachedSwX = sw[0];
+      this.gridCachedSwY = sw[1];
+      this.gridCachedNeX = ne[0];
+      this.gridCachedNeY = ne[1];
+    }
+
+    const { major, minor } = getGridLevels(this.gridCachedZoom, this.config.isMapLibreMode);
 
     // Compute bounds snapped to the finest interval
     const finest = minor ?? major;
     const armaBounds = {
-      minX: Math.max(0, Math.floor(sw[0] / finest) * finest),
-      maxX: Math.min(ws, Math.ceil(ne[0] / finest) * finest),
-      minY: Math.max(0, Math.floor(sw[1] / finest) * finest),
-      maxY: Math.min(ws, Math.ceil(ne[1] / finest) * finest),
+      minX: Math.max(0, Math.floor(this.gridCachedSwX / finest) * finest),
+      maxX: Math.min(ws, Math.ceil(this.gridCachedNeX / finest) * finest),
+      minY: Math.max(0, Math.floor(this.gridCachedSwY / finest) * finest),
+      maxY: Math.min(ws, Math.ceil(this.gridCachedNeY / finest) * finest),
     };
 
     // --- Minor grid (thin, subtle) ---
     if (minor) {
       const minorLines = computeGridLines(armaBounds, minor);
-      // Filter out lines that coincide with major grid and pre-compute points
       const minorXPts: { sx: number; sy: number; ex: number; ey: number }[] = [];
       for (const x of minorLines.x) {
         if (x % major === 0) continue;
-        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
-        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
+        const s = this.projArma(x, armaBounds.minY);
+        const e = this.projArma(x, armaBounds.maxY);
         minorXPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y });
       }
       const minorYPts: { sx: number; sy: number; ex: number; ey: number }[] = [];
       for (const y of minorLines.y) {
         if (y % major === 0) continue;
-        const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
-        const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
+        const s = this.projArma(armaBounds.minX, y);
+        const e = this.projArma(armaBounds.maxX, y);
         minorYPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y });
       }
 
@@ -546,24 +571,23 @@ export class EntityCanvasLayer {
 
     // --- Major grid (thicker, more visible) ---
     const majorBounds = {
-      minX: Math.max(0, Math.floor(sw[0] / major) * major),
-      maxX: Math.min(ws, Math.ceil(ne[0] / major) * major),
-      minY: Math.max(0, Math.floor(sw[1] / major) * major),
-      maxY: Math.min(ws, Math.ceil(ne[1] / major) * major),
+      minX: Math.max(0, Math.floor(this.gridCachedSwX / major) * major),
+      maxX: Math.min(ws, Math.ceil(this.gridCachedNeX / major) * major),
+      minY: Math.max(0, Math.floor(this.gridCachedSwY / major) * major),
+      maxY: Math.min(ws, Math.ceil(this.gridCachedNeY / major) * major),
     };
     const majorLines = computeGridLines(majorBounds, major);
 
-    // Pre-compute major grid points (reused for stroke passes + labels)
     const majorXPts: { sx: number; sy: number; ex: number; ey: number; val: number }[] = [];
     for (const x of majorLines.x) {
-      const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.minY]));
-      const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([x, armaBounds.maxY]));
+      const s = this.projArma(x, armaBounds.minY);
+      const e = this.projArma(x, armaBounds.maxY);
       majorXPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y, val: x });
     }
     const majorYPts: { sx: number; sy: number; ex: number; ey: number; val: number }[] = [];
     for (const y of majorLines.y) {
-      const s = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.minX, y]));
-      const e = this.map.latLngToContainerPoint(this.config.armaToLatLng([armaBounds.maxX, y]));
+      const s = this.projArma(armaBounds.minX, y);
+      const e = this.projArma(armaBounds.maxX, y);
       majorYPts.push({ sx: s.x, sy: s.y, ex: e.x, ey: e.y, val: y });
     }
 
