@@ -163,7 +163,7 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
         : [35, 35];
 
       const id = this.nextProjectileId++;
-      this.canvasLayer.addProjectile(id, { iconUrl, iconSize });
+      this.canvasLayer.addProjectile(id, { iconUrl, iconSize, text: def.text });
       return wrapProjectileHandle(id);
     }
     return super.createBriefingMarker(def);

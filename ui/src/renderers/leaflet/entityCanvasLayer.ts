@@ -77,11 +77,13 @@ interface CanvasProjectile {
   cachedPx: number;
   cachedPy: number;
   cachedDir: number;
+  text: string;
 }
 
 export interface ProjectileOpts {
   iconUrl: string;
   iconSize: [number, number];
+  text?: string;
 }
 
 export interface ProjectileState {
@@ -337,6 +339,7 @@ export class EntityCanvasLayer {
       // (distance from origin triggers SKIP_ANIMATION_DISTANCE).
       opacity: 0,
       cachedPx: 0, cachedPy: 0, cachedDir: 0,
+      text: opts.text ?? "",
     });
   }
 
@@ -688,6 +691,9 @@ export class EntityCanvasLayer {
     const dpr = this.dpr;
     const iconCache = this.config.iconCache;
     const interpDur = this.interpDurationSec;
+    const labelFontSize = Math.round(11 * cs);
+    const fontNormal =
+      `${labelFontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
 
     for (const p of this.projectiles.values()) {
       if (p.opacity === 0) continue;
@@ -737,6 +743,20 @@ export class EntityCanvasLayer {
       );
       ctx.globalAlpha = p.opacity;
       ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+
+      // Draw label above icon (matching Leaflet popup placement)
+      if (p.text) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.font = fontNormal;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.lineWidth = 3 * cs;
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.fillStyle = "#ffffff";
+        const labelY = py - dh / 2 - 2 * cs;
+        ctx.strokeText(p.text, px, labelY);
+        ctx.fillText(p.text, px, labelY);
+      }
     }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
