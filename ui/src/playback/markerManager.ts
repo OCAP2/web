@@ -70,11 +70,11 @@ export function parseMarkerPosition(
 
     // Extended JSON format: [frame, pos, dir, alpha, text, color, size, type, brush, shape]
     if (entry.length > 4) {
-      if (entry[4] !== undefined && entry[4] !== "") result.text = entry[4];
-      if (entry[5] !== undefined) result.color = entry[5];
-      if (entry[6] !== undefined) result.size = entry[6];
-      if (entry[7] !== undefined && entry[7] !== "") result.type = entry[7];
-      if (entry[8] !== undefined) result.brush = entry[8];
+      if (entry[4] != null && entry[4] !== "") result.text = entry[4];
+      if (entry[5] != null) result.color = entry[5];
+      if (entry[6] != null) result.size = entry[6];
+      if (entry[7] != null && entry[7] !== "") result.type = entry[7];
+      if (entry[8] != null) result.brush = entry[8];
     }
 
     return result;
@@ -427,7 +427,7 @@ export class MarkerManager {
         }
 
         // Check if position entry carries style overrides that differ from active style
-        if (parsed.type || parsed.color || parsed.brush) {
+        if (parsed.type || parsed.color || parsed.brush || parsed.size) {
           const typeChanged = parsed.type && parsed.type !== tracked.activeType;
           const colorChanged = parsed.color && parsed.color !== tracked.activeColor;
           const brushChanged = parsed.brush && parsed.brush !== tracked.activeBrush;
