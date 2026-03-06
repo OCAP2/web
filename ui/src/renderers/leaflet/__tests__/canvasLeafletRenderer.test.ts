@@ -461,6 +461,31 @@ describe("CanvasLeafletRenderer", () => {
       const call = mockCanvasLayer.addProjectile.mock.calls[0];
       expect(call[1].iconSize).toEqual([70, 70]);
     });
+
+    it("passes text to addProjectile when provided", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_mine_AP_bouncing_CA.paa",
+        color: "D96600",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+        text: "APERS Bounding Mine",
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].text).toBe("APERS Bounding Mine");
+    });
+
+    it("passes undefined text when no text provided", () => {
+      renderer.createBriefingMarker({
+        shape: "ICON",
+        type: "magIcons/gear_M67.paa",
+        color: "FF0000",
+        side: "GLOBAL",
+        layer: "projectileMarkers",
+      });
+      const call = mockCanvasLayer.addProjectile.mock.calls[0];
+      expect(call[1].text).toBeUndefined();
+    });
   });
 
   describe("updateBriefingMarker (projectile routing)", () => {

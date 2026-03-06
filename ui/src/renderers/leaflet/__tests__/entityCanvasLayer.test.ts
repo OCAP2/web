@@ -456,6 +456,25 @@ describe("EntityCanvasLayer", () => {
       expect(() => layer.removeProjectile(999)).not.toThrow();
     });
 
+    it("stores text from opts", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/mine.png",
+        iconSize: [35, 35],
+        text: "APERS Bounding Mine",
+      });
+      const p = (layer as any).projectiles.get(1);
+      expect(p.text).toBe("APERS Bounding Mine");
+    });
+
+    it("defaults text to empty string when not provided", () => {
+      layer.addProjectile(1, {
+        iconUrl: "http://example.com/grenade.png",
+        iconSize: [35, 35],
+      });
+      const p = (layer as any).projectiles.get(1);
+      expect(p.text).toBe("");
+    });
+
     it("clears projectiles on dispose", () => {
       layer.addProjectile(1, {
         iconUrl: "http://example.com/grenade.png",
@@ -1049,6 +1068,35 @@ describe("EntityCanvasLayer — render paths", () => {
     // the projectile's rotation setTransform should not appear)
     // Since no entities exist, drawImage should not be called at all
     expect(mockCtx.drawImage).not.toHaveBeenCalled();
+  });
+
+  it("renders projectile label when text is set", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/mine.png",
+      iconSize: [35, 35],
+      text: "APERS Bounding Mine",
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("APERS Bounding Mine");
+    // Should also have stroke outline
+    const strokeTexts = mockCtx.strokeText.mock.calls.map((c: any[]) => c[0]);
+    expect(strokeTexts).toContain("APERS Bounding Mine");
+  });
+
+  it("does not render label when projectile has no text", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render();
+    // drawImage is called for the icon, but no fillText for labels
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    // No projectile-related text should appear (no entities either)
+    expect(texts).toHaveLength(0);
   });
 
   it("skips projectiles whose icon has not loaded yet", () => {
