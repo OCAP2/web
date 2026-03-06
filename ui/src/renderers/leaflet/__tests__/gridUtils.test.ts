@@ -138,6 +138,10 @@ describe("formatCoordLabel", () => {
     expect(formatCoordLabel(0, 100)).toBe("000");
   });
 
+  // fallback for unexpected intervals
+  it("returns raw value for unknown interval", () => {
+    expect(formatCoordLabel(500, 50)).toBe("500");
+  });
 });
 
 // ------------------------------------------------------------------
