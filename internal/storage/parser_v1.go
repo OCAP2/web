@@ -369,6 +369,26 @@ func (p *ParserV1) parseMarkerPosition(pos interface{}) *MarkerPosition {
 			if len(arr) > 3 {
 				mp.Alpha = float32(toFloat64(arr[3]))
 			}
+			// Parse style override fields: [frame, pos, dir, alpha, text, color, size, type, brush, ...]
+			if len(arr) > 4 {
+				mp.Text = toString(arr[4])
+			}
+			if len(arr) > 5 {
+				mp.Color = toString(arr[5])
+			}
+			if len(arr) > 6 {
+				if sizeArr, ok := arr[6].([]interface{}); ok {
+					for _, s := range sizeArr {
+						mp.Size = append(mp.Size, float32(toFloat64(s)))
+					}
+				}
+			}
+			if len(arr) > 7 {
+				mp.Type = toString(arr[7])
+			}
+			if len(arr) > 8 {
+				mp.Brush = toString(arr[8])
+			}
 			return mp
 		}
 	}

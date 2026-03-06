@@ -53,6 +53,12 @@ type MarkerPosition struct {
 	Direction  float32
 	Alpha      float32
 	LineCoords []float32 // For POLYLINE: [x1, y1, x2, y2, ...] pairs
+	// Style overrides from state update entries
+	Text  string
+	Color string
+	Size  []float32
+	Type  string
+	Brush string
 }
 
 // TimeSample is schema-agnostic time sample

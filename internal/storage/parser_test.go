@@ -963,6 +963,47 @@ func TestParserV1_parseMarkerPosition_Formats(t *testing.T) {
 		assert.Equal(t, float32(0.0), pos.Direction)
 		assert.Equal(t, float32(1.0), pos.Alpha)
 	})
+
+	t.Run("extended JSON format with style overrides", func(t *testing.T) {
+		pos := p.parseMarkerPosition([]interface{}{
+			20.0,
+			[]interface{}{14831.0, 16599.9, 17.843},
+			0.0,
+			1.0,
+			"",                          // text
+			"004C99",                    // color
+			[]interface{}{1.5, 1.5},     // size
+			"b_installation",            // type
+			"Solid",                     // brush
+			"ICON",                      // shape (not stored in position)
+		})
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(20), pos.FrameNum)
+		assert.InDelta(t, 14831.0, pos.PosX, 0.1)
+		assert.InDelta(t, 16599.9, pos.PosY, 0.1)
+		assert.Equal(t, "", pos.Text)
+		assert.Equal(t, "004C99", pos.Color)
+		assert.Equal(t, []float32{1.5, 1.5}, pos.Size)
+		assert.Equal(t, "b_installation", pos.Type)
+		assert.Equal(t, "Solid", pos.Brush)
+	})
+
+	t.Run("extended JSON format with empty style fields", func(t *testing.T) {
+		pos := p.parseMarkerPosition([]interface{}{
+			20.0,
+			[]interface{}{100.0, 200.0},
+			0.0,
+			1.0,
+			"", "", nil, "", "",
+		})
+		require.NotNil(t, pos)
+		assert.Equal(t, uint32(20), pos.FrameNum)
+		assert.Equal(t, "", pos.Text)
+		assert.Equal(t, "", pos.Color)
+		assert.Nil(t, pos.Size)
+		assert.Equal(t, "", pos.Type)
+		assert.Equal(t, "", pos.Brush)
+	})
 }
 
 func TestParserV1_calculateEndFrame(t *testing.T) {
