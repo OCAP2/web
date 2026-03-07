@@ -366,7 +366,7 @@ describe("EventsTab", () => {
   it("renders CapturedEvent with unit name and object type", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "Soldier" })];
-    const events = [capturedEvent(0, "CapGuy", "flag")];
+    const events = [capturedEvent(0, "Bravo", "sector")];
     engine.loadRecording(makeManifest(entities, events));
 
     render(() => (
@@ -375,8 +375,9 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    expect(screen.getByText(/CapGuy/)).toBeTruthy();
-    expect(screen.getByText(/flag/)).toBeTruthy();
+    expect(screen.getByText(/Sector/)).toBeTruthy();
+    expect(screen.getByText(/Bravo/)).toBeTruthy();
+    expect(screen.getByText(/captured/)).toBeTruthy();
   });
 
   it("clicking a CapturedEvent with position pans the map", () => {

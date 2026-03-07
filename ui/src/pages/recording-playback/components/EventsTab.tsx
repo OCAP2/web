@@ -246,9 +246,9 @@ export function EventsTab(): JSX.Element {
                     ) : event instanceof CapturedEvent ? (
                       <>
                         <span class={styles.eventMessage}>
-                          {event.type === "contested"
-                            ? <>{t("sector")} {event.unitName} {t("contested")}</>
-                            : <>{event.unitName} {t("captured")} {event.objectType}</>
+                          {event.type === "capturedFlag"
+                            ? <>{event.unitName} {t("captured")} {event.objectType}</>
+                            : <>{t("sector")} {event.unitName} {t(event.type)}</>
                           }
                         </span>
                         <span class={styles.eventMeta}>
