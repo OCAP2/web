@@ -26,10 +26,10 @@ afterEach(() => {
 function renderScrubber(
   entities = [unitDef()],
   events: Parameters<typeof makeManifest>[1] = [],
-  frameCount = 100,
+  endFrame = 99,
 ) {
   const { engine, renderer } = createTestEngine();
-  engine.loadRecording(makeManifest(entities, events, frameCount));
+  engine.loadRecording(makeManifest(entities, events, endFrame));
 
   const [focusRange] = createSignal<FocusRange | null>(null);
   const [editingFocus] = createSignal(false);
@@ -66,11 +66,11 @@ describe("TimelineScrubber", () => {
   });
 
   it("progress bar width updates when engine seeks", () => {
-    // frameCount=100 -> endFrame=99, so 50/99*100 ~= 50.505%
+    // endFrame=99, so 50/99*100 ~= 50.505%
     const { engine } = renderScrubber(
       [unitDef({ endFrame: 99 })],
       [],
-      100,
+      99,
     );
 
     engine.seekTo(50);
@@ -435,10 +435,10 @@ function renderConstrainedScrubber(
   focusRange: FocusRange,
   entities = [unitDef({ id: 1, name: "V", side: "WEST", endFrame: 99 }), unitDef({ id: 2, name: "K", side: "EAST", endFrame: 99 })],
   events: Parameters<typeof makeManifest>[1] = [],
-  frameCount = 100,
+  endFrame = 99,
 ) {
   const { engine, renderer } = createTestEngine();
-  engine.loadRecording(makeManifest(entities, events, frameCount));
+  engine.loadRecording(makeManifest(entities, events, endFrame));
 
   const [focusSignal] = createSignal<FocusRange | null>(focusRange);
   const [editingFocus] = createSignal(false);

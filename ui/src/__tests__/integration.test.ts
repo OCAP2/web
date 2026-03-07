@@ -23,7 +23,7 @@ function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
     version: 1,
     worldName: "Altis",
     missionName: "Integration Test Mission",
-    frameCount: 100,
+    endFrame: 99,
     chunkSize: 300,
     captureDelayMs: 1000,
     chunkCount: 1,
@@ -155,7 +155,7 @@ describe("Integration: Full stack playback", () => {
     ];
 
     const manifest = makeManifest({
-      frameCount: 200,
+      endFrame: 199,
       entities,
       events,
     });
@@ -182,7 +182,7 @@ describe("Integration: Full stack playback", () => {
     // hit and killed produce HitKilledEvent, connected produces ConnectEvent
     expect(engine.eventManager.getAll()).toHaveLength(3);
 
-    // Verify endFrame = frameCount - 1
+    // Verify endFrame matches manifest
     expect(engine.endFrame()).toBe(199);
   });
 
@@ -194,7 +194,7 @@ describe("Integration: Full stack playback", () => {
     const cm = makeMockChunkManager(chunkData);
 
     const manifest = makeManifest({
-      frameCount: 50,
+      endFrame: 49,
       captureDelayMs: 500,
       entities: [makeEntityDef({ id: 1, endFrame: 49 })],
     });
@@ -234,7 +234,7 @@ describe("Integration: Full stack playback", () => {
     const cm = makeMockChunkManager(chunkData);
 
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [makeEntityDef({ id: 1 })],
     });
 
@@ -260,7 +260,7 @@ describe("Integration: Full stack playback", () => {
     const cm = makeMockChunkManager(chunkData);
 
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       captureDelayMs: 200,
       entities: [makeEntityDef({ id: 1 })],
     });
@@ -291,7 +291,7 @@ describe("Integration: Full stack playback", () => {
     const cm = makeMockChunkManager(chunkData);
 
     const manifest = makeManifest({
-      frameCount: 10,
+      endFrame: 9,
       captureDelayMs: 100,
       entities: [makeEntityDef({ id: 1, endFrame: 9 })],
     });
@@ -375,7 +375,7 @@ describe("Integration: Entity type verification", () => {
     const engine = new PlaybackEngine(renderer);
 
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [
         makeEntityDef({ id: 1, type: "man", name: "Rifleman" }),
         makeEntityDef({ id: 2, type: "car", name: "MRAP" }),
@@ -425,7 +425,7 @@ describe("Integration: Event resolution", () => {
 
   it("resolves victim and causer names on HitKilled events", () => {
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [
         makeEntityDef({
           id: 1,
@@ -471,7 +471,7 @@ describe("Integration: Event resolution", () => {
 
   it("resolves multiple HitKilled events with correct references", () => {
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [
         makeEntityDef({ id: 1, name: "UnitA", side: "WEST" }),
         makeEntityDef({ id: 2, name: "UnitB", side: "EAST" }),
@@ -538,7 +538,7 @@ describe("Integration: Event resolution", () => {
 
   it("handles events where victim or causer is a vehicle (no side resolution)", () => {
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [
         makeEntityDef({
           id: 1,
@@ -579,7 +579,7 @@ describe("Integration: Event resolution", () => {
 
   it("events at specific frames are retrievable after load", () => {
     const manifest = makeManifest({
-      frameCount: 100,
+      endFrame: 99,
       entities: [
         makeEntityDef({ id: 1, name: "A" }),
         makeEntityDef({ id: 2, name: "B" }),

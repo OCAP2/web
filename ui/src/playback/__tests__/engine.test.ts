@@ -13,7 +13,7 @@ function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
     version: 1,
     worldName: "Altis",
     missionName: "Test Mission",
-    frameCount: 100,
+    endFrame: 99,
     chunkSize: 300,
     captureDelayMs: 1000,
     chunkCount: 1,
@@ -124,8 +124,8 @@ describe("PlaybackEngine", () => {
       expect(engine.eventManager.getAll()).toHaveLength(2);
     });
 
-    it("sets endFrame from manifest frameCount", () => {
-      const manifest = makeManifest({ frameCount: 500 });
+    it("sets endFrame from manifest endFrame", () => {
+      const manifest = makeManifest({ endFrame: 499 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -159,7 +159,7 @@ describe("PlaybackEngine", () => {
 
   describe("play()", () => {
     it("sets isPlaying to true", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -168,7 +168,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("frame advances on tick", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
+      const manifest = makeManifest({ endFrame: 99, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -184,7 +184,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("does not play when already at endFrame", () => {
-      const manifest = makeManifest({ frameCount: 10 });
+      const manifest = makeManifest({ endFrame: 9 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -196,7 +196,7 @@ describe("PlaybackEngine", () => {
 
   describe("pause()", () => {
     it("sets isPlaying to false", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -208,7 +208,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("stops frame from advancing", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
+      const manifest = makeManifest({ endFrame: 99, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -225,7 +225,7 @@ describe("PlaybackEngine", () => {
 
   describe("togglePlayPause()", () => {
     it("toggles between play and pause", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -241,7 +241,7 @@ describe("PlaybackEngine", () => {
 
   describe("seekTo()", () => {
     it("sets currentFrame to N", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -250,7 +250,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("clamps to 0 when seeking negative", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -259,12 +259,12 @@ describe("PlaybackEngine", () => {
     });
 
     it("clamps to endFrame when seeking past end", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
       engine.seekTo(9999);
-      expect(engine.currentFrame()).toBe(99); // endFrame = frameCount - 1
+      expect(engine.currentFrame()).toBe(99); // endFrame from manifest
     });
 
     it("updates snapshots when seeking", () => {
@@ -283,7 +283,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
 
@@ -302,7 +302,7 @@ describe("PlaybackEngine", () => {
 
   describe("setSpeed()", () => {
     it("changes playbackSpeed signal", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -311,7 +311,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("clamps speed to range 1-60", () => {
-      const manifest = makeManifest({ frameCount: 100 });
+      const manifest = makeManifest({ endFrame: 99 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -323,7 +323,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("changes timer interval when playing", () => {
-      const manifest = makeManifest({ frameCount: 1000, captureDelayMs: 1000 });
+      const manifest = makeManifest({ endFrame: 999, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -367,7 +367,7 @@ describe("PlaybackEngine", () => {
 
   describe("endFrame auto-pause", () => {
     it("auto-pauses when reaching endFrame", () => {
-      const manifest = makeManifest({ frameCount: 5, captureDelayMs: 100 });
+      const manifest = makeManifest({ endFrame: 4, captureDelayMs: 100 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -410,7 +410,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
@@ -441,7 +441,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
@@ -474,7 +474,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [makeEntityDef({ id: 1, startFrame: 10, endFrame: 19 })],
       });
 
@@ -490,7 +490,7 @@ describe("PlaybackEngine", () => {
 
   describe("dispose()", () => {
     it("stops playback and clears state", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
+      const manifest = makeManifest({ endFrame: 99, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -527,7 +527,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         captureDelayMs: 100,
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
@@ -564,7 +564,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         captureDelayMs: 100,
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 2 })],
       });
@@ -616,7 +616,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 }),
           makeEntityDef({ id: 2, name: "Medic", startFrame: 0, endFrame: 99 }),
@@ -638,7 +638,7 @@ describe("PlaybackEngine", () => {
   describe("vehicle side derived from crew", () => {
     it("vehicle snapshot has null side when no crew", () => {
       const manifest = makeManifest({
-        frameCount: 10,
+        endFrame: 9,
         entities: [
           makeEntityDef({
             id: 1,
@@ -663,7 +663,7 @@ describe("PlaybackEngine", () => {
 
     it("vehicle derives side from first crew member", () => {
       const manifest = makeManifest({
-        frameCount: 10,
+        endFrame: 9,
         entities: [
           makeEntityDef({
             id: 1,
@@ -699,7 +699,7 @@ describe("PlaybackEngine", () => {
 
     it("vehicle side changes when crew changes", () => {
       const manifest = makeManifest({
-        frameCount: 10,
+        endFrame: 9,
         entities: [
           makeEntityDef({
             id: 1,
@@ -750,7 +750,7 @@ describe("PlaybackEngine", () => {
 
     it("vehicle crew clears when seeking backward to frame without crew", () => {
       const manifest = makeManifest({
-        frameCount: 10,
+        endFrame: 9,
         entities: [
           makeEntityDef({
             id: 1,
@@ -799,7 +799,7 @@ describe("PlaybackEngine", () => {
 
     it("unit snapshots always use their own side", () => {
       const manifest = makeManifest({
-        frameCount: 10,
+        endFrame: 9,
         entities: [
           makeEntityDef({
             id: 1,
@@ -827,7 +827,7 @@ describe("PlaybackEngine", () => {
   describe("events at frame", () => {
     it("returns events at the current frame after seekTo", () => {
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           makeEntityDef({ id: 1 }),
           makeEntityDef({ id: 2, name: "Enemy", side: "EAST" }),
@@ -848,7 +848,7 @@ describe("PlaybackEngine", () => {
 
     it("returns empty when no events at frame", () => {
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         events: [
           { frameNum: 10, type: "connected", unitName: "Player1" },
         ],
@@ -862,7 +862,7 @@ describe("PlaybackEngine", () => {
 
     it("returns cumulative events (all events up to current frame)", () => {
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           makeEntityDef({ id: 1 }),
           makeEntityDef({ id: 2, name: "Enemy", side: "EAST" }),
@@ -902,7 +902,7 @@ describe("PlaybackEngine", () => {
 
   describe("playback speed affects timer", () => {
     it("speed 2 halves the interval", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 1000 });
+      const manifest = makeManifest({ endFrame: 99, captureDelayMs: 1000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -918,7 +918,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("speed 1 uses full captureDelayMs", () => {
-      const manifest = makeManifest({ frameCount: 100, captureDelayMs: 2000 });
+      const manifest = makeManifest({ endFrame: 99, captureDelayMs: 2000 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
 
@@ -933,7 +933,7 @@ describe("PlaybackEngine", () => {
     });
 
     it("skips frames when ideal interval is sub-16ms", () => {
-      const manifest = makeManifest({ frameCount: 1000, captureDelayMs: 100 });
+      const manifest = makeManifest({ endFrame: 999, captureDelayMs: 100 });
       const cm = makeMockChunkManager();
       engine.loadRecording(manifest, cm);
       engine.setSpeed(60); // interval = 100/60 ≈ 1.67ms
@@ -965,7 +965,7 @@ describe("PlaybackEngine", () => {
       } as unknown as ChunkManager;
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 })],
       });
 
@@ -1025,7 +1025,7 @@ describe("PlaybackEngine", () => {
       } as unknown as ChunkManager;
 
       const manifest = makeManifest({
-        frameCount: 600,
+        endFrame: 599,
         chunkSize: 300,
         entities: [makeEntityDef({ id: 1, startFrame: 0, endFrame: 599 })],
       });
@@ -1093,7 +1093,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           makeEntityDef({ id: 1, name: "Player1", type: "man", side: "WEST", isPlayer: true, startFrame: 0, endFrame: 99 }),
           makeEntityDef({ id: 2, name: "HMMWV", type: "car", side: "CIV", isPlayer: false, startFrame: 0, endFrame: 99 }),
@@ -1142,7 +1142,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           makeEntityDef({ id: 1, name: "AI1", type: "man", side: "EAST", isPlayer: false, startFrame: 0, endFrame: 99 }),
           makeEntityDef({ id: 2, name: "T-100", type: "tank", side: "CIV", isPlayer: false, startFrame: 0, endFrame: 99 }),
@@ -1178,7 +1178,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           {
             ...makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 }),
@@ -1211,7 +1211,7 @@ describe("PlaybackEngine", () => {
       const cm = makeMockChunkManager(chunkData);
 
       const manifest = makeManifest({
-        frameCount: 100,
+        endFrame: 99,
         entities: [
           {
             ...makeEntityDef({ id: 1, startFrame: 0, endFrame: 99 }),
@@ -1262,7 +1262,7 @@ describe("PlaybackEngine", () => {
 
   describe("panToEntity", () => {
     it("does not call setView when entity has no snapshot", () => {
-      const manifest = makeManifest({ frameCount: 10 });
+      const manifest = makeManifest({ endFrame: 9 });
       engine.loadRecording(manifest);
 
       const spy = vi.spyOn(renderer, "setView");
@@ -1274,7 +1274,7 @@ describe("PlaybackEngine", () => {
 
   describe("panToPosition", () => {
     it("calls setView with the given Arma position", () => {
-      const manifest = makeManifest({ frameCount: 10 });
+      const manifest = makeManifest({ endFrame: 9 });
       engine.loadRecording(manifest);
 
       const spy = vi.spyOn(renderer, "setView");

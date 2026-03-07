@@ -9,7 +9,7 @@ type ParseResult struct {
 	// Manifest data
 	WorldName        string
 	MissionName      string
-	FrameCount       uint32
+	EndFrame         uint32
 	ChunkSize        uint32
 	CaptureDelayMs   uint32
 	ExtensionVersion string

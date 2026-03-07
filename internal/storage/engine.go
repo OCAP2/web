@@ -10,7 +10,7 @@ type Manifest struct {
 	Version          uint32      `json:"version"`
 	WorldName        string      `json:"worldName"`
 	MissionName      string      `json:"missionName"`
-	FrameCount       uint32      `json:"frameCount"`
+	EndFrame         uint32      `json:"endFrame"`
 	ChunkSize        uint32      `json:"chunkSize"`
 	CaptureDelayMs   uint32      `json:"captureDelayMs"`
 	ChunkCount       uint32      `json:"chunkCount"`

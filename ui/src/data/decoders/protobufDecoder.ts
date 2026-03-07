@@ -237,7 +237,7 @@ export class ProtobufDecoder implements DecoderStrategy {
       version: pb.version,
       worldName: pb.worldName,
       missionName: pb.missionName,
-      frameCount: pb.frameCount,
+      endFrame: pb.endFrame,
       chunkSize: pb.chunkSize,
       captureDelayMs: pb.captureDelayMs,
       chunkCount: pb.chunkCount,

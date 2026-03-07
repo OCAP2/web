@@ -23,7 +23,7 @@ func TestConverter_Convert(t *testing.T) {
 	testData := map[string]interface{}{
 		"worldName":    "Altis",
 		"missionName":  "Test Mission",
-		"endFrame":     10,
+		"endFrame":     9,
 		"captureDelay": 1.0,
 		"entities": []interface{}{
 			map[string]interface{}{
@@ -89,7 +89,7 @@ func TestConverter_Convert(t *testing.T) {
 	manifest := readManifest(t, outputPath)
 	assert.Equal(t, "Altis", manifest.WorldName)
 	assert.Equal(t, "Test Mission", manifest.MissionName)
-	assert.Equal(t, uint32(10), manifest.FrameCount)
+	assert.Equal(t, uint32(9), manifest.EndFrame)
 	assert.Equal(t, uint32(5), manifest.ChunkSize)
 	assert.Equal(t, uint32(2), manifest.ChunkCount)
 	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)

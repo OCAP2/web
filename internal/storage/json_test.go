@@ -39,7 +39,7 @@ func TestJSONEngineGetManifest(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "altis", manifest.WorldName)
 	assert.Equal(t, "Test Mission", manifest.MissionName)
-	assert.Equal(t, uint32(100), manifest.FrameCount)
+	assert.Equal(t, uint32(100), manifest.EndFrame)
 	assert.Equal(t, uint32(1000), manifest.CaptureDelayMs)
 	assert.Len(t, manifest.Entities, 2)
 
@@ -86,7 +86,7 @@ func TestJSONEngineGetManifestGzipped(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "tanoa", manifest.WorldName)
 	assert.Equal(t, "Gzipped Mission", manifest.MissionName)
-	assert.Equal(t, uint32(500), manifest.FrameCount)
+	assert.Equal(t, uint32(500), manifest.EndFrame)
 	assert.Equal(t, uint32(500), manifest.CaptureDelayMs) // 0.5 * 1000
 	assert.Len(t, manifest.Entities, 1)
 
@@ -125,7 +125,7 @@ func TestJSONEngineEmptyEntities(t *testing.T) {
 	manifest, err := engine.GetManifest(ctx, "empty")
 	require.NoError(t, err)
 	assert.Equal(t, "stratis", manifest.WorldName)
-	assert.Equal(t, uint32(50), manifest.FrameCount)
+	assert.Equal(t, uint32(50), manifest.EndFrame)
 	assert.Empty(t, manifest.Entities)
 }
 

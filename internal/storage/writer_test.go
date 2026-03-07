@@ -139,7 +139,7 @@ func TestProtobufWriterV1WriteManifest(t *testing.T) {
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
-		FrameCount:     100,
+		EndFrame:       99,
 		ChunkSize:      50,
 		CaptureDelayMs: 1000,
 		Entities: []EntityDef{
@@ -222,7 +222,7 @@ func TestProtobufWriterV1WriteChunks(t *testing.T) {
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
-		FrameCount:     100,
+		EndFrame:       99,
 		ChunkSize:      50,
 		CaptureDelayMs: 1000,
 		EntityPositions: []EntityPositionData{
@@ -266,7 +266,7 @@ func TestProtobufWriterV1WriteChunksCancellation(t *testing.T) {
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
-		FrameCount:     1000,
+		EndFrame:       999,
 		ChunkSize:      100,
 		CaptureDelayMs: 1000,
 	}
@@ -335,7 +335,7 @@ func TestProtobufWriterV1WriteManifest_WithFramesFired(t *testing.T) {
 	result := &ParseResult{
 		WorldName:      "TestWorld",
 		MissionName:    "TestMission",
-		FrameCount:     100,
+		EndFrame:       99,
 		ChunkSize:      50,
 		CaptureDelayMs: 1000,
 		Entities: []EntityDef{
@@ -396,7 +396,7 @@ func TestProtobufWriterV1EmptyResult(t *testing.T) {
 	result := &ParseResult{
 		WorldName:      "EmptyWorld",
 		MissionName:    "EmptyMission",
-		FrameCount:     0,
+		EndFrame:       0,
 		ChunkSize:      50,
 		CaptureDelayMs: 1000,
 	}

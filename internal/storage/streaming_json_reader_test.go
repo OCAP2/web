@@ -22,7 +22,7 @@ func TestStreamingJSONReader_Metadata(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Altis", meta.WorldName)
 	assert.Equal(t, "Test Mission", meta.MissionName)
-	assert.Equal(t, uint32(5), meta.FrameCount)
+	assert.Equal(t, uint32(5), meta.EndFrame)
 	assert.Equal(t, uint32(1000), meta.CaptureDelayMs)
 }
 
@@ -271,7 +271,7 @@ func TestStreamingJSONReader_AllMetadataFields(t *testing.T) {
 	assert.Equal(t, "Stratis", meta.WorldName)
 	assert.Equal(t, "Full Meta", meta.MissionName)
 	assert.Equal(t, "TestAuthor", meta.MissionAuthor)
-	assert.Equal(t, uint32(42), meta.FrameCount)
+	assert.Equal(t, uint32(42), meta.EndFrame)
 	assert.Equal(t, uint32(500), meta.CaptureDelayMs)
 	assert.Equal(t, "1.2.3", meta.ExtensionVersion)
 	assert.Equal(t, "4.5.6", meta.AddonVersion)
@@ -294,7 +294,7 @@ func TestStreamingJSONReader_MetadataWrongTypes(t *testing.T) {
 	assert.Empty(t, meta.WorldName)
 	assert.Empty(t, meta.MissionName)
 	assert.Empty(t, meta.MissionAuthor)
-	assert.Equal(t, uint32(0), meta.FrameCount)
+	assert.Equal(t, uint32(0), meta.EndFrame)
 	assert.Equal(t, uint32(0), meta.CaptureDelayMs)
 	assert.Empty(t, meta.ExtensionVersion)
 	assert.Empty(t, meta.AddonVersion)
@@ -317,7 +317,7 @@ func TestStreamingJSONReader_SkipArraysWithoutCallbacks(t *testing.T) {
 	meta, err := reader.Process(StreamingCallbacks{})
 	require.NoError(t, err)
 	assert.Equal(t, "Altis", meta.WorldName)
-	assert.Equal(t, uint32(5), meta.FrameCount)
+	assert.Equal(t, uint32(5), meta.EndFrame)
 }
 
 func TestStreamingJSONReader_EntitiesNotArray(t *testing.T) {

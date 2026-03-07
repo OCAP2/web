@@ -45,7 +45,7 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 		Version:        pbManifest.Version,
 		WorldName:      pbManifest.WorldName,
 		MissionName:    pbManifest.MissionName,
-		FrameCount:     pbManifest.FrameCount,
+		EndFrame:       pbManifest.EndFrame,
 		ChunkSize:      pbManifest.ChunkSize,
 		CaptureDelayMs: pbManifest.CaptureDelayMs,
 		ChunkCount:     pbManifest.ChunkCount,

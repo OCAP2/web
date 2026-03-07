@@ -4,7 +4,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v4.25.1
-// source: pkg/schemas/protobuf/v1/ocap.proto
+// source: ocap.proto
 
 package v1
 
@@ -56,11 +56,11 @@ func (x EntityType) String() string {
 }
 
 func (EntityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[0].Descriptor()
+	return file_ocap_proto_enumTypes[0].Descriptor()
 }
 
 func (EntityType) Type() protoreflect.EnumType {
-	return &file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[0]
+	return &file_ocap_proto_enumTypes[0]
 }
 
 func (x EntityType) Number() protoreflect.EnumNumber {
@@ -69,7 +69,7 @@ func (x EntityType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EntityType.Descriptor instead.
 func (EntityType) EnumDescriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{0}
+	return file_ocap_proto_rawDescGZIP(), []int{0}
 }
 
 type Side int32
@@ -114,11 +114,11 @@ func (x Side) String() string {
 }
 
 func (Side) Descriptor() protoreflect.EnumDescriptor {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[1].Descriptor()
+	return file_ocap_proto_enumTypes[1].Descriptor()
 }
 
 func (Side) Type() protoreflect.EnumType {
-	return &file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes[1]
+	return &file_ocap_proto_enumTypes[1]
 }
 
 func (x Side) Number() protoreflect.EnumNumber {
@@ -127,7 +127,7 @@ func (x Side) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Side.Descriptor instead.
 func (Side) EnumDescriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{1}
+	return file_ocap_proto_rawDescGZIP(), []int{1}
 }
 
 // Manifest - loaded once at playback start (~10-100KB)
@@ -136,7 +136,7 @@ type Manifest struct {
 	Version          uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	WorldName        string                 `protobuf:"bytes,2,opt,name=world_name,json=worldName,proto3" json:"world_name,omitempty"`
 	MissionName      string                 `protobuf:"bytes,3,opt,name=mission_name,json=missionName,proto3" json:"mission_name,omitempty"`
-	FrameCount       uint32                 `protobuf:"varint,4,opt,name=frame_count,json=frameCount,proto3" json:"frame_count,omitempty"`
+	EndFrame         uint32                 `protobuf:"varint,4,opt,name=end_frame,json=endFrame,proto3" json:"end_frame,omitempty"`
 	ChunkSize        uint32                 `protobuf:"varint,5,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`
 	CaptureDelayMs   uint32                 `protobuf:"varint,6,opt,name=capture_delay_ms,json=captureDelayMs,proto3" json:"capture_delay_ms,omitempty"`
 	ChunkCount       uint32                 `protobuf:"varint,7,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
@@ -152,7 +152,7 @@ type Manifest struct {
 
 func (x *Manifest) Reset() {
 	*x = Manifest{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[0]
+	mi := &file_ocap_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -164,7 +164,7 @@ func (x *Manifest) String() string {
 func (*Manifest) ProtoMessage() {}
 
 func (x *Manifest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[0]
+	mi := &file_ocap_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -177,7 +177,7 @@ func (x *Manifest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Manifest.ProtoReflect.Descriptor instead.
 func (*Manifest) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{0}
+	return file_ocap_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Manifest) GetVersion() uint32 {
@@ -201,9 +201,9 @@ func (x *Manifest) GetMissionName() string {
 	return ""
 }
 
-func (x *Manifest) GetFrameCount() uint32 {
+func (x *Manifest) GetEndFrame() uint32 {
 	if x != nil {
-		return x.FrameCount
+		return x.EndFrame
 	}
 	return 0
 }
@@ -290,7 +290,7 @@ type EntityDef struct {
 
 func (x *EntityDef) Reset() {
 	*x = EntityDef{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[1]
+	mi := &file_ocap_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -302,7 +302,7 @@ func (x *EntityDef) String() string {
 func (*EntityDef) ProtoMessage() {}
 
 func (x *EntityDef) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[1]
+	mi := &file_ocap_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -315,7 +315,7 @@ func (x *EntityDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityDef.ProtoReflect.Descriptor instead.
 func (*EntityDef) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{1}
+	return file_ocap_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *EntityDef) GetId() uint32 {
@@ -408,7 +408,7 @@ type FiredFrame struct {
 
 func (x *FiredFrame) Reset() {
 	*x = FiredFrame{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[2]
+	mi := &file_ocap_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +420,7 @@ func (x *FiredFrame) String() string {
 func (*FiredFrame) ProtoMessage() {}
 
 func (x *FiredFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[2]
+	mi := &file_ocap_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +433,7 @@ func (x *FiredFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FiredFrame.ProtoReflect.Descriptor instead.
 func (*FiredFrame) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{2}
+	return file_ocap_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FiredFrame) GetFrameNum() uint32 {
@@ -477,7 +477,7 @@ type TimeSample struct {
 
 func (x *TimeSample) Reset() {
 	*x = TimeSample{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[3]
+	mi := &file_ocap_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +489,7 @@ func (x *TimeSample) String() string {
 func (*TimeSample) ProtoMessage() {}
 
 func (x *TimeSample) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[3]
+	mi := &file_ocap_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +502,7 @@ func (x *TimeSample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSample.ProtoReflect.Descriptor instead.
 func (*TimeSample) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{3}
+	return file_ocap_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TimeSample) GetFrameNum() uint32 {
@@ -553,7 +553,7 @@ type Chunk struct {
 
 func (x *Chunk) Reset() {
 	*x = Chunk{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[4]
+	mi := &file_ocap_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -565,7 +565,7 @@ func (x *Chunk) String() string {
 func (*Chunk) ProtoMessage() {}
 
 func (x *Chunk) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[4]
+	mi := &file_ocap_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -578,7 +578,7 @@ func (x *Chunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chunk.ProtoReflect.Descriptor instead.
 func (*Chunk) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{4}
+	return file_ocap_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Chunk) GetIndex() uint32 {
@@ -619,7 +619,7 @@ type Frame struct {
 
 func (x *Frame) Reset() {
 	*x = Frame{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[5]
+	mi := &file_ocap_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +631,7 @@ func (x *Frame) String() string {
 func (*Frame) ProtoMessage() {}
 
 func (x *Frame) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[5]
+	mi := &file_ocap_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +644,7 @@ func (x *Frame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Frame.ProtoReflect.Descriptor instead.
 func (*Frame) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{5}
+	return file_ocap_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Frame) GetFrameNum() uint32 {
@@ -683,7 +683,7 @@ type EntityState struct {
 
 func (x *EntityState) Reset() {
 	*x = EntityState{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[6]
+	mi := &file_ocap_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -695,7 +695,7 @@ func (x *EntityState) String() string {
 func (*EntityState) ProtoMessage() {}
 
 func (x *EntityState) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[6]
+	mi := &file_ocap_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +708,7 @@ func (x *EntityState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityState.ProtoReflect.Descriptor instead.
 func (*EntityState) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{6}
+	return file_ocap_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *EntityState) GetEntityId() uint32 {
@@ -829,7 +829,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[7]
+	mi := &file_ocap_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +841,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[7]
+	mi := &file_ocap_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -854,7 +854,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{7}
+	return file_ocap_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Event) GetFrameNum() uint32 {
@@ -960,7 +960,7 @@ type MarkerDef struct {
 
 func (x *MarkerDef) Reset() {
 	*x = MarkerDef{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[8]
+	mi := &file_ocap_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -972,7 +972,7 @@ func (x *MarkerDef) String() string {
 func (*MarkerDef) ProtoMessage() {}
 
 func (x *MarkerDef) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[8]
+	mi := &file_ocap_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -985,7 +985,7 @@ func (x *MarkerDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerDef.ProtoReflect.Descriptor instead.
 func (*MarkerDef) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{8}
+	return file_ocap_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MarkerDef) GetType() string {
@@ -1086,7 +1086,7 @@ type MarkerPosition struct {
 
 func (x *MarkerPosition) Reset() {
 	*x = MarkerPosition{}
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[9]
+	mi := &file_ocap_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +1098,7 @@ func (x *MarkerPosition) String() string {
 func (*MarkerPosition) ProtoMessage() {}
 
 func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes[9]
+	mi := &file_ocap_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +1111,7 @@ func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerPosition.ProtoReflect.Descriptor instead.
 func (*MarkerPosition) Descriptor() ([]byte, []int) {
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP(), []int{9}
+	return file_ocap_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MarkerPosition) GetFrameNum() uint32 {
@@ -1198,18 +1198,18 @@ func (x *MarkerPosition) GetBrush() string {
 	return ""
 }
 
-var File_pkg_schemas_protobuf_v1_ocap_proto protoreflect.FileDescriptor
+var File_ocap_proto protoreflect.FileDescriptor
 
-const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
+const file_ocap_proto_rawDesc = "" +
 	"\n" +
-	"\"pkg/schemas/protobuf/v1/ocap.proto\x12\aocap.v1\"\xf4\x03\n" +
+	"\n" +
+	"ocap.proto\x12\aocap.v1\"\xf0\x03\n" +
 	"\bManifest\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x1d\n" +
 	"\n" +
 	"world_name\x18\x02 \x01(\tR\tworldName\x12!\n" +
-	"\fmission_name\x18\x03 \x01(\tR\vmissionName\x12\x1f\n" +
-	"\vframe_count\x18\x04 \x01(\rR\n" +
-	"frameCount\x12\x1d\n" +
+	"\fmission_name\x18\x03 \x01(\tR\vmissionName\x12\x1b\n" +
+	"\tend_frame\x18\x04 \x01(\rR\bendFrame\x12\x1d\n" +
 	"\n" +
 	"chunk_size\x18\x05 \x01(\rR\tchunkSize\x12(\n" +
 	"\x10capture_delay_ms\x18\x06 \x01(\rR\x0ecaptureDelayMs\x12\x1f\n" +
@@ -1336,20 +1336,20 @@ const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	"\vSIDE_GLOBAL\x10\x05B.Z,github.com/OCAP2/web/pkg/schemas/protobuf/v1b\x06proto3"
 
 var (
-	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescOnce sync.Once
-	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData []byte
+	file_ocap_proto_rawDescOnce sync.Once
+	file_ocap_proto_rawDescData []byte
 )
 
-func file_pkg_schemas_protobuf_v1_ocap_proto_rawDescGZIP() []byte {
-	file_pkg_schemas_protobuf_v1_ocap_proto_rawDescOnce.Do(func() {
-		file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc), len(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc)))
+func file_ocap_proto_rawDescGZIP() []byte {
+	file_ocap_proto_rawDescOnce.Do(func() {
+		file_ocap_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_ocap_proto_rawDesc), len(file_ocap_proto_rawDesc)))
 	})
-	return file_pkg_schemas_protobuf_v1_ocap_proto_rawDescData
+	return file_ocap_proto_rawDescData
 }
 
-var file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
-var file_pkg_schemas_protobuf_v1_ocap_proto_goTypes = []any{
+var file_ocap_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_ocap_proto_goTypes = []any{
 	(EntityType)(0),        // 0: ocap.v1.EntityType
 	(Side)(0),              // 1: ocap.v1.Side
 	(*Manifest)(nil),       // 2: ocap.v1.Manifest
@@ -1363,7 +1363,7 @@ var file_pkg_schemas_protobuf_v1_ocap_proto_goTypes = []any{
 	(*MarkerDef)(nil),      // 10: ocap.v1.MarkerDef
 	(*MarkerPosition)(nil), // 11: ocap.v1.MarkerPosition
 }
-var file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs = []int32{
+var file_ocap_proto_depIdxs = []int32{
 	3,  // 0: ocap.v1.Manifest.entities:type_name -> ocap.v1.EntityDef
 	5,  // 1: ocap.v1.Manifest.times:type_name -> ocap.v1.TimeSample
 	9,  // 2: ocap.v1.Manifest.events:type_name -> ocap.v1.Event
@@ -1382,27 +1382,27 @@ var file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs = []int32{
 	0,  // [0:11] is the sub-list for field type_name
 }
 
-func init() { file_pkg_schemas_protobuf_v1_ocap_proto_init() }
-func file_pkg_schemas_protobuf_v1_ocap_proto_init() {
-	if File_pkg_schemas_protobuf_v1_ocap_proto != nil {
+func init() { file_ocap_proto_init() }
+func file_ocap_proto_init() {
+	if File_ocap_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc), len(file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ocap_proto_rawDesc), len(file_ocap_proto_rawDesc)),
 			NumEnums:      2,
 			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_pkg_schemas_protobuf_v1_ocap_proto_goTypes,
-		DependencyIndexes: file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs,
-		EnumInfos:         file_pkg_schemas_protobuf_v1_ocap_proto_enumTypes,
-		MessageInfos:      file_pkg_schemas_protobuf_v1_ocap_proto_msgTypes,
+		GoTypes:           file_ocap_proto_goTypes,
+		DependencyIndexes: file_ocap_proto_depIdxs,
+		EnumInfos:         file_ocap_proto_enumTypes,
+		MessageInfos:      file_ocap_proto_msgTypes,
 	}.Build()
-	File_pkg_schemas_protobuf_v1_ocap_proto = out.File
-	file_pkg_schemas_protobuf_v1_ocap_proto_goTypes = nil
-	file_pkg_schemas_protobuf_v1_ocap_proto_depIdxs = nil
+	File_ocap_proto = out.File
+	file_ocap_proto_goTypes = nil
+	file_ocap_proto_depIdxs = nil
 }

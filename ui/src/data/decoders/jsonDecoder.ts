@@ -387,7 +387,7 @@ export class JsonDecoder implements DecoderStrategy {
       worldName: data.worldName ?? "",
       missionName: data.missionName ?? "",
       missionAuthor: data.missionAuthor,
-      frameCount: data.endFrame ?? 0,
+      endFrame: data.endFrame ?? 0,
       chunkSize: data.endFrame ?? 0,
       captureDelayMs: (data.captureDelay ?? 1) * 1000,
       chunkCount: 1,

@@ -63,7 +63,7 @@ function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
     version: 1,
     worldName: "Altis",
     missionName: "Test Mission",
-    frameCount: 100,
+    endFrame: 99,
     chunkSize: 300,
     captureDelayMs: 1000,
     chunkCount: 1,

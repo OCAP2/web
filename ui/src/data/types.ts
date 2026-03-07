@@ -138,7 +138,7 @@ export interface Manifest {
   worldName: string;
   missionName: string;
   missionAuthor?: string;
-  frameCount: number;
+  endFrame: number;
   chunkSize: number;
   captureDelayMs: number;
   chunkCount: number;

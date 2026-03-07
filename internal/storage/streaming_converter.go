@@ -205,7 +205,7 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 	}
 
 	// Validate required fields
-	if meta.WorldName == "" || meta.MissionName == "" || meta.FrameCount == 0 {
+	if meta.WorldName == "" || meta.MissionName == "" || meta.EndFrame == 0 {
 		return fmt.Errorf("unknown JSON input version: missing required fields")
 	}
 
@@ -220,7 +220,8 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 		return fmt.Errorf("create chunks directory: %w", err)
 	}
 
-	chunkCount := (meta.FrameCount + sc.ChunkSize - 1) / sc.ChunkSize
+	totalFrames := meta.EndFrame + 1
+	chunkCount := (totalFrames + sc.ChunkSize - 1) / sc.ChunkSize
 	if chunkCount == 0 {
 		chunkCount = 1
 	}
@@ -232,7 +233,7 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 		default:
 		}
 
-		if err := sc.assembleChunk(bucket, chunksDir, chunkIdx, meta.FrameCount); err != nil {
+		if err := sc.assembleChunk(bucket, chunksDir, chunkIdx, totalFrames); err != nil {
 			return fmt.Errorf("assemble chunk %d: %w", chunkIdx, err)
 		}
 	}
@@ -242,7 +243,7 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 		Version:          uint32(SchemaVersionV1),
 		WorldName:        meta.WorldName,
 		MissionName:      meta.MissionName,
-		FrameCount:       meta.FrameCount,
+		EndFrame:         meta.EndFrame,
 		ChunkSize:        sc.ChunkSize,
 		CaptureDelayMs:   meta.CaptureDelayMs,
 		ChunkCount:       chunkCount,

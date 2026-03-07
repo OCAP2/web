@@ -11,7 +11,7 @@ function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
     version: 1,
     worldName: "altis",
     missionName: "test",
-    frameCount: 1200,
+    endFrame: 1199,
     chunkSize: 300,
     captureDelayMs: 1000,
     chunkCount: 4,
@@ -198,7 +198,7 @@ describe("ChunkManager", () => {
   describe("ensureLoaded", () => {
     beforeEach(async () => {
       decoder = makeDecoder(
-        makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
+        makeManifest({ chunkSize: 100, endFrame: 499, chunkCount: 5 }),
       );
       cm = new ChunkManager(decoder, api);
       await cm.loadManifest("op_mission");
@@ -224,7 +224,7 @@ describe("ChunkManager", () => {
   describe("prefetch at 80%", () => {
     beforeEach(async () => {
       decoder = makeDecoder(
-        makeManifest({ chunkSize: 100, frameCount: 500, chunkCount: 5 }),
+        makeManifest({ chunkSize: 100, endFrame: 499, chunkCount: 5 }),
       );
       cm = new ChunkManager(decoder, api);
       await cm.loadManifest("op_mission");

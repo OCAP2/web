@@ -11,7 +11,7 @@ function makeStubDecoder(label: string): DecoderStrategy {
         version: 0,
         worldName: label,
         missionName: "",
-        frameCount: 0,
+        endFrame: 0,
         chunkSize: 0,
         captureDelayMs: 0,
         chunkCount: 0,

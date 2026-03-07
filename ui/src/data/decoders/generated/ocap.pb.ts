@@ -112,7 +112,7 @@ export interface Manifest {
   version: number;
   worldName: string;
   missionName: string;
-  frameCount: number;
+  endFrame: number;
   chunkSize: number;
   captureDelayMs: number;
   chunkCount: number;
@@ -236,7 +236,7 @@ function createBaseManifest(): Manifest {
     version: 0,
     worldName: "",
     missionName: "",
-    frameCount: 0,
+    endFrame: 0,
     chunkSize: 0,
     captureDelayMs: 0,
     chunkCount: 0,
@@ -260,8 +260,8 @@ export const Manifest: MessageFns<Manifest> = {
     if (message.missionName !== "") {
       writer.uint32(26).string(message.missionName);
     }
-    if (message.frameCount !== 0) {
-      writer.uint32(32).uint32(message.frameCount);
+    if (message.endFrame !== 0) {
+      writer.uint32(32).uint32(message.endFrame);
     }
     if (message.chunkSize !== 0) {
       writer.uint32(40).uint32(message.chunkSize);
@@ -329,7 +329,7 @@ export const Manifest: MessageFns<Manifest> = {
             break;
           }
 
-          message.frameCount = reader.uint32();
+          message.endFrame = reader.uint32();
           continue;
         }
         case 5: {
@@ -426,10 +426,10 @@ export const Manifest: MessageFns<Manifest> = {
         : isSet(object.mission_name)
         ? globalThis.String(object.mission_name)
         : "",
-      frameCount: isSet(object.frameCount)
-        ? globalThis.Number(object.frameCount)
-        : isSet(object.frame_count)
-        ? globalThis.Number(object.frame_count)
+      endFrame: isSet(object.endFrame)
+        ? globalThis.Number(object.endFrame)
+        : isSet(object.end_frame)
+        ? globalThis.Number(object.end_frame)
         : 0,
       chunkSize: isSet(object.chunkSize)
         ? globalThis.Number(object.chunkSize)
@@ -482,8 +482,8 @@ export const Manifest: MessageFns<Manifest> = {
     if (message.missionName !== "") {
       obj.missionName = message.missionName;
     }
-    if (message.frameCount !== 0) {
-      obj.frameCount = Math.round(message.frameCount);
+    if (message.endFrame !== 0) {
+      obj.endFrame = Math.round(message.endFrame);
     }
     if (message.chunkSize !== 0) {
       obj.chunkSize = Math.round(message.chunkSize);
@@ -523,7 +523,7 @@ export const Manifest: MessageFns<Manifest> = {
     message.version = object.version ?? 0;
     message.worldName = object.worldName ?? "";
     message.missionName = object.missionName ?? "";
-    message.frameCount = object.frameCount ?? 0;
+    message.endFrame = object.endFrame ?? 0;
     message.chunkSize = object.chunkSize ?? 0;
     message.captureDelayMs = object.captureDelayMs ?? 0;
     message.chunkCount = object.chunkCount ?? 0;

@@ -104,7 +104,7 @@ func TestParserV1_Parse_MinimalData(t *testing.T) {
 
 	assert.Equal(t, "Altis", result.WorldName)
 	assert.Equal(t, "Test Mission", result.MissionName)
-	assert.Equal(t, uint32(100), result.FrameCount)
+	assert.Equal(t, uint32(100), result.EndFrame)
 	assert.Equal(t, uint32(50), result.ChunkSize)
 	assert.Equal(t, uint32(1500), result.CaptureDelayMs)
 }
@@ -1171,7 +1171,7 @@ func TestParserV1_Parse_VehicleSparsePositions_ChunkBuild(t *testing.T) {
 	data := map[string]interface{}{
 		"worldName":    "Altis",
 		"missionName":  "Test",
-		"endFrame":     10.0,
+		"endFrame":     9.0,
 		"captureDelay": 1.0,
 		"entities": []interface{}{
 			map[string]interface{}{
@@ -1187,7 +1187,7 @@ func TestParserV1_Parse_VehicleSparsePositions_ChunkBuild(t *testing.T) {
 						180.0,
 						1.0,
 						[]interface{}{},
-						[]interface{}{0.0, 9.0}, // Covers all 10 frames
+						[]interface{}{0.0, 9.0}, // Covers all 10 frames (0-9)
 					},
 				},
 			},

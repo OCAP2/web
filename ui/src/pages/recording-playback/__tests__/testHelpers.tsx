@@ -77,15 +77,15 @@ export function vehicleDef(overrides: Partial<EntityDef> = {}): EntityDef {
 export function makeManifest(
   entities: EntityDef[],
   events: EventDef[] = [],
-  frameCount = 100,
+  endFrame = 99,
 ): Manifest {
   return {
     version: 1,
     worldName: "test_world",
     missionName: "test_mission",
-    frameCount,
+    endFrame,
     chunkSize: 300,
-    chunkCount: Math.ceil(frameCount / 300),
+    chunkCount: Math.ceil((endFrame + 1) / 300),
     captureDelayMs: 1000,
     entities,
     events,

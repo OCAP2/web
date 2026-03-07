@@ -23,7 +23,7 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(manifest.version).toBe(0);
     expect(manifest.worldName).toBe("Altis");
     expect(manifest.missionName).toBe("Test Op");
-    expect(manifest.frameCount).toBe(500);
+    expect(manifest.endFrame).toBe(500);
     expect(manifest.captureDelayMs).toBe(1000);
     expect(manifest.chunkSize).toBe(500);
     expect(manifest.chunkCount).toBe(1);

@@ -25,7 +25,7 @@ func TestWriteManifest_ReadOnlyDir(t *testing.T) {
 	result := &ParseResult{
 		WorldName:   "altis",
 		MissionName: "test",
-		FrameCount:  10,
+		EndFrame:    9,
 		ChunkSize:   30,
 	}
 
@@ -44,7 +44,7 @@ func TestWriteChunks_ReadOnlyDir(t *testing.T) {
 	result := &ParseResult{
 		WorldName:   "altis",
 		MissionName: "test",
-		FrameCount:  10,
+		EndFrame:    9,
 		ChunkSize:   5,
 	}
 
@@ -66,7 +66,7 @@ func TestWriteChunks_ReadOnlyChunksDir(t *testing.T) {
 	result := &ParseResult{
 		WorldName:   "altis",
 		MissionName: "test",
-		FrameCount:  5,
+		EndFrame:    4,
 		ChunkSize:   3,
 	}
 
@@ -84,7 +84,7 @@ func TestWriteChunks_CancelledMidway(t *testing.T) {
 	result := &ParseResult{
 		WorldName:   "altis",
 		MissionName: "test",
-		FrameCount:  100,
+		EndFrame:    99,
 		ChunkSize:   10,
 	}
 
@@ -103,7 +103,7 @@ func TestWriteManifest_WithAllFields(t *testing.T) {
 	result := &ParseResult{
 		WorldName:        "stratis",
 		MissionName:      "full_test",
-		FrameCount:       200,
+		EndFrame:         199,
 		ChunkSize:        50,
 		CaptureDelayMs:   500,
 		ExtensionVersion: "1.2.3",
@@ -165,7 +165,7 @@ func TestWriteManifest_WithAllFields(t *testing.T) {
 
 	assert.Equal(t, "stratis", manifest.WorldName)
 	assert.Equal(t, "full_test", manifest.MissionName)
-	assert.Equal(t, uint32(200), manifest.FrameCount)
+	assert.Equal(t, uint32(199), manifest.EndFrame)
 	assert.Equal(t, uint32(50), manifest.ChunkSize)
 	assert.Equal(t, uint32(500), manifest.CaptureDelayMs)
 	assert.Equal(t, uint32(4), manifest.ChunkCount)
@@ -200,7 +200,7 @@ func TestWriteChunks_WithEntityPositions(t *testing.T) {
 	result := &ParseResult{
 		WorldName:   "altis",
 		MissionName: "position_test",
-		FrameCount:  6,
+		EndFrame:    5,
 		ChunkSize:   3,
 		EntityPositions: []EntityPositionData{
 			{
@@ -254,8 +254,8 @@ func TestWriteChunks_WithEntityPositions(t *testing.T) {
 func TestBuildChunk_LastChunkTruncated(t *testing.T) {
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{
-		FrameCount: 7,
-		ChunkSize:  3,
+		EndFrame:  6,
+		ChunkSize: 3,
 	}
 
 	// Chunk 2 should cover frames 6-6 (only 1 frame, not 3)

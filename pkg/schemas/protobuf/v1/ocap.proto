@@ -8,7 +8,7 @@ message Manifest {
   uint32 version = 1;
   string world_name = 2;
   string mission_name = 3;
-  uint32 frame_count = 4;
+  uint32 end_frame = 4;
   uint32 chunk_size = 5;
   uint32 capture_delay_ms = 6;
   uint32 chunk_count = 7;

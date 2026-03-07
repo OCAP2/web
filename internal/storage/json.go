@@ -30,7 +30,7 @@ func (e *JSONEngine) GetManifest(ctx context.Context, filename string) (*Manifes
 		Version:        1,
 		WorldName:      getString(data, "worldName"),
 		MissionName:    getString(data, "missionName"),
-		FrameCount:     getUint32(data, "endFrame"),
+		EndFrame:       getUint32(data, "endFrame"),
 		ChunkSize:      300,
 		CaptureDelayMs: uint32(getFloat64(data, "captureDelay") * 1000),
 		ChunkCount:     1, // JSON is single "chunk"

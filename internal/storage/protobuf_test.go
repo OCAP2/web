@@ -24,7 +24,7 @@ func TestProtobufEngineGetManifest(t *testing.T) {
 		Version:        1,
 		WorldName:      "altis",
 		MissionName:    "Test Mission",
-		FrameCount:     1000,
+		EndFrame:       1000,
 		ChunkSize:      300,
 		CaptureDelayMs: 1000,
 		ChunkCount:     4,
@@ -46,7 +46,7 @@ func TestProtobufEngineGetManifest(t *testing.T) {
 
 	assert.Equal(t, "altis", manifest.WorldName)
 	assert.Equal(t, "Test Mission", manifest.MissionName)
-	assert.Equal(t, uint32(1000), manifest.FrameCount)
+	assert.Equal(t, uint32(1000), manifest.EndFrame)
 	assert.Equal(t, uint32(4), manifest.ChunkCount)
 	assert.Len(t, manifest.Entities, 2)
 
@@ -143,7 +143,7 @@ func TestProtobufEngineFullEntityDef(t *testing.T) {
 		Version:     1,
 		WorldName:   "stratis",
 		MissionName: "Full Test",
-		FrameCount:  500,
+		EndFrame:    500,
 		ChunkSize:   100,
 		ChunkCount:  5,
 		Entities: []*pbv1.EntityDef{

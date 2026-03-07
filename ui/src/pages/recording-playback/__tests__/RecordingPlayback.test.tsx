@@ -356,7 +356,7 @@ describe("RecordingPlayback", () => {
         version: 1,
         worldName: "Altis",
         missionName: "Op Alpha",
-        frameCount: 101,
+        endFrame: 100,
         chunkSize: 300,
         captureDelayMs: 1000,
         chunkCount: 1,
@@ -647,7 +647,7 @@ describe("RecordingPlayback", () => {
       const markerManager = args[2];
       engine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{
           id: 7, name: "TestPlayer", type: "man", startFrame: 0, endFrame: 100,
           side: "WEST", isPlayer: true, groupName: "Alpha", role: "Rifleman",
@@ -947,7 +947,7 @@ describe("RecordingPlayback", () => {
       capturedEngine = args[1];
       capturedEngine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
         events: [], markers: [], times: [],
       });
@@ -993,7 +993,7 @@ describe("RecordingPlayback", () => {
       capturedEngine = args[1];
       capturedEngine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
         events: [], markers: [], times: [],
       });
@@ -1069,7 +1069,7 @@ describe("RecordingPlayback", () => {
       capturedEngine = args[1];
       capturedEngine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
         events: [], markers: [], times: [],
       });
@@ -1124,7 +1124,7 @@ describe("RecordingPlayback", () => {
       capturedEngine = args[1];
       capturedEngine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
         events: [], markers: [], times: [],
       });
@@ -1178,7 +1178,7 @@ describe("RecordingPlayback", () => {
       capturedEngine = args[1];
       capturedEngine.loadRecording({
         version: 1, worldName: "Altis", missionName: "Op Alpha",
-        frameCount: 101, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
+        endFrame: 100, chunkSize: 300, captureDelayMs: 1000, chunkCount: 1,
         entities: [{ id: 1, name: "Unit", type: "man", startFrame: 0, endFrame: 100, side: "WEST", isPlayer: true, groupName: "A", role: "R", positions: undefined, framesFired: undefined }],
         events: [], markers: [], times: [],
       });

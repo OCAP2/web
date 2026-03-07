@@ -333,7 +333,7 @@ export class PlaybackEngine {
 
     // Set endFrame AFTER events are populated so reactive computations
     // (e.g. timeline event ticks) see the events when they re-run.
-    this._setEndFrame(manifest.frameCount - 1);
+    this._setEndFrame(manifest.endFrame);
 
     // Initial snapshot computation
     this.computeSnapshots(0);

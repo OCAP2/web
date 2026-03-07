@@ -23,7 +23,7 @@ function makeCapturingDecoder(): DecoderStrategy & {
         version: 0,
         worldName: "test",
         missionName: "",
-        frameCount: 0,
+        endFrame: 0,
         chunkSize: 0,
         captureDelayMs: 0,
         chunkCount: 0,

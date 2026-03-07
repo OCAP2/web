@@ -13,7 +13,7 @@ type StreamingMetadata struct {
 	WorldName        string
 	MissionName      string
 	MissionAuthor    string
-	FrameCount       uint32
+	EndFrame         uint32
 	CaptureDelayMs   uint32
 	ExtensionVersion string
 	AddonVersion     string
@@ -140,7 +140,7 @@ func (sr *StreamingJSONReader) Process(callbacks StreamingCallbacks) (StreamingM
 				}
 			case "endFrame":
 				if f, ok := val.(float64); ok {
-					meta.FrameCount = uint32(f)
+					meta.EndFrame = uint32(f)
 				}
 			case "captureDelay":
 				if f, ok := val.(float64); ok {

@@ -40,10 +40,10 @@ func TestStreamingConverter_RealFile(t *testing.T) {
 
 	assert.NotEmpty(t, manifest.WorldName)
 	assert.NotEmpty(t, manifest.MissionName)
-	assert.Greater(t, manifest.FrameCount, uint32(0))
+	assert.Greater(t, manifest.EndFrame, uint32(0))
 	assert.Greater(t, len(manifest.Entities), 0)
-	t.Logf("Manifest: %s on %s, %d frames, %d entities, %d events, %d chunks",
-		manifest.MissionName, manifest.WorldName, manifest.FrameCount,
+	t.Logf("Manifest: %s on %s, endFrame %d, %d entities, %d events, %d chunks",
+		manifest.MissionName, manifest.WorldName, manifest.EndFrame,
 		len(manifest.Entities), len(manifest.Events), manifest.ChunkCount)
 
 	// Verify each chunk exists and is valid

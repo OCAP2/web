@@ -17,14 +17,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderBottomBar(frameCount = 200, opts?: {
+function renderBottomBar(endFrame = 199, opts?: {
   focusRange?: FocusRange | null;
   editingFocus?: boolean;
   isAdmin?: boolean;
   showFullTimeline?: boolean;
 }) {
   const { engine, renderer } = createTestEngine();
-  engine.loadRecording(makeManifest([], [], frameCount));
+  engine.loadRecording(makeManifest([], [], endFrame));
 
   const [panelOpen, setPanelOpen] = createSignal(true);
   const onTogglePanel = vi.fn(() => setPanelOpen((v) => !v));
@@ -155,15 +155,15 @@ describe("BottomBar", () => {
   });
 
   it("displays total time from endFrame", () => {
-    // frameCount=200, endFrame=199, captureDelayMs=1000: 199*1000=199000ms = 0:03:19
-    renderBottomBar(200);
+    // endFrame=199, captureDelayMs=1000: 199*1000=199000ms = 0:03:19
+    renderBottomBar(199);
 
     // The time display shows "current / total" — total is based on endFrame
     expect(screen.getByText("0:03:19")).toBeTruthy();
   });
 
   it("shows FocusToolbar when editingFocus is true", () => {
-    renderBottomBar(200, { editingFocus: true, isAdmin: true });
+    renderBottomBar(199, { editingFocus: true, isAdmin: true });
     expect(screen.getByText("Focus Range")).toBeTruthy();
     expect(screen.getByText("Save")).toBeTruthy();
   });
