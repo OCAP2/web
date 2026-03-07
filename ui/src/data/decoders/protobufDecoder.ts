@@ -165,7 +165,6 @@ function convertEvent(pb: PbEvent): EventDef | null {
         objectType: pb.objectType || "",
         unitName: pb.unitName || "",
         side: pb.side || undefined,
-        color: pb.color || undefined,
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
     case "terminalHackStarted":

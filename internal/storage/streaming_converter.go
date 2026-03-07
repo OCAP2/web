@@ -148,7 +148,6 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 					ObjectType: evt.ObjectType,
 					UnitName:   evt.UnitName,
 					Side:       evt.Side,
-					Color:      evt.Color,
 				})
 			}
 			return nil

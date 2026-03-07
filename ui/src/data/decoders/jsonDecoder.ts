@@ -281,18 +281,16 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
     }
     case "captured":
     case "contested": {
-      // Extension format: [frameNum, "captured", [objectType, unitName, side, color, [posX, posY, posZ]]]
+      // Extension format: [frameNum, "captured", [objectType, unitName, side, [posX, posY, posZ]]]
       const capData = raw[2] as unknown[] | undefined;
       const capPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
       const maybeSide = capData?.[2];
-      const maybeColor = capData?.[3];
       return {
         frameNum,
         type,
         unitName: String(capData?.[1] ?? ""),
         objectType: String(capData?.[0] ?? ""),
         side: typeof maybeSide === "string" ? maybeSide : undefined,
-        color: typeof maybeColor === "string" && maybeColor ? maybeColor : undefined,
         position: capPos ? [capPos[0], capPos[1]] as [number, number] : undefined,
       };
     }

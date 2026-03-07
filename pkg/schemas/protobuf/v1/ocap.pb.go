@@ -823,7 +823,6 @@ type Event struct {
 	ObjectType    string                 `protobuf:"bytes,10,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
 	UnitName      string                 `protobuf:"bytes,11,opt,name=unit_name,json=unitName,proto3" json:"unit_name,omitempty"`
 	Side          string                 `protobuf:"bytes,12,opt,name=side,proto3" json:"side,omitempty"`
-	Color         string                 `protobuf:"bytes,13,opt,name=color,proto3" json:"color,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -938,13 +937,6 @@ func (x *Event) GetUnitName() string {
 func (x *Event) GetSide() string {
 	if x != nil {
 		return x.Side
-	}
-	return ""
-}
-
-func (x *Event) GetColor() string {
-	if x != nil {
-		return x.Color
 	}
 	return ""
 }
@@ -1285,7 +1277,7 @@ const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	"\n" +
 	"group_name\x18\f \x01(\tR\tgroupName\x12\x12\n" +
 	"\x04side\x18\r \x01(\tR\x04side\x12\x1b\n" +
-	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xd2\x02\n" +
+	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xbc\x02\n" +
 	"\x05Event\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1b\n" +
@@ -1300,8 +1292,7 @@ const file_pkg_schemas_protobuf_v1_ocap_proto_rawDesc = "" +
 	" \x01(\tR\n" +
 	"objectType\x12\x1b\n" +
 	"\tunit_name\x18\v \x01(\tR\bunitName\x12\x12\n" +
-	"\x04side\x18\f \x01(\tR\x04side\x12\x14\n" +
-	"\x05color\x18\r \x01(\tR\x05color\"\xbe\x02\n" +
+	"\x04side\x18\f \x01(\tR\x04side\"\xbe\x02\n" +
 	"\tMarkerDef\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1f\n" +

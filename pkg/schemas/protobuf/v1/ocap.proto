@@ -108,7 +108,6 @@ message Event {
   string object_type = 10;
   string unit_name = 11;
   string side = 12;
-  string color = 13;
 }
 
 message MarkerDef {

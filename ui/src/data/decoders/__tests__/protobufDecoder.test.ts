@@ -281,7 +281,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       captureDelayMs: 1000,
       chunkCount: 1,
       events: [
-        { frameNum: 30, type: "captured", objectType: "sector", unitName: "Sector Alpha", side: "WEST", color: "#0000FF", posX: 5000, posY: 6000 },
+        { frameNum: 30, type: "captured", objectType: "sector", unitName: "Sector Alpha", side: "WEST", posX: 5000, posY: 6000 },
         { frameNum: 40, type: "capturedFlag", objectType: "flag", unitName: "PlayerB" },
       ],
     });
@@ -295,7 +295,6 @@ describe("ProtobufDecoder.decodeManifest", () => {
       expect(evt0.unitName).toBe("Sector Alpha");
       expect(evt0.objectType).toBe("sector");
       expect(evt0.side).toBe("WEST");
-      expect(evt0.color).toBe("#0000FF");
       expect(evt0.position).toEqual([5000, 6000]);
     }
 
