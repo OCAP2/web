@@ -11,7 +11,7 @@ import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon } from "../../../components/Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 function sideColor(side?: string): string {
@@ -31,7 +31,7 @@ function eventIcon(event: GameEvent): JSX.Element {
       : <BulletIcon size={16} />;
   }
   if (event instanceof ConnectEvent) return <LinkIcon size={16} />;
-  if (event instanceof EndMissionEvent) return <TargetIcon size={16} />;
+  if (event instanceof EndMissionEvent) return <DoorExitIcon size={16} />;
   if (event instanceof CapturedEvent) {
     return event.type === "contested"
       ? <AlertTriangleIcon size={16} />
