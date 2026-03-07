@@ -151,14 +151,24 @@ function convertEvent(pb: PbEvent): EventDef | null {
       return { frameNum, type, message: pb.message ?? "" };
     case "captured":
     case "capturedFlag":
-    case "contested":
+    case "contested": {
+      // New postgres format: "objectType,unitName,side"
+      // Old postgres format: "unitName" or "unitName,objectType"
+      // Distinguish by checking if parts[0] looks like an objectType keyword
+      const parts = pb.message?.split(",") ?? [];
+      const knownObjectTypes = ["sector", "flag"];
+      const isNewFormat = knownObjectTypes.includes(parts[0]?.toLowerCase() ?? "");
       return {
         frameNum,
         type,
-        unitName: pb.message?.split(",")[0] ?? "",
-        objectType: pb.message?.split(",")[1] ?? (type === "capturedFlag" ? "flag" : ""),
+        objectType: isNewFormat
+          ? (parts[0] ?? "")
+          : (parts[1] ?? (type === "capturedFlag" ? "flag" : "")),
+        unitName: isNewFormat ? (parts[1] ?? "") : (parts[0] ?? ""),
+        side: isNewFormat ? (parts[2] || undefined) : undefined,
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
+    }
     case "terminalHackStarted":
     case "terminalHackCanceled":
       return { frameNum, type, unitName: pb.message ?? "" };

@@ -92,6 +92,7 @@ export interface CapturedEventDef {
   type: "captured" | "capturedFlag" | "contested";
   unitName: string;
   objectType: string;
+  side?: string;
   position?: [number, number];
 }
 

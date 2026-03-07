@@ -248,7 +248,10 @@ export function EventsTab(): JSX.Element {
                         <span class={styles.eventMessage}>
                           {event.type === "capturedFlag"
                             ? <>{event.unitName} {t("captured")} {event.objectType}</>
-                            : <>{t("sector")} {event.unitName} {t(event.type)}</>
+                            : <>
+                                {t("sector")} {event.unitName} {t(event.type)}
+                                {event.side ? <> <span style={{ color: sideColor(event.side) }}>({event.side})</span></> : null}
+                              </>
                           }
                         </span>
                         <span class={styles.eventMeta}>

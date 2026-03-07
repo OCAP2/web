@@ -643,6 +643,7 @@ describe("JsonDecoder.decodeManifest", () => {
     if (event.type === "captured") {
       expect(event.unitName).toBe("PlayerB");
       expect(event.objectType).toBe("flag");
+      expect(event.side).toBe("WEST");
       expect(event.position).toEqual([100, 200]);
     }
   });
