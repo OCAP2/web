@@ -156,6 +156,7 @@ function convertEvent(pb: PbEvent): EventDef | null {
       // Old postgres format: "unitName" or "unitName,objectType"
       // Distinguish by checking if parts[0] looks like an objectType keyword
       const parts = pb.message?.split(",") ?? [];
+      // Keep in sync with objectType values sent by the extension (e.g. "sector", "flag")
       const knownObjectTypes = ["sector", "flag"];
       const isNewFormat = knownObjectTypes.includes(parts[0]?.toLowerCase() ?? "");
       return {
