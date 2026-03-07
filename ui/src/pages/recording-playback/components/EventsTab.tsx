@@ -11,7 +11,7 @@ import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon } from "../../../components/Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 function sideColor(side?: string): string {
@@ -24,26 +24,27 @@ function sideColor(side?: string): string {
   }
 }
 
-function eventIcon(event: GameEvent): JSX.Element {
+function eventStyle(event: GameEvent): { icon: JSX.Element; color: string } {
   if (event instanceof HitKilledEvent) {
     return event.type === "killed"
-      ? <SkullIcon size={16} />
-      : <BulletIcon size={16} />;
-  }
-  if (event instanceof ConnectEvent) return <LinkIcon size={16} />;
-  if (event instanceof EndMissionEvent) return <TargetIcon size={16} />;
-  return <ActivityIcon size={16} />;
-}
-
-function eventColor(event: GameEvent): string {
-  if (event instanceof HitKilledEvent) {
-    return event.type === "killed" ? "var(--accent-danger)" : "var(--accent-warning)";
+      ? { icon: <SkullIcon size={16} />, color: "var(--accent-danger)" }
+      : { icon: <BulletIcon size={16} />, color: "var(--accent-warning)" };
   }
   if (event instanceof ConnectEvent) {
-    return event.type === "connected" ? "var(--accent-success)" : "#888";
+    return { icon: <LinkIcon size={16} />, color: event.type === "connected" ? "var(--accent-success)" : "#888" };
   }
-  if (event instanceof EndMissionEvent) return "var(--accent-purple)";
-  return "#888";
+  if (event instanceof EndMissionEvent) {
+    return { icon: <DoorExitIcon size={16} />, color: "var(--accent-purple)" };
+  }
+  if (event instanceof CapturedEvent) {
+    return event.type === "contested"
+      ? { icon: <AlertTriangleIcon size={16} />, color: "var(--accent-warning)" }
+      : { icon: <FlagIcon size={16} />, color: "var(--accent-primary)" };
+  }
+  if (event instanceof TerminalHackEvent) {
+    return { icon: <TerminalIcon size={16} />, color: "var(--accent-warning)" };
+  }
+  return { icon: <ActivityIcon size={16} />, color: "#888" };
 }
 
 export function EventsTab(): JSX.Element {
@@ -154,7 +155,7 @@ export function EventsTab(): JSX.Element {
         }>
           <For each={filteredEvents()}>
             {(event) => {
-              const color = eventColor(event);
+              const { icon, color } = eventStyle(event);
               return (
                 <button
                   data-testid={`event-row-${event.frameNum}`}
@@ -163,7 +164,7 @@ export function EventsTab(): JSX.Element {
                   onClick={() => handleEventClick(event)}
                 >
                   <span class={styles.eventIcon} style={{ color }}>
-                    {eventIcon(event)}
+                    {icon}
                   </span>
                   <span class={styles.eventContent}>
                     {event instanceof HitKilledEvent ? (
@@ -223,7 +224,6 @@ export function EventsTab(): JSX.Element {
                           <span style={{ color: sideColor(event.side) }}>
                             {event.side}
                           </span>
-                          {" \u2014 "}
                           <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                         </span>
                         <span class={styles.eventMeta}>

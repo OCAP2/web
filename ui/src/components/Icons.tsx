@@ -498,6 +498,21 @@ export const BracketInIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const DoorExitIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size)} height={s(p.size)}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+export const FlagIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size)} height={s(p.size)}>
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+    <line x1="4" y1="22" x2="4" y2="15" />
+  </svg>
+);
+
 export const BracketOutIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width={s(p.size)} height={s(p.size)}>
     <polyline points="16 4 20 4 20 20 16 20" />
