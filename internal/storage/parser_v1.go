@@ -179,7 +179,7 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return event
 	}
 
-	// Captured/contested sector events: [frameNum, "type", [objectType, unitName, side?, [posX, posY, posZ]?]]
+	// Captured/contested sector events: [frameNum, "type", [objectType, unitName, side?, color?, [posX, posY, posZ]?]]
 	if event.Type == "captured" || event.Type == "contested" {
 		if len(evtArr) > 2 {
 			if arr, ok := evtArr[2].([]interface{}); ok {
