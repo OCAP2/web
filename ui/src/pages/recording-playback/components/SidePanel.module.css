@@ -526,7 +526,7 @@
 .eventWeapon {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  color: var(--text-dimmest);
+  color: var(--text-dimmer);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
