@@ -48,7 +48,7 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 		"worldName":    "altis",
 		"missionName":  "Integration Test Mission",
 		"captureDelay": 1.0,
-		"endFrame":     10,
+		"endFrame":     9,
 		"entities": []map[string]interface{}{
 			{
 				"id":            1,
@@ -148,7 +148,7 @@ func TestIntegration_ConversionAndStaticServing(t *testing.T) {
 		require.NoError(t, err)
 		err = repo.UpdateConversionStatus(ctx, 1, "completed")
 		require.NoError(t, err)
-		err = repo.UpdateChunkCount(ctx, 1, 2) // 10 frames / 5 per chunk = 2 chunks
+		err = repo.UpdateChunkCount(ctx, 1, 2) // endFrame 9 = 10 frames / 5 per chunk = 2 chunks
 		require.NoError(t, err)
 	})
 
