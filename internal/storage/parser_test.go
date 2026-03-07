@@ -804,6 +804,14 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		assert.Empty(t, evt.Message)
 	})
 
+	t.Run("endMission with single-element array", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{376.0, "endMission", []interface{}{"Mission complete"}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "endMission", evt.Type)
+		assert.Equal(t, "Mission complete", evt.Message)
+		assert.Empty(t, evt.Side)
+	})
+
 	t.Run("endMission without data", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{376.0, "endMission"})
 		require.NotNil(t, evt)
