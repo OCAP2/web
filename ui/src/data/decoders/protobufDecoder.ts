@@ -144,35 +144,29 @@ function convertEvent(pb: PbEvent): EventDef | null {
       return {
         frameNum,
         type,
-        side: pb.message?.split(",")[0] ?? "",
-        message: pb.message?.split(",").slice(1).join(",") ?? "",
+        side: pb.side || "",
+        message: pb.message ?? "",
       };
     case "generalEvent":
       return { frameNum, type, message: pb.message ?? "" };
-    case "capturedFlag": {
-      // Legacy v1 JSON: message = "unitName,unitSide,flagSide"
-      const parts = pb.message?.split(",") ?? [];
+    case "capturedFlag":
       return {
         frameNum,
         type,
-        objectType: "flag",
-        unitName: parts[0] ?? "",
+        objectType: pb.objectType || "flag",
+        unitName: pb.unitName || "",
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
-    }
     case "captured":
-    case "contested": {
-      // v1 JSON: message = "objectType,unitName,side"
-      const parts = pb.message?.split(",") ?? [];
+    case "contested":
       return {
         frameNum,
         type,
-        objectType: parts[0] ?? "",
-        unitName: parts[1] ?? "",
-        side: parts[2] || undefined,
+        objectType: pb.objectType || "",
+        unitName: pb.unitName || "",
+        side: pb.side || undefined,
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
-    }
     case "terminalHackStarted":
     case "terminalHackCanceled":
       return { frameNum, type, unitName: pb.message ?? "" };

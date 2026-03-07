@@ -195,6 +195,9 @@ export interface Event {
   weapon: string;
   posX: number;
   posY: number;
+  objectType: string;
+  unitName: string;
+  side: string;
 }
 
 export interface MarkerDef {
@@ -1584,7 +1587,20 @@ export const EntityState: MessageFns<EntityState> = {
 };
 
 function createBaseEvent(): Event {
-  return { frameNum: 0, type: "", sourceId: 0, targetId: 0, message: "", distance: 0, weapon: "", posX: 0, posY: 0 };
+  return {
+    frameNum: 0,
+    type: "",
+    sourceId: 0,
+    targetId: 0,
+    message: "",
+    distance: 0,
+    weapon: "",
+    posX: 0,
+    posY: 0,
+    objectType: "",
+    unitName: "",
+    side: "",
+  };
 }
 
 export const Event: MessageFns<Event> = {
@@ -1615,6 +1631,15 @@ export const Event: MessageFns<Event> = {
     }
     if (message.posY !== 0) {
       writer.uint32(77).float(message.posY);
+    }
+    if (message.objectType !== "") {
+      writer.uint32(82).string(message.objectType);
+    }
+    if (message.unitName !== "") {
+      writer.uint32(90).string(message.unitName);
+    }
+    if (message.side !== "") {
+      writer.uint32(98).string(message.side);
     }
     return writer;
   },
@@ -1698,6 +1723,30 @@ export const Event: MessageFns<Event> = {
           message.posY = reader.float();
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.objectType = reader.string();
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.unitName = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.side = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1738,6 +1787,17 @@ export const Event: MessageFns<Event> = {
         : isSet(object.pos_y)
         ? globalThis.Number(object.pos_y)
         : 0,
+      objectType: isSet(object.objectType)
+        ? globalThis.String(object.objectType)
+        : isSet(object.object_type)
+        ? globalThis.String(object.object_type)
+        : "",
+      unitName: isSet(object.unitName)
+        ? globalThis.String(object.unitName)
+        : isSet(object.unit_name)
+        ? globalThis.String(object.unit_name)
+        : "",
+      side: isSet(object.side) ? globalThis.String(object.side) : "",
     };
   },
 
@@ -1770,6 +1830,15 @@ export const Event: MessageFns<Event> = {
     if (message.posY !== 0) {
       obj.posY = message.posY;
     }
+    if (message.objectType !== "") {
+      obj.objectType = message.objectType;
+    }
+    if (message.unitName !== "") {
+      obj.unitName = message.unitName;
+    }
+    if (message.side !== "") {
+      obj.side = message.side;
+    }
     return obj;
   },
 
@@ -1787,6 +1856,9 @@ export const Event: MessageFns<Event> = {
     message.weapon = object.weapon ?? "";
     message.posX = object.posX ?? 0;
     message.posY = object.posY ?? 0;
+    message.objectType = object.objectType ?? "";
+    message.unitName = object.unitName ?? "";
+    message.side = object.side ?? "";
     return message;
   },
 };

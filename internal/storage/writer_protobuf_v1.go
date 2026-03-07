@@ -148,15 +148,18 @@ func (w *ProtobufWriterV1) toProtoEntityDef(e EntityDef) *pbv1.EntityDef {
 // toProtoEvent converts schema-agnostic Event to pbv1.Event
 func (w *ProtobufWriterV1) toProtoEvent(e Event) *pbv1.Event {
 	return &pbv1.Event{
-		FrameNum: e.FrameNum,
-		Type:     e.Type,
-		SourceId: e.SourceID,
-		TargetId: e.TargetID,
-		Message:  e.Message,
-		Distance: e.Distance,
-		Weapon:   e.Weapon,
-		PosX:     e.PosX,
-		PosY:     e.PosY,
+		FrameNum:   e.FrameNum,
+		Type:       e.Type,
+		SourceId:   e.SourceID,
+		TargetId:   e.TargetID,
+		Message:    e.Message,
+		Distance:   e.Distance,
+		Weapon:     e.Weapon,
+		PosX:       e.PosX,
+		PosY:       e.PosY,
+		ObjectType: e.ObjectType,
+		UnitName:   e.UnitName,
+		Side:       e.Side,
 	}
 }
 

@@ -237,7 +237,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       chunkSize: 100,
       captureDelayMs: 1000,
       chunkCount: 1,
-      events: [{ frameNum: 99, type: "endMission", message: "WEST,Mission Complete" }],
+      events: [{ frameNum: 99, type: "endMission", side: "WEST", message: "Mission Complete" }],
     });
 
     const manifest = decoder.decodeManifest(buffer);
@@ -281,8 +281,8 @@ describe("ProtobufDecoder.decodeManifest", () => {
       captureDelayMs: 1000,
       chunkCount: 1,
       events: [
-        { frameNum: 30, type: "captured", message: "sector,Sector Alpha,WEST", posX: 5000, posY: 6000 },
-        { frameNum: 40, type: "capturedFlag", message: "PlayerB,WEST,EAST" },
+        { frameNum: 30, type: "captured", objectType: "sector", unitName: "Sector Alpha", side: "WEST", posX: 5000, posY: 6000 },
+        { frameNum: 40, type: "capturedFlag", objectType: "flag", unitName: "PlayerB" },
       ],
     });
 
@@ -317,7 +317,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       captureDelayMs: 1000,
       chunkCount: 1,
       events: [
-        { frameNum: 30, type: "capturedFlag", message: "PlayerC" },
+        { frameNum: 30, type: "capturedFlag", objectType: "flag", unitName: "PlayerC" },
       ],
     });
 

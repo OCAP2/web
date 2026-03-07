@@ -820,6 +820,9 @@ type Event struct {
 	Weapon        string                 `protobuf:"bytes,7,opt,name=weapon,proto3" json:"weapon,omitempty"`
 	PosX          float32                `protobuf:"fixed32,8,opt,name=pos_x,json=posX,proto3" json:"pos_x,omitempty"`
 	PosY          float32                `protobuf:"fixed32,9,opt,name=pos_y,json=posY,proto3" json:"pos_y,omitempty"`
+	ObjectType    string                 `protobuf:"bytes,10,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	UnitName      string                 `protobuf:"bytes,11,opt,name=unit_name,json=unitName,proto3" json:"unit_name,omitempty"`
+	Side          string                 `protobuf:"bytes,12,opt,name=side,proto3" json:"side,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -915,6 +918,27 @@ func (x *Event) GetPosY() float32 {
 		return x.PosY
 	}
 	return 0
+}
+
+func (x *Event) GetObjectType() string {
+	if x != nil {
+		return x.ObjectType
+	}
+	return ""
+}
+
+func (x *Event) GetUnitName() string {
+	if x != nil {
+		return x.UnitName
+	}
+	return ""
+}
+
+func (x *Event) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
 }
 
 type MarkerDef struct {
@@ -1254,7 +1278,7 @@ const file_ocap_proto_rawDesc = "" +
 	"\n" +
 	"group_name\x18\f \x01(\tR\tgroupName\x12\x12\n" +
 	"\x04side\x18\r \x01(\tR\x04side\x12\x1b\n" +
-	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xea\x01\n" +
+	"\tframe_num\x18\x0e \x01(\rR\bframeNum\"\xbc\x02\n" +
 	"\x05Event\x12\x1b\n" +
 	"\tframe_num\x18\x01 \x01(\rR\bframeNum\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1b\n" +
@@ -1264,7 +1288,12 @@ const file_ocap_proto_rawDesc = "" +
 	"\bdistance\x18\x06 \x01(\x02R\bdistance\x12\x16\n" +
 	"\x06weapon\x18\a \x01(\tR\x06weapon\x12\x13\n" +
 	"\x05pos_x\x18\b \x01(\x02R\x04posX\x12\x13\n" +
-	"\x05pos_y\x18\t \x01(\x02R\x04posY\"\xbe\x02\n" +
+	"\x05pos_y\x18\t \x01(\x02R\x04posY\x12\x1f\n" +
+	"\vobject_type\x18\n" +
+	" \x01(\tR\n" +
+	"objectType\x12\x1b\n" +
+	"\tunit_name\x18\v \x01(\tR\bunitName\x12\x12\n" +
+	"\x04side\x18\f \x01(\tR\x04side\"\xbe\x02\n" +
 	"\tMarkerDef\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1f\n" +

@@ -167,12 +167,11 @@ func parseEventArray(evtArr []interface{}) *Event {
 	// End mission: [frameNum, "endMission", [side, message]] or [frameNum, "endMission", "message"]
 	if event.Type == "endMission" {
 		if len(evtArr) > 2 {
-			if arr, ok := evtArr[2].([]interface{}); ok {
-				parts := make([]string, len(arr))
-				for i, v := range arr {
-					parts[i] = toString(v)
-				}
-				event.Message = strings.Join(parts, ",")
+			if arr, ok := evtArr[2].([]interface{}); ok && len(arr) >= 2 {
+				event.Side = toString(arr[0])
+				event.Message = toString(arr[1])
+			} else if arr, ok := evtArr[2].([]interface{}); ok && len(arr) == 1 {
+				event.Message = toString(arr[0])
 			} else {
 				event.Message = toString(evtArr[2])
 			}
@@ -180,24 +179,50 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return event
 	}
 
-	// Captured and terminal hack events: [frameNum, "type", [data, ...]]
-	if event.Type == "captured" || event.Type == "contested" || event.Type == "capturedFlag" || event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
+	// Captured/contested sector events: [frameNum, "type", [objectType, unitName, side?, [posX, posY, posZ]?]]
+	if event.Type == "captured" || event.Type == "contested" {
 		if len(evtArr) > 2 {
 			if arr, ok := evtArr[2].([]interface{}); ok {
-				// Build message from string parts, extract position from array elements
-				var parts []string
-				var posFound bool
+				var strIdx int
 				for _, v := range arr {
 					if posArr, ok := v.([]interface{}); ok && len(posArr) >= 2 {
-						// Position array [x, y, z] — take first found as event position
-						if !posFound {
-							event.PosX = float32(toFloat64(posArr[0]))
-							event.PosY = float32(toFloat64(posArr[1]))
-							posFound = true
-						}
+						event.PosX = float32(toFloat64(posArr[0]))
+						event.PosY = float32(toFloat64(posArr[1]))
 					} else {
-						parts = append(parts, toString(v))
+						switch strIdx {
+						case 0:
+							event.ObjectType = toString(v)
+						case 1:
+							event.UnitName = toString(v)
+						case 2:
+							event.Side = toString(v)
+						}
+						strIdx++
 					}
+				}
+			}
+		}
+		return event
+	}
+
+	// Legacy capturedFlag: [frameNum, "capturedFlag", [unitName, unitSide, flagSide]]
+	if event.Type == "capturedFlag" {
+		event.ObjectType = "flag"
+		if len(evtArr) > 2 {
+			if arr, ok := evtArr[2].([]interface{}); ok && len(arr) > 0 {
+				event.UnitName = toString(arr[0])
+			}
+		}
+		return event
+	}
+
+	// Terminal hack events: [frameNum, "type", [data, ...]]
+	if event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
+		if len(evtArr) > 2 {
+			if arr, ok := evtArr[2].([]interface{}); ok {
+				var parts []string
+				for _, v := range arr {
+					parts = append(parts, toString(v))
 				}
 				event.Message = strings.Join(parts, ",")
 			}

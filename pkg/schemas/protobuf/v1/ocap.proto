@@ -105,6 +105,9 @@ message Event {
   string weapon = 7;
   float pos_x = 8;
   float pos_y = 9;
+  string object_type = 10;
+  string unit_name = 11;
+  string side = 12;
 }
 
 message MarkerDef {

@@ -136,15 +136,18 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 			evt := parseEventArray(evtArr)
 			if evt != nil {
 				events = append(events, &pbv1.Event{
-					FrameNum: evt.FrameNum,
-					Type:     evt.Type,
-					SourceId: evt.SourceID,
-					TargetId: evt.TargetID,
-					Message:  evt.Message,
-					Distance: evt.Distance,
-					Weapon:   evt.Weapon,
-					PosX:     evt.PosX,
-					PosY:     evt.PosY,
+					FrameNum:   evt.FrameNum,
+					Type:       evt.Type,
+					SourceId:   evt.SourceID,
+					TargetId:   evt.TargetID,
+					Message:    evt.Message,
+					Distance:   evt.Distance,
+					Weapon:     evt.Weapon,
+					PosX:       evt.PosX,
+					PosY:       evt.PosY,
+					ObjectType: evt.ObjectType,
+					UnitName:   evt.UnitName,
+					Side:       evt.Side,
 				})
 			}
 			return nil
