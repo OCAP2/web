@@ -132,7 +132,7 @@
 
 .forceTotal {
   font-size: var(--font-size-sm);
-  color: var(--text-dimmest);
+  color: var(--text-dimmer);
   font-family: var(--font-mono);
 }
 

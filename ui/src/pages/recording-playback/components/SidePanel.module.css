@@ -511,7 +511,7 @@
 .eventTime {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  color: var(--text-dimmest);
+  color: var(--text-dimmer);
   display: flex;
   align-items: center;
   gap: 3px;
