@@ -281,7 +281,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       captureDelayMs: 1000,
       chunkCount: 1,
       events: [
-        { frameNum: 30, type: "captured", objectType: "flag", unitName: "PlayerA", side: "WEST", color: "#FF0000", posX: 5000, posY: 6000 },
+        { frameNum: 30, type: "captured", objectType: "sector", unitName: "Sector Alpha", side: "WEST", color: "#0000FF", posX: 5000, posY: 6000 },
         { frameNum: 40, type: "capturedFlag", objectType: "flag", unitName: "PlayerB" },
       ],
     });
@@ -292,10 +292,10 @@ describe("ProtobufDecoder.decodeManifest", () => {
     const evt0 = manifest.events[0];
     expect(evt0.type).toBe("captured");
     if (evt0.type === "captured") {
-      expect(evt0.unitName).toBe("PlayerA");
-      expect(evt0.objectType).toBe("flag");
+      expect(evt0.unitName).toBe("Sector Alpha");
+      expect(evt0.objectType).toBe("sector");
       expect(evt0.side).toBe("WEST");
-      expect(evt0.color).toBe("#FF0000");
+      expect(evt0.color).toBe("#0000FF");
       expect(evt0.position).toEqual([5000, 6000]);
     }
 
