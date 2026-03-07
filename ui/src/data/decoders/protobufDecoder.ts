@@ -149,24 +149,27 @@ function convertEvent(pb: PbEvent): EventDef | null {
       };
     case "generalEvent":
       return { frameNum, type, message: pb.message ?? "" };
-    case "captured":
-    case "capturedFlag":
-    case "contested": {
-      // New postgres format: "objectType,unitName,side"
-      // Old postgres format: "unitName" or "unitName,objectType"
-      // Distinguish by checking if parts[0] looks like an objectType keyword
+    case "capturedFlag": {
+      // Legacy v1 JSON: message = "unitName,unitSide,flagSide"
       const parts = pb.message?.split(",") ?? [];
-      // Keep in sync with objectType values sent by the extension (e.g. "sector", "flag")
-      const knownObjectTypes = ["sector", "flag"];
-      const isNewFormat = knownObjectTypes.includes(parts[0]?.toLowerCase() ?? "");
       return {
         frameNum,
         type,
-        objectType: isNewFormat
-          ? (parts[0] ?? "")
-          : (parts[1] ?? (type === "capturedFlag" ? "flag" : "")),
-        unitName: isNewFormat ? (parts[1] ?? "") : (parts[0] ?? ""),
-        side: isNewFormat ? (parts[2] || undefined) : undefined,
+        objectType: "flag",
+        unitName: parts[0] ?? "",
+        position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
+      };
+    }
+    case "captured":
+    case "contested": {
+      // v1 JSON: message = "objectType,unitName,side"
+      const parts = pb.message?.split(",") ?? [];
+      return {
+        frameNum,
+        type,
+        objectType: parts[0] ?? "",
+        unitName: parts[1] ?? "",
+        side: parts[2] || undefined,
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
     }

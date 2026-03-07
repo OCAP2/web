@@ -282,7 +282,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       chunkCount: 1,
       events: [
         { frameNum: 30, type: "captured", message: "sector,Sector Alpha,WEST", posX: 5000, posY: 6000 },
-        { frameNum: 40, type: "capturedFlag", message: "flag,PlayerB" },
+        { frameNum: 40, type: "capturedFlag", message: "PlayerB,WEST,EAST" },
       ],
     });
 
@@ -307,7 +307,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
     }
   });
 
-  it("decodes capturedFlag with no objectType defaults to 'flag'", () => {
+  it("decodes capturedFlag with player name only", () => {
     const buffer = encodePb(PbManifest, {
       version: 1,
       worldName: "W",
