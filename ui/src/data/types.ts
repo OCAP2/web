@@ -93,6 +93,7 @@ export interface CapturedEventDef {
   unitName: string;
   objectType: string;
   side?: string;
+  color?: string;
   position?: [number, number];
 }
 

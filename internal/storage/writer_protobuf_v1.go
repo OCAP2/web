@@ -160,6 +160,7 @@ func (w *ProtobufWriterV1) toProtoEvent(e Event) *pbv1.Event {
 		ObjectType: e.ObjectType,
 		UnitName:   e.UnitName,
 		Side:       e.Side,
+		Color:      e.Color,
 	}
 }
 

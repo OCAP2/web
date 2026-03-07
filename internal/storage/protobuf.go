@@ -80,6 +80,7 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 			ObjectType: evt.ObjectType,
 			UnitName:   evt.UnitName,
 			Side:       evt.Side,
+			Color:      evt.Color,
 		})
 	}
 

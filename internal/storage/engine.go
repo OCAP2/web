@@ -34,6 +34,7 @@ type Event struct {
 	ObjectType string  `json:"objectType,omitempty"`
 	UnitName   string  `json:"unitName,omitempty"`
 	Side       string  `json:"side,omitempty"`
+	Color      string  `json:"color,omitempty"`
 }
 
 // EntityDef defines an entity's metadata

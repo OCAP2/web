@@ -198,6 +198,7 @@ export interface Event {
   objectType: string;
   unitName: string;
   side: string;
+  color: string;
 }
 
 export interface MarkerDef {
@@ -1600,6 +1601,7 @@ function createBaseEvent(): Event {
     objectType: "",
     unitName: "",
     side: "",
+    color: "",
   };
 }
 
@@ -1640,6 +1642,9 @@ export const Event: MessageFns<Event> = {
     }
     if (message.side !== "") {
       writer.uint32(98).string(message.side);
+    }
+    if (message.color !== "") {
+      writer.uint32(106).string(message.color);
     }
     return writer;
   },
@@ -1747,6 +1752,14 @@ export const Event: MessageFns<Event> = {
           message.side = reader.string();
           continue;
         }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.color = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1798,6 +1811,7 @@ export const Event: MessageFns<Event> = {
         ? globalThis.String(object.unit_name)
         : "",
       side: isSet(object.side) ? globalThis.String(object.side) : "",
+      color: isSet(object.color) ? globalThis.String(object.color) : "",
     };
   },
 
@@ -1839,6 +1853,9 @@ export const Event: MessageFns<Event> = {
     if (message.side !== "") {
       obj.side = message.side;
     }
+    if (message.color !== "") {
+      obj.color = message.color;
+    }
     return obj;
   },
 
@@ -1859,6 +1876,7 @@ export const Event: MessageFns<Event> = {
     message.objectType = object.objectType ?? "";
     message.unitName = object.unitName ?? "";
     message.side = object.side ?? "";
+    message.color = object.color ?? "";
     return message;
   },
 };

@@ -196,6 +196,8 @@ func parseEventArray(evtArr []interface{}) *Event {
 							event.UnitName = toString(v)
 						case 2:
 							event.Side = toString(v)
+						case 3:
+							event.Color = toString(v)
 						}
 						strIdx++
 					}

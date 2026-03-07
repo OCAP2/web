@@ -823,7 +823,21 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		assert.Equal(t, "WEST", evt.Side)
 	})
 
-	t.Run("captured with position", func(t *testing.T) {
+	t.Run("captured with color and position", func(t *testing.T) {
+		evt := p.parseEvent([]interface{}{200.0, "captured", []interface{}{
+			"flag", "PlayerName", "WEST", "#FF0000", []interface{}{5000.0, 6000.0, 0.0},
+		}})
+		require.NotNil(t, evt)
+		assert.Equal(t, "captured", evt.Type)
+		assert.Equal(t, "flag", evt.ObjectType)
+		assert.Equal(t, "PlayerName", evt.UnitName)
+		assert.Equal(t, "WEST", evt.Side)
+		assert.Equal(t, "#FF0000", evt.Color)
+		assert.Equal(t, float32(5000.0), evt.PosX)
+		assert.Equal(t, float32(6000.0), evt.PosY)
+	})
+
+	t.Run("captured with position but no color", func(t *testing.T) {
 		evt := p.parseEvent([]interface{}{200.0, "captured", []interface{}{
 			"sector", "Sector Alpha", "WEST", []interface{}{5000.0, 6000.0, 0.0},
 		}})
@@ -832,6 +846,7 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 		assert.Equal(t, "sector", evt.ObjectType)
 		assert.Equal(t, "Sector Alpha", evt.UnitName)
 		assert.Equal(t, "WEST", evt.Side)
+		assert.Empty(t, evt.Color)
 		assert.Equal(t, float32(5000.0), evt.PosX)
 		assert.Equal(t, float32(6000.0), evt.PosY)
 	})
