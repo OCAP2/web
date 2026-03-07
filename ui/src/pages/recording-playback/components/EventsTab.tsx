@@ -11,7 +11,7 @@ import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon } from "../../../components/Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, TargetIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon } from "../../../components/Icons";
 import styles from "./SidePanel.module.css";
 
 function sideColor(side?: string): string {
@@ -32,6 +32,12 @@ function eventIcon(event: GameEvent): JSX.Element {
   }
   if (event instanceof ConnectEvent) return <LinkIcon size={16} />;
   if (event instanceof EndMissionEvent) return <TargetIcon size={16} />;
+  if (event instanceof CapturedEvent) {
+    return event.type === "contested"
+      ? <AlertTriangleIcon size={16} />
+      : <FlagIcon size={16} />;
+  }
+  if (event instanceof TerminalHackEvent) return <TerminalIcon size={16} />;
   return <ActivityIcon size={16} />;
 }
 
@@ -43,6 +49,10 @@ function eventColor(event: GameEvent): string {
     return event.type === "connected" ? "var(--accent-success)" : "#888";
   }
   if (event instanceof EndMissionEvent) return "var(--accent-purple)";
+  if (event instanceof CapturedEvent) {
+    return event.type === "contested" ? "var(--accent-warning)" : "var(--accent-primary)";
+  }
+  if (event instanceof TerminalHackEvent) return "var(--accent-warning)";
   return "#888";
 }
 
@@ -223,7 +233,6 @@ export function EventsTab(): JSX.Element {
                           <span style={{ color: sideColor(event.side) }}>
                             {event.side}
                           </span>
-                          {" \u2014 "}
                           <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                         </span>
                         <span class={styles.eventMeta}>
