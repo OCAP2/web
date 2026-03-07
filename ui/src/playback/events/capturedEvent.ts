@@ -1,7 +1,7 @@
 import { GameEvent } from "./gameEvent";
 
 /**
- * Represents a capture event (flag capture or object capture).
+ * Represents a capture or contested event (flag capture, object capture, or sector contested).
  */
 export class CapturedEvent extends GameEvent {
   readonly unitName: string;
@@ -10,7 +10,7 @@ export class CapturedEvent extends GameEvent {
 
   constructor(
     frameNum: number,
-    type: "captured" | "capturedFlag",
+    type: "captured" | "capturedFlag" | "contested",
     id: number,
     unitName: string,
     objectType: string,

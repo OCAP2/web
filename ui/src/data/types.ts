@@ -89,7 +89,7 @@ export interface GeneralEventDef {
 }
 
 export interface CapturedEventDef {
-  type: "captured" | "capturedFlag";
+  type: "captured" | "capturedFlag" | "contested";
   unitName: string;
   objectType: string;
   position?: [number, number];

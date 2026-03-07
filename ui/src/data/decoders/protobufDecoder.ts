@@ -151,11 +151,12 @@ function convertEvent(pb: PbEvent): EventDef | null {
       return { frameNum, type, message: pb.message ?? "" };
     case "captured":
     case "capturedFlag":
+    case "contested":
       return {
         frameNum,
         type,
-        unitName: pb.message?.split(",")[0] ?? "",
-        objectType: pb.message?.split(",")[1] ?? (type === "capturedFlag" ? "flag" : ""),
+        objectType: pb.message?.split(",")[0] ?? (type === "capturedFlag" ? "flag" : ""),
+        unitName: pb.message?.split(",")[1] ?? "",
         position: pb.posX || pb.posY ? [pb.posX, pb.posY] as [number, number] : undefined,
       };
     case "terminalHackStarted":

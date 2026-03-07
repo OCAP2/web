@@ -45,6 +45,7 @@ function createGameEvent(def: EventDef): GameEvent | null {
       return new GeneralMissionEvent(def.frameNum, id, def.message);
     case "captured":
     case "capturedFlag":
+    case "contested":
       return new CapturedEvent(def.frameNum, def.type, id, def.unitName, def.objectType, def.position);
     case "terminalHackStarted":
     case "terminalHackCanceled":

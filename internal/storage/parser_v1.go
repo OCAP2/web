@@ -181,7 +181,7 @@ func parseEventArray(evtArr []interface{}) *Event {
 	}
 
 	// Captured and terminal hack events: [frameNum, "type", [data, ...]]
-	if event.Type == "captured" || event.Type == "capturedFlag" || event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
+	if event.Type == "captured" || event.Type == "contested" || event.Type == "capturedFlag" || event.Type == "terminalHackStarted" || event.Type == "terminalHackCanceled" {
 		if len(evtArr) > 2 {
 			if arr, ok := evtArr[2].([]interface{}); ok {
 				// Build message from string parts, extract position from array elements

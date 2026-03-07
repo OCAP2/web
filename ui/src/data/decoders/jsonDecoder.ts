@@ -279,7 +279,8 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
         position: capFlagPos ? [capFlagPos[0], capFlagPos[1]] as [number, number] : undefined,
       };
     }
-    case "captured": {
+    case "captured":
+    case "contested": {
       // Extension format: [frameNum, "captured", [objectType, unitName, side, color, [posX, posY, posZ]]]
       const capData = raw[2] as unknown[] | undefined;
       const capPos = capData?.find((v): v is number[] => Array.isArray(v) && v.length >= 2 && typeof v[0] === "number") as number[] | undefined;
