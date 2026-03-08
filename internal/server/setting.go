@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -48,9 +50,14 @@ type Customize struct {
 }
 
 type Auth struct {
-	SessionTTL    time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
-	AdminSteamIDs []string      `json:"adminSteamIds" yaml:"adminSteamIds"`
-	SteamAPIKey   string        `json:"steamApiKey" yaml:"steamApiKey"`
+	Mode             string        `json:"mode" yaml:"mode"`
+	SessionTTL       time.Duration `json:"sessionTTL" yaml:"sessionTTL"`
+	AdminSteamIDs    []string      `json:"adminSteamIds" yaml:"adminSteamIds"`
+	SteamAPIKey      string        `json:"steamApiKey" yaml:"steamApiKey"`
+	Password         string        `json:"password" yaml:"password"`
+	SteamGroupID     string        `json:"steamGroupId" yaml:"steamGroupId"`
+	SquadXmlURL      string        `json:"squadXmlUrl" yaml:"squadXmlUrl"`
+	SquadXmlCacheTTL time.Duration `json:"squadXmlCacheTTL" yaml:"squadXmlCacheTTL"`
 }
 
 type Streaming struct {
@@ -97,10 +104,14 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("auth.sessionTTL", "24h")
 	viper.SetDefault("auth.adminSteamIds", []string{})
 	viper.SetDefault("auth.steamApiKey", "")
-
+	viper.SetDefault("auth.mode", "public")
+	viper.SetDefault("auth.password", "")
+	viper.SetDefault("auth.steamGroupId", "")
+	viper.SetDefault("auth.squadXmlUrl", "")
+	viper.SetDefault("auth.squadXmlCacheTTL", "5m")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey", "auth.mode", "auth.password", "auth.steamGroupId", "auth.squadXmlUrl", "auth.squadXmlCacheTTL"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
@@ -123,6 +134,10 @@ func NewSetting() (setting Setting, err error) {
 	// so a value like "id1,id2" ends up as ["id1,id2"]. Expand it.
 	setting.Auth.AdminSteamIDs = splitCSV(setting.Auth.AdminSteamIDs)
 
+	if err = validateAuthConfig(setting.Auth); err != nil {
+		return
+	}
+
 	// Viper can't unmarshal a JSON string env var into map[string]string,
 	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set. Env var takes
 	// precedence over config file.
@@ -143,6 +158,37 @@ func NewSetting() (setting Setting, err error) {
 	}
 
 	return
+}
+
+func validateAuthConfig(auth Auth) error {
+	validModes := []string{"public", "password", "steam", "steamGroup", "squadXml"}
+	if !slices.Contains(validModes, auth.Mode) {
+		return fmt.Errorf("auth.mode %q is not valid, must be one of: %s", auth.Mode, strings.Join(validModes, ", "))
+	}
+	switch auth.Mode {
+	case "password":
+		if auth.Password == "" {
+			return fmt.Errorf("auth.mode %q requires auth.password to be set", auth.Mode)
+		}
+	case "steamGroup":
+		if auth.SteamAPIKey == "" {
+			return fmt.Errorf("auth.mode %q requires auth.steamApiKey to be set", auth.Mode)
+		}
+		if auth.SteamGroupID == "" {
+			return fmt.Errorf("auth.mode %q requires auth.steamGroupId to be set", auth.Mode)
+		}
+	case "squadXml":
+		if auth.SteamAPIKey == "" {
+			return fmt.Errorf("auth.mode %q requires auth.steamApiKey to be set", auth.Mode)
+		}
+		if auth.SquadXmlURL == "" {
+			return fmt.Errorf("auth.mode %q requires auth.squadXmlUrl to be set", auth.Mode)
+		}
+		if auth.SquadXmlCacheTTL == 0 {
+			log.Printf("WARN: auth.squadXmlCacheTTL is 0, squad XML will be fetched on every login")
+		}
+	}
+	return nil
 }
 
 // splitCSV expands a []string where one element may contain comma-separated

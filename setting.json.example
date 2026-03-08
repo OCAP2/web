@@ -33,8 +33,13 @@
 		"pingTimeout": "10s"
 	},
 	"auth": {
+		"mode": "public",
 		"sessionTTL": "24h",
 		"adminSteamIds": [],
-		"steamApiKey": ""
+		"steamApiKey": "",
+		"password": "",
+		"steamGroupId": "",
+		"squadXmlUrl": "",
+		"squadXmlCacheTTL": "5m"
 	}
 }
