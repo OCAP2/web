@@ -629,6 +629,7 @@ func newPasswordAuthHandler(password string) Handler {
 		setting: Setting{
 			Secret: "test-secret",
 			Auth: Auth{
+				Mode:       "password",
 				SessionTTL: time.Hour,
 				Password:   password,
 			},
@@ -704,6 +705,22 @@ func TestPasswordLogin_MissingBody(t *testing.T) {
 
 	hdlr.PasswordLogin(rec, req)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestPasswordLogin_WrongMode(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{
+			Secret: "test-secret",
+			Auth:   Auth{Mode: "steam", SessionTTL: time.Hour, Password: "s3cret"},
+		},
+		jwt: NewJWTManager("test-secret", time.Hour),
+	}
+	body := strings.NewReader(`{"password":"s3cret"}`)
+	req := httptest.NewRequest("POST", "/api/v1/auth/password", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
 // --- checkSteamGroupMembership unit tests ---

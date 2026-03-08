@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -190,6 +191,11 @@ func (h *Handler) authRedirect(w http.ResponseWriter, r *http.Request, query str
 
 // PasswordLogin validates a shared password and issues a viewer JWT.
 func (h *Handler) PasswordLogin(w http.ResponseWriter, r *http.Request) {
+	if h.setting.Auth.Mode != "password" {
+		http.Error(w, "password login not enabled", http.StatusNotFound)
+		return
+	}
+
 	var req struct {
 		Password string `json:"password"`
 	}
@@ -198,7 +204,7 @@ func (h *Handler) PasswordLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Password == "" || req.Password != h.setting.Auth.Password {
+	if req.Password == "" || subtle.ConstantTimeCompare([]byte(req.Password), []byte(h.setting.Auth.Password)) != 1 {
 		http.Error(w, "invalid password", http.StatusUnauthorized)
 		return
 	}
