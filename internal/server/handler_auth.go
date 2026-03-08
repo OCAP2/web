@@ -238,6 +238,17 @@ func (h *Handler) GetMe(c ContextNoBody) (MeResponse, error) {
 	return resp, nil
 }
 
+// AuthConfigResponse describes the authentication configuration returned by GetAuthConfig.
+type AuthConfigResponse struct {
+	Mode string `json:"mode"`
+}
+
+// GetAuthConfig returns the current authentication mode so the frontend
+// can show the appropriate login controls.
+func (h *Handler) GetAuthConfig(c ContextNoBody) (AuthConfigResponse, error) {
+	return AuthConfigResponse{Mode: h.setting.Auth.Mode}, nil
+}
+
 // Logout is a no-op for stateless JWT — the frontend discards the token.
 func (h *Handler) Logout(c ContextNoBody) (any, error) {
 	c.SetStatus(http.StatusNoContent)

@@ -1244,6 +1244,63 @@ func TestSteamCallback_SquadXml_AdminBypassesCheck(t *testing.T) {
 	assert.Equal(t, "admin", claims.Role)
 }
 
+// --- GetAuthConfig tests ---
+
+func TestGetAuthConfig_ReturnsSteamGroupMode(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{Auth: Auth{Mode: "steamGroup"}},
+	}
+
+	ctx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAuthConfig(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "steamGroup", resp.Mode)
+}
+
+func TestGetAuthConfig_ReturnsPublicMode(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{Auth: Auth{Mode: "public"}},
+	}
+
+	ctx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAuthConfig(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "public", resp.Mode)
+}
+
+func TestGetAuthConfig_ReturnsPasswordMode(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{Auth: Auth{Mode: "password"}},
+	}
+
+	ctx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAuthConfig(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "password", resp.Mode)
+}
+
+func TestGetAuthConfig_ReturnsSteamMode(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{Auth: Auth{Mode: "steam"}},
+	}
+
+	ctx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAuthConfig(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "steam", resp.Mode)
+}
+
+func TestGetAuthConfig_ReturnsEmptyWhenNotSet(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{},
+	}
+
+	ctx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAuthConfig(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "", resp.Mode)
+}
+
 func TestSteamCallback_SquadXml_FetchFailureRedirectsWithError(t *testing.T) {
 	steamID := "76561198012345678"
 	hdlr, srv := newSquadXmlHandler(steamID, nil, []string{steamID})

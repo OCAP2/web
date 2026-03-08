@@ -169,6 +169,7 @@ func NewHandler(
 	fuego.GetStd(g, "/images/maps/{path...}", hdlr.GetMapTile, fuego.OptionTags("Assets"), fuego.OptionMiddleware(cacheMiddleware))
 
 	// Auth
+	fuego.Get(g, "/api/v1/auth/config", hdlr.GetAuthConfig, fuego.OptionTags("Auth"))
 	fuego.GetStd(g, "/api/v1/auth/steam", hdlr.SteamLogin, fuego.OptionTags("Auth"))
 	fuego.GetStd(g, "/api/v1/auth/steam/callback", hdlr.SteamCallback, fuego.OptionTags("Auth"))
 	fuego.PostStd(g, "/api/v1/auth/password", hdlr.PasswordLogin, fuego.OptionTags("Auth"))
