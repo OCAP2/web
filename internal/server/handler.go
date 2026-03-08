@@ -238,7 +238,7 @@ func (h *Handler) GetOperation(c ContextNoBody) (*Operation, error) {
 	if err != nil {
 		op, err = h.repoOperation.GetByFilename(ctx, id)
 		if err != nil {
-			return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
+			return nil, fuego.NotFoundError{Err: err, Detail: "recording not found"}
 		}
 	}
 

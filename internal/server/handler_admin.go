@@ -96,7 +96,7 @@ func (h *Handler) EditOperation(c ContextNoBody) (*Operation, error) {
 	// Fetch current to fill in any fields not provided
 	current, err := h.repoOperation.GetByID(c.Context(), c.PathParam("id"))
 	if err != nil {
-		return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
+		return nil, fuego.NotFoundError{Err: err, Detail: "recording not found"}
 	}
 
 	name := req.MissionName
@@ -163,7 +163,7 @@ func (h *Handler) RetryConversion(c ContextNoBody) (RetryResponse, error) {
 	ctx := c.Context()
 	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return RetryResponse{}, fuego.NotFoundError{Err: err, Detail: err.Error()}
+		return RetryResponse{}, fuego.NotFoundError{Err: err, Detail: "recording not found"}
 	}
 
 	if op.ConversionStatus != ConversionStatusFailed {
@@ -197,7 +197,7 @@ func (h *Handler) DeleteOperation(c ContextNoBody) (any, error) {
 	ctx := c.Context()
 	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
+		return nil, fuego.NotFoundError{Err: err, Detail: "recording not found"}
 	}
 
 	// Delete DB record first

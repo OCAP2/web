@@ -68,7 +68,7 @@ func (h *Handler) getMapToolTools(c ContextNoBody) (maptool.ToolSet, error) {
 func (h *Handler) getMapToolMaps(c ContextNoBody) ([]maptool.MapInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return nil, fuego.InternalServerError{Err: err, Detail: err.Error()}
+		return nil, fuego.InternalServerError{Err: err, Detail: "failed to scan maps"}
 	}
 	return maps, nil
 }
@@ -86,7 +86,7 @@ func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
 		return nil, fuego.BadRequestError{Detail: "invalid map name"}
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return nil, fuego.InternalServerError{Err: err, Detail: err.Error()}
+		return nil, fuego.InternalServerError{Err: err, Detail: "failed to delete map"}
 	}
 	c.SetStatus(http.StatusNoContent)
 	return nil, nil
@@ -141,7 +141,7 @@ func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
 	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
-		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to submit import job"}
 	}
 
 	c.SetStatus(http.StatusAccepted)
@@ -152,7 +152,7 @@ func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
 func (h *Handler) restyleMapToolAll(c ContextNoBody) (maptool.JobInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to scan maps"}
 	}
 	if len(maps) == 0 {
 		return maptool.JobInfo{}, fuego.BadRequestError{Detail: "no maps found"}
@@ -179,7 +179,7 @@ func (h *Handler) restyleMapToolAll(c ContextNoBody) (maptool.JobInfo, error) {
 		return nil
 	})
 	if err != nil {
-		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to submit restyle job"}
 	}
 
 	c.SetStatus(http.StatusAccepted)
