@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1005,4 +1006,259 @@ func TestSteamCallback_NonSteamGroupMode_SkipsGroupCheck(t *testing.T) {
 	loc := rec.Header().Get("Location")
 	assert.Contains(t, loc, "auth_token=")
 	assert.NotContains(t, loc, "auth_error")
+}
+
+// --- squadXmlChecker unit tests ---
+
+const testSquadXML = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE squad SYSTEM "squad.dtd">
+<squad nick="TestGroup">
+  <name>Test Group</name>
+  <member id="76561198012345678" nick="Player1"></member>
+  <member id="76561198099999999" nick="Player2"></member>
+</squad>`
+
+func TestSquadXmlChecker_MemberFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, testSquadXML)
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 5*time.Minute)
+	isMember, err := checker.isMember("76561198012345678")
+	require.NoError(t, err)
+	assert.True(t, isMember)
+}
+
+func TestSquadXmlChecker_NonMemberNotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, testSquadXML)
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 5*time.Minute)
+	isMember, err := checker.isMember("76561198000000000")
+	require.NoError(t, err)
+	assert.False(t, isMember)
+}
+
+func TestSquadXmlChecker_CachePreventsRefetch(t *testing.T) {
+	var fetchCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetchCount.Add(1)
+		fmt.Fprint(w, testSquadXML)
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 5*time.Minute)
+
+	// First call fetches
+	_, err := checker.isMember("76561198012345678")
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), fetchCount.Load())
+
+	// Second call should use cache (same TTL, no expiry)
+	_, err = checker.isMember("76561198099999999")
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), fetchCount.Load(), "should not refetch when cache is valid")
+}
+
+func TestSquadXmlChecker_ZeroTTL_AlwaysRefetches(t *testing.T) {
+	var fetchCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetchCount.Add(1)
+		fmt.Fprint(w, testSquadXML)
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 0) // zero TTL = always refetch
+
+	_, err := checker.isMember("76561198012345678")
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), fetchCount.Load())
+
+	_, err = checker.isMember("76561198012345678")
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), fetchCount.Load(), "should refetch every time with zero TTL")
+}
+
+func TestSquadXmlChecker_HTTPError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 5*time.Minute)
+	_, err := checker.isMember("76561198012345678")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "status 500")
+}
+
+func TestSquadXmlChecker_InvalidXML(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, "not valid xml <><><<")
+	}))
+	defer srv.Close()
+
+	checker := newSquadXmlChecker(srv.URL, 5*time.Minute)
+	_, err := checker.isMember("76561198012345678")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "parse error")
+}
+
+func TestSquadXmlChecker_ConnectionError(t *testing.T) {
+	checker := newSquadXmlChecker("http://127.0.0.1:1/", 5*time.Minute)
+	_, err := checker.isMember("76561198012345678")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "fetch failed")
+}
+
+// --- SteamCallback integration tests for squadXml mode ---
+
+func newSquadXmlHandler(steamID string, adminIDs []string, squadMembers []string) (Handler, *httptest.Server) {
+	// Build squad XML from member list
+	var members strings.Builder
+	for _, id := range squadMembers {
+		fmt.Fprintf(&members, `  <member id="%s" nick="Player"></member>`+"\n", id)
+	}
+	squadXMLBody := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<squad nick="TestGroup">
+  <name>Test Group</name>
+%s</squad>`, members.String())
+
+	// Create a mock server that handles squad XML, profile API, and group API requests
+	mux := http.NewServeMux()
+	mux.HandleFunc("/squad.xml", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, squadXMLBody)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("steamids") != "" {
+			// GetPlayerSummaries request
+			json.NewEncoder(w).Encode(steamProfileResponse{
+				Response: struct {
+					Players []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					} `json:"players"`
+				}{
+					Players: []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					}{
+						{PersonaName: "TestPlayer", AvatarURL: "https://example.com/avatar.jpg"},
+					},
+				},
+			})
+		}
+	})
+	srv := httptest.NewServer(mux)
+
+	hdlr := Handler{
+		setting: Setting{
+			Secret: "test-secret",
+			Auth: Auth{
+				Mode:             "squadXml",
+				SessionTTL:       time.Hour,
+				AdminSteamIDs:    adminIDs,
+				SteamAPIKey:      "TESTKEY",
+				SquadXmlURL:      srv.URL + "/squad.xml",
+				SquadXmlCacheTTL: 5 * time.Minute,
+			},
+		},
+		jwt:              NewJWTManager("test-secret", time.Hour),
+		openIDCache:      openid.NewSimpleDiscoveryCache(),
+		openIDNonceStore: openid.NewSimpleNonceStore(),
+		openIDVerifier:   mockVerifier{claimedID: "https://steamcommunity.com/openid/id/" + steamID},
+		steamAPIBaseURL:  srv.URL,
+	}
+	hdlr.squadXml = newSquadXmlChecker(hdlr.setting.Auth.SquadXmlURL, hdlr.setting.Auth.SquadXmlCacheTTL)
+
+	return hdlr, srv
+}
+
+func TestSteamCallback_SquadXml_MemberGetsToken(t *testing.T) {
+	steamID := "76561198012345678"
+	hdlr, srv := newSquadXmlHandler(steamID, nil, []string{steamID, "76561198099999999"})
+	defer srv.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "viewer", claims.Role)
+}
+
+func TestSteamCallback_SquadXml_NonMemberGetsError(t *testing.T) {
+	steamID := "76561198012345678"
+	// Squad XML only contains a different user
+	hdlr, srv := newSquadXmlHandler(steamID, nil, []string{"76561198099999999"})
+	defer srv.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_error=not_a_member")
+	assert.NotContains(t, loc, "auth_token=")
+}
+
+func TestSteamCallback_SquadXml_AdminBypassesCheck(t *testing.T) {
+	steamID := "76561198012345678"
+	// Squad XML has NO members — if check runs, it would reject
+	hdlr, srv := newSquadXmlHandler(steamID, []string{steamID}, []string{})
+	defer srv.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "admin", claims.Role)
+}
+
+func TestSteamCallback_SquadXml_FetchFailureRedirectsWithError(t *testing.T) {
+	steamID := "76561198012345678"
+	hdlr, srv := newSquadXmlHandler(steamID, nil, []string{steamID})
+	defer srv.Close()
+
+	// Replace the squad XML checker with one pointing to a dead server
+	hdlr.squadXml = newSquadXmlChecker("http://127.0.0.1:1/squad.xml", 5*time.Minute)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_error=membership_check_failed")
 }

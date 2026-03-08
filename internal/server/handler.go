@@ -65,6 +65,7 @@ type Handler struct {
 	openIDCache       openid.DiscoveryCache
 	openIDNonceStore  openid.NonceStore
 	steamAPIBaseURL   string // override for testing; empty uses default
+	squadXml          *squadXmlChecker
 
 	spriteOnce    sync.Once
 	spriteFiles   map[string][]byte
@@ -131,6 +132,10 @@ func NewHandler(
 	hdlr.openIDCache = openid.NewSimpleDiscoveryCache()
 	hdlr.openIDNonceStore = openid.NewSimpleNonceStore()
 	hdlr.openIDVerifier = defaultOpenIDVerifier{}
+
+	if hdlr.setting.Auth.Mode == "squadXml" {
+		hdlr.squadXml = newSquadXmlChecker(hdlr.setting.Auth.SquadXmlURL, hdlr.setting.Auth.SquadXmlCacheTTL)
+	}
 
 	prefixURL := strings.TrimRight(hdlr.setting.PrefixURL, "/")
 	g := fuego.Group(s, prefixURL)
