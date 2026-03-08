@@ -704,3 +704,305 @@ func TestPasswordLogin_MissingBody(t *testing.T) {
 	hdlr.PasswordLogin(rec, req)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
+
+// --- checkSteamGroupMembership unit tests ---
+
+func TestCheckSteamGroupMembership_IsMember(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "TESTKEY", r.URL.Query().Get("key"))
+		assert.Equal(t, "76561198012345678", r.URL.Query().Get("steamid"))
+		fmt.Fprint(w, `{"response":{"success":true,"groups":[{"gid":"103582791460000000"},{"gid":"103582791460111111"}]}}`)
+	}))
+	defer srv.Close()
+
+	isMember, err := checkSteamGroupMembership(srv.URL, "76561198012345678", "TESTKEY", "103582791460111111")
+	require.NoError(t, err)
+	assert.True(t, isMember)
+}
+
+func TestCheckSteamGroupMembership_NotAMember(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"response":{"success":true,"groups":[{"gid":"103582791460000000"}]}}`)
+	}))
+	defer srv.Close()
+
+	isMember, err := checkSteamGroupMembership(srv.URL, "76561198012345678", "TESTKEY", "103582791460999999")
+	require.NoError(t, err)
+	assert.False(t, isMember)
+}
+
+func TestCheckSteamGroupMembership_APIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	_, err := checkSteamGroupMembership(srv.URL, "76561198012345678", "BADKEY", "103582791460111111")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "status 403")
+}
+
+func TestCheckSteamGroupMembership_InvalidJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `not json`)
+	}))
+	defer srv.Close()
+
+	_, err := checkSteamGroupMembership(srv.URL, "76561198012345678", "TESTKEY", "103582791460111111")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decode error")
+}
+
+func TestCheckSteamGroupMembership_ConnectionError(t *testing.T) {
+	_, err := checkSteamGroupMembership("http://127.0.0.1:1/", "76561198012345678", "TESTKEY", "103582791460111111")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "request failed")
+}
+
+func TestCheckSteamGroupMembership_EmptyGroups(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"response":{"success":true,"groups":[]}}`)
+	}))
+	defer srv.Close()
+
+	isMember, err := checkSteamGroupMembership(srv.URL, "76561198012345678", "TESTKEY", "103582791460111111")
+	require.NoError(t, err)
+	assert.False(t, isMember)
+}
+
+// --- SteamCallback integration tests for steamGroup mode ---
+
+func newSteamGroupHandler(steamID string, adminIDs []string, groupID string) (Handler, *httptest.Server) {
+	// Create a mock server that handles both profile API and group membership API requests
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		// Route based on query parameters: group API uses "steamid" (singular), profile API uses "steamids" (plural)
+		if q.Get("steamid") != "" {
+			// GetUserGroupList request — return groupID as a member group
+			fmt.Fprintf(w, `{"response":{"success":true,"groups":[{"gid":"%s"}]}}`, groupID)
+		} else if q.Get("steamids") != "" {
+			// GetPlayerSummaries request
+			json.NewEncoder(w).Encode(steamProfileResponse{
+				Response: struct {
+					Players []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					} `json:"players"`
+				}{
+					Players: []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					}{
+						{PersonaName: "TestPlayer", AvatarURL: "https://example.com/avatar.jpg"},
+					},
+				},
+			})
+		}
+	})
+	srv := httptest.NewServer(mux)
+
+	hdlr := Handler{
+		setting: Setting{
+			Secret: "test-secret",
+			Auth: Auth{
+				Mode:          "steamGroup",
+				SessionTTL:    time.Hour,
+				AdminSteamIDs: adminIDs,
+				SteamAPIKey:   "TESTKEY",
+				SteamGroupID:  groupID,
+			},
+		},
+		jwt:              NewJWTManager("test-secret", time.Hour),
+		openIDCache:      openid.NewSimpleDiscoveryCache(),
+		openIDNonceStore: openid.NewSimpleNonceStore(),
+		openIDVerifier:   mockVerifier{claimedID: "https://steamcommunity.com/openid/id/" + steamID},
+		steamAPIBaseURL:  srv.URL,
+	}
+
+	return hdlr, srv
+}
+
+func TestSteamCallback_SteamGroup_MemberGetsToken(t *testing.T) {
+	hdlr, srv := newSteamGroupHandler("76561198012345678", nil, "103582791460111111")
+	defer srv.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "viewer", claims.Role)
+}
+
+func TestSteamCallback_SteamGroup_NonMemberGetsError(t *testing.T) {
+	// The mock server returns groupID "103582791460111111" as the user's group,
+	// but we configure the handler to require "999999999999999999"
+	hdlr, srv := newSteamGroupHandler("76561198012345678", nil, "999999999999999999")
+	defer srv.Close()
+
+	// Override the mock to return a different group than what's required
+	srv.Close()
+	nonMemberSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("steamid") != "" {
+			// Return a group that doesn't match the required one
+			fmt.Fprint(w, `{"response":{"success":true,"groups":[{"gid":"103582791460000000"}]}}`)
+		} else if q.Get("steamids") != "" {
+			json.NewEncoder(w).Encode(steamProfileResponse{
+				Response: struct {
+					Players []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					} `json:"players"`
+				}{
+					Players: []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					}{
+						{PersonaName: "TestPlayer", AvatarURL: "https://example.com/avatar.jpg"},
+					},
+				},
+			})
+		}
+	}))
+	defer nonMemberSrv.Close()
+	hdlr.steamAPIBaseURL = nonMemberSrv.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_error=not_a_member")
+	assert.NotContains(t, loc, "auth_token=")
+}
+
+func TestSteamCallback_SteamGroup_AdminBypassesGroupCheck(t *testing.T) {
+	// Admin's steam ID is in the admin list; group check should be skipped entirely
+	// Use a group ID that doesn't match any group the user is in, to prove bypass
+	steamID := "76561198012345678"
+	hdlr, srv := newSteamGroupHandler(steamID, []string{steamID}, "999999999999999999")
+	defer srv.Close()
+
+	// Override to return no matching group — if group check runs, it would fail
+	srv.Close()
+	noGroupSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("steamid") != "" {
+			// Return empty groups — would fail membership check
+			fmt.Fprint(w, `{"response":{"success":true,"groups":[]}}`)
+		} else if q.Get("steamids") != "" {
+			json.NewEncoder(w).Encode(steamProfileResponse{
+				Response: struct {
+					Players []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					} `json:"players"`
+				}{
+					Players: []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					}{
+						{PersonaName: "AdminPlayer", AvatarURL: "https://example.com/admin.jpg"},
+					},
+				},
+			})
+		}
+	}))
+	defer noGroupSrv.Close()
+	hdlr.steamAPIBaseURL = noGroupSrv.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "admin", claims.Role)
+}
+
+func TestSteamCallback_SteamGroup_APIFailureRedirectsWithError(t *testing.T) {
+	steamID := "76561198012345678"
+	hdlr, srv := newSteamGroupHandler(steamID, nil, "103582791460111111")
+	defer srv.Close()
+
+	// Replace with a server that returns 500 for group check
+	srv.Close()
+	failSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("steamid") != "" {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else if q.Get("steamids") != "" {
+			// Profile fetch still works
+			json.NewEncoder(w).Encode(steamProfileResponse{
+				Response: struct {
+					Players []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					} `json:"players"`
+				}{
+					Players: []struct {
+						PersonaName string `json:"personaname"`
+						AvatarURL   string `json:"avatarmedium"`
+					}{
+						{PersonaName: "TestPlayer", AvatarURL: "https://example.com/avatar.jpg"},
+					},
+				},
+			})
+		}
+	}))
+	defer failSrv.Close()
+	hdlr.steamAPIBaseURL = failSrv.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_error=membership_check_failed")
+}
+
+func TestSteamCallback_NonSteamGroupMode_SkipsGroupCheck(t *testing.T) {
+	// In "steam" mode (not "steamGroup"), group membership check should NOT run
+	hdlr := newSteamAuthHandler([]string{})
+	hdlr.setting.Auth.Mode = "steam"
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+}

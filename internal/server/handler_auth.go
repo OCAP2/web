@@ -116,6 +116,24 @@ func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 		role = "admin"
 	}
 
+	// In steamGroup mode, check group membership (admins bypass)
+	if h.setting.Auth.Mode == "steamGroup" && role != "admin" {
+		baseURL := steamGroupAPIBaseURL
+		if h.steamAPIBaseURL != "" {
+			baseURL = h.steamAPIBaseURL
+		}
+		isMember, err := checkSteamGroupMembership(baseURL, steamID, h.setting.Auth.SteamAPIKey, h.setting.Auth.SteamGroupID)
+		if err != nil {
+			log.Printf("WARN: steam group membership check failed for %s: %v", steamID, err)
+			h.authRedirect(w, r, "auth_error=membership_check_failed")
+			return
+		}
+		if !isMember {
+			h.authRedirect(w, r, "auth_error=not_a_member")
+			return
+		}
+	}
+
 	// Fetch Steam profile data if API key is configured
 	claimOpts := []ClaimOption{WithRole(role)}
 	if h.setting.Auth.SteamAPIKey != "" {
@@ -282,6 +300,7 @@ type steamProfileResponse struct {
 }
 
 const steamAPIBaseURL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
+const steamGroupAPIBaseURL = "https://api.steampowered.com/ISteamUser/GetUserGroupList/v1/"
 
 // fetchSteamProfileFrom calls the Steam Web API to get the player's display name and avatar.
 func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string, err error) {
@@ -309,6 +328,45 @@ func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string
 
 	p := data.Response.Players[0]
 	return p.PersonaName, p.AvatarURL, nil
+}
+
+// steamGroupListResponse models the Steam Web API GetUserGroupList response.
+type steamGroupListResponse struct {
+	Response struct {
+		Success bool `json:"success"`
+		Groups  []struct {
+			GID string `json:"gid"`
+		} `json:"groups"`
+	} `json:"response"`
+}
+
+// checkSteamGroupMembership checks whether the given Steam user is a member
+// of the specified Steam group by querying the Steam Web API.
+func checkSteamGroupMembership(baseURL, steamID, apiKey, groupID string) (bool, error) {
+	u := baseURL + "?key=" + url.QueryEscape(apiKey) + "&steamid=" + url.QueryEscape(steamID)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(u)
+	if err != nil {
+		return false, fmt.Errorf("steam group API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("steam group API error: status %d", resp.StatusCode)
+	}
+
+	var data steamGroupListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return false, fmt.Errorf("steam group API decode error: %w", err)
+	}
+
+	for _, g := range data.Response.Groups {
+		if g.GID == groupID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func randomHex(n int) (string, error) {
