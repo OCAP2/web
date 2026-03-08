@@ -5,14 +5,12 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/yohcop/openid-go"
@@ -117,38 +115,6 @@ func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 	role := "viewer"
 	if slices.Contains(h.setting.Auth.AdminSteamIDs, steamID) {
 		role = "admin"
-	}
-
-	// In steamGroup mode, check group membership (admins bypass)
-	if h.setting.Auth.Mode == "steamGroup" && role != "admin" {
-		baseURL := steamGroupAPIBaseURL
-		if h.steamAPIBaseURL != "" {
-			baseURL = h.steamAPIBaseURL
-		}
-		isMember, err := checkSteamGroupMembership(baseURL, steamID, h.setting.Auth.SteamAPIKey, h.setting.Auth.SteamGroupID)
-		if err != nil {
-			log.Printf("WARN: steam group membership check failed for %s: %v", steamID, err)
-			h.authRedirect(w, r, "auth_error=membership_check_failed")
-			return
-		}
-		if !isMember {
-			h.authRedirect(w, r, "auth_error=not_a_member")
-			return
-		}
-	}
-
-	// In squadXml mode, check squad XML membership (admins bypass)
-	if h.setting.Auth.Mode == "squadXml" && role != "admin" {
-		isMember, err := h.squadXml.isMember(steamID)
-		if err != nil {
-			log.Printf("WARN: squad XML membership check failed for %s: %v", steamID, err)
-			h.authRedirect(w, r, "auth_error=membership_check_failed")
-			return
-		}
-		if !isMember {
-			h.authRedirect(w, r, "auth_error=not_a_member")
-			return
-		}
 	}
 
 	// Fetch Steam profile data if API key is configured
@@ -333,7 +299,6 @@ type steamProfileResponse struct {
 }
 
 const steamAPIBaseURL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
-const steamGroupAPIBaseURL = "https://api.steampowered.com/ISteamUser/GetUserGroupList/v1/"
 
 // fetchSteamProfileFrom calls the Steam Web API to get the player's display name and avatar.
 func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string, err error) {
@@ -363,105 +328,10 @@ func fetchSteamProfileFrom(baseURL, steamID, apiKey string) (name, avatar string
 	return p.PersonaName, p.AvatarURL, nil
 }
 
-// steamGroupListResponse models the Steam Web API GetUserGroupList response.
-type steamGroupListResponse struct {
-	Response struct {
-		Success bool `json:"success"`
-		Groups  []struct {
-			GID string `json:"gid"`
-		} `json:"groups"`
-	} `json:"response"`
-}
-
-// checkSteamGroupMembership checks whether the given Steam user is a member
-// of the specified Steam group by querying the Steam Web API.
-func checkSteamGroupMembership(baseURL, steamID, apiKey, groupID string) (bool, error) {
-	u := baseURL + "?key=" + url.QueryEscape(apiKey) + "&steamid=" + url.QueryEscape(steamID)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(u)
-	if err != nil {
-		return false, fmt.Errorf("steam group API request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("steam group API error: status %d", resp.StatusCode)
-	}
-
-	var data steamGroupListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return false, fmt.Errorf("steam group API decode error: %w", err)
-	}
-
-	for _, g := range data.Response.Groups {
-		if g.GID == groupID {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func randomHex(n int) (string, error) {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
-}
-
-// squadXmlChecker fetches and caches a remote Arma 3 squad XML,
-// then checks membership by Steam ID.
-type squadXmlChecker struct {
-	url      string
-	cacheTTL time.Duration
-
-	mu        sync.Mutex
-	members   map[string]bool
-	fetchedAt time.Time
-}
-
-func newSquadXmlChecker(url string, cacheTTL time.Duration) *squadXmlChecker {
-	return &squadXmlChecker{url: url, cacheTTL: cacheTTL}
-}
-
-type squadXml struct {
-	Members []squadXmlMember `xml:"member"`
-}
-
-type squadXmlMember struct {
-	ID string `xml:"id,attr"`
-}
-
-func (c *squadXmlChecker) isMember(steamID string) (bool, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.members != nil && c.cacheTTL > 0 && time.Since(c.fetchedAt) < c.cacheTTL {
-		return c.members[steamID], nil
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(c.url)
-	if err != nil {
-		return false, fmt.Errorf("squad XML fetch failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("squad XML fetch error: status %d", resp.StatusCode)
-	}
-
-	var squad squadXml
-	if err := xml.NewDecoder(resp.Body).Decode(&squad); err != nil {
-		return false, fmt.Errorf("squad XML parse error: %w", err)
-	}
-
-	c.members = make(map[string]bool, len(squad.Members))
-	for _, m := range squad.Members {
-		c.members[m.ID] = true
-	}
-	c.fetchedAt = time.Now()
-
-	return c.members[steamID], nil
 }

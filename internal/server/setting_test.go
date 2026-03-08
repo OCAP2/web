@@ -493,15 +493,11 @@ func TestNewSetting_NoConfigFile(t *testing.T) {
 
 func TestValidateAuthConfig(t *testing.T) {
 	t.Run("valid modes accepted", func(t *testing.T) {
-		for _, mode := range []string{"public", "steam"} {
+		for _, mode := range []string{"public", "steam", "steamAllowlist"} {
 			err := validateAuthConfig(Auth{Mode: mode})
 			assert.NoError(t, err, "mode %q should be valid", mode)
 		}
 		err := validateAuthConfig(Auth{Mode: "password", Password: "secret"})
-		assert.NoError(t, err)
-		err = validateAuthConfig(Auth{Mode: "steamGroup", SteamAPIKey: "key", SteamGroupID: "123"})
-		assert.NoError(t, err)
-		err = validateAuthConfig(Auth{Mode: "squadXml", SteamAPIKey: "key", SquadXmlURL: "https://example.com/squad.xml", SquadXmlCacheTTL: 5 * time.Minute})
 		assert.NoError(t, err)
 	})
 
@@ -518,38 +514,14 @@ func TestValidateAuthConfig(t *testing.T) {
 		assert.Contains(t, err.Error(), "auth.password")
 	})
 
-	t.Run("steamGroup mode without steamApiKey", func(t *testing.T) {
-		err := validateAuthConfig(Auth{Mode: "steamGroup", SteamGroupID: "123"})
+	t.Run("removed modes are rejected", func(t *testing.T) {
+		err := validateAuthConfig(Auth{Mode: "steamGroup"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "auth.steamApiKey")
-	})
+		assert.Contains(t, err.Error(), "not valid")
 
-	t.Run("steamGroup mode without steamGroupId", func(t *testing.T) {
-		err := validateAuthConfig(Auth{Mode: "steamGroup", SteamAPIKey: "key"})
+		err = validateAuthConfig(Auth{Mode: "squadXml"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "auth.steamGroupId")
-	})
-
-	t.Run("squadXml mode without steamApiKey", func(t *testing.T) {
-		err := validateAuthConfig(Auth{Mode: "squadXml", SquadXmlURL: "https://example.com/squad.xml"})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "auth.steamApiKey")
-	})
-
-	t.Run("squadXml mode without squadXmlUrl", func(t *testing.T) {
-		err := validateAuthConfig(Auth{Mode: "squadXml", SteamAPIKey: "key"})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "auth.squadXmlUrl")
-	})
-
-	t.Run("squadXml mode with zero cacheTTL does not error", func(t *testing.T) {
-		err := validateAuthConfig(Auth{
-			Mode:             "squadXml",
-			SteamAPIKey:      "key",
-			SquadXmlURL:      "https://example.com/squad.xml",
-			SquadXmlCacheTTL: 0,
-		})
-		assert.NoError(t, err)
+		assert.Contains(t, err.Error(), "not valid")
 	})
 }
 
@@ -566,7 +538,6 @@ func TestNewSetting_AuthModeDefault(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "public", setting.Auth.Mode)
-	assert.Equal(t, 5*time.Minute, setting.Auth.SquadXmlCacheTTL)
 }
 
 func TestNewSetting_AuthModeInvalid(t *testing.T) {

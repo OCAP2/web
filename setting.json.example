@@ -37,9 +37,6 @@
 		"sessionTTL": "24h",
 		"adminSteamIds": [],
 		"steamApiKey": "",
-		"password": "",
-		"steamGroupId": "",
-		"squadXmlUrl": "",
-		"squadXmlCacheTTL": "5m"
+		"password": ""
 	}
 }
