@@ -13,8 +13,7 @@ Single `auth.mode` config value. Default `public` (current behavior).
 | `public` | No restrictions. Current behavior. |
 | `password` | Shared viewer password. |
 | `steam` | Any Steam account can view. |
-| `steamGroup` | Steam login + Steam group membership required. |
-| `squadXml` | Steam login + UID present in remote squad XML required. |
+| `steamAllowlist` | Steam login + admin-managed allowlist of Steam IDs. |
 
 All non-public modes issue a JWT with `viewer` role on successful authentication.
 
@@ -22,6 +21,7 @@ All non-public modes issue a JWT with `viewer` role on successful authentication
 
 ### Protected Endpoints
 - `/api/v1/operations*` — recording list, metadata, marker blacklist
+- `/api/v1/worlds` — installed world metadata
 - `/data/*` — recording data files
 
 ### Always Public
@@ -47,32 +47,30 @@ No gate. Optional Steam login for admin access.
 
 ### `password`
 1. User enters shared password on login page
-2. Backend validates password against `auth.password` config
-3. JWT issued with `viewer` role
+2. Backend validates password against `auth.password` config (timing-safe comparison)
+3. JWT issued with `viewer` role, subject `password`
 
 ### `steam`
 1. User clicks Steam login button
 2. Standard Steam OpenID flow
 3. JWT issued with `viewer` role (or `admin` if in `adminSteamIds`)
 
-### `steamGroup`
+### `steamAllowlist`
 1. User clicks Steam login button
 2. Steam OpenID flow completes, Steam ID obtained
-3. Backend checks group membership via Steam Web API (`steamApiKey` + `steamGroupId`)
-4. **Member** → JWT issued with `viewer` role
-5. **Not a member** → no token issued, error message, redirect to login
+3. Backend checks if Steam ID is in `steam_allowlist` SQLite table
+4. **Admins bypass** — users in `adminSteamIds` always get `admin` role regardless of allowlist
+5. **On allowlist** → JWT issued with `viewer` role
+6. **Not on allowlist** → no token issued, redirect with `auth_error=not_allowed`
 
-### `squadXml`
-1. User clicks Steam login button
-2. Steam OpenID flow completes, Steam ID obtained
-3. Backend fetches squad XML from `squadXmlUrl` (cached per `squadXmlCacheTTL`)
-4. Checks if Steam UID is present in the XML
-5. **Found** → JWT issued with `viewer` role
-6. **Not found** → no token issued, error message, redirect to login
+Admins manage the allowlist via API:
+- `GET /api/v1/auth/allowlist` — list all allowed Steam IDs
+- `PUT /api/v1/auth/allowlist/{steamId}` — add (idempotent)
+- `DELETE /api/v1/auth/allowlist/{steamId}` — remove
 
 ## Admin Bypass
 
-Users whose Steam ID is in `adminSteamIds` always pass the gate regardless of mode. This prevents admin lockout (e.g. admin not in Steam group or squad XML).
+Users whose Steam ID is in `adminSteamIds` always pass the gate regardless of mode. This prevents admin lockout.
 
 ## Login UI
 
@@ -81,10 +79,7 @@ Users whose Steam ID is in `adminSteamIds` always pass the gate regardless of mo
 | `public` | — | Steam button (admin) |
 | `password` | Password field + submit | Steam button (admin) |
 | `steam` | Steam button | — |
-| `steamGroup` | Steam button | — |
-| `squadXml` | Steam button | — |
-
-Visual lock icon or indicator when instance is restricted (non-public mode).
+| `steamAllowlist` | Steam button | — |
 
 ## Configuration
 
@@ -93,11 +88,8 @@ Visual lock icon or indicator when instance is restricted (non-public mode).
   "mode": "public",
   "sessionTTL": "24h",
   "adminSteamIds": ["76561198000074241"],
-  "steamApiKey": "...",
-  "password": "viewer-password-here",
-  "steamGroupId": "103582791460XXXXX",
-  "squadXmlUrl": "https://example.com/squad.xml",
-  "squadXmlCacheTTL": "5m"
+  "steamApiKey": "",
+  "password": ""
 }
 ```
 
@@ -105,15 +97,24 @@ Fields only relevant to the active mode are ignored.
 
 ## Startup Validation
 
-Server validates on start that required config values for the active mode are present. Missing required values are fatal errors. Optional warnings for edge cases.
+Server validates on start that required config values for the active mode are present.
 
-| Mode | Required | Warnings |
-|------|----------|----------|
-| `public` | — | — |
-| `password` | `password` | — |
-| `steam` | — | — |
-| `steamGroup` | `steamApiKey`, `steamGroupId` | — |
-| `squadXml` | `steamApiKey`, `squadXmlUrl` | `squadXmlCacheTTL=0` → "caching disabled, fetching on every login" |
+| Mode | Required |
+|------|----------|
+| `public` | — |
+| `password` | `password` |
+| `steam` | — |
+| `steamAllowlist` | — |
+
+## Storage
+
+The `steam_allowlist` table (migration v11) stores allowed Steam IDs:
+
+```sql
+CREATE TABLE steam_allowlist (
+    steam_id TEXT NOT NULL PRIMARY KEY
+);
+```
 
 ## Future Compatibility
 
