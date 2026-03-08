@@ -632,8 +632,9 @@ describe("RecordingSelector", () => {
 
     // Wait for toast to appear
     await vi.waitFor(() => {
-      expect(screen.getByTestId("auth-toast")).toBeDefined();
-      expect(screen.getByText(/Steam login failed/)).toBeDefined();
+      const toast = screen.getByTestId("auth-toast");
+      expect(toast).toBeDefined();
+      expect(within(toast).getByText(/Steam login failed/)).toBeDefined();
     });
 
     // Advance past the 5s auto-dismiss timeout

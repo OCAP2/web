@@ -11,6 +11,8 @@ const mockLogout = vi.fn();
 const mockGetSteamLoginUrl = vi.fn().mockReturnValue("/api/v1/auth/steam");
 const mockConsumeAuthToken = vi.fn().mockReturnValue(false);
 const mockPopReturnTo = vi.fn().mockReturnValue(null);
+const mockGetAuthConfig = vi.fn().mockResolvedValue({ mode: "public" });
+const mockPasswordLogin = vi.fn();
 
 vi.mock("../../data/apiClient", async () => {
   const actual = await vi.importActual<typeof import("../../data/apiClient")>("../../data/apiClient");
@@ -22,6 +24,8 @@ vi.mock("../../data/apiClient", async () => {
       getSteamLoginUrl = mockGetSteamLoginUrl;
       consumeAuthToken = mockConsumeAuthToken;
       popReturnTo = mockPopReturnTo;
+      getAuthConfig = mockGetAuthConfig;
+      passwordLogin = mockPasswordLogin;
     },
   };
 });
@@ -50,6 +54,8 @@ describe("useAuth", () => {
     mockLogout.mockResolvedValue(undefined);
     mockConsumeAuthToken.mockReturnValue(false);
     mockPopReturnTo.mockReturnValue(null);
+    mockGetAuthConfig.mockResolvedValue({ mode: "public" });
+    mockPasswordLogin.mockResolvedValue("pw-token");
   });
 
   afterEach(() => {
@@ -283,5 +289,103 @@ describe("useAuth", () => {
     await authRef.logout();
     expect(authRef.role()).toBeNull();
     expect(authRef.isAdmin()).toBe(false);
+  });
+
+  it("authMode defaults to public", async () => {
+    let authRef!: Auth;
+    const { findByTestId } = renderAuth((a) => { authRef = a; });
+
+    await findByTestId("authenticated");
+    await vi.waitFor(() => {
+      expect(authRef.authMode()).toBe("public");
+    });
+  });
+
+  it("authMode reflects server config", async () => {
+    mockGetAuthConfig.mockResolvedValue({ mode: "password" });
+
+    let authRef!: Auth;
+    const { findByTestId } = renderAuth((a) => { authRef = a; });
+
+    await findByTestId("authenticated");
+    await vi.waitFor(() => {
+      expect(authRef.authMode()).toBe("password");
+    });
+  });
+
+  it("authMode defaults to public when getAuthConfig fails", async () => {
+    mockGetAuthConfig.mockRejectedValue(new Error("network error"));
+
+    let authRef!: Auth;
+    const { findByTestId } = renderAuth((a) => { authRef = a; });
+
+    await findByTestId("authenticated");
+    await vi.waitFor(() => {
+      expect(authRef.authMode()).toBe("public");
+    });
+  });
+
+  it("loginWithPassword success sets authenticated state", async () => {
+    mockPasswordLogin.mockResolvedValue("pw-token");
+    mockGetMe.mockResolvedValue({
+      authenticated: true,
+      role: "viewer",
+      steamId: null,
+      steamName: null,
+      steamAvatar: null,
+    });
+
+    let authRef!: Auth;
+    const { findByTestId } = renderAuth((a) => { authRef = a; });
+
+    await findByTestId("authenticated");
+    await authRef.loginWithPassword("secret123");
+
+    expect(mockPasswordLogin).toHaveBeenCalledWith("secret123");
+    expect(authRef.authenticated()).toBe(true);
+    expect(authRef.role()).toBe("viewer");
+  });
+
+  it("loginWithPassword failure sets authError", async () => {
+    mockPasswordLogin.mockRejectedValue(new Error("Invalid password"));
+
+    let authRef!: Auth;
+    const { findByTestId } = renderAuth((a) => { authRef = a; });
+
+    await findByTestId("authenticated");
+    await authRef.loginWithPassword("wrong");
+
+    expect(authRef.authError()).toBe("Invalid password");
+    expect(authRef.authenticated()).toBe(false);
+  });
+
+  it("maps not_a_member auth error", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=not_a_member", href: window.location.origin + "/?auth_error=not_a_member", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    let authRef!: Auth;
+    renderAuth((a) => { authRef = a; });
+
+    await vi.waitFor(() => {
+      expect(authRef.authError()).toBe("You are not a member of this community. Contact an admin for access.");
+    });
+  });
+
+  it("maps membership_check_failed auth error", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?auth_error=membership_check_failed", href: window.location.origin + "/?auth_error=membership_check_failed", pathname: "/" },
+      writable: true,
+      configurable: true,
+    });
+
+    let authRef!: Auth;
+    renderAuth((a) => { authRef = a; });
+
+    await vi.waitFor(() => {
+      expect(authRef.authError()).toBe("Could not verify membership. Please try again later.");
+    });
   });
 });

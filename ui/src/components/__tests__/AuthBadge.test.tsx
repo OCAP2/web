@@ -6,6 +6,7 @@ import { I18nProvider } from "../../hooks/useLocale";
 // ─── Mock useAuth ───
 
 const mockLoginWithSteam = vi.fn();
+const mockLoginWithPassword = vi.fn().mockResolvedValue(undefined);
 const mockLogout = vi.fn();
 
 const authState = {
@@ -15,9 +16,11 @@ const authState = {
   steamName: vi.fn(() => null as string | null),
   steamId: vi.fn(() => null as string | null),
   steamAvatar: vi.fn(() => null as string | null),
-  authError: vi.fn(() => null),
+  authError: vi.fn(() => null as string | null),
+  authMode: vi.fn(() => "public"),
   dismissAuthError: vi.fn(),
   loginWithSteam: mockLoginWithSteam,
+  loginWithPassword: mockLoginWithPassword,
   logout: mockLogout,
 };
 
@@ -37,6 +40,8 @@ describe("AuthBadge", () => {
     authState.steamName.mockReturnValue(null);
     authState.steamId.mockReturnValue(null);
     authState.steamAvatar.mockReturnValue(null);
+    authState.authError.mockReturnValue(null);
+    authState.authMode.mockReturnValue("public");
   });
 
   it("shows sign-in button when not authenticated", () => {
@@ -110,5 +115,54 @@ describe("AuthBadge", () => {
     const { getByTitle } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
     fireEvent.click(getByTitle("Sign out"));
     expect(mockLogout).toHaveBeenCalledOnce();
+  });
+
+  // ─── Password mode ───
+
+  it("shows password field and Steam button in password mode", () => {
+    authState.authMode.mockReturnValue("password");
+
+    const { getByPlaceholderText, getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByPlaceholderText("Password")).toBeDefined();
+    expect(getByText("Unlock")).toBeDefined();
+    expect(getByText("Sign in")).toBeDefined();
+  });
+
+  it("shows only Steam button in steam mode", () => {
+    authState.authMode.mockReturnValue("steam");
+
+    const { getByText, queryByPlaceholderText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByText("Sign in")).toBeDefined();
+    expect(queryByPlaceholderText("Password")).toBeNull();
+  });
+
+  it("shows only Steam button in public mode", () => {
+    authState.authMode.mockReturnValue("public");
+
+    const { getByText, queryByPlaceholderText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByText("Sign in")).toBeDefined();
+    expect(queryByPlaceholderText("Password")).toBeNull();
+  });
+
+  it("calls loginWithPassword on form submit", async () => {
+    authState.authMode.mockReturnValue("password");
+
+    const { getByPlaceholderText, getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+
+    const input = getByPlaceholderText("Password") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "secret123" } });
+    fireEvent.click(getByText("Unlock"));
+
+    expect(mockLoginWithPassword).toHaveBeenCalledWith("secret123");
+  });
+
+  it("displays auth error and dismiss button", () => {
+    authState.authError.mockReturnValue("Invalid password");
+
+    const { getByText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByText("Invalid password")).toBeDefined();
+
+    fireEvent.click(getByText("x"));
+    expect(authState.dismissAuthError).toHaveBeenCalledOnce();
   });
 });

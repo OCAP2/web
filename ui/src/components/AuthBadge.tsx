@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import type { JSX } from "solid-js";
 import { useAuth } from "../hooks/useAuth";
 import { useI18n } from "../hooks/useLocale";
@@ -6,21 +6,59 @@ import { SteamIcon, ShieldIcon, LogOutIcon } from "./Icons";
 import styles from "./AuthBadge.module.css";
 
 /**
- * Shared auth badge — renders Steam sign-in when unauthenticated,
+ * Shared auth badge — renders login controls when unauthenticated,
  * admin badge + sign-out when authenticated.
+ * Shows password form in password mode, Steam button in all other modes.
  * Calls useAuth() internally; no props needed.
  */
 export function AuthBadge(): JSX.Element {
-  const { authenticated, isAdmin, steamName, steamId, steamAvatar, loginWithSteam, logout } = useAuth();
+  const { authenticated, isAdmin, steamName, steamId, steamAvatar, authMode, authError, dismissAuthError, loginWithSteam, loginWithPassword, logout } = useAuth();
   const { t } = useI18n();
+  const [password, setPassword] = createSignal("");
+  const [loading, setLoading] = createSignal(false);
+
+  const handlePasswordSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!password()) return;
+    setLoading(true);
+    try {
+      await loginWithPassword(password());
+    } finally {
+      setLoading(false);
+      setPassword("");
+    }
+  };
 
   return (
     <Show
       when={authenticated()}
       fallback={
-        <button class={styles.signInButton} onClick={() => loginWithSteam()}>
-          <SteamIcon /> {t("sign_in")}
-        </button>
+        <div class={styles.authControls}>
+          <Show when={authMode() === "password"}>
+            <form onSubmit={handlePasswordSubmit} class={styles.passwordForm}>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password()}
+                onInput={(e) => setPassword(e.currentTarget.value)}
+                class={styles.passwordInput}
+                disabled={loading()}
+              />
+              <button type="submit" class={styles.passwordSubmit} disabled={loading() || !password()}>
+                Unlock
+              </button>
+            </form>
+          </Show>
+          <button class={styles.signInButton} onClick={() => loginWithSteam()}>
+            <SteamIcon /> {t("sign_in")}
+          </button>
+          <Show when={authError()}>
+            <div class={styles.authError}>
+              {authError()}
+              <button class={styles.dismissError} onClick={dismissAuthError}>x</button>
+            </div>
+          </Show>
+        </div>
       }
     >
       <>

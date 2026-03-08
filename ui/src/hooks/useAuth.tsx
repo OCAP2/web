@@ -10,13 +10,17 @@ export interface Auth {
   steamName: Accessor<string | null>;
   steamAvatar: Accessor<string | null>;
   authError: Accessor<string | null>;
+  authMode: Accessor<string>;
   dismissAuthError: () => void;
   loginWithSteam: () => void;
+  loginWithPassword: (password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   steam_error: "Steam login failed. Please try again.",
+  not_a_member: "You are not a member of this community. Contact an admin for access.",
+  membership_check_failed: "Could not verify membership. Please try again later.",
 };
 
 const AuthContext = createContext<Auth>();
@@ -32,9 +36,18 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   const [steamName, setSteamName] = createSignal<string | null>(null);
   const [steamAvatar, setSteamAvatar] = createSignal<string | null>(null);
   const [authError, setAuthError] = createSignal<string | null>(null);
+  const [authMode, setAuthMode] = createSignal<string>("public");
   const api = new ApiClient();
 
   onMount(async () => {
+    // Fetch auth config first
+    try {
+      const config = await api.getAuthConfig();
+      setAuthMode(config.mode);
+    } catch {
+      // Default to public if endpoint fails
+    }
+
     // Read query params from Steam callback redirect
     const params = new URLSearchParams(window.location.search);
 
@@ -78,6 +91,21 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
 
   const dismissAuthError = () => setAuthError(null);
 
+  const loginWithPassword = async (password: string): Promise<void> => {
+    setAuthError(null);
+    try {
+      await api.passwordLogin(password);
+      const state = await api.getMe();
+      setAuthenticated(state.authenticated);
+      setRole(state.role ?? null);
+      setSteamId(state.steamId ?? null);
+      setSteamName(state.steamName ?? null);
+      setSteamAvatar(state.steamAvatar ?? null);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Login failed");
+    }
+  };
+
   const loginWithSteam = () => {
     setAuthError(null);
     window.location.href = api.getSteamLoginUrl(
@@ -98,7 +126,7 @@ export function AuthProvider(props: { children: JSX.Element }): JSX.Element {
   };
 
   return (
-    <AuthContext.Provider value={{ authenticated, role, isAdmin, steamId, steamName, steamAvatar, authError, dismissAuthError, loginWithSteam, logout }}>
+    <AuthContext.Provider value={{ authenticated, role, isAdmin, steamId, steamName, steamAvatar, authError, authMode, dismissAuthError, loginWithSteam, loginWithPassword, logout }}>
       {props.children}
     </AuthContext.Provider>
   );
