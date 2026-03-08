@@ -622,3 +622,85 @@ func TestGetMe_ReturnsRole(t *testing.T) {
 	assert.True(t, resp.Authenticated)
 	assert.Equal(t, "viewer", resp.Role)
 }
+
+func newPasswordAuthHandler(password string) Handler {
+	return Handler{
+		setting: Setting{
+			Secret: "test-secret",
+			Auth: Auth{
+				SessionTTL: time.Hour,
+				Password:   password,
+			},
+		},
+		jwt: NewJWTManager("test-secret", time.Hour),
+	}
+}
+
+func TestPasswordLogin_CorrectPassword(t *testing.T) {
+	hdlr := newPasswordAuthHandler("s3cret")
+
+	body := strings.NewReader(`{"password":"s3cret"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+
+	var resp map[string]string
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	require.NotEmpty(t, resp["token"])
+
+	claims := hdlr.jwt.Claims(resp["token"])
+	require.NotNil(t, claims)
+	assert.Equal(t, "viewer", claims.Role)
+	assert.Equal(t, "password", claims.Subject)
+}
+
+func TestPasswordLogin_WrongPassword(t *testing.T) {
+	hdlr := newPasswordAuthHandler("s3cret")
+
+	body := strings.NewReader(`{"password":"wrong"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestPasswordLogin_EmptyPassword(t *testing.T) {
+	hdlr := newPasswordAuthHandler("s3cret")
+
+	body := strings.NewReader(`{"password":""}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestPasswordLogin_InvalidJSON(t *testing.T) {
+	hdlr := newPasswordAuthHandler("s3cret")
+
+	body := strings.NewReader(`not json`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestPasswordLogin_MissingBody(t *testing.T) {
+	hdlr := newPasswordAuthHandler("s3cret")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password", nil)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	hdlr.PasswordLogin(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}

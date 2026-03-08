@@ -154,6 +154,31 @@ func (h *Handler) authRedirect(w http.ResponseWriter, r *http.Request, query str
 	http.Redirect(w, r, prefix, http.StatusTemporaryRedirect)
 }
 
+// PasswordLogin validates a shared password and issues a viewer JWT.
+func (h *Handler) PasswordLogin(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Password == "" || req.Password != h.setting.Auth.Password {
+		http.Error(w, "invalid password", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := h.jwt.Create("password", WithRole("viewer"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
+}
+
 // MeResponse describes the authentication status returned by GetMe.
 type MeResponse struct {
 	Authenticated bool   `json:"authenticated"`
