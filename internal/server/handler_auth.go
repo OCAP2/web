@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-fuego/fuego"
 	"github.com/yohcop/openid-go"
 )
 
@@ -115,6 +116,20 @@ func (h *Handler) SteamCallback(w http.ResponseWriter, r *http.Request) {
 	role := "viewer"
 	if slices.Contains(h.setting.Auth.AdminSteamIDs, steamID) {
 		role = "admin"
+	}
+
+	// In steamAllowlist mode, check if the user is allowed (admins always bypass)
+	if h.setting.Auth.Mode == "steamAllowlist" && role != "admin" {
+		allowed, err := h.repoOperation.IsOnAllowlist(r.Context(), steamID)
+		if err != nil {
+			log.Printf("WARN: allowlist check failed for %s: %v", steamID, err)
+			h.authRedirect(w, r, "auth_error=steam_error")
+			return
+		}
+		if !allowed {
+			h.authRedirect(w, r, "auth_error=not_allowed")
+			return
+		}
 	}
 
 	// Fetch Steam profile data if API key is configured
@@ -334,4 +349,44 @@ func randomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// AllowlistResponse contains the Steam IDs on the allowlist.
+type AllowlistResponse struct {
+	SteamIDs []string `json:"steamIds"`
+}
+
+// GetAllowlist returns all Steam IDs on the allowlist.
+func (h *Handler) GetAllowlist(c ContextNoBody) (AllowlistResponse, error) {
+	ids, err := h.repoOperation.GetAllowlist(c.Context())
+	if err != nil {
+		return AllowlistResponse{}, err
+	}
+	return AllowlistResponse{SteamIDs: ids}, nil
+}
+
+// AddToAllowlist adds a Steam ID to the allowlist.
+func (h *Handler) AddToAllowlist(c ContextNoBody) (any, error) {
+	steamID := c.PathParam("steamId")
+	if steamID == "" {
+		return nil, fuego.BadRequestError{Detail: "steamId is required"}
+	}
+	if err := h.repoOperation.AddToAllowlist(c.Context(), steamID); err != nil {
+		return nil, err
+	}
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
+}
+
+// RemoveFromAllowlist removes a Steam ID from the allowlist.
+func (h *Handler) RemoveFromAllowlist(c ContextNoBody) (any, error) {
+	steamID := c.PathParam("steamId")
+	if steamID == "" {
+		return nil, fuego.BadRequestError{Detail: "steamId is required"}
+	}
+	if err := h.repoOperation.RemoveFromAllowlist(c.Context(), steamID); err != nil {
+		return nil, err
+	}
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
 }

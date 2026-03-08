@@ -438,7 +438,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, version)
+	assert.Equal(t, 11, version)
 }
 
 func TestMigrationV10NormalizeWorldName(t *testing.T) {
@@ -461,7 +461,7 @@ func TestMigrationV10NormalizeWorldName(t *testing.T) {
 	// Reset version so migration 10 runs again
 	db, err := sql.Open("sqlite3", pathDB)
 	require.NoError(t, err)
-	_, err = db.Exec(`DELETE FROM version WHERE db = 10`)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 10`)
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 

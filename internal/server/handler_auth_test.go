@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -766,5 +768,186 @@ func TestGetAuthConfig_ReturnsEmptyWhenNotSet(t *testing.T) {
 	resp, err := hdlr.GetAuthConfig(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "", resp.Mode)
+}
+
+// --- Allowlist CRUD tests ---
+
+func newAllowlistAuthHandler(t *testing.T, adminIDs []string) Handler {
+	t.Helper()
+	repo, err := NewRepoOperation(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	return Handler{
+		repoOperation: repo,
+		setting: Setting{
+			Secret: "test-secret",
+			Auth: Auth{
+				Mode:          "steamAllowlist",
+				SessionTTL:    time.Hour,
+				AdminSteamIDs: adminIDs,
+			},
+		},
+		jwt:              NewJWTManager("test-secret", time.Hour),
+		openIDCache:      openid.NewSimpleDiscoveryCache(),
+		openIDNonceStore: openid.NewSimpleNonceStore(),
+		openIDVerifier:   mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"},
+	}
+}
+
+func TestAllowlistCRUD(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	ctx := context.Background()
+
+	// Empty allowlist
+	ids, err := hdlr.repoOperation.GetAllowlist(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, ids)
+
+	// Add a Steam ID
+	err = hdlr.repoOperation.AddToAllowlist(ctx, "76561198012345678")
+	require.NoError(t, err)
+
+	// Verify it's there
+	ids, err = hdlr.repoOperation.GetAllowlist(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"76561198012345678"}, ids)
+
+	// Add again (idempotent)
+	err = hdlr.repoOperation.AddToAllowlist(ctx, "76561198012345678")
+	require.NoError(t, err)
+
+	ids, err = hdlr.repoOperation.GetAllowlist(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"76561198012345678"}, ids)
+
+	// IsOnAllowlist
+	on, err := hdlr.repoOperation.IsOnAllowlist(ctx, "76561198012345678")
+	require.NoError(t, err)
+	assert.True(t, on)
+
+	on, err = hdlr.repoOperation.IsOnAllowlist(ctx, "76561198099999999")
+	require.NoError(t, err)
+	assert.False(t, on)
+
+	// Remove
+	err = hdlr.repoOperation.RemoveFromAllowlist(ctx, "76561198012345678")
+	require.NoError(t, err)
+
+	ids, err = hdlr.repoOperation.GetAllowlist(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, ids)
+}
+
+func TestGetAllowlist_Handler(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	ctx := context.Background()
+
+	// Seed data
+	require.NoError(t, hdlr.repoOperation.AddToAllowlist(ctx, "76561198012345678"))
+	require.NoError(t, hdlr.repoOperation.AddToAllowlist(ctx, "76561198099999999"))
+
+	mockCtx := fuego.NewMockContextNoBody()
+	resp, err := hdlr.GetAllowlist(mockCtx)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"76561198012345678", "76561198099999999"}, resp.SteamIDs)
+}
+
+func TestAddToAllowlist_Handler(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{"steamId": "76561198012345678"}
+
+	_, err := hdlr.AddToAllowlist(mockCtx)
+	require.NoError(t, err)
+
+	// Verify it was added
+	ids, err := hdlr.repoOperation.GetAllowlist(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"76561198012345678"}, ids)
+}
+
+func TestRemoveFromAllowlist_Handler(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	ctx := context.Background()
+
+	// Seed data
+	require.NoError(t, hdlr.repoOperation.AddToAllowlist(ctx, "76561198012345678"))
+
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{"steamId": "76561198012345678"}
+
+	_, err := hdlr.RemoveFromAllowlist(mockCtx)
+	require.NoError(t, err)
+
+	// Verify it was removed
+	ids, err := hdlr.repoOperation.GetAllowlist(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, ids)
+}
+
+// --- SteamCallback allowlist mode tests ---
+
+func TestSteamCallback_AllowlistMode_AllowedUser(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, []string{"76561198099999999"}) // different admin
+	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
+
+	// Add the user to the allowlist
+	require.NoError(t, hdlr.repoOperation.AddToAllowlist(context.Background(), "76561198012345678"))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "viewer", claims.Role)
+}
+
+func TestSteamCallback_AllowlistMode_DeniedUser(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, []string{"76561198099999999"}) // different admin
+	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
+	// Do NOT add to allowlist
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+	assert.Contains(t, rec.Header().Get("Location"), "auth_error=not_allowed")
+}
+
+func TestSteamCallback_AllowlistMode_AdminBypass(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, []string{"76561198012345678"}) // same as the mock verifier
+	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
+	// Do NOT add to allowlist — admin should bypass
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+
+	loc := rec.Header().Get("Location")
+	assert.Contains(t, loc, "auth_token=")
+	assert.NotContains(t, loc, "auth_error")
+
+	u, err := url.Parse(loc)
+	require.NoError(t, err)
+	tokenValue := u.Query().Get("auth_token")
+	claims := hdlr.jwt.Claims(tokenValue)
+	require.NotNil(t, claims)
+	assert.Equal(t, "admin", claims.Role)
 }
 

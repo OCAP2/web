@@ -232,6 +232,16 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 11 {
+		if err = r.runMigration(11,
+			`CREATE TABLE IF NOT EXISTS steam_allowlist (
+				steam_id TEXT NOT NULL PRIMARY KEY
+			)`,
+		); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
