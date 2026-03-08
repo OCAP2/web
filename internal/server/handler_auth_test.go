@@ -776,6 +776,7 @@ func newAllowlistAuthHandler(t *testing.T, adminIDs []string) Handler {
 	t.Helper()
 	repo, err := NewRepoOperation(filepath.Join(t.TempDir(), "test.db"))
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.db.Close() })
 	return Handler{
 		repoOperation: repo,
 		setting: Setting{
