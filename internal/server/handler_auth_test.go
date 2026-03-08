@@ -541,6 +541,72 @@ func TestRequireAdmin_AllowsAdminRole(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestRequireViewer_PublicMode_AllowsUnauthenticated(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	hdlr.setting.Auth.Mode = "public"
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireViewer(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, called)
+}
+
+func TestRequireViewer_NonPublic_RejectsUnauthenticated(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	hdlr.setting.Auth.Mode = "steam"
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireViewer(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.False(t, called)
+}
+
+func TestRequireViewer_NonPublic_AllowsViewerRole(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	hdlr.setting.Auth.Mode = "steam"
+	token, err := hdlr.jwt.Create("76561198012345678", WithRole("viewer"))
+	require.NoError(t, err)
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireViewer(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, called)
+}
+
+func TestRequireViewer_NonPublic_AllowsAdminRole(t *testing.T) {
+	hdlr := newSteamAuthHandler(nil)
+	hdlr.setting.Auth.Mode = "steam"
+	token, err := hdlr.jwt.Create("76561198012345678", WithRole("admin"))
+	require.NoError(t, err)
+
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	hdlr.requireViewer(next).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, called)
+}
+
 func TestGetMe_ReturnsRole(t *testing.T) {
 	hdlr := newSteamAuthHandler(nil)
 	token, err := hdlr.jwt.Create("76561198012345678", WithRole("viewer"))

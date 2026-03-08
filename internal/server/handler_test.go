@@ -831,6 +831,7 @@ func TestNewHandler(t *testing.T) {
 		Data:      dataDir,
 		Markers:   markerDir,
 		Ammo:      ammoDir,
+		Auth:      Auth{Mode: "public"},
 	}
 
 	s := fuego.NewServer(fuego.WithoutStartupMessages(), fuego.WithoutAutoGroupTags(), fuego.WithSecurity(OpenAPISecuritySchemes))

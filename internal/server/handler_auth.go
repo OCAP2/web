@@ -185,6 +185,24 @@ func (h *Handler) Logout(c ContextNoBody) (any, error) {
 	return nil, nil
 }
 
+// requireViewer is middleware that enforces site-wide access control.
+// In "public" mode it passes all requests through. In all other modes
+// it requires a valid JWT with any role (viewer or admin).
+func (h *Handler) requireViewer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.setting.Auth.Mode == "public" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		token := bearerToken(r)
+		if token == "" || h.jwt.Validate(token) != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // requireAdmin is middleware that checks for a valid JWT Bearer token with admin role.
 func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
