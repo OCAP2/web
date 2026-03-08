@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiClient, ApiError, setAuthToken, getAuthToken } from "../apiClient";
-import type { CustomizeConfig, BuildInfo } from "../apiClient";
+import type { CustomizeConfig, BuildInfo, AuthConfig } from "../apiClient";
 
 // ─── Helpers ───
 
@@ -161,7 +161,7 @@ describe("ApiClient", () => {
       const client = new ApiClient("/aar/");
       const result = await client.getRecordingData("my_mission");
 
-      expect(fetch).toHaveBeenCalledWith("/aar/data/my_mission.json.gz");
+      expect(fetch).toHaveBeenCalledWith("/aar/data/my_mission.json.gz", expect.anything());
       expect(new Uint8Array(result)).toEqual(new Uint8Array([1, 2, 3, 4]));
     });
 
@@ -476,6 +476,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith(
         "/aar/data/op-123/manifest.pb",
+        expect.anything(),
       );
       expect(new Uint8Array(result)).toEqual(new Uint8Array([10, 20, 30]));
     });
@@ -491,6 +492,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith(
         "/aar/data/op-123/chunks/0005.pb",
+        expect.anything(),
       );
       expect(new Uint8Array(result)).toEqual(new Uint8Array([0xaa, 0xbb]));
     });
@@ -1105,6 +1107,158 @@ describe("ApiClient", () => {
       lastXhr.responseText = JSON.stringify({ id: "j1", worldName: "Altis", status: "pending" });
       lastXhr.onload!();
       await promise;
+    });
+  });
+
+  // ─── getAuthConfig ───
+
+  describe("getAuthConfig", () => {
+    it("returns auth mode from server", async () => {
+      mockFetchJson({ mode: "password" });
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getAuthConfig();
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/config", {
+        cache: "no-cache",
+      });
+      expect(result).toEqual({ mode: "password" });
+    });
+
+    it("defaults to public mode on error", async () => {
+      mockFetchError(500, "Internal Server Error");
+
+      const client = new ApiClient("/aar/");
+      const result = await client.getAuthConfig();
+
+      expect(result).toEqual({ mode: "public" });
+    });
+  });
+
+  // ─── passwordLogin ───
+
+  describe("passwordLogin", () => {
+    it("stores token on success", async () => {
+      mockFetchJson({ token: "pw-jwt-token" });
+
+      const client = new ApiClient("/aar/");
+      const token = await client.passwordLogin("secret123");
+
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "secret123" }),
+      });
+      expect(token).toBe("pw-jwt-token");
+      expect(getAuthToken()).toBe("pw-jwt-token");
+    });
+
+    it("throws 'Invalid password' on 401", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.passwordLogin("wrong")).rejects.toThrow("Invalid password");
+    });
+
+    it("throws 'Login failed' on other errors", async () => {
+      mockFetchError(500, "Internal Server Error");
+
+      const client = new ApiClient("/aar/");
+      await expect(client.passwordLogin("test")).rejects.toThrow("Login failed");
+    });
+  });
+
+  // ─── Auth headers on viewer-gated endpoints ───
+
+  describe("auth headers on viewer-gated endpoints", () => {
+    it("includes auth header in fetchJson calls when token is set", async () => {
+      setAuthToken("viewer-jwt");
+      mockFetchJson([]);
+
+      const client = new ApiClient("/aar/");
+      await client.getRecordings();
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer viewer-jwt" },
+        }),
+      );
+    });
+
+    it("includes auth header in fetchBuffer calls when token is set", async () => {
+      setAuthToken("viewer-jwt");
+      mockFetchBuffer(new ArrayBuffer(0));
+
+      const client = new ApiClient("/aar/");
+      await client.getRecordingData("test");
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/data/test.json.gz",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer viewer-jwt" },
+        }),
+      );
+    });
+
+    it("sends empty headers when no token is stored", async () => {
+      mockFetchJson([]);
+
+      const client = new ApiClient("/aar/");
+      await client.getRecordings();
+
+      expect(fetch).toHaveBeenCalledWith(
+        "/aar/api/v1/operations",
+        expect.objectContaining({
+          headers: {},
+        }),
+      );
+    });
+
+    it("saves return path and redirects on 401 from fetchJson", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const hrefSetter = vi.fn();
+      Object.defineProperty(window, "location", {
+        value: {
+          ...window.location,
+          pathname: "/recording/42/test",
+          search: "",
+          get href() { return "http://localhost/recording/42/test"; },
+          set href(v: string) { hrefSetter(v); },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const client = new ApiClient("/aar/");
+      await expect(client.getRecordings()).rejects.toThrow("Authentication required");
+
+      expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/42/test");
+      expect(hrefSetter).toHaveBeenCalledWith("/");
+    });
+
+    it("saves return path and redirects on 401 from fetchBuffer", async () => {
+      mockFetchError(401, "Unauthorized");
+
+      const hrefSetter = vi.fn();
+      Object.defineProperty(window, "location", {
+        value: {
+          ...window.location,
+          pathname: "/recording/7/mission",
+          search: "?t=100",
+          get href() { return "http://localhost/recording/7/mission?t=100"; },
+          set href(v: string) { hrefSetter(v); },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const client = new ApiClient("/aar/");
+      await expect(client.getRecordingData("test")).rejects.toThrow("Authentication required");
+
+      expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/7/mission?t=100");
+      expect(hrefSetter).toHaveBeenCalledWith("/");
     });
   });
 });

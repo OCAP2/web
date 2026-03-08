@@ -3,6 +3,10 @@ import type { ToolSet, HealthCheck, MapInfo, JobInfo } from "../pages/map-manage
 
 // ─── Response types for endpoints not covered in types.ts ───
 
+export interface AuthConfig {
+  mode: string;
+}
+
 export interface CustomizeConfig {
   websiteURL?: string;
   websiteLogo?: string;
@@ -333,6 +337,34 @@ export class ApiClient {
     return true;
   }
 
+  async getAuthConfig(): Promise<AuthConfig> {
+    const response = await fetch(`${this.baseUrl}/api/v1/auth/config`, {
+      cache: "no-cache",
+    });
+    if (!response.ok) {
+      return { mode: "public" };
+    }
+    return response.json() as Promise<AuthConfig>;
+  }
+
+  async passwordLogin(password: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/api/v1/auth/password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!response.ok) {
+      throw new ApiError(
+        response.status === 401 ? "Invalid password" : "Login failed",
+        response.status,
+        response.statusText,
+      );
+    }
+    const data = (await response.json()) as { token: string };
+    setAuthToken(data.token);
+    return data.token;
+  }
+
   async getMe(): Promise<AuthState> {
     const response = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
       headers: authHeaders(),
@@ -590,7 +622,16 @@ export class ApiClient {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    if (response.status === 401) {
+      sessionStorage.setItem("ocap_return_to", window.location.pathname + window.location.search);
+      const base = ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
+      window.location.href = base + "/";
+      throw new ApiError("Authentication required", 401, "Unauthorized");
+    }
     if (!response.ok) {
       throw new ApiError(
         `GET ${url} failed: ${response.status} ${response.statusText}`,
@@ -602,7 +643,15 @@ export class ApiClient {
   }
 
   private async fetchBuffer(url: string): Promise<ArrayBuffer> {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: authHeaders(),
+    });
+    if (response.status === 401) {
+      sessionStorage.setItem("ocap_return_to", window.location.pathname + window.location.search);
+      const base = ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
+      window.location.href = base + "/";
+      throw new ApiError("Authentication required", 401, "Unauthorized");
+    }
     if (!response.ok) {
       throw new ApiError(
         `GET ${url} failed: ${response.status} ${response.statusText}`,
