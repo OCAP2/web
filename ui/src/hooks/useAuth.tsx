@@ -19,8 +19,7 @@ export interface Auth {
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   steam_error: "Steam login failed. Please try again.",
-  not_a_member: "You are not a member of this community. Contact an admin for access.",
-  membership_check_failed: "Could not verify membership. Please try again later.",
+  not_allowed: "You are not on the allowlist. Contact an admin for access.",
 };
 
 const AuthContext = createContext<Auth>();

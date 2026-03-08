@@ -359,9 +359,9 @@ describe("useAuth", () => {
     expect(authRef.authenticated()).toBe(false);
   });
 
-  it("maps not_a_member auth error", async () => {
+  it("maps not_allowed auth error", async () => {
     Object.defineProperty(window, "location", {
-      value: { ...window.location, search: "?auth_error=not_a_member", href: window.location.origin + "/?auth_error=not_a_member", pathname: "/" },
+      value: { ...window.location, search: "?auth_error=not_allowed", href: window.location.origin + "/?auth_error=not_allowed", pathname: "/" },
       writable: true,
       configurable: true,
     });
@@ -370,22 +370,7 @@ describe("useAuth", () => {
     renderAuth((a) => { authRef = a; });
 
     await vi.waitFor(() => {
-      expect(authRef.authError()).toBe("You are not a member of this community. Contact an admin for access.");
-    });
-  });
-
-  it("maps membership_check_failed auth error", async () => {
-    Object.defineProperty(window, "location", {
-      value: { ...window.location, search: "?auth_error=membership_check_failed", href: window.location.origin + "/?auth_error=membership_check_failed", pathname: "/" },
-      writable: true,
-      configurable: true,
-    });
-
-    let authRef!: Auth;
-    renderAuth((a) => { authRef = a; });
-
-    await vi.waitFor(() => {
-      expect(authRef.authError()).toBe("Could not verify membership. Please try again later.");
+      expect(authRef.authError()).toBe("You are not on the allowlist. Contact an admin for access.");
     });
   });
 });

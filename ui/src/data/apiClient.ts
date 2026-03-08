@@ -502,6 +502,43 @@ export class ApiClient {
     }
   }
 
+  // ─── Allowlist methods (admin) ───
+
+  async getAllowlist(): Promise<string[]> {
+    const data = await this.fetchJsonAuth<{ steamIds: string[] }>(
+      `${this.baseUrl}/api/v1/auth/allowlist`,
+    );
+    return data.steamIds;
+  }
+
+  async addToAllowlist(steamId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/auth/allowlist/${encodeURIComponent(steamId)}`,
+      { method: "PUT", headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Add to allowlist failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
+  async removeFromAllowlist(steamId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/auth/allowlist/${encodeURIComponent(steamId)}`,
+      { method: "DELETE", headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new ApiError(
+        `Remove from allowlist failed: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+      );
+    }
+  }
+
   // ─── MapTool methods ───
 
   async getMapToolHealth(): Promise<HealthCheck[]> {

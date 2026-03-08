@@ -136,6 +136,14 @@ describe("AuthBadge", () => {
     expect(queryByPlaceholderText("Password")).toBeNull();
   });
 
+  it("shows only Steam button in steamAllowlist mode", () => {
+    authState.authMode.mockReturnValue("steamAllowlist");
+
+    const { getByText, queryByPlaceholderText } = render(() => <I18nProvider locale="en"><AuthBadge /></I18nProvider>);
+    expect(getByText("Sign in")).toBeDefined();
+    expect(queryByPlaceholderText("Password")).toBeNull();
+  });
+
   it("shows only Steam button in public mode", () => {
     authState.authMode.mockReturnValue("public");
 
