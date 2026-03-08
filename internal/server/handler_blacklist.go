@@ -12,7 +12,7 @@ import (
 func (h *Handler) GetMarkerBlacklist(c ContextNoBody) ([]int, error) {
 	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return nil, fuego.BadRequestError{Err: err}
+		return nil, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 
 	ids, err := h.repoOperation.GetBlacklist(c.Context(), id)
@@ -56,12 +56,12 @@ func (h *Handler) RemoveMarkerBlacklist(c ContextNoBody) (any, error) {
 func parseBlacklistIDs(c ContextNoBody) (int64, int, error) {
 	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return 0, 0, fuego.BadRequestError{Err: fmt.Errorf("invalid id: %w", err)}
+		return 0, 0, fuego.BadRequestError{Err: err, Detail: fmt.Sprintf("invalid id: %v", err)}
 	}
 
 	playerID, err := strconv.Atoi(c.PathParam("playerId"))
 	if err != nil {
-		return 0, 0, fuego.BadRequestError{Err: fmt.Errorf("invalid playerId: %w", err)}
+		return 0, 0, fuego.BadRequestError{Err: err, Detail: fmt.Sprintf("invalid playerId: %v", err)}
 	}
 
 	return id, playerID, nil

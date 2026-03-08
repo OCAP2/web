@@ -15,7 +15,7 @@ describe("ImportDialog", () => {
   it("renders dialog title", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain("Import Map");
@@ -24,7 +24,7 @@ describe("ImportDialog", () => {
   it("renders drop zone with instructions", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain(".zip");
@@ -35,7 +35,7 @@ describe("ImportDialog", () => {
   it("renders structure hint", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain("meta.json");
@@ -45,7 +45,7 @@ describe("ImportDialog", () => {
   it("import button is disabled when no file selected", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const buttons = container.querySelectorAll("button");
@@ -59,7 +59,7 @@ describe("ImportDialog", () => {
   it("shows 'Select a .zip file' status when no file", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain("Select a .zip file");
@@ -69,7 +69,7 @@ describe("ImportDialog", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const cancelBtn = Array.from(container.querySelectorAll("button")).find(
@@ -84,7 +84,7 @@ describe("ImportDialog", () => {
     const onClose = vi.fn();
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={onClose} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     // Overlay is the outermost div
@@ -95,7 +95,7 @@ describe("ImportDialog", () => {
   it("shows upload progress when uploading", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={45} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={45} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain("Uploading...");
@@ -105,7 +105,7 @@ describe("ImportDialog", () => {
   it("caps progress display at 100%", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={120} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={true} uploadProgress={120} uploadError={null} />
       </I18nProvider>
     ));
     expect(container.textContent).toContain("100%");
@@ -114,7 +114,7 @@ describe("ImportDialog", () => {
   it("shows grad_meh link", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const link = container.querySelector('a[href*="grad_meh"]');
@@ -124,7 +124,7 @@ describe("ImportDialog", () => {
   it("accepts a .zip file via file input and shows file info", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -137,7 +137,7 @@ describe("ImportDialog", () => {
   it("rejects non-.zip files via file input", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -150,7 +150,7 @@ describe("ImportDialog", () => {
   it("shows file size in MB after selection", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -164,7 +164,7 @@ describe("ImportDialog", () => {
   it("enables import button when file is selected", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -181,7 +181,7 @@ describe("ImportDialog", () => {
     const onImport = vi.fn();
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={onImport} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={onImport} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -198,7 +198,7 @@ describe("ImportDialog", () => {
   it("clears selected file when clear button clicked", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -216,7 +216,7 @@ describe("ImportDialog", () => {
   it("accepts dropped .zip file", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const dropZone = container.querySelector('[class*="dropZone"]');
@@ -231,7 +231,7 @@ describe("ImportDialog", () => {
   it("handles dragOver and dragLeave", () => {
     const { container } = render(() => (
       <I18nProvider locale="en">
-        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} />
+        <ImportDialog onImport={() => {}} onClose={() => {}} uploading={false} uploadProgress={0} uploadError={null} />
       </I18nProvider>
     ));
     const dropZone = container.querySelector('[class*="dropZone"]');

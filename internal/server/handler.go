@@ -181,7 +181,7 @@ func NewHandler(
 		fuego.Get(mt, "/tools", hdlr.getMapToolTools, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		fuego.Get(mt, "/maps", hdlr.getMapToolMaps, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		fuego.Delete(mt, "/maps/{name}", hdlr.deleteMapToolMap, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
-		fuego.PostStd(mt, "/maps/import", hdlr.importMapToolZip, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
+		fuego.Post(mt, "/maps/import", hdlr.importMapToolZip, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		fuego.Post(mt, "/maps/restyle", hdlr.restyleMapToolAll, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		fuego.Get(mt, "/jobs", hdlr.getMapToolJobs, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
 		fuego.Post(mt, "/jobs/{id}/cancel", hdlr.cancelMapToolJob, fuego.OptionTags("MapTool"), fuego.OptionSecurity(bearerAuth))
@@ -238,7 +238,7 @@ func (h *Handler) GetOperation(c ContextNoBody) (*Operation, error) {
 	if err != nil {
 		op, err = h.repoOperation.GetByFilename(ctx, id)
 		if err != nil {
-			return nil, fuego.NotFoundError{Err: err}
+			return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
 		}
 	}
 

@@ -45,6 +45,7 @@ export function MapManager(): JSX.Element {
   const [showDelete, setShowDelete] = createSignal(false);
   const [uploading, setUploading] = createSignal(false);
   const [uploadProgress, setUploadProgress] = createSignal(0);
+  const [uploadError, setUploadError] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(true);
 
   // SSE events
@@ -111,6 +112,7 @@ export function MapManager(): JSX.Element {
   async function handleImport(file: File) {
     setUploading(true);
     setUploadProgress(0);
+    setUploadError(null);
     try {
       await api.importMapToolZip(file, (loaded, total) => {
         setUploadProgress((loaded / total) * 100);
@@ -119,6 +121,12 @@ export function MapManager(): JSX.Element {
       // Maps list will refresh automatically when the job completes via SSE
     } catch (e) {
       console.error("Import failed:", e);
+      const apiErr = e as { status?: number };
+      if (apiErr.status === 413) {
+        setUploadError(t("mm_upload_too_large"));
+      } else {
+        setUploadError(`${t("mm_upload_failed")}: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
     setUploading(false);
   }
@@ -354,9 +362,10 @@ export function MapManager(): JSX.Element {
       <Show when={showImport()}>
         <ImportDialog
           onImport={handleImport}
-          onClose={() => setShowImport(false)}
+          onClose={() => { setShowImport(false); setUploadError(null); }}
           uploading={uploading()}
           uploadProgress={uploadProgress()}
+          uploadError={uploadError()}
         />
       </Show>
 

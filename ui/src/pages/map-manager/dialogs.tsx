@@ -19,6 +19,7 @@ export function ImportDialog(props: {
   onClose: () => void;
   uploading: boolean;
   uploadProgress: number;
+  uploadError: string | null;
 }): JSX.Element {
   const [file, setFile] = createSignal<File | null>(null);
   const [dragOver, setDragOver] = createSignal(false);
@@ -144,6 +145,12 @@ export function ImportDialog(props: {
         </div>
 
         <div class={styles.dialogFooter}>
+          <Show when={props.uploadError}>
+            <div class={styles.uploadError}>
+              <AlertTriangleIcon size={14} />
+              <span>{props.uploadError}</span>
+            </div>
+          </Show>
           <Show
             when={props.uploading}
             fallback={

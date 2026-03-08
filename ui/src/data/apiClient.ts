@@ -519,13 +519,13 @@ export class ApiClient {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(JSON.parse(xhr.responseText) as JobInfo);
         } else {
-          reject(
-            new ApiError(
-              `Upload failed: ${xhr.status} ${xhr.statusText}`,
-              xhr.status,
-              xhr.statusText,
-            ),
-          );
+          let msg = `${xhr.status} ${xhr.statusText}`;
+          try {
+            const body = JSON.parse(xhr.responseText) as { detail?: string; error?: string };
+            if (body.detail) msg = body.detail;
+            else if (body.error) msg = body.error;
+          } catch { /* not JSON */ }
+          reject(new ApiError(msg, xhr.status, xhr.statusText));
         }
       };
 

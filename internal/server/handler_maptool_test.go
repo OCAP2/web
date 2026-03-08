@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -231,14 +230,12 @@ func TestImportMapToolZip_NotZip(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	rec := httptest.NewRecorder()
 
-	hdlr.importMapToolZip(rec, req)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var respBody map[string]string
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
-	assert.Contains(t, respBody["error"], ".zip")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.SetRequest(req)
+	_, err = hdlr.importMapToolZip(ctx)
+	assert.IsType(t, fuego.BadRequestError{}, err)
+	assert.Contains(t, err.Error(), ".zip")
 }
 
 func TestImportMapToolZip_MissingFile(t *testing.T) {
@@ -252,14 +249,12 @@ func TestImportMapToolZip_MissingFile(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	rec := httptest.NewRecorder()
 
-	hdlr.importMapToolZip(rec, req)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var respBody map[string]string
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
-	assert.Contains(t, respBody["error"], "file field is required")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.SetRequest(req)
+	_, err := hdlr.importMapToolZip(ctx)
+	assert.IsType(t, fuego.BadRequestError{}, err)
+	assert.Contains(t, err.Error(), "file field is required")
 }
 
 func TestRestyleMapToolAll_NoMaps(t *testing.T) {
@@ -343,13 +338,11 @@ func TestImportMapToolZip_ValidZip(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	rec := httptest.NewRecorder()
 
-	hdlr.importMapToolZip(rec, req)
-	assert.Equal(t, http.StatusAccepted, rec.Code)
-
-	var snap maptool.JobInfo
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &snap))
+	ctx := fuego.NewMockContextNoBody()
+	ctx.SetRequest(req)
+	snap, err := hdlr.importMapToolZip(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, "testworld", snap.WorldName)
 	assert.Equal(t, "pending", snap.Status)
 }
@@ -394,14 +387,12 @@ func TestImportMapToolZip_BadExtract(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	rec := httptest.NewRecorder()
 
-	hdlr.importMapToolZip(rec, req)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var respBody map[string]string
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
-	assert.Contains(t, respBody["error"], "extract zip")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.SetRequest(req)
+	_, err = hdlr.importMapToolZip(ctx)
+	assert.IsType(t, fuego.BadRequestError{}, err)
+	assert.Contains(t, err.Error(), "extract zip")
 }
 
 func TestRestyleMapToolAll_ExecutesCallback(t *testing.T) {
@@ -475,14 +466,12 @@ func TestImportMapToolZip_NoGradMehDir(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	rec := httptest.NewRecorder()
 
-	hdlr.importMapToolZip(rec, req)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var respBody map[string]string
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respBody))
-	assert.Contains(t, respBody["error"], "grad_meh")
+	ctx := fuego.NewMockContextNoBody()
+	ctx.SetRequest(req)
+	_, err = hdlr.importMapToolZip(ctx)
+	assert.IsType(t, fuego.BadRequestError{}, err)
+	assert.Contains(t, err.Error(), "grad_meh")
 }
 
 func TestRestyleMapToolAll_ScanError(t *testing.T) {
@@ -855,12 +844,3 @@ func (w *nonFlushableWriter) Header() http.Header         { return w.header }
 func (w *nonFlushableWriter) Write(b []byte) (int, error)  { w.body = append(w.body, b...); return len(b), nil }
 func (w *nonFlushableWriter) WriteHeader(code int)         { w.code = code }
 
-// jsonTrimmed returns the recorder body with trailing whitespace removed.
-func jsonTrimmed(rec *httptest.ResponseRecorder) string {
-	s := rec.Body.String()
-	// Fuego's JSON encoder appends a trailing newline
-	if len(s) > 0 && s[len(s)-1] == '\n' {
-		s = s[:len(s)-1]
-	}
-	return s
-}

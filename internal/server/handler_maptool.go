@@ -68,7 +68,7 @@ func (h *Handler) getMapToolTools(c ContextNoBody) (maptool.ToolSet, error) {
 func (h *Handler) getMapToolMaps(c ContextNoBody) ([]maptool.MapInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return nil, fuego.InternalServerError{Err: err}
+		return nil, fuego.InternalServerError{Err: err, Detail: err.Error()}
 	}
 	return maps, nil
 }
@@ -77,93 +77,85 @@ func (h *Handler) getMapToolMaps(c ContextNoBody) ([]maptool.MapInfo, error) {
 func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
 	name := c.PathParam("name")
 	if name == "" {
-		return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid map name")}
+		return nil, fuego.BadRequestError{Detail: "invalid map name"}
 	}
 	dir := filepath.Join(h.maptoolCfg.mapsDir, filepath.Clean(name))
 	absDir, _ := filepath.Abs(dir)
 	absMaps, _ := filepath.Abs(h.maptoolCfg.mapsDir)
 	if !strings.HasPrefix(absDir, absMaps+string(filepath.Separator)) {
-		return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid map name")}
+		return nil, fuego.BadRequestError{Detail: "invalid map name"}
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return nil, fuego.InternalServerError{Err: err}
+		return nil, fuego.InternalServerError{Err: err, Detail: err.Error()}
 	}
 	c.SetStatus(http.StatusNoContent)
 	return nil, nil
 }
 
 // importMapToolZip handles ZIP upload, extraction, and pipeline submission.
-func (h *Handler) importMapToolZip(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
+	r := c.Request()
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "file field is required")
-		return
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: "file field is required"}
 	}
 	defer file.Close()
 
 	if !strings.HasSuffix(strings.ToLower(header.Filename), ".zip") {
-		writeJSONError(w, http.StatusBadRequest, "only .zip files are accepted")
-		return
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: "only .zip files are accepted"}
 	}
 
 	tmpFile, err := os.CreateTemp("", "ocap-maptool-upload-*.zip")
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to create temp file")
-		return
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to create temp file"}
 	}
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
 	if _, err := io.Copy(tmpFile, file); err != nil {
 		tmpFile.Close()
-		writeJSONError(w, http.StatusInternalServerError, "failed to save upload")
-		return
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to save upload"}
 	}
 	if err := tmpFile.Close(); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to save upload")
-		return
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to save upload"}
 	}
 
 	extractDir, err := os.MkdirTemp("", "ocap-maptool-uploads-")
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to create extraction dir")
-		return
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to create extraction dir"}
 	}
 
 	if err := maptool.ExtractZip(tmpPath, extractDir); err != nil {
 		os.RemoveAll(extractDir)
-		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to extract zip: %v", err))
-		return
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("failed to extract zip: %v", err)}
 	}
 
 	gradMehDir, err := maptool.FindGradMehDir(extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
-		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("not a valid grad_meh export: %v", err))
-		return
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("not a valid grad_meh export: %v", err)}
 	}
 
 	worldName := maptool.WorldNameFromDir(gradMehDir)
 	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(snap)
+	c.SetStatus(http.StatusAccepted)
+	return snap, nil
 }
 
 // restyleMapToolAll restyles all existing maps.
 func (h *Handler) restyleMapToolAll(c ContextNoBody) (maptool.JobInfo, error) {
 	maps, err := maptool.ScanMaps(h.maptoolCfg.mapsDir)
 	if err != nil {
-		return maptool.JobInfo{}, fuego.InternalServerError{Err: err}
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
 	}
 	if len(maps) == 0 {
-		return maptool.JobInfo{}, fuego.BadRequestError{Err: fmt.Errorf("no maps found")}
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: "no maps found"}
 	}
 
 	id := fmt.Sprintf("restyle-%d", time.Now().UnixMilli())
@@ -187,7 +179,7 @@ func (h *Handler) restyleMapToolAll(c ContextNoBody) (maptool.JobInfo, error) {
 		return nil
 	})
 	if err != nil {
-		return maptool.JobInfo{}, fuego.InternalServerError{Err: err}
+		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: err.Error()}
 	}
 
 	c.SetStatus(http.StatusAccepted)
@@ -203,7 +195,7 @@ func (h *Handler) getMapToolJobs(c ContextNoBody) ([]maptool.JobInfo, error) {
 func (h *Handler) cancelMapToolJob(c ContextNoBody) (any, error) {
 	id := c.PathParam("id")
 	if err := h.maptoolMgr.CancelJob(id); err != nil {
-		return nil, fuego.BadRequestError{Err: err}
+		return nil, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 	c.SetStatus(http.StatusNoContent)
 	return nil, nil
@@ -266,9 +258,3 @@ func (h *Handler) mapToolEventStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// writeJSONError writes a JSON error response.
-func writeJSONError(w http.ResponseWriter, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}

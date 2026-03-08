@@ -85,18 +85,18 @@ func decodeEditRequest(r *http.Request) (editOperationRequest, error) {
 func (h *Handler) EditOperation(c ContextNoBody) (*Operation, error) {
 	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return nil, fuego.BadRequestError{Err: err}
+		return nil, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 
 	req, err := decodeEditRequest(c.Request())
 	if err != nil {
-		return nil, fuego.BadRequestError{Err: err}
+		return nil, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 
 	// Fetch current to fill in any fields not provided
 	current, err := h.repoOperation.GetByID(c.Context(), c.PathParam("id"))
 	if err != nil {
-		return nil, fuego.NotFoundError{Err: err}
+		return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
 	}
 
 	name := req.MissionName
@@ -115,24 +115,24 @@ func (h *Handler) EditOperation(c ContextNoBody) (*Operation, error) {
 	if req.hasFocusStart {
 		val, ok := parseFocusField(req.FocusStart)
 		if !ok {
-			return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid focusStart")}
+			return nil, fuego.BadRequestError{Detail: "invalid focusStart"}
 		}
 		focusStart = val
 	}
 	if req.hasFocusEnd {
 		val, ok := parseFocusField(req.FocusEnd)
 		if !ok {
-			return nil, fuego.BadRequestError{Err: fmt.Errorf("invalid focusEnd")}
+			return nil, fuego.BadRequestError{Detail: "invalid focusEnd"}
 		}
 		focusEnd = val
 	}
 
 	// Validate focus range: both must be present or both absent, and start < end
 	if (focusStart == nil) != (focusEnd == nil) {
-		return nil, fuego.BadRequestError{Err: fmt.Errorf("focusStart and focusEnd must both be present or both absent")}
+		return nil, fuego.BadRequestError{Detail: "focusStart and focusEnd must both be present or both absent"}
 	}
 	if focusStart != nil && focusEnd != nil && *focusStart >= *focusEnd {
-		return nil, fuego.BadRequestError{Err: fmt.Errorf("focusStart must be less than focusEnd")}
+		return nil, fuego.BadRequestError{Detail: "focusStart must be less than focusEnd"}
 	}
 
 	if err := h.repoOperation.UpdateOperation(c.Context(), id, name, tag, date, focusStart, focusEnd); err != nil {
@@ -157,17 +157,17 @@ type RetryResponse struct {
 func (h *Handler) RetryConversion(c ContextNoBody) (RetryResponse, error) {
 	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return RetryResponse{}, fuego.BadRequestError{Err: err}
+		return RetryResponse{}, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 
 	ctx := c.Context()
 	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return RetryResponse{}, fuego.NotFoundError{Err: err}
+		return RetryResponse{}, fuego.NotFoundError{Err: err, Detail: err.Error()}
 	}
 
 	if op.ConversionStatus != ConversionStatusFailed {
-		return RetryResponse{}, fuego.ConflictError{Err: fmt.Errorf("operation is not in failed state")}
+		return RetryResponse{}, fuego.ConflictError{Detail: "operation is not in failed state"}
 	}
 
 	// Remove partial protobuf output
@@ -191,13 +191,13 @@ func (h *Handler) RetryConversion(c ContextNoBody) (RetryResponse, error) {
 func (h *Handler) DeleteOperation(c ContextNoBody) (any, error) {
 	id, err := strconv.ParseInt(c.PathParam("id"), 10, 64)
 	if err != nil {
-		return nil, fuego.BadRequestError{Err: err}
+		return nil, fuego.BadRequestError{Err: err, Detail: err.Error()}
 	}
 
 	ctx := c.Context()
 	op, err := h.repoOperation.GetByID(ctx, c.PathParam("id"))
 	if err != nil {
-		return nil, fuego.NotFoundError{Err: err}
+		return nil, fuego.NotFoundError{Err: err, Detail: err.Error()}
 	}
 
 	// Delete DB record first
