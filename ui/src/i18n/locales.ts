@@ -482,7 +482,7 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: "Language:",
     de: "Sprache:",
     cs: "Jazyk:",
-    it: "Linguk:",
+    it: "Lingua:",
     fr: "Langue :",
     fi: "Kieli:",
     uk: "Мова:",
