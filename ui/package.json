@@ -34,7 +34,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^9.39.3",
+    "eslint": "^10.0.3",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.4.0",
     "jsdom": "^28.1.0",
