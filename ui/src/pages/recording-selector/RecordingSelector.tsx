@@ -161,7 +161,7 @@ export function RecordingSelector(): JSX.Element {
     const sb = sortBy();
     const sd = sortDir();
     result.sort((a, b) => {
-      let cmp = 0;
+      let cmp: number;
       switch (sb) {
         case "date": cmp = new Date(a.date).getTime() - new Date(b.date).getTime(); break;
         case "name": cmp = a.missionName.localeCompare(b.missionName); break;
