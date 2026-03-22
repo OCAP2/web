@@ -85,16 +85,16 @@ The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persiste
 
 ## Configuration
 
-The configuration file is called `setting.json`. All settings can also be set via environment variables with the `OCAP_` prefix. Nested keys use underscores: `admin.sessionTTL` → `OCAP_ADMIN_SESSIONTTL`.
+The configuration file is called `setting.json`. All settings can also be set via environment variables with the `OCAP_` prefix. Nested keys use underscores: `auth.sessionTTL` → `OCAP_AUTH_SESSIONTTL`.
 
 ```json
 {
   "listen": "127.0.0.1:5000",
   "secret": "your-secret",
   "logger": true,
-  "admin": {
+  "auth": {
     "sessionTTL": "24h",
-    "allowedSteamIds": ["76561198012345678"],
+    "adminSteamIds": ["76561198012345678"],
     "steamApiKey": ""
   },
   "customize": {
@@ -141,9 +141,9 @@ Admin access uses Steam OpenID — no passwords. Admins authenticate via their S
 
 | Setting | Env Var | Description | Default |
 |---------|---------|-------------|---------|
-| `admin.sessionTTL` | `OCAP_ADMIN_SESSIONTTL` | How long admin sessions last | `24h` |
-| `admin.allowedSteamIds` | `OCAP_ADMIN_ALLOWEDSTEAMIDS` | Steam64 IDs authorized for admin access (comma-separated in env var) | `[]` |
-| `admin.steamApiKey` | `OCAP_ADMIN_STEAMAPIKEY` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
+| `auth.sessionTTL` | `OCAP_AUTH_SESSIONTTL` | How long admin sessions last | `24h` |
+| `auth.adminSteamIds` | `OCAP_AUTH_ADMINSTEAMIDS` | Steam64 IDs authorized for admin access (comma-separated in env var) | `[]` |
+| `auth.steamApiKey` | `OCAP_AUTH_STEAMAPIKEY` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
 
 The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
 

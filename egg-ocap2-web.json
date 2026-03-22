@@ -105,7 +105,7 @@
         {
             "name": "Allowed Steam IDs",
             "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID. Leave empty to disable Steam admin login.",
-            "env_variable": "OCAP_ADMIN_ALLOWEDSTEAMIDS",
+            "env_variable": "OCAP_AUTH_ADMINSTEAMIDS",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
@@ -115,7 +115,7 @@
         {
             "name": "Steam API Key",
             "description": "Steam Web API key for fetching player display names and avatars. Get one at https://steamcommunity.com/dev/apikey. Optional — without it, the admin badge shows the Steam ID instead of a name.",
-            "env_variable": "OCAP_ADMIN_STEAMAPIKEY",
+            "env_variable": "OCAP_AUTH_STEAMAPIKEY",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
