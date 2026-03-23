@@ -295,14 +295,15 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		viper.Reset()
 		viper.AddConfigPath(dir)
 
+		dbPath := filepath.Join(t.TempDir(), "db", "custom.db")
 		os.Setenv("OCAP_SECRET", "env-secret")
-		os.Setenv("OCAP_DB", "/data/custom.db")
+		os.Setenv("OCAP_DB", dbPath)
 		defer os.Unsetenv("OCAP_SECRET")
 		defer os.Unsetenv("OCAP_DB")
 
 		setting, err := NewSetting()
 		require.NoError(t, err)
-		assert.Equal(t, "/data/custom.db", setting.DB)
+		assert.Equal(t, dbPath, setting.DB)
 	})
 
 	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES env var", func(t *testing.T) {

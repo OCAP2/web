@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -136,6 +137,12 @@ func NewSetting() (setting Setting, err error) {
 
 	if err = os.MkdirAll(setting.Data, 0755); err != nil {
 		return setting, fmt.Errorf("create data directory: %w", err)
+	}
+	if err = os.MkdirAll(filepath.Dir(setting.DB), 0755); err != nil {
+		return setting, fmt.Errorf("create database directory: %w", err)
+	}
+	if err = os.MkdirAll(setting.Maps, 0755); err != nil {
+		return setting, fmt.Errorf("create maps directory: %w", err)
 	}
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {

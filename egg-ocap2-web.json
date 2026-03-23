@@ -8,11 +8,12 @@
     "author": "ocap2@github.com",
     "uuid": "b3f5a8e2-7c41-4d6f-9e1a-2f8b0c3d4e5f",
     "description": "OCAP2 Web Server — archives and replays Arma 3 military simulation missions on interactive Leaflet maps. Provides a web interface for browsing operations, streaming playback, and mission upload via API.",
-    "image": null,
+    "image": "ghcr.io/ocap2/web:full",
     "tags": [],
     "features": null,
     "docker_images": {
-        "ghcr.io/ocap2/web:latest": "ghcr.io/ocap2/web:latest"
+        "Full (with map tools)": "ghcr.io/ocap2/web:full",
+        "Slim": "ghcr.io/ocap2/web:latest"
     },
     "file_denylist": [],
     "startup_commands": {
@@ -27,7 +28,7 @@
     "scripts": {
         "installation": {
             "script": "#!/bin/bash\nset -euo pipefail\n\n## Create persistent data directories\nmkdir -p /mnt/server/data /mnt/server/db /mnt/server/maps\n\necho \"Installation complete\"",
-            "container": "ghcr.io/ocap2/web:latest",
+            "container": "ghcr.io/ocap2/web:full",
             "entrypoint": "bash"
         }
     },
