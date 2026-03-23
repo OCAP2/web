@@ -47,7 +47,7 @@
             "name": "Listen Address",
             "description": "Address and port the server binds to. Uses the Pelican-allocated port by default.",
             "env_variable": "OCAP_LISTEN",
-            "default_value": "0.0.0.0:{{server.allocations.default.port}}",
+            "default_value": "0.0.0.0:5000",
             "user_viewable": true,
             "user_editable": false,
             "rules": ["required", "string"],
