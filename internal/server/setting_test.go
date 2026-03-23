@@ -304,6 +304,8 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		setting, err := NewSetting()
 		require.NoError(t, err)
 		assert.Equal(t, dbPath, setting.DB)
+		_, err = os.Stat(filepath.Dir(dbPath))
+		require.NoError(t, err, "database directory should have been created")
 	})
 
 	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES env var", func(t *testing.T) {
