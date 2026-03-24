@@ -253,7 +253,7 @@ func (h *Handler) GetWorlds(c ContextNoBody) ([]WorldInfo, error) {
 	return worlds, nil
 }
 
-func (h *Handler) GetCustomize(c ContextNoBody) (*Customize, error) {
+func (h *Handler) GetCustomize(c ContextNoBody) (any, error) {
 	if !h.setting.Customize.Enabled {
 		c.SetStatus(http.StatusNoContent)
 		return nil, nil

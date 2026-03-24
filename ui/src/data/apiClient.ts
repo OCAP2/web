@@ -565,7 +565,8 @@ export class ApiClient {
 
   getMapToolEventsUrl(): string {
     const token = getAuthToken();
-    return `${this.baseUrl}/api/v1/maptool/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    if (!token) return "";
+    return `${this.baseUrl}/api/v1/maptool/events?token=${encodeURIComponent(token)}`;
   }
 
   // ─── Internal fetch helpers ───

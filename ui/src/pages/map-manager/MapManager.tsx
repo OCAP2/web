@@ -1,7 +1,7 @@
 import type { JSX } from "solid-js";
 import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { ApiClient } from "../../data/apiClient";
+import { ApiClient, getAuthToken } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
 import { useI18n } from "../../hooks/useLocale";
 import type { ToolSet, HealthCheck, MapInfo } from "./types";
@@ -91,6 +91,10 @@ export function MapManager(): JSX.Element {
 
   // ─── Load data ───
   onMount(async () => {
+    if (!getAuthToken()) {
+      navigate("/", { replace: true });
+      return;
+    }
     try {
       const [t, m, h] = await Promise.all([
         api.getMapToolTools(),
