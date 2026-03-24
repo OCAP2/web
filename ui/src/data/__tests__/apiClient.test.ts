@@ -197,13 +197,13 @@ describe("ApiClient", () => {
       expect(result).toEqual(data);
     });
 
-    it("returns empty config on 204 No Content", async () => {
-      mockFetchJson(null, 204);
+    it("returns config with enabled false when disabled", async () => {
+      mockFetchJson({ enabled: false });
 
       const client = new ApiClient("/aar/");
       const result = await client.getCustomize();
 
-      expect(result).toEqual({});
+      expect(result).toEqual({ enabled: false });
     });
   });
 
@@ -261,7 +261,7 @@ describe("ApiClient", () => {
   // ─── getCustomize error ───
 
   describe("getCustomize error handling", () => {
-    it("throws ApiError on non-204 non-OK response", async () => {
+    it("throws ApiError on non-OK response", async () => {
       mockFetchError(500, "Internal Server Error");
 
       const client = new ApiClient("/aar/");
@@ -979,10 +979,10 @@ describe("ApiClient", () => {
   });
 
   describe("getMapToolEventsUrl", () => {
-    it("returns URL without token when not authenticated", () => {
+    it("returns empty string when not authenticated", () => {
       setAuthToken(null as unknown as string);
       const client = new ApiClient();
-      expect(client.getMapToolEventsUrl()).toBe("/api/v1/maptool/events");
+      expect(client.getMapToolEventsUrl()).toBe("");
     });
 
     it("returns URL with token when authenticated", () => {

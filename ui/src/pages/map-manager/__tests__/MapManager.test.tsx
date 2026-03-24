@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@solidjs/testing-library";
 import { Router, Route } from "@solidjs/router";
 import { I18nProvider } from "../../../hooks/useLocale";
+import { setAuthToken } from "../../../data/apiClient";
 import { MapManager } from "../MapManager";
 import type { ToolSet, MapInfo } from "../types";
 
@@ -123,6 +124,7 @@ async function flush() {
 // ─── Tests ───
 
 beforeEach(() => {
+  setAuthToken("test-admin-token");
   window.history.replaceState(null, "", "/");
   mockJobsRef.current = [];
   mockGetMapToolTools.mockResolvedValue(tools);
@@ -136,6 +138,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  setAuthToken(null as unknown as string);
   vi.restoreAllMocks();
 });
 

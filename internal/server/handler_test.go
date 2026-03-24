@@ -141,11 +141,10 @@ func TestGetCustomize(t *testing.T) {
 		mockCtx := fuego.NewMockContextNoBody()
 		result, err := hdlr.GetCustomize(mockCtx)
 		assert.NoError(t, err)
-		c := result.(*Customize)
-		assert.Equal(t, "https://example.com", c.WebsiteURL)
-		assert.Equal(t, "/logo.png", c.WebsiteLogo)
-		assert.Equal(t, "64px", c.WebsiteLogoSize)
-		assert.True(t, c.DisableKillCount)
+		assert.Equal(t, "https://example.com", result.WebsiteURL)
+		assert.Equal(t, "/logo.png", result.WebsiteLogo)
+		assert.Equal(t, "64px", result.WebsiteLogoSize)
+		assert.True(t, result.DisableKillCount)
 	})
 
 	t.Run("disabled", func(t *testing.T) {
@@ -160,7 +159,7 @@ func TestGetCustomize(t *testing.T) {
 		mockCtx := fuego.NewMockContextNoBody()
 		result, err := hdlr.GetCustomize(mockCtx)
 		assert.NoError(t, err)
-		assert.Nil(t, result)
+		assert.False(t, result.Enabled)
 	})
 }
 
@@ -1521,9 +1520,8 @@ func TestGetCustomize_Enabled(t *testing.T) {
 	mockCtx := fuego.NewMockContextNoBody()
 	result, err := hdlr.GetCustomize(mockCtx)
 	assert.NoError(t, err)
-	c := result.(*Customize)
-	assert.True(t, c.Enabled)
-	assert.Equal(t, "https://example.com", c.WebsiteURL)
+	assert.True(t, result.Enabled)
+	assert.Equal(t, "https://example.com", result.WebsiteURL)
 }
 
 func TestGetCustomize_Disabled(t *testing.T) {
@@ -1536,7 +1534,7 @@ func TestGetCustomize_Disabled(t *testing.T) {
 	mockCtx := fuego.NewMockContextNoBody()
 	result, err := hdlr.GetCustomize(mockCtx)
 	assert.NoError(t, err)
-	assert.Nil(t, result)
+	assert.False(t, result.Enabled)
 }
 
 func TestStoreOperation_FilenameStripping(t *testing.T) {
@@ -2014,8 +2012,7 @@ func TestGetCustomize_Fields(t *testing.T) {
 	mockCtx := fuego.NewMockContextNoBody()
 	result, err := h.GetCustomize(mockCtx)
 	assert.NoError(t, err)
-	c := result.(*Customize)
-	assert.Equal(t, "https://example.com", c.WebsiteURL)
+	assert.Equal(t, "https://example.com", result.WebsiteURL)
 }
 
 // emptyFS is an fs.FS that always returns file not found

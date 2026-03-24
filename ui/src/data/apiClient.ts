@@ -4,6 +4,7 @@ import type { ToolSet, HealthCheck, MapInfo, JobInfo } from "../pages/map-manage
 // ─── Response types for endpoints not covered in types.ts ───
 
 export interface CustomizeConfig {
+  enabled?: boolean;
   websiteURL?: string;
   websiteLogo?: string;
   websiteLogoSize?: string;
@@ -181,9 +182,6 @@ export class ApiClient {
     const response = await fetch(`${this.baseUrl}/api/v1/customize`, {
       cache: "no-cache",
     });
-    if (response.status === 204) {
-      return {};
-    }
     if (!response.ok) {
       throw new ApiError(
         `GET customize failed: ${response.status} ${response.statusText}`,
