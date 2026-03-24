@@ -19,6 +19,7 @@ export function CustomizeProvider(props: {
     try {
       const api = new ApiClient();
       const data = await api.getCustomize();
+      if (!data.enabled) return;
       setConfig(data);
 
       // Apply CSS variable overrides to :root
