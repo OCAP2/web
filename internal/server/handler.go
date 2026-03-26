@@ -283,12 +283,13 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		claims := h.jwt.Claims(token)
 		if claims == nil || claims.Role != "admin" {
-			reason := "invalid secret"
-			if secret == "" {
-				reason = "missing secret"
-			}
+			var reason string
 			if token != "" {
 				reason = "invalid or insufficient token"
+			} else if secret == "" {
+				reason = "missing secret"
+			} else {
+				reason = "invalid secret"
 			}
 			slog.Warn("upload rejected", "reason", reason, "remote_addr", r.RemoteAddr)
 			w.Header().Set("Content-Type", "application/json")
