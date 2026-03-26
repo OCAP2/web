@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -254,6 +255,28 @@ func TestStoreOperation(t *testing.T) {
 
 		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+
+		var errResp map[string]string
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&errResp))
+		assert.Contains(t, errResp["detail"], "invalid secret")
+	})
+
+	t.Run("missing secret", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+
+		var errResp map[string]string
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&errResp))
+		assert.Contains(t, errResp["detail"], "missing secret")
 	})
 
 	t.Run("invalid duration", func(t *testing.T) {
@@ -1100,6 +1123,10 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 
 		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
+
+		var errResp map[string]string
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&errResp))
+		assert.Contains(t, errResp["detail"], "invalid or insufficient token")
 	})
 
 	t.Run("viewer JWT token is rejected", func(t *testing.T) {
@@ -1121,6 +1148,10 @@ func TestStoreOperation_CookieAuth(t *testing.T) {
 
 		hdlr.StoreOperation(rec, req)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
+
+		var errResp map[string]string
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&errResp))
+		assert.Contains(t, errResp["detail"], "invalid or insufficient token")
 	})
 
 	t.Run("no secret and no token fails", func(t *testing.T) {
