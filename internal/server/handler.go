@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"errors"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"io"
 	"io/fs"
 	"net/http"
@@ -281,7 +283,20 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		claims := h.jwt.Claims(token)
 		if claims == nil || claims.Role != "admin" {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			reason := "invalid secret"
+			if secret == "" {
+				reason = "missing secret"
+			}
+			if token != "" {
+				reason = "invalid or insufficient token"
+			}
+			slog.Warn("upload rejected", "reason", reason, "remote_addr", r.RemoteAddr)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error":  "Forbidden",
+				"detail": "Authentication failed: " + reason + ". Verify the secret matches your server configuration.",
+			})
 			return
 		}
 	}
