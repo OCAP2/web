@@ -144,8 +144,12 @@ func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
 		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("not a valid grad_meh export: %v", err)}
 	}
 
-	worldName := maptool.WorldNameFromDir(gradMehDir)
-	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
+	meta, err := maptool.ReadGradMehMeta(gradMehDir)
+	if err != nil {
+		os.RemoveAll(extractDir)
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("invalid grad_meh meta.json: %v", err)}
+	}
+	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, meta.WorldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
 		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to submit import job"}
