@@ -38,7 +38,32 @@ func ReadGradMehMeta(dir string) (GradMehMeta, error) {
 		return GradMehMeta{}, fmt.Errorf("meta.json: worldSize must be positive, got %v", meta.WorldSize)
 	}
 	meta.WorldName = strings.ToLower(meta.WorldName)
+	if !isSafeWorldName(meta.WorldName) {
+		return GradMehMeta{}, fmt.Errorf("meta.json: worldName %q is not a safe directory name", meta.WorldName)
+	}
 	return meta, nil
+}
+
+// isSafeWorldName reports whether name is safe to use as a single-segment
+// directory name. It rejects path separators, traversal segments, and any
+// characters outside [a-z0-9_-].
+func isSafeWorldName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if filepath.Base(name) != name {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= '0' && r <= '9':
+		case r == '_' || r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // ValidateGradMehDir checks that a directory contains a valid grad_meh export.
