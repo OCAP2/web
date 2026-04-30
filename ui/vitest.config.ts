@@ -1,8 +1,25 @@
 import { defineConfig } from "vitest/config";
 import solidPlugin from "vite-plugin-solid";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 export default defineConfig({
-  plugins: [solidPlugin()],
+  plugins: [
+    {
+      name: "fix-solid-refresh-path",
+      enforce: "pre",
+      // On Windows, fileURLToPath rejects 'file:///@solid-refresh' because the path
+      // has no drive letter. Redirect to the actual file before solidPlugin's resolveId
+      // returns the virtual ID, so the module ID is always a real file path.
+      resolveId(id: string) {
+        if (id === "/@solid-refresh") {
+          return require.resolve("solid-refresh/dist/solid-refresh.mjs");
+        }
+      },
+    },
+    solidPlugin(),
+  ],
   resolve: {
     conditions: ["development", "browser"],
     dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
