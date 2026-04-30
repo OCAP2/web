@@ -780,7 +780,16 @@ export class LeafletRenderer implements MapRenderer {
     marker.bindPopup(popup).openPopup();
 
     const iconKey = `${opts.iconType}:${opts.side}:1`;
-    const internal: InternalMarkerHandle = { marker, id, lastDirection: 0, iconKey, popupName: popupContent, isPlayer: opts.isPlayer, isInVehicle: false, isVehicle: opts.crew !== undefined };
+    const internal: InternalMarkerHandle = {
+      marker,
+      id,
+      lastDirection: 0,
+      iconKey,
+      popupName: popupContent,
+      isPlayer: opts.isPlayer,
+      isInVehicle: false,
+      isVehicle: opts.crew !== undefined,
+    };
     (marker as any)._ocapInternal = internal;
     return wrapMarker(internal);
   }
