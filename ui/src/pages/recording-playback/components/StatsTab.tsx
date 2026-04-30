@@ -115,13 +115,13 @@ export function StatsTab(): JSX.Element {
                     </div>
                     <div class={styles.forceStatGrid}>
                       <div class={styles.forceStatPill}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--text-secondary)" }}>
+                        <div class={`${styles.forceStatNum} ${styles.forceStatNumTotal}`}>
                           {stat.total}
                         </div>
                         <div class={styles.forceStatLabel}>{t("total")}</div>
                       </div>
                       <div class={styles.forceStatPill}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--accent-success)" }}>
+                        <div class={`${styles.forceStatNum} ${styles.forceStatNumAlive}`}>
                           {stat.alive}
                         </div>
                         <div class={styles.forceStatLabel}>{t("alive")}</div>
@@ -129,7 +129,7 @@ export function StatsTab(): JSX.Element {
                       <div class={styles.forceStatPill}>
                         <div
                           class={styles.forceStatNum}
-                          style={{ color: stat.kills > 0 ? "var(--accent-danger)" : "var(--text-dimmest)" }}
+                          classList={{ [styles.forceStatNumKills]: stat.kills > 0 }}
                         >
                           {stat.kills}
                         </div>
@@ -138,7 +138,7 @@ export function StatsTab(): JSX.Element {
                       <div class={styles.forceStatPill}>
                         <div
                           class={styles.forceStatNum}
-                          style={{ color: stat.deaths > 0 ? "var(--accent-warning)" : "var(--text-dimmest)" }}
+                          classList={{ [styles.forceStatNumDeaths]: stat.deaths > 0 }}
                         >
                           {stat.deaths}
                         </div>

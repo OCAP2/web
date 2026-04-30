@@ -286,7 +286,7 @@ function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
           <div class={styles.detailStatPill}>
             <div
               class={styles.detailStatValue}
-              style={{ color: props.kills > 0 ? "var(--accent-danger)" : "var(--text-dimmest)" }}
+              classList={{ [styles.detailStatValueKills]: props.kills > 0 }}
             >
               {props.kills}
             </div>
@@ -295,7 +295,7 @@ function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
           <div class={styles.detailStatPill}>
             <div
               class={styles.detailStatValue}
-              style={{ color: props.deaths > 0 ? "var(--accent-warning)" : "var(--text-dimmest)" }}
+              classList={{ [styles.detailStatValueDeaths]: props.deaths > 0 }}
             >
               {props.deaths}
             </div>
@@ -309,7 +309,7 @@ function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
               <>
                 <div
                   class={styles.detailStatValue}
-                  style={{ color: visible > 0 ? "#A78BFA" : "var(--text-dimmest)" }}
+                  classList={{ [styles.detailStatValueMarkers]: visible > 0 }}
                 >
                   {visible}
                 </div>
