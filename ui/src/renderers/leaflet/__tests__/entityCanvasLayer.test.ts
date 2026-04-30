@@ -915,6 +915,39 @@ describe("EntityCanvasLayer — render paths", () => {
     expect(texts).not.toContain("AI Unit");
   });
 
+  it("shows AI vehicle type labels in 'players' mode", () => {
+    (layer as any).config.nameDisplayMode = () => "players";
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "T-72",
+      crew: { count: 3, names: [] },
+    });
+    layer.addEntity(2, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "AI Rifleman",
+      position: [1100, 2000],
+    });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("T-72 (3)");
+    expect(texts).not.toContain("AI Rifleman");
+  });
+
+  it("hides AI vehicle type labels when nameMode is 'none'", () => {
+    (layer as any).config.nameDisplayMode = () => "none";
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "T-72",
+      crew: { count: 3, names: [] },
+    });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).not.toContain("T-72 (3)");
+  });
+
   it("renders vehicle crew label with background pill", () => {
     layer.addEntity(1, {
       ...DEFAULT_OPTS,

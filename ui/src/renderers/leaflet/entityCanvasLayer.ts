@@ -875,12 +875,15 @@ export class EntityCanvasLayer {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
-      // Draw label (not rotated, positioned above icon, counter-scaled during zoom)
+      // Draw label (not rotated, positioned above icon, counter-scaled during zoom).
+      // Vehicle types stay visible in "players" mode so AI vehicles can still be
+      // identified without showing every AI infantry name.
+      const isVehicle = e.crew !== undefined;
       if (
         !hideLabels &&
         nameMode !== "none" &&
         !e.isInVehicle &&
-        (nameMode === "all" || (nameMode === "players" && e.isPlayer))
+        (nameMode === "all" || e.isPlayer || isVehicle)
       ) {
         const [, ih] = e.iconSize;
         const crew = e.crew;
