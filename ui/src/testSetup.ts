@@ -6,7 +6,7 @@ if (
   typeof localStorage !== "undefined" &&
   typeof localStorage.getItem !== "function"
 ) {
-  const _store: Record<string, string> = {};
+  const _store: Record<string, string> = Object.create(null);
   Object.defineProperty(globalThis, "localStorage", {
     value: {
       getItem: (key: string) => _store[key] ?? null,
