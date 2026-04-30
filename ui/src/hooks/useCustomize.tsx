@@ -19,7 +19,14 @@ export function CustomizeProvider(props: {
     try {
       const api = new ApiClient();
       const data = await api.getCustomize();
-      if (!data.enabled) return;
+      if (!data.enabled) {
+        // disableKillCount is a privacy toggle, not a branding option, so
+        // honor it even when customize itself is not enabled.
+        if (data.disableKillCount) {
+          setConfig({ disableKillCount: true });
+        }
+        return;
+      }
       setConfig(data);
 
       // Apply CSS variable overrides to :root

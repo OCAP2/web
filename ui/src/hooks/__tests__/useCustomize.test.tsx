@@ -127,6 +127,28 @@ describe("useCustomize", () => {
     expect(document.documentElement.style.getPropertyValue("--accent-primary")).toBe("");
   });
 
+  it("honors disableKillCount even when customize is not enabled", async () => {
+    mockGetCustomize.mockResolvedValue({
+      enabled: false,
+      disableKillCount: true,
+      websiteURL: "https://should-not-appear.com",
+    });
+
+    const { getByTestId } = render(() => (
+      <CustomizeProvider>
+        <TestConsumer onConfig={() => {}} />
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+      expect(parsed.disableKillCount).toBe(true);
+    });
+    // Branding fields must NOT leak through when customize is disabled.
+    const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+    expect(parsed.websiteURL).toBeUndefined();
+  });
+
   it("cleans up applied properties on unmount", async () => {
     mockGetCustomize.mockResolvedValue({
       enabled: true,
