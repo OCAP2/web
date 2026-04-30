@@ -185,11 +185,16 @@ export function MapManager(): JSX.Element {
             <Show when={authenticated()}>
               <button
                 class={styles.importBtn}
+                title={t("mm_import_map_tooltip")}
                 onClick={() => setShowImport(true)}
               >
                 <FilePlusIcon size={12} /> {t("mm_import_map")}
               </button>
-              <button class={styles.restyleBtn} onClick={handleRestyle}>
+              <button
+                class={styles.restyleBtn}
+                title={t("mm_restyle_all_tooltip")}
+                onClick={handleRestyle}
+              >
                 <PaletteIcon size={12} /> {t("mm_restyle_all")}
               </button>
             </Show>
@@ -339,6 +344,7 @@ export function MapManager(): JSX.Element {
                 <Show when={!search()}>
                   <button
                     class={styles.emptyImportBtn}
+                    title={t("mm_import_map_tooltip")}
                     onClick={() => setShowImport(true)}
                   >
                     <FilePlusIcon size={12} /> {t("mm_import_map")}
