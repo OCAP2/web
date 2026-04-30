@@ -329,7 +329,7 @@
 }
 
 .detailStatValueMarkers {
-  color: #a78bfa;
+  color: var(--accent-purple);
 }
 
 .detailStatLabel {
