@@ -84,6 +84,7 @@ func NewSetting() (setting Setting, err error) {
 
 	viper.SetDefault("listen", "127.0.0.1:5000")
 	viper.SetDefault("prefixURL", "")
+	viper.SetDefault("secret", "")
 	viper.SetDefault("db", "data.db")
 	viper.SetDefault("markers", "assets/markers")
 	viper.SetDefault("ammo", "assets/ammo")
@@ -93,7 +94,12 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("static", "")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.enabled", false)
+	viper.SetDefault("customize.websiteURL", "")
+	viper.SetDefault("customize.websiteLogo", "")
 	viper.SetDefault("customize.websiteLogoSize", "32px")
+	viper.SetDefault("customize.disableKillCount", false)
+	viper.SetDefault("customize.headerTitle", "")
+	viper.SetDefault("customize.headerSubtitle", "")
 	viper.SetDefault("conversion.enabled", false)
 	viper.SetDefault("conversion.interval", "5m")
 	viper.SetDefault("conversion.batchSize", 1)
@@ -111,49 +117,6 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("httpServer.readHeaderTimeout", "30s")
 	viper.SetDefault("httpServer.writeTimeout", "120s")
 	viper.SetDefault("httpServer.idleTimeout", "120s")
-
-	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{
-		"listen",
-		"prefixURL",
-		"secret",
-		"db",
-		"markers",
-		"ammo",
-		"fonts",
-		"maps",
-		"data",
-		"static",
-		"customize.enabled",
-		"customize.websiteurl",
-		"customize.websitelogo",
-		"customize.websitelogosize",
-		"customize.disableKillCount",
-		"customize.headertitle",
-		"customize.headersubtitle",
-		"conversion.enabled",
-		"conversion.interval",
-		"conversion.batchSize",
-		"conversion.chunkSize",
-		"conversion.retryFailed",
-		"streaming.enabled",
-		"streaming.pingInterval",
-		"streaming.pingTimeout",
-		"auth.sessionTTL",
-		"auth.adminSteamIds",
-		"auth.steamApiKey",
-		"httpServer.readTimeout",
-		"httpServer.readHeaderTimeout",
-		"httpServer.writeTimeout",
-		"httpServer.idleTimeout",
-	}
-
-	for _, key := range envKeys {
-		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
-		if err = viper.BindEnv(key, env); err != nil {
-			return
-		}
-	}
 
 	if err = viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

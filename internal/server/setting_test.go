@@ -381,11 +381,11 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		viper.AddConfigPath(dir)
 
 		os.Setenv("OCAP_SECRET", "env-secret")
-		os.Setenv("CONVERSION_ENABLED", "true")
-		os.Setenv("CONVERSION_CHUNKSIZE", "600")
+		os.Setenv("OCAP_CONVERSION_ENABLED", "true")
+		os.Setenv("OCAP_CONVERSION_CHUNKSIZE", "600")
 		defer os.Unsetenv("OCAP_SECRET")
-		defer os.Unsetenv("CONVERSION_ENABLED")
-		defer os.Unsetenv("CONVERSION_CHUNKSIZE")
+		defer os.Unsetenv("OCAP_CONVERSION_ENABLED")
+		defer os.Unsetenv("OCAP_CONVERSION_CHUNKSIZE")
 
 		setting, err := NewSetting()
 		require.NoError(t, err)
