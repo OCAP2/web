@@ -651,6 +651,23 @@ func TestMigrationV11_NoDataDir(t *testing.T) {
 	assert.Equal(t, "A B_2026", fn)
 }
 
+func TestSafeRename_LstatError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission tests require non-root user")
+	}
+	dir := t.TempDir()
+	parent := filepath.Join(dir, "locked")
+	require.NoError(t, os.MkdirAll(parent, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(parent, "src"), []byte("x"), 0o644))
+	require.NoError(t, os.Chmod(parent, 0o000))
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	// Lstat on a path inside an unreadable directory returns EACCES, not
+	// ENOENT, exercising the non-ErrNotExist error branch.
+	err := safeRename(filepath.Join(parent, "src"), filepath.Join(parent, "dst"))
+	assert.Error(t, err)
+}
+
 func TestRenameMissionPaths_PermissionError(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("permission tests require non-root user")
