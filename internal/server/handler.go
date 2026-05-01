@@ -305,6 +305,10 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	filename := filepath.Base(r.FormValue("filename"))
 	filename = strings.TrimSuffix(filename, ".gz")
 	filename = strings.TrimSuffix(filename, ".json")
+	// Defensively URL-decode: some addon versions sent percent-encoded mission
+	// names (e.g. "Foo%20Bar_..."), which leaked into filenames and on-disk
+	// directories. Mirror the cleanup performed by migration v11.
+	filename = decodeFilename(filename)
 
 	op := Operation{
 		WorldName:   r.FormValue("worldName"),

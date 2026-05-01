@@ -438,7 +438,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, version)
+	assert.Equal(t, 11, version)
 }
 
 func TestMigrationV10NormalizeWorldName(t *testing.T) {
@@ -461,7 +461,7 @@ func TestMigrationV10NormalizeWorldName(t *testing.T) {
 	// Reset version so migration 10 runs again
 	db, err := sql.Open("sqlite3", pathDB)
 	require.NoError(t, err)
-	_, err = db.Exec(`DELETE FROM version WHERE db = 10`)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 10`)
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 
@@ -482,6 +482,70 @@ func TestMigrationV10NormalizeWorldName(t *testing.T) {
 	}
 	require.NoError(t, rows.Err())
 	assert.Equal(t, []string{"altis", "cup_chernarus_a3", "enoch"}, names)
+}
+
+func TestMigrationV11DecodeFilenames(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0o755))
+	pathDB := filepath.Join(dir, "test.db")
+
+	// Bring DB up to v10 first.
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	encodedName := "Tavern%20WW2%20-%20Japanese%20Invasion%20of%20Nanjing%20V2_20260426_233617"
+	decodedName := "Tavern WW2 - Japanese Invasion of Nanjing V2_20260426_233617"
+	cleanName := "Already_Clean_20260426_000000"
+
+	for _, fn := range []string{encodedName, cleanName} {
+		_, err = repo.db.Exec(
+			`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES ('altis', 'm', 100, ?, '2026-01-01', '')`,
+			fn)
+		require.NoError(t, err)
+	}
+
+	// Create file + directory matching the encoded name on disk.
+	require.NoError(t, os.WriteFile(filepath.Join(dataDir, encodedName+".json.gz"), []byte("hi"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dataDir, encodedName), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dataDir, encodedName, "manifest.bin"), []byte("m"), 0o644))
+
+	// Reset to before v11 and re-open with dataDir wired so v11 runs file ops.
+	require.NoError(t, repo.db.Close())
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 11`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	repo2, err := NewRepoOperationWithDataDir(pathDB, dataDir)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo2.db.Close()) }()
+
+	// DB filename should be decoded.
+	var fn string
+	require.NoError(t, repo2.db.QueryRow(
+		`SELECT filename FROM operations WHERE filename = ?`, decodedName).Scan(&fn))
+	assert.Equal(t, decodedName, fn)
+
+	// Clean filename untouched.
+	require.NoError(t, repo2.db.QueryRow(
+		`SELECT filename FROM operations WHERE filename = ?`, cleanName).Scan(&fn))
+
+	// Files renamed on disk.
+	_, err = os.Stat(filepath.Join(dataDir, decodedName+".json.gz"))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(dataDir, decodedName, "manifest.bin"))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(dataDir, encodedName+".json.gz"))
+	assert.True(t, os.IsNotExist(err))
+	_, err = os.Stat(filepath.Join(dataDir, encodedName))
+	assert.True(t, os.IsNotExist(err))
+
+	// Version recorded.
+	var version int
+	require.NoError(t, repo2.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version))
+	assert.Equal(t, 11, version)
 }
 
 func TestStoreNormalizesWorldName(t *testing.T) {

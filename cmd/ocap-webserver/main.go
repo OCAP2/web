@@ -55,7 +55,7 @@ func app() error {
 	logHandler := slog.NewJSONHandler(logOutput, nil)
 	slog.SetDefault(slog.New(logHandler))
 
-	operation, err := server.NewRepoOperation(setting.DB)
+	operation, err := server.NewRepoOperationWithDataDir(setting.DB, setting.Data)
 	if err != nil {
 		return fmt.Errorf("operation: %w", err)
 	}
