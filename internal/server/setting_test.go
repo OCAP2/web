@@ -200,7 +200,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, map[string]string{
-			"--accent-blue":  "#FF6600",
+			"--accent-blue": "#FF6600",
 			"--side-blufor": "#00FF88",
 		}, setting.Customize.CSSOverrides)
 	})
@@ -306,6 +306,18 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		assert.Equal(t, dbPath, setting.DB)
 		_, err = os.Stat(filepath.Dir(dbPath))
 		require.NoError(t, err, "database directory should have been created")
+	})
+
+	t.Run("OCAP_HTTPSERVER_READTIMEOUT env var", func(t *testing.T) {
+		viper.Reset()
+		viper.AddConfigPath(dir)
+
+		os.Setenv("OCAP_HTTPSERVER_READTIMEOUT", "60s")
+		defer os.Unsetenv("OCAP_HTTPSERVER_READTIMEOUT")
+
+		setting, err := NewSetting()
+		require.NoError(t, err)
+		assert.Equal(t, 60*time.Second, setting.HttpServer.ReadTimeout)
 	})
 
 	t.Run("OCAP_CUSTOMIZE_CSSOVERRIDES env var", func(t *testing.T) {
@@ -459,6 +471,33 @@ func TestSetting_AuthSteamAPIKey(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "ABCDEF0123456789", setting.Auth.SteamAPIKey)
+}
+
+func TestSetting_HttpServer(t *testing.T) {
+	defer viper.Reset()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	err := os.WriteFile(configPath, []byte(`{
+		"secret": "test-secret-value",
+		"httpServer": {
+			"readTimeout": "110s",
+			"readHeaderTimeout": "120s",
+			"writeTimeout": "130s",
+			"idleTimeout": "140s"
+		}
+	}`), 0644)
+	require.NoError(t, err)
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, 110*time.Second, setting.HttpServer.ReadTimeout)
+	assert.Equal(t, 120*time.Second, setting.HttpServer.ReadHeaderTimeout)
+	assert.Equal(t, 130*time.Second, setting.HttpServer.WriteTimeout)
+	assert.Equal(t, 140*time.Second, setting.HttpServer.IdleTimeout)
 }
 
 func TestSplitCSV(t *testing.T) {

@@ -36,5 +36,11 @@
 		"sessionTTL": "24h",
 		"adminSteamIds": [],
 		"steamApiKey": ""
+	},
+	"httpServer": {
+		"readTimeout": "120s",
+		"readHeaderTimeout": "120s",
+		"writeTimeout": "120s",
+		"idleTimeout": "120s"
 	}
 }

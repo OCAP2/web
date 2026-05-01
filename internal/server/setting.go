@@ -26,7 +26,8 @@ type Setting struct {
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
 	Streaming  Streaming  `json:"streaming" yaml:"streaming"`
-	Auth      Auth      `json:"auth" yaml:"auth"`
+	Auth       Auth       `json:"auth" yaml:"auth"`
+	HttpServer HttpServer `json:"httpServer" yaml:"httpServer"`
 }
 
 type Conversion struct {
@@ -38,11 +39,11 @@ type Conversion struct {
 }
 
 type Customize struct {
-	Enabled          bool   `json:"enabled" yaml:"enabled"`
-	WebsiteURL       string `json:"websiteURL" yaml:"websiteURL"`
-	WebsiteLogo      string `json:"websiteLogo" yaml:"websiteLogo"`
-	WebsiteLogoSize  string `json:"websiteLogoSize" yaml:"websiteLogoSize"`
-	DisableKillCount bool   `json:"disableKillCount" yaml:"disableKillCount"`
+	Enabled          bool              `json:"enabled" yaml:"enabled"`
+	WebsiteURL       string            `json:"websiteURL" yaml:"websiteURL"`
+	WebsiteLogo      string            `json:"websiteLogo" yaml:"websiteLogo"`
+	WebsiteLogoSize  string            `json:"websiteLogoSize" yaml:"websiteLogoSize"`
+	DisableKillCount bool              `json:"disableKillCount" yaml:"disableKillCount"`
 	HeaderTitle      string            `json:"headerTitle" yaml:"headerTitle"`
 	HeaderSubtitle   string            `json:"headerSubtitle" yaml:"headerSubtitle"`
 	CSSOverrides     map[string]string `json:"cssOverrides,omitempty" yaml:"cssOverrides"`
@@ -58,6 +59,13 @@ type Streaming struct {
 	Enabled      bool          `json:"enabled" yaml:"enabled"`
 	PingInterval time.Duration `json:"pingInterval" yaml:"pingInterval"`
 	PingTimeout  time.Duration `json:"pingTimeout" yaml:"pingTimeout"`
+}
+
+type HttpServer struct {
+	ReadTimeout       time.Duration `json:"readTimeout" yaml:"readTimeout"`
+	ReadHeaderTimeout time.Duration `json:"readHeaderTimeout" yaml:"readHeaderTimeout"`
+	WriteTimeout      time.Duration `json:"writeTimeout" yaml:"writeTimeout"`
+	IdleTimeout       time.Duration `json:"idleTimeout" yaml:"idleTimeout"`
 }
 
 func NewSetting() (setting Setting, err error) {
@@ -99,9 +107,13 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("auth.adminSteamIds", []string{})
 	viper.SetDefault("auth.steamApiKey", "")
 
+	viper.SetDefault("httpServer.readTimeout", "120s")
+	viper.SetDefault("httpServer.readHeaderTimeout", "120s")
+	viper.SetDefault("httpServer.writeTimeout", "120s")
+	viper.SetDefault("httpServer.idleTimeout", "120s")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey"}
+	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey", "httpServer.readTimeout", "httpServer.readHeaderTimeout", "httpServer.writeTimeout", "httpServer.idleTimeout"}
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {

@@ -91,6 +91,12 @@ func app() error {
 		),
 	)
 
+	// Apply HTTP server settings
+	s.Server.ReadTimeout = setting.HttpServer.ReadTimeout
+	s.Server.ReadHeaderTimeout = setting.HttpServer.ReadHeaderTimeout
+	s.Server.WriteTimeout = setting.HttpServer.WriteTimeout
+	s.Server.IdleTimeout = setting.HttpServer.IdleTimeout
+
 	// Create conversion worker if enabled (before handler so we can pass it)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
