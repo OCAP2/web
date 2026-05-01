@@ -593,6 +593,129 @@ func TestSafeRename(t *testing.T) {
 	assert.Equal(t, "ok", string(got))
 }
 
+func TestMigrationV11_InvalidEscapeLeftAlone(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	// Filename matches the LIKE '%\%%' filter but contains an invalid escape
+	// sequence, so decodeFilename returns it unchanged and the loop must skip.
+	literal := "weird_%ZZ_name_2026"
+	_, err = repo.db.Exec(
+		`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES ('altis', 'm', 100, ?, '2026-01-01', '')`,
+		literal)
+	require.NoError(t, err)
+
+	require.NoError(t, repo.db.Close())
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 11`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	repo2, err := NewRepoOperationWithDataDir(pathDB, dir)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo2.db.Close()) }()
+
+	var fn string
+	require.NoError(t, repo2.db.QueryRow(`SELECT filename FROM operations WHERE id = 1`).Scan(&fn))
+	assert.Equal(t, literal, fn)
+}
+
+func TestMigrationV11_NoDataDir(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	_, err = repo.db.Exec(
+		`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES ('altis', 'm', 100, 'A%20B_2026', '2026-01-01', '')`)
+	require.NoError(t, err)
+	require.NoError(t, repo.db.Close())
+
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 11`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	// Default constructor (no dataDir) — DB row should still get decoded.
+	repo2, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo2.db.Close()) }()
+
+	var fn string
+	require.NoError(t, repo2.db.QueryRow(`SELECT filename FROM operations WHERE id = 1`).Scan(&fn))
+	assert.Equal(t, "A B_2026", fn)
+}
+
+func TestRenameMissionPaths_PermissionError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission tests require non-root user")
+	}
+	dir := t.TempDir()
+
+	// File rename should fail when destination parent is read-only.
+	src := filepath.Join(dir, "old.json.gz")
+	require.NoError(t, os.WriteFile(src, []byte("x"), 0o644))
+	require.NoError(t, os.Chmod(dir, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	err := renameMissionPaths(dir, "old", "new")
+	assert.Error(t, err)
+}
+
+func TestRenameMissionPaths_DirPermissionError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission tests require non-root user")
+	}
+	dir := t.TempDir()
+
+	// No .json.gz file -> first safeRename is a no-op. Streaming directory
+	// exists -> second safeRename must fail when dataDir is read-only.
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "old"), 0o755))
+	require.NoError(t, os.Chmod(dir, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	err := renameMissionPaths(dir, "old", "new")
+	assert.Error(t, err)
+}
+
+func TestMigrationV11_RenameErrorPropagates(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission tests require non-root user")
+	}
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0o755))
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+
+	encoded := "Quux%20Corge_2026"
+	_, err = repo.db.Exec(
+		`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES ('altis', 'm', 100, ?, '2026-01-01', '')`,
+		encoded)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dataDir, encoded+".json.gz"), []byte("x"), 0o644))
+	require.NoError(t, repo.db.Close())
+
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(`DELETE FROM version WHERE db >= 11`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	require.NoError(t, os.Chmod(dataDir, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(dataDir, 0o755) })
+
+	_, err = NewRepoOperationWithDataDir(pathDB, dataDir)
+	assert.Error(t, err, "migration should propagate rename failure")
+}
+
 func TestMigrationV11_DBCollisionSkipped(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
