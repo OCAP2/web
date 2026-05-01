@@ -261,7 +261,7 @@ func decodeFilename(name string) string {
 	if !strings.Contains(name, "%") {
 		return name
 	}
-	decoded, err := url.QueryUnescape(name)
+	decoded, err := url.PathUnescape(name)
 	if err != nil {
 		return name
 	}

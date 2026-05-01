@@ -556,6 +556,7 @@ func TestDecodeFilename(t *testing.T) {
 		{"a%20b", "a b"},                            // valid escape
 		{"missing_arg_%ZZ", "missing_arg_%ZZ"},      // invalid escape -> unchanged
 		{"", ""},                                    // empty
+		{"a+b", "a+b"},                              // literal '+' preserved (PathUnescape, not QueryUnescape)
 	}
 	for _, c := range cases {
 		assert.Equal(t, c.want, decodeFilename(c.in), "input=%q", c.in)
