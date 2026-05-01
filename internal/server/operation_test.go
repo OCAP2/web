@@ -652,6 +652,74 @@ func TestMigrationV11_NoDataDir(t *testing.T) {
 	assert.Equal(t, "A B_2026", fn)
 }
 
+func TestSafeRename_LstatDstError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission tests require non-root user")
+	}
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	require.NoError(t, os.WriteFile(src, []byte("x"), 0o644))
+
+	locked := filepath.Join(dir, "locked")
+	require.NoError(t, os.MkdirAll(locked, 0o755))
+	require.NoError(t, os.Chmod(locked, 0o000))
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	// Lstat(dst) returns EACCES (not ENOENT) -> exercises the dst-error branch.
+	err := safeRename(src, filepath.Join(locked, "dst"))
+	assert.Error(t, err)
+}
+
+func TestMigrateDecodeFilenames_QueryError(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	require.NoError(t, repo.db.Close())
+
+	// Calling the migration on a closed DB exercises the Query error branch.
+	err = repo.migrateDecodeFilenames(11)
+	assert.Error(t, err)
+}
+
+func TestMigrateDecodeFilenames_UpdateError(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	_, err = repo.db.Exec(
+		`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES ('altis', 'm', 100, 'A%20B', '2026-01-01', '')`)
+	require.NoError(t, err)
+
+	// Trigger that aborts any UPDATE on the operations table -> tx.Exec fails.
+	_, err = repo.db.Exec(`CREATE TRIGGER block_update BEFORE UPDATE ON operations BEGIN SELECT RAISE(ABORT, 'blocked'); END`)
+	require.NoError(t, err)
+
+	// Reset to before v11.
+	_, err = repo.db.Exec(`DELETE FROM version WHERE db >= 11`)
+	require.NoError(t, err)
+
+	err = repo.migrateDecodeFilenames(11)
+	assert.Error(t, err)
+}
+
+func TestMigrateDecodeFilenames_VersionInsertError(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	// No rows to rename, but block the version-table INSERT.
+	_, err = repo.db.Exec(`CREATE TRIGGER block_version BEFORE INSERT ON version BEGIN SELECT RAISE(ABORT, 'blocked'); END`)
+	require.NoError(t, err)
+
+	err = repo.migrateDecodeFilenames(11)
+	assert.Error(t, err)
+}
+
 func TestSafeRename_LstatError(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("permission tests require non-root user")
