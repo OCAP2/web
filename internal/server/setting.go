@@ -108,7 +108,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("auth.steamApiKey", "")
 
 	viper.SetDefault("httpServer.readTimeout", "120s")
-	viper.SetDefault("httpServer.readHeaderTimeout", "120s")
+	viper.SetDefault("httpServer.readHeaderTimeout", "30s")
 	viper.SetDefault("httpServer.writeTimeout", "120s")
 	viper.SetDefault("httpServer.idleTimeout", "120s")
 
