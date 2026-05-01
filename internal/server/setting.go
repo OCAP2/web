@@ -113,7 +113,41 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("httpServer.idleTimeout", "120s")
 
 	// workaround for https://github.com/spf13/viper/issues/761
-	envKeys := []string{"listen", "prefixURL", "secret", "db", "markers", "ammo", "fonts", "maps", "data", "static", "customize.enabled", "customize.websiteurl", "customize.websitelogo", "customize.websitelogosize", "customize.disableKillCount", "customize.headertitle", "customize.headersubtitle", "conversion.enabled", "conversion.interval", "conversion.batchSize", "conversion.chunkSize", "conversion.retryFailed", "streaming.enabled", "streaming.pingInterval", "streaming.pingTimeout", "auth.sessionTTL", "auth.adminSteamIds", "auth.steamApiKey", "httpServer.readTimeout", "httpServer.readHeaderTimeout", "httpServer.writeTimeout", "httpServer.idleTimeout"}
+	envKeys := []string{
+		"listen",
+		"prefixURL",
+		"secret",
+		"db",
+		"markers",
+		"ammo",
+		"fonts",
+		"maps",
+		"data",
+		"static",
+		"customize.enabled",
+		"customize.websiteurl",
+		"customize.websitelogo",
+		"customize.websitelogosize",
+		"customize.disableKillCount",
+		"customize.headertitle",
+		"customize.headersubtitle",
+		"conversion.enabled",
+		"conversion.interval",
+		"conversion.batchSize",
+		"conversion.chunkSize",
+		"conversion.retryFailed",
+		"streaming.enabled",
+		"streaming.pingInterval",
+		"streaming.pingTimeout",
+		"auth.sessionTTL",
+		"auth.adminSteamIds",
+		"auth.steamApiKey",
+		"httpServer.readTimeout",
+		"httpServer.readHeaderTimeout",
+		"httpServer.writeTimeout",
+		"httpServer.idleTimeout",
+	}
+
 	for _, key := range envKeys {
 		env := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 		if err = viper.BindEnv(key, env); err != nil {
