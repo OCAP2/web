@@ -9,7 +9,7 @@ import { useCustomize } from "../../hooks/useCustomize";
 import { useAuth } from "../../hooks/useAuth";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
-import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon } from "../../components/Icons";
+import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon, BookOpenIcon } from "../../components/Icons";
 import { AuthBadge } from "../../components/AuthBadge";
 import { getMapColor, isRecordingReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
@@ -339,6 +339,15 @@ export function RecordingSelector(): JSX.Element {
               <div class={styles.adminArea}>
                 <AuthBadge />
                 <Show when={isAdmin()}>
+                  <a
+                    class={styles.adminIconButton}
+                    href={`${basePath}swagger`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t("api_docs")}
+                  >
+                    <BookOpenIcon />
+                  </a>
                   <Show when={mapToolEnabled()}>
                     <button
                       class={styles.adminIconButton}

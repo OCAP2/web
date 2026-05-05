@@ -1450,6 +1450,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Tallenna muutokset",
     uk: "Зберегти зміни",
   },
+  api_docs: {
+    en: "API Documentation",
+    ru: "Документация API",
+    de: "API-Dokumentation",
+    cs: "Dokumentace API",
+    it: "Documentazione API",
+    fr: "Documentation de l'API",
+    fi: "API-dokumentaatio",
+    uk: "Документація API",
+  },
   upload_recording: {
     en: "Upload Recording",
     ru: "Загрузить запись",
