@@ -341,7 +341,7 @@ export function RecordingSelector(): JSX.Element {
                 <Show when={isAdmin()}>
                   <a
                     class={styles.adminIconButton}
-                    href={`${basePath}swagger`}
+                    href={`${basePath}swagger/`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={t("api_docs")}
