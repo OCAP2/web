@@ -1,4 +1,4 @@
-import { createSignal, createMemo, Show, For, onMount, onCleanup, batch } from "solid-js";
+import { createSignal, createMemo, createEffect, Show, For, onMount, onCleanup, batch } from "solid-js";
 import type { JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
@@ -7,6 +7,7 @@ import { ApiClient, type BuildInfo } from "../../data/apiClient";
 import { useI18n } from "../../hooks/useLocale";
 import { useCustomize } from "../../hooks/useCustomize";
 import { useAuth } from "../../hooks/useAuth";
+import { useClickOutside } from "../../hooks/useClickOutside";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
 import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon, BookOpenIcon } from "../../components/Icons";
@@ -34,7 +35,7 @@ export function RecordingSelector(): JSX.Element {
   const [loading, setLoading] = createSignal(false);
   const [search, setSearch] = createSignal("");
   const [tagFilter, setTagFilter] = createSignal<string | null>(null);
-  const [mapFilter, setMapFilter] = createSignal<string | null>(null);
+  const [mapFilter, setMapFilter] = createSignal<Set<string>>(new Set());
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [sortBy, setSortBy] = createSignal("date");
   const [sortDir, setSortDir] = createSignal("desc");
@@ -72,7 +73,7 @@ export function RecordingSelector(): JSX.Element {
     } finally {
       setLoading(false);
     }
-    api.getMapToolTools().then(() => setMapToolEnabled(true)).catch(() => {});
+    api.getMapToolTools().then(() => setMapToolEnabled(true)).catch(() => { });
   });
 
   // Keyboard shortcuts
@@ -156,7 +157,7 @@ export function RecordingSelector(): JSX.Element {
     const tf = tagFilter();
     if (tf) result = result.filter((r) => r.tag === tf);
     const mf = mapFilter();
-    if (mf) result = result.filter((r) => r.worldName === mf);
+    if (mf.size > 0) result = result.filter((r) => mf.has(r.worldName));
 
     const sb = sortBy();
     const sd = sortDir();
@@ -186,13 +187,34 @@ export function RecordingSelector(): JSX.Element {
     return id ? recordings().find((o) => o.id === id) ?? null : null;
   });
 
-  const hasFilters = () => search() || tagFilter() || mapFilter();
+  const hasFilters = () => search() || tagFilter() || mapFilter().size > 0;
 
   const clearFilters = () => {
     setSearch("");
     setTagFilter(null);
-    setMapFilter(null);
+    setMapFilter(new Set<string>());
   };
+
+  // Map filter dropdown helpers
+  const [mapDropdownOpen, setMapDropdownOpen] = createSignal(false);
+  const [mapSearch, setMapSearch] = createSignal("");
+
+  const toggleMapFilter = (mapName: string) => {
+    setMapFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(mapName)) next.delete(mapName);
+      else next.add(mapName);
+      return next;
+    });
+  };
+
+  const filteredMapOptions = createMemo(() => {
+    const q = mapSearch().toLowerCase();
+    if (!q) return uniqueMaps();
+    return uniqueMaps().filter((m) =>
+      worldDisplayName(m).toLowerCase().includes(q) || m.toLowerCase().includes(q)
+    );
+  });
 
   // Launch handler
   const handleLaunch = (rec: Recording) => {
@@ -402,33 +424,23 @@ export function RecordingSelector(): JSX.Element {
               </For>
             </div>
 
-            {/* Map filters */}
-            <Show when={uniqueMaps().length > 1}>
-              <div class={styles.mapFilters}>
-                <span class={styles.mapIcon}><MapIcon /></span>
-                <For each={uniqueMaps()}>
-                  {(mapName) => {
-                    const color = getMapColor(mapName);
-                    const active = () => mapFilter() === null || mapFilter() === mapName;
-                    return (
-                      <button
-                        class={styles.mapButton}
-                        data-testid={`map-filter-${mapName}`}
-                        style={{
-                          background: active() ? `${color}18` : "rgba(255,255,255,0.02)",
-                          color: active() ? color : "var(--text-dimmer)",
-                          border: `1px solid ${active() ? color + "30" : "rgba(255,255,255,0.05)"}`,
-                        }}
-                        onClick={() => setMapFilter(mapFilter() === mapName ? null : mapName)}
-                      >
-                        <div class={styles.mapDot} style={{ background: active() ? color : "var(--text-dimmer)" }} />
-                        {worldDisplayName(mapName)}
-                      </button>
-                    );
-                  }}
-                </For>
-              </div>
-            </Show>
+          {/* Map filter dropdown */}
+          <Show when={uniqueMaps().length > 1}>
+            <span class={styles.mapIcon}><MapIcon /></span>
+            <MapFilterDropdown
+              uniqueMaps={uniqueMaps()}
+              mapFilter={mapFilter()}
+              mapSearch={mapSearch()}
+              filteredMapOptions={filteredMapOptions()}
+              mapDropdownOpen={mapDropdownOpen()}
+              setMapDropdownOpen={setMapDropdownOpen}
+              setMapSearch={setMapSearch}
+              toggleMapFilter={toggleMapFilter}
+              worldDisplayName={worldDisplayName}
+              getMapColor={getMapColor}
+              t={t}
+            />
+          </Show>
 
             {/* Clear */}
             <Show when={hasFilters()}>
@@ -611,6 +623,148 @@ export function RecordingSelector(): JSX.Element {
   );
 }
 
+// ─── Map Filter Dropdown ───
+
+interface MapFilterDropdownProps {
+  uniqueMaps: string[];
+  mapFilter: Set<string>;
+  mapSearch: string;
+  filteredMapOptions: string[];
+  mapDropdownOpen: boolean;
+  setMapDropdownOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
+  setMapSearch: (v: string) => void;
+  toggleMapFilter: (mapName: string) => void;
+  worldDisplayName: (systemName: string) => string;
+  getMapColor: (mapName: string) => string;
+  t: (key: string) => string;
+}
+
+function MapFilterDropdown(props: MapFilterDropdownProps): JSX.Element {
+  let wrapperRef: HTMLDivElement | undefined;
+  let searchInputRef: HTMLInputElement | undefined;
+  useClickOutside(() => wrapperRef, () => props.setMapDropdownOpen(false));
+
+  const selectedCount = () => props.mapFilter.size;
+
+  const handleOpen = () => {
+    props.setMapDropdownOpen((v) => !v);
+  };
+
+  createEffect(() => {
+    if (props.mapDropdownOpen) {
+      searchInputRef?.focus();
+    }
+  });
+
+  return (
+    <div ref={wrapperRef} class={styles.mapFilters}>
+      {/* Trigger button */}
+      <button
+        id="map-filter-trigger"
+        class={styles.mapFilterTrigger}
+        classList={{ [styles.mapFilterTriggerActive]: selectedCount() > 0 }}
+        onClick={handleOpen}
+        data-testid="map-filter-dropdown-trigger"
+      >
+        <Show
+          when={selectedCount() > 0}
+          fallback={<span>{props.t("map_filter_label")}</span>}
+        >
+          <span>
+            {selectedCount() === 1
+              ? props.worldDisplayName([...props.mapFilter][0])
+              : `${selectedCount()} ${props.t("map_filter_maps")}`}
+          </span>
+        </Show>
+        <span
+          class={styles.mapFilterChevron}
+          classList={{ [styles.mapFilterChevronOpen]: props.mapDropdownOpen }}
+        >
+          <ChevronDownIcon />
+        </span>
+      </button>
+
+      {/* Selected pills */}
+      <Show when={selectedCount() > 0}>
+        <For each={[...props.mapFilter]}>
+          {(mapName) => {
+            const color = props.getMapColor(mapName);
+            return (
+              <button
+                class={styles.mapFilterPill}
+                style={{ background: `${color}18`, color: color, border: `1px solid ${color}30` }}
+                onClick={() => props.toggleMapFilter(mapName)}
+                title={`${props.t("map_filter_remove")} ${props.worldDisplayName(mapName)}`}
+              >
+                <div class={styles.mapDot} style={{ background: color }} />
+                {props.worldDisplayName(mapName)}
+              </button>
+            );
+          }}
+        </For>
+      </Show>
+
+      {/* Dropdown */}
+      <Show when={props.mapDropdownOpen}>
+        <div class={styles.mapFilterDropdown} data-testid="map-filter-dropdown">
+          {/* Search */}
+          <div class={styles.mapFilterSearch}>
+            <span class={styles.mapFilterSearchIcon}><SearchIcon /></span>
+            <input
+              ref={searchInputRef}
+              class={styles.mapFilterSearchInput}
+              type="text"
+              placeholder={props.t("map_filter_search")}
+              value={props.mapSearch}
+              onInput={(e) => props.setMapSearch(e.currentTarget.value)}
+            />
+            <Show when={props.mapSearch}>
+              <button class={styles.mapFilterSearchClear} onClick={() => props.setMapSearch("")}>
+                <XIcon />
+              </button>
+            </Show>
+          </div>
+
+          {/* Options */}
+          <div class={styles.mapFilterOptions}>
+            <Show
+              when={props.filteredMapOptions.length > 0}
+              fallback={
+                <div class={styles.mapFilterEmpty}>{props.t("map_filter_no_results")}</div>
+              }
+            >
+              <For each={props.filteredMapOptions}>
+                {(mapName) => {
+                  const color = props.getMapColor(mapName);
+                  const checked = () => props.mapFilter.has(mapName);
+                  return (
+                    <button
+                      class={styles.mapFilterOption}
+                      classList={{ [styles.mapFilterOptionChecked]: checked() }}
+                      data-testid={`map-filter-${mapName}`}
+                      onClick={() => props.toggleMapFilter(mapName)}
+                    >
+                      <div
+                        class={styles.mapFilterOptionDot}
+                        style={{ background: checked() ? color : "var(--text-dimmer)" }}
+                      />
+                      <span class={styles.mapFilterOptionLabel}
+                        style={{ color: checked() ? color : "var(--text-muted)" }}
+                      >
+                        {props.worldDisplayName(mapName)}
+                      </span>
+                    </button>
+                  );
+                }}
+              </For>
+            </Show>
+          </div>
+        </div>
+        </Show>
+      </div>
+  );
+}
+
 // ─── Toast notification ───
 
 function Toast(props: { message: string; onDismiss: () => void }): JSX.Element {
@@ -632,4 +786,3 @@ function Toast(props: { message: string; onDismiss: () => void }): JSX.Element {
     </div>
   );
 }
-
