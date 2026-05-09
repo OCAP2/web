@@ -424,23 +424,22 @@ export function RecordingSelector(): JSX.Element {
               </For>
             </div>
 
-          {/* Map filter dropdown */}
-          <Show when={uniqueMaps().length > 1}>
-            <span class={styles.mapIcon}><MapIcon /></span>
-            <MapFilterDropdown
-              uniqueMaps={uniqueMaps()}
-              mapFilter={mapFilter()}
-              mapSearch={mapSearch()}
-              filteredMapOptions={filteredMapOptions()}
-              mapDropdownOpen={mapDropdownOpen()}
-              setMapDropdownOpen={setMapDropdownOpen}
-              setMapSearch={setMapSearch}
-              toggleMapFilter={toggleMapFilter}
-              worldDisplayName={worldDisplayName}
-              getMapColor={getMapColor}
-              t={t}
-            />
-          </Show>
+            {/* Map filter dropdown */}
+            <Show when={uniqueMaps().length > 1}>
+              <MapFilterDropdown
+                uniqueMaps={uniqueMaps()}
+                mapFilter={mapFilter()}
+                mapSearch={mapSearch()}
+                filteredMapOptions={filteredMapOptions()}
+                mapDropdownOpen={mapDropdownOpen()}
+                setMapDropdownOpen={setMapDropdownOpen}
+                setMapSearch={setMapSearch}
+                toggleMapFilter={toggleMapFilter}
+                worldDisplayName={worldDisplayName}
+                getMapColor={getMapColor}
+                t={t}
+              />
+            </Show>
 
             {/* Clear */}
             <Show when={hasFilters()}>
@@ -658,6 +657,7 @@ function MapFilterDropdown(props: MapFilterDropdownProps): JSX.Element {
 
   return (
     <div ref={wrapperRef} class={styles.mapFilters}>
+      <span class={styles.mapIcon}><MapIcon /></span>
       {/* Trigger button */}
       <button
         id="map-filter-trigger"

@@ -325,6 +325,7 @@
 
 .mapIcon {
   color: var(--text-dimmer);
+  margin-right: 4px;
 }
 
 .mapDot {
