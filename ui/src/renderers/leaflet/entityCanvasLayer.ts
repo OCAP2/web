@@ -300,15 +300,14 @@ export class EntityCanvasLayer {
     this.entities.delete(id);
   }
 
-  setSmoothingEnabled(enabled: boolean, speed?: number): void {
+  setSmoothingEnabled(enabled: boolean, frameIntervalSec?: number): void {
     this.smoothing = enabled;
-    if (speed !== undefined) {
-      // Canvas interpolation must complete within the frame interval (1/speed)
-      // so entities reach their target before the next update arrives.
-      // The CSS renderer uses longer durations (getTransitionDuration) because
-      // CSS transitions redirect smoothly when interrupted, but canvas lerp
-      // accumulates visible lag if the duration exceeds the frame interval.
-      this.interpDurationSec = speed > 0 ? 1 / speed : 1;
+    if (frameIntervalSec !== undefined) {
+      // Canvas interpolation must complete within one frame interval so
+      // entities reach their target before the next update resets the tween.
+      // Otherwise visible lag accumulates and fast markers (e.g. projectiles)
+      // appear to step from keyframe to keyframe.
+      this.interpDurationSec = frameIntervalSec > 0 ? frameIntervalSec : 1;
     }
     // Don't snap on disable — entities freeze at their current interpolated
     // position. Seeking while paused snaps via updateEntity() instead.

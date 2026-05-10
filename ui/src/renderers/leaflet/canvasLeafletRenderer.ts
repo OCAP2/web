@@ -117,9 +117,9 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
     this.canvasLayer.removeEntity(unwrapHandle(handle));
   }
 
-  override setSmoothingEnabled(enabled: boolean, speed?: number): void {
+  override setSmoothingEnabled(enabled: boolean, frameIntervalSec?: number): void {
     // Guard: SolidJS effects may fire before init()
-    this.canvasLayer?.setSmoothingEnabled(enabled, speed);
+    this.canvasLayer?.setSmoothingEnabled(enabled, frameIntervalSec);
   }
 
   override dispose(): void {

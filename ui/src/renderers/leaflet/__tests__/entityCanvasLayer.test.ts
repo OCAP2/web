@@ -313,23 +313,23 @@ describe("EntityCanvasLayer", () => {
       return (layer as any).interpDurationSec;
     }
 
-    it("sets interpDurationSec to 1/speed (frame interval)", () => {
+    it("stores the supplied frame interval as the interpolation duration", () => {
       layer.setSmoothingEnabled(true, 1);
       expect(getInterpDuration()).toBeCloseTo(1.0);
 
-      layer.setSmoothingEnabled(true, 2);
+      layer.setSmoothingEnabled(true, 0.5);
       expect(getInterpDuration()).toBeCloseTo(0.5);
 
-      layer.setSmoothingEnabled(true, 5);
+      layer.setSmoothingEnabled(true, 0.2);
       expect(getInterpDuration()).toBeCloseTo(0.2);
 
-      layer.setSmoothingEnabled(true, 10);
+      layer.setSmoothingEnabled(true, 0.1);
       expect(getInterpDuration()).toBeCloseTo(0.1);
     });
 
-    it("entities reach target within one frame interval at high speed", () => {
+    it("entities reach target within one frame interval", () => {
       layer.addEntity(1, DEFAULT_OPTS);
-      layer.setSmoothingEnabled(true, 10);
+      layer.setSmoothingEnabled(true, 0.1);
       const interpDur = getInterpDuration(); // 0.1s
 
       // Move to new position — starts interpolation
@@ -343,25 +343,24 @@ describe("EntityCanvasLayer", () => {
       expect(progress).toBe(1);
     });
 
-    it("does not exceed 1s duration for fractional speeds", () => {
-      layer.setSmoothingEnabled(true, 0.5);
-      // speed 0.5 → 1/0.5 = 2s, but the guard caps at 1/speed
-      // which is correct: at 0.5x, frames come every 2s
+    it("respects long frame intervals (slow capture rate or fractional speed)", () => {
+      // E.g. captureDelayMs=1000, speed=0.5 → 2s interval
+      layer.setSmoothingEnabled(true, 2.0);
       expect(getInterpDuration()).toBeCloseTo(2.0);
     });
 
-    it("handles edge case of speed 0 without division error", () => {
+    it("falls back to 1s duration when interval is zero", () => {
       layer.setSmoothingEnabled(true, 0);
       expect(getInterpDuration()).toBe(1);
       expect(Number.isFinite(getInterpDuration())).toBe(true);
     });
 
-    it("preserves duration when speed is not provided", () => {
-      layer.setSmoothingEnabled(true, 4);
+    it("preserves duration when interval is not provided", () => {
+      layer.setSmoothingEnabled(true, 0.25);
       const dur = getInterpDuration();
       expect(dur).toBeCloseTo(0.25);
 
-      // Toggle smoothing without changing speed
+      // Toggle smoothing without changing interval
       layer.setSmoothingEnabled(false);
       expect(getInterpDuration()).toBeCloseTo(0.25); // unchanged
     });
@@ -835,7 +834,7 @@ describe("EntityCanvasLayer — render paths", () => {
 
   it("clamps interpolation progress to 1", () => {
     layer.addEntity(1, DEFAULT_OPTS);
-    layer.setSmoothingEnabled(true, 10); // 0.1s duration
+    layer.setSmoothingEnabled(true, 0.1); // 0.1s duration
     layer.updateEntity(1, makeState({ position: [1010, 2010] }));
     render(1.0); // well past 0.1s
     expect(getEntity(1).interpProgress).toBe(1);
