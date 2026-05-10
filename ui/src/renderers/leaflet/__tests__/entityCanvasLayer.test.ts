@@ -1063,6 +1063,76 @@ describe("EntityCanvasLayer — render paths", () => {
     expect(p.interpProgress).toBeGreaterThan(0);
   });
 
+  it("produces constant-velocity projectile motion when interval matches tween duration", () => {
+    // Simulates the bridge passing frameIntervalSec = captureDelayMs/1000/speed.
+    // For captureDelay 0.5s @ 1× speed, interval is 0.5s — tween must complete
+    // within that window so each segment advances by the full keyframe step.
+    const intervalSec = 0.5;
+    layer.setSmoothingEnabled(true, intervalSec);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+
+    // Snap onto first keyframe (distance from origin triggers snap).
+    layer.updateProjectile(1, { position: [1000, 1000], direction: 0, alpha: 1 });
+
+    // Drive 4 ticks, each separated by exactly `intervalSec` of render time,
+    // with the shell advancing 30m per tick along x. Capture displayed x at
+    // the moment of each tick (right after updateProjectile, before any
+    // further rAF advances it). Use one full-interval render() per tick so
+    // interpProgress reaches exactly 1.0 (rAF granularity is mocked anyway).
+    const step = 30;
+    const displayedAtTick: number[] = [];
+    for (let tick = 1; tick <= 4; tick++) {
+      render(intervalSec);
+      const target = 1000 + tick * step;
+      layer.updateProjectile(1, { position: [target, 1000], direction: 0, alpha: 1 });
+      displayedAtTick.push((layer as any).projectiles.get(1).prevX);
+    }
+
+    // With interval == interpDuration, each tween fully reaches its target
+    // before the next tick — displayed position advances by `step` every
+    // tick. Velocity is constant: no acceleration profile, no kinks.
+    expect(displayedAtTick[1] - displayedAtTick[0]).toBeCloseTo(step, 5);
+    expect(displayedAtTick[2] - displayedAtTick[1]).toBeCloseTo(step, 5);
+    expect(displayedAtTick[3] - displayedAtTick[2]).toBeCloseTo(step, 5);
+  });
+
+  it("regression: oversized tween duration produces accelerating velocity (the old bug)", () => {
+    // Pre-fix behavior was to pass `1/speed` regardless of captureDelayMs.
+    // For captureDelay 0.5s the tween was 1s — twice the real interval —
+    // and each tick reset the tween at t≈0.5, leaving the shell lagging
+    // behind with a velocity that ramps up across ticks instead of being
+    // constant. This pins the old configuration so a future regression
+    // to it would be caught.
+    const intervalSec = 0.5;
+    const oversizedDuration = 1.0;
+    layer.setSmoothingEnabled(true, oversizedDuration);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+
+    layer.updateProjectile(1, { position: [1000, 1000], direction: 0, alpha: 1 });
+
+    const step = 30;
+    const displayedAtTick: number[] = [];
+    for (let tick = 1; tick <= 3; tick++) {
+      render(intervalSec);
+      const target = 1000 + tick * step;
+      layer.updateProjectile(1, { position: [target, 1000], direction: 0, alpha: 1 });
+      displayedAtTick.push((layer as any).projectiles.get(1).prevX);
+    }
+
+    // First-tick advance is roughly half a step (tween only reached 50%).
+    const firstAdvance = displayedAtTick[1] - displayedAtTick[0];
+    // Second-tick advance is larger (catching up). Velocity not constant.
+    const secondAdvance = displayedAtTick[2] - displayedAtTick[1];
+    expect(firstAdvance).toBeLessThan(step * 0.7);
+    expect(secondAdvance).toBeGreaterThan(firstAdvance);
+  });
+
   it("uses cached projectile positions during zoom", () => {
     layer.addProjectile(1, {
       iconUrl: "http://example.com/grenade.png",
