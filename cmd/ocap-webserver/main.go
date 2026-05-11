@@ -28,6 +28,13 @@ func main() {
 		return
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == "maptool" {
+		if err := runMaptool(os.Args[2:]); err != nil {
+			log.Fatalf("maptool: %v", err)
+		}
+		return
+	}
+
 	if err := app(); err != nil {
 		log.Fatalf("fatal: %v", err)
 	}
