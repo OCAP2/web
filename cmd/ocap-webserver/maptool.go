@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
+
+	"github.com/OCAP2/web/internal/maptool"
+	"github.com/OCAP2/web/internal/server"
 )
 
 // maptoolOptions holds parsed CLI flags for `maptool render`.
@@ -154,12 +159,33 @@ func resolveTarget(outDir, world string, force bool) (targetDecision, error) {
 }
 
 func runMaptoolRender(args []string) error {
-	_, err := parseMaptoolRenderFlags(args)
+	opts, err := parseMaptoolRenderFlags(args)
 	if err != nil {
 		printMaptoolUsage(os.Stderr)
 		return err
 	}
-	return errors.New("not implemented")
+
+	if opts.Out == "" {
+		setting, err := server.NewSetting()
+		if err != nil {
+			return fmt.Errorf("settings: %w", err)
+		}
+		opts.Out = setting.Maps
+	}
+
+	tools := maptool.DetectTools()
+	if err := preflight(tools); err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	code := orchestrate(ctx, opts, realRender(tools), os.Stdout)
+	if code != 0 {
+		os.Exit(code)
+	}
+	return nil
 }
 
 // orchestrate is the testable core of `maptool render`. It returns the exit code.
