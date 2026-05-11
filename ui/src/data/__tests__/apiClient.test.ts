@@ -1262,4 +1262,205 @@ describe("ApiClient", () => {
       expect(hrefSetter).toHaveBeenCalledWith("/");
     });
   });
+
+  // ─── Error body parsing (apiErrorFromResponse) ───
+
+  describe("error body parsing", () => {
+    function mockFetchErrorWithBody(status: number, statusText: string, bodyText: string): void {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status,
+          statusText,
+          text: () => Promise.resolve(bodyText),
+          json: () => Promise.reject(new Error("use text")),
+        }),
+      );
+    }
+
+    it("surfaces JSON `detail` field on ApiError", async () => {
+      mockFetchErrorWithBody(400, "Bad Request", JSON.stringify({ detail: "steamId is required" }));
+      const client = new ApiClient();
+      try {
+        await client.addToAllowlist("76561198099999999");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        const apiErr = err as ApiError;
+        expect(apiErr.status).toBe(400);
+        expect(apiErr.detail).toBe("steamId is required");
+        expect(apiErr.message).toContain("steamId is required");
+      }
+    });
+
+    it("surfaces JSON `error` field on ApiError", async () => {
+      mockFetchErrorWithBody(500, "Internal Server Error", JSON.stringify({ error: "database is locked" }));
+      const client = new ApiClient();
+      try {
+        await client.removeFromAllowlist("76561198000000000");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect((err as ApiError).detail).toBe("database is locked");
+      }
+    });
+
+    it("surfaces JSON `message` field on ApiError", async () => {
+      mockFetchErrorWithBody(403, "Forbidden", JSON.stringify({ message: "admin role required" }));
+      const client = new ApiClient();
+      try {
+        await client.deleteRecording("42");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect((err as ApiError).detail).toBe("admin role required");
+      }
+    });
+
+    it("falls back to raw text when JSON has no recognised field", async () => {
+      mockFetchErrorWithBody(400, "Bad Request", JSON.stringify({ otherField: "x" }));
+      const client = new ApiClient();
+      try {
+        await client.addToAllowlist("76561198099999999");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect((err as ApiError).detail).toBe('{"otherField":"x"}');
+      }
+    });
+
+    it("uses raw text body when not JSON", async () => {
+      mockFetchErrorWithBody(502, "Bad Gateway", "upstream timed out");
+      const client = new ApiClient();
+      try {
+        await client.addToAllowlist("76561198099999999");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect((err as ApiError).detail).toBe("upstream timed out");
+        expect((err as ApiError).message).toContain("upstream timed out");
+      }
+    });
+
+    it("omits detail when response has no body", async () => {
+      mockFetchErrorWithBody(500, "Internal Server Error", "");
+      const client = new ApiClient();
+      try {
+        await client.addToAllowlist("76561198099999999");
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect((err as ApiError).detail).toBeUndefined();
+        expect((err as ApiError).message).toBe(
+          "PUT /api/v1/auth/allowlist/76561198099999999 failed: 500 Internal Server Error",
+        );
+      }
+    });
+
+    it("survives a body-read failure without crashing", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+          text: () => Promise.reject(new Error("body read failed")),
+          json: () => Promise.reject(new Error("body read failed")),
+        }),
+      );
+      const client = new ApiClient();
+      await expect(client.addToAllowlist("76561198099999999")).rejects.toMatchObject({
+        status: 500,
+        detail: undefined,
+      });
+    });
+  });
+
+  // ─── Admin / allowlist endpoints ───
+
+  describe("admin auth config", () => {
+    it("fetches admin config with auth header", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson({
+        mode: "steamAllowlist",
+        adminSteamIds: ["76561198000000001"],
+        steamApiKeyConfigured: true,
+        sessionTtl: "24h",
+      });
+      const client = new ApiClient("/aar/");
+      const cfg = await client.getAdminAuthConfig();
+      expect(cfg.mode).toBe("steamAllowlist");
+      expect(cfg.adminSteamIds).toEqual(["76561198000000001"]);
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/admin-config", {
+        method: "GET",
+        cache: "no-cache",
+        headers: { Authorization: "Bearer admin-jwt" },
+      });
+    });
+
+    it("propagates 401 as ApiError without redirect", async () => {
+      setAuthToken("expired-jwt");
+      mockFetchError(401, "Unauthorized");
+      const client = new ApiClient();
+      await expect(client.getAdminAuthConfig()).rejects.toMatchObject({ status: 401 });
+    });
+  });
+
+  describe("allowlist endpoints", () => {
+    it("getAllowlist unwraps the steamIds field", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson({ steamIds: ["76561198000000001", "76561198000000002"] });
+      const client = new ApiClient();
+      const ids = await client.getAllowlist();
+      expect(ids).toEqual(["76561198000000001", "76561198000000002"]);
+    });
+
+    it("addToAllowlist PUTs the Steam ID with auth header", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson(null);
+      const client = new ApiClient("/aar/");
+      await client.addToAllowlist("76561198099999999");
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/allowlist/76561198099999999", {
+        method: "PUT",
+        headers: { Authorization: "Bearer admin-jwt" },
+      });
+    });
+
+    it("removeFromAllowlist DELETEs the Steam ID with auth header", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson(null);
+      const client = new ApiClient("/aar/");
+      await client.removeFromAllowlist("76561198099999999");
+      expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/allowlist/76561198099999999", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer admin-jwt" },
+      });
+    });
+
+    it("addToAllowlist URL-encodes the Steam ID", async () => {
+      setAuthToken("admin-jwt");
+      mockFetchJson(null);
+      const client = new ApiClient();
+      await client.addToAllowlist("weird/id with spaces");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/v1/auth/allowlist/weird%2Fid%20with%20spaces",
+        expect.objectContaining({ method: "PUT" }),
+      );
+    });
+
+    it("surfaces server detail when addToAllowlist returns 400", async () => {
+      setAuthToken("admin-jwt");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 400,
+          statusText: "Bad Request",
+          text: () => Promise.resolve(JSON.stringify({ detail: "invalid steamId" })),
+          json: () => Promise.reject(new Error("use text")),
+        }),
+      );
+      const client = new ApiClient();
+      await expect(client.addToAllowlist("not-a-steam-id")).rejects.toMatchObject({
+        status: 400,
+        detail: "invalid steamId",
+      });
+    });
+  });
 });
