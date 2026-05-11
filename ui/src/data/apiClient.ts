@@ -46,10 +46,45 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly statusText: string,
+    public readonly detail?: string,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/**
+ * Build an ApiError from a non-ok Response, extracting the server's
+ * error detail (JSON `detail`/`error`/`message` field or raw text body)
+ * so callers can show something more useful than the status code.
+ */
+async function apiErrorFromResponse(
+  response: Response,
+  prefix: string,
+): Promise<ApiError> {
+  let detail: string | undefined;
+  try {
+    const text = await response.text();
+    if (text) {
+      try {
+        const parsed = JSON.parse(text) as Record<string, unknown>;
+        const candidate = parsed.detail ?? parsed.error ?? parsed.message;
+        if (typeof candidate === "string" && candidate.length > 0) {
+          detail = candidate;
+        } else {
+          detail = text;
+        }
+      } catch {
+        detail = text;
+      }
+    }
+  } catch {
+    // ignore body read failures
+  }
+  const message = detail
+    ? `${prefix}: ${response.status} ${response.statusText} — ${detail}`
+    : `${prefix}: ${response.status} ${response.statusText}`;
+  return new ApiError(message, response.status, response.statusText, detail);
 }
 
 // ─── Raw server response shape (snake_case from Go JSON tags) ───
@@ -528,11 +563,7 @@ export class ApiClient {
       { method: "PUT", headers: authHeaders() },
     );
     if (!response.ok) {
-      throw new ApiError(
-        `Add to allowlist failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
+      throw await apiErrorFromResponse(response, "Add to allowlist failed");
     }
   }
 
@@ -542,11 +573,7 @@ export class ApiClient {
       { method: "DELETE", headers: authHeaders() },
     );
     if (!response.ok) {
-      throw new ApiError(
-        `Remove from allowlist failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
+      throw await apiErrorFromResponse(response, "Remove from allowlist failed");
     }
   }
 

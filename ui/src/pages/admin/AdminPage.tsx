@@ -1,7 +1,7 @@
 import type { JSX } from "solid-js";
 import { createSignal, createMemo, createResource, Show, For, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { ApiClient, type AdminAuthConfig } from "../../data/apiClient";
+import { ApiClient, ApiError, type AdminAuthConfig } from "../../data/apiClient";
 import { useI18n } from "../../hooks/useLocale";
 import {
   ArrowLeftIcon,
@@ -106,8 +106,8 @@ export function AdminPage(): JSX.Element {
       await api.addToAllowlist(steamId);
       setAllowlist((prev) => [...prev, { steamId }]);
       showToast("success", `${t("admin_toast_added_prefix")} ${steamId} ${t("admin_toast_added_suffix")}`);
-    } catch {
-      showToast("error", t("admin_toast_action_failed"));
+    } catch (err) {
+      showToast("error", actionErrorMessage(err));
     }
   }
 
@@ -157,9 +157,22 @@ export function AdminPage(): JSX.Element {
         return next;
       });
       showToast("success", `${t("admin_toast_removed_prefix")} ${entry.steamId}.`);
-    } catch {
-      showToast("error", t("admin_toast_action_failed"));
+    } catch (err) {
+      showToast("error", actionErrorMessage(err));
     }
+  }
+
+  function actionErrorMessage(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.detail) {
+        return `${err.status} ${err.statusText} — ${err.detail}`;
+      }
+      return `${err.status} ${err.statusText}`;
+    }
+    if (err instanceof Error && err.message) {
+      return err.message;
+    }
+    return t("admin_toast_action_failed");
   }
 
   async function confirmRemoveSingle(): Promise<void> {
