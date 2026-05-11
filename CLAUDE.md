@@ -28,6 +28,8 @@ go generate ./pkg/schemas/...
 docker build -t ocap-webserver .
 ```
 
+CLI subcommands on the built binary: `ocap-webserver convert --help` (mission data conversion) and `ocap-webserver maptool render --help` (grad_meh -> tile rendering, single or `--batch`).
+
 ## Architecture
 
 ### Backend (Go)
