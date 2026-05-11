@@ -198,6 +198,56 @@ describe("useCustomize", () => {
     document.title = originalTitle;
   });
 
+  it("does not mutate document.title if unmounted before API resolves", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    let resolveCustomize: (value: CustomizeConfig) => void = () => {};
+    mockGetCustomize.mockReturnValue(
+      new Promise<CustomizeConfig>((resolve) => {
+        resolveCustomize = resolve;
+      }),
+    );
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    unmount();
+    resolveCustomize({ enabled: true, pageTitle: "Should Not Apply" });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
+  it("does not apply cssOverrides if unmounted before API resolves", async () => {
+    let resolveCustomize: (value: CustomizeConfig) => void = () => {};
+    mockGetCustomize.mockReturnValue(
+      new Promise<CustomizeConfig>((resolve) => {
+        resolveCustomize = resolve;
+      }),
+    );
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    unmount();
+    resolveCustomize({
+      enabled: true,
+      cssOverrides: { "--accent-primary": "#ff0000" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.documentElement.style.getPropertyValue("--accent-primary")).toBe("");
+  });
+
   it("cleans up applied properties on unmount", async () => {
     mockGetCustomize.mockResolvedValue({
       enabled: true,
