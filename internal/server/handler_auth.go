@@ -236,6 +236,31 @@ func (h *Handler) GetAuthConfig(c ContextNoBody) (AuthConfigResponse, error) {
 	return AuthConfigResponse{Mode: h.setting.Auth.Mode}, nil
 }
 
+// AdminAuthConfigResponse exposes read-only auth configuration to admins
+// for display in the admin UI. Sensitive values (password, raw API key)
+// are not included — only their presence.
+type AdminAuthConfigResponse struct {
+	Mode                 string   `json:"mode"`
+	AdminSteamIDs        []string `json:"adminSteamIds"`
+	SteamAPIKeyConfigured bool    `json:"steamApiKeyConfigured"`
+	SessionTTL           string   `json:"sessionTtl"`
+}
+
+// GetAdminAuthConfig returns the read-only auth configuration for the
+// admin UI. Requires admin role.
+func (h *Handler) GetAdminAuthConfig(c ContextNoBody) (AdminAuthConfigResponse, error) {
+	ids := h.setting.Auth.AdminSteamIDs
+	if ids == nil {
+		ids = []string{}
+	}
+	return AdminAuthConfigResponse{
+		Mode:                  h.setting.Auth.Mode,
+		AdminSteamIDs:         ids,
+		SteamAPIKeyConfigured: h.setting.Auth.SteamAPIKey != "",
+		SessionTTL:            h.setting.Auth.SessionTTL.String(),
+	}, nil
+}
+
 // Logout is a no-op for stateless JWT — the frontend discards the token.
 func (h *Handler) Logout(c ContextNoBody) (any, error) {
 	c.SetStatus(http.StatusNoContent)

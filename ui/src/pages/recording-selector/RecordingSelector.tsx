@@ -10,7 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { LOCALES } from "../../i18n/i18n";
 import { LOCALE_LABELS } from "./constants";
-import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon, BookOpenIcon } from "../../components/Icons";
+import { GlobeIcon, UsersIcon, CrosshairIcon, ChevronDownIcon, UploadIcon, SearchIcon, TagIcon, MapIcon, XIcon, GitHubIcon, ExternalLinkIcon, HeartIcon, AlertTriangleIcon, BookOpenIcon, ShieldCheckIcon } from "../../components/Icons";
 import { AuthBadge } from "../../components/AuthBadge";
 import { getMapColor, isRecordingReady, stripRecordingExtension } from "./helpers";
 import { StatPill, TagBadge, SortHeader } from "./components";
@@ -27,7 +27,7 @@ export function RecordingSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { isAdmin, authError, dismissAuthError } = useAuth();
+  const { isAdmin, authMode, authError, dismissAuthError } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -377,6 +377,15 @@ export function RecordingSelector(): JSX.Element {
                       title={t("map_manager")}
                     >
                       <GlobeIcon />
+                    </button>
+                  </Show>
+                  <Show when={authMode() === "steamAllowlist"}>
+                    <button
+                      class={styles.adminIconButton}
+                      onClick={() => navigate("/admin")}
+                      title={t("admin_icon_button_tooltip")}
+                    >
+                      <ShieldCheckIcon />
                     </button>
                   </Show>
                   <button

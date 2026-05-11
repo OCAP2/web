@@ -183,6 +183,7 @@ func NewHandler(
 	fuego.Post(admin, "/api/v1/operations/{id}/retry", hdlr.RetryConversion, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 	fuego.Put(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.AddMarkerBlacklist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 	fuego.Delete(admin, "/api/v1/operations/{id}/marker-blacklist/{playerId}", hdlr.RemoveMarkerBlacklist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
+	fuego.Get(admin, "/api/v1/auth/admin-config", hdlr.GetAdminAuthConfig, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 	fuego.Get(admin, "/api/v1/auth/allowlist", hdlr.GetAllowlist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 	fuego.Put(admin, "/api/v1/auth/allowlist/{steamId}", hdlr.AddToAllowlist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))
 	fuego.Delete(admin, "/api/v1/auth/allowlist/{steamId}", hdlr.RemoveFromAllowlist, fuego.OptionTags("Admin"), fuego.OptionSecurity(bearerAuth))

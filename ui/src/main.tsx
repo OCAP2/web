@@ -4,6 +4,7 @@ import { App } from "./App";
 import { RecordingSelector } from "./pages/recording-selector";
 import { RecordingPlayback } from "./pages/recording-playback";
 import { MapManager } from "./pages/map-manager";
+import { AdminPage } from "./pages/admin/AdminPage";
 import { basePath } from "./data/basePath";
 
 // Strip trailing slash for Router base prop (Router expects no trailing slash).
@@ -17,6 +18,7 @@ if (root) {
         <Route path="/" component={RecordingSelector} />
         <Route path="/recording/:id/:name" component={RecordingPlayback} />
         <Route path="/map-manager" component={MapManager} />
+        <Route path="/admin" component={AdminPage} />
       </Router>
     ),
     root,

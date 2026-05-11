@@ -7,6 +7,13 @@ export interface AuthConfig {
   mode: string;
 }
 
+export interface AdminAuthConfig {
+  mode: string;
+  adminSteamIds: string[];
+  steamApiKeyConfigured: boolean;
+  sessionTtl: string;
+}
+
 export interface CustomizeConfig {
   enabled?: boolean;
   websiteURL?: string;
@@ -501,6 +508,12 @@ export class ApiClient {
   }
 
   // ─── Allowlist methods (admin) ───
+
+  async getAdminAuthConfig(): Promise<AdminAuthConfig> {
+    return this.fetchJsonAuth<AdminAuthConfig>(
+      `${this.baseUrl}/api/v1/auth/admin-config`,
+    );
+  }
 
   async getAllowlist(): Promise<string[]> {
     const data = await this.fetchJsonAuth<{ steamIds: string[] }>(
