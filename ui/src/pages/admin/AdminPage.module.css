@@ -24,81 +24,63 @@
   overflow-y: auto;
 }
 
-/* ─── Top bar ────────────────────────────────────────────────────────── */
-.topBar {
-  height: 56px;
+/* ─── Header (aligned with MapManager) ───────────────────────────────── */
+.header {
+  padding: 14px 24px 0;
   flex-shrink: 0;
-  background: var(--bg-surface);
-  border-bottom: var(--border-subtle);
+}
+
+.headerTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-xl);
+  margin-bottom: 12px;
 }
 
-.topBarLeft {
+.headerLeft {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
-.backButton {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: transparent;
-  border: var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 5px 10px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: var(--font-size-md);
-  font-family: var(--font-mono);
-  font-weight: 500;
-}
-.backButton:hover {
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
   background: var(--bg-interactive);
-  color: var(--text-secondary);
-}
-
-.topBarDivider {
-  width: 1px;
-  height: 22px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.topBarTitleGroup {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.topBarTitleIcon {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--accent-success) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-success) 15%, transparent);
-  color: var(--accent-success);
+  border: var(--border-subtle);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: filter 0.15s ease;
 }
 
-.topBarTitle {
-  font-size: var(--font-size-lg);
-  color: var(--text-primary);
+.backBtn:hover {
+  filter: brightness(1.15);
+}
+
+.headerTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.headerTitle {
   font-family: var(--font-heading);
-  font-weight: 600;
-  line-height: 1;
+  font-size: var(--font-size-4xl);
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: -0.02em;
 }
 
-.topBarSubtitle {
-  font-size: var(--font-size-xs);
-  color: var(--text-dimmest);
-  font-family: var(--font-mono);
-  letter-spacing: 0.06em;
-  margin-top: 2px;
+.headerSubtitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: 400;
+  color: var(--text-dimmer);
 }
 
 /* ─── Sidebar nav ────────────────────────────────────────────────────── */

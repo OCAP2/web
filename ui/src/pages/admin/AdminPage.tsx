@@ -229,21 +229,23 @@ export function AdminPage(): JSX.Element {
 
   return (
     <div class={styles.page}>
-      {/* Top bar */}
-      <header class={styles.topBar}>
-        <div class={styles.topBarLeft}>
-          <button class={styles.backButton} onClick={() => navigate("/")} type="button">
-            <ArrowLeftIcon size={14} />
-            <span>{t("admin_back_to_recordings")}</span>
-          </button>
-          <div class={styles.topBarDivider} />
-          <div class={styles.topBarTitleGroup}>
-            <div class={styles.topBarTitleIcon}>
-              <ShieldCheckIcon size={16} />
-            </div>
+      {/* Header */}
+      <header class={styles.header}>
+        <div class={styles.headerTop}>
+          <div class={styles.headerLeft}>
+            <button
+              class={styles.backBtn}
+              title={t("admin_back_to_recordings")}
+              onClick={() => navigate("/")}
+              type="button"
+            >
+              <ArrowLeftIcon size={16} />
+            </button>
             <div>
-              <div class={styles.topBarTitle}>{t("admin")}</div>
-              <div class={styles.topBarSubtitle}>{t("admin_top_bar_subtitle")}</div>
+              <div class={styles.headerTitleRow}>
+                <span class={styles.headerTitle}>OCAP</span>
+                <span class={styles.headerSubtitle}>{t("admin")}</span>
+              </div>
             </div>
           </div>
         </div>
