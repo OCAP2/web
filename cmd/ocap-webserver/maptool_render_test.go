@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/OCAP2/web/internal/maptool"
 )
 
 func TestPublishPartial_Fresh(t *testing.T) {
@@ -41,4 +45,37 @@ func TestPublishPartial_OverwritesExisting(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(final, "new.txt"))
 	require.NoError(t, err)
 	assert.Equal(t, "new", string(data))
+}
+
+// TestRealRender_EndToEnd renders a real grad_meh fixture through the full
+// pipeline. It is skipped unless OCAP_MAPTOOL_FIXTURE_ZIP points at a real
+// grad_meh export AND all required external tools are present.
+func TestRealRender_EndToEnd(t *testing.T) {
+	fixtureZip := os.Getenv("OCAP_MAPTOOL_FIXTURE_ZIP")
+	if fixtureZip == "" {
+		t.Skip("set OCAP_MAPTOOL_FIXTURE_ZIP to a grad_meh export to run this test")
+	}
+	if _, err := os.Stat(fixtureZip); err != nil {
+		t.Skipf("fixture %s not available: %v", fixtureZip, err)
+	}
+
+	tools := maptool.DetectTools()
+	if missing := tools.MissingRequired(); len(missing) > 0 {
+		names := make([]string, 0, len(missing))
+		for _, m := range missing {
+			names = append(names, m.Name)
+		}
+		t.Skipf("missing tools: %v", names)
+	}
+
+	out := t.TempDir()
+	partial := filepath.Join(out, ".partial")
+	fm := newJSONFormatter(io.Discard)
+
+	world, err := realRender(tools)(context.Background(), fixtureZip, partial, fm)
+	require.NoError(t, err)
+	assert.NotEmpty(t, world)
+
+	_, err = os.Stat(filepath.Join(partial, "map.json"))
+	require.NoError(t, err, "pipeline must produce map.json")
 }
