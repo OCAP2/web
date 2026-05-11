@@ -22,6 +22,7 @@ export interface CustomizeConfig {
   disableKillCount?: boolean;
   headerTitle?: string;
   headerSubtitle?: string;
+  pageTitle?: string;
   cssOverrides?: Record<string, string>;
 }
 

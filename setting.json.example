@@ -15,6 +15,7 @@
 		"enabled": false,
 		"headerSubtitle": "",
 		"headerTitle": "",
+		"pageTitle": "",
 		"websiteLogo": "",
 		"websiteLogoSize": "32px",
 		"websiteURL": "",

@@ -14,6 +14,8 @@ export function CustomizeProvider(props: {
 }): JSX.Element {
   const [config, setConfig] = createSignal<CustomizeConfig>({});
   let appliedProps: string[] = [];
+  const originalTitle = document.title;
+  let titleOverridden = false;
 
   onMount(async () => {
     try {
@@ -28,6 +30,11 @@ export function CustomizeProvider(props: {
         return;
       }
       setConfig(data);
+
+      if (data.pageTitle) {
+        document.title = data.pageTitle;
+        titleOverridden = true;
+      }
 
       // Apply CSS variable overrides to :root
       if (data.cssOverrides) {
@@ -50,6 +57,10 @@ export function CustomizeProvider(props: {
       style.removeProperty(prop);
     }
     appliedProps = [];
+    if (titleOverridden) {
+      document.title = originalTitle;
+      titleOverridden = false;
+    }
   });
 
   return (

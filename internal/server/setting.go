@@ -48,6 +48,7 @@ type Customize struct {
 	DisableKillCount bool              `json:"disableKillCount" yaml:"disableKillCount"`
 	HeaderTitle      string            `json:"headerTitle" yaml:"headerTitle"`
 	HeaderSubtitle   string            `json:"headerSubtitle" yaml:"headerSubtitle"`
+	PageTitle        string            `json:"pageTitle" yaml:"pageTitle"`
 	CSSOverrides     map[string]string `json:"cssOverrides,omitempty" yaml:"cssOverrides"`
 }
 
@@ -108,6 +109,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("customize.disableKillCount", false)
 	viper.SetDefault("customize.headerTitle", "")
 	viper.SetDefault("customize.headerSubtitle", "")
+	viper.SetDefault("customize.pageTitle", "")
 	viper.SetDefault("conversion.enabled", false)
 	viper.SetDefault("conversion.interval", "5m")
 	viper.SetDefault("conversion.batchSize", 1)
