@@ -22,7 +22,7 @@ import {
   CheckIcon,
   TrashIcon,
   CopyIcon,
-  ExternalLinkIcon,
+  SteamIcon,
   InboxIcon,
   ClipboardIcon,
 } from "../../components/Icons";
@@ -741,7 +741,7 @@ function AllowlistRow(props: {
         rel="noopener noreferrer"
         title={t("admin_open_steam")}
       >
-        <ExternalLinkIcon size={12} />
+        <SteamIcon size={13} />
       </a>
 
       <button
