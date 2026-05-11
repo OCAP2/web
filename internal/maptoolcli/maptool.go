@@ -18,8 +18,8 @@ import (
 	"github.com/OCAP2/web/internal/server"
 )
 
-// maptoolOptions holds parsed CLI flags for `maptool render`.
-type maptoolOptions struct {
+// renderOptions holds parsed CLI flags for `maptool render`.
+type renderOptions struct {
 	Input     string
 	Batch     string
 	Out       string
@@ -28,25 +28,53 @@ type maptoolOptions struct {
 	Force     bool
 }
 
-// Run executes the `maptool` CLI subcommand.
-func Run(args []string) error {
-	if len(args) == 0 {
-		printMaptoolUsage(os.Stderr)
-		return errors.New("missing subcommand: expected 'render'")
-	}
-	switch args[0] {
-	case "render":
-		return runMaptoolRender(args[1:])
-	case "-h", "--help":
-		printMaptoolUsage(os.Stdout)
-		return nil
-	default:
-		printMaptoolUsage(os.Stderr)
-		return fmt.Errorf("unknown maptool subcommand: %q", args[0])
+// deps bundles injectable dependencies for the maptool CLI.
+type deps struct {
+	loadSettings   func() (server.Setting, error)
+	detectTools    func() maptool.ToolSet
+	installSignals func(context.Context) (context.Context, context.CancelFunc)
+	render         func(maptool.ToolSet) renderFunc
+	stdout, stderr io.Writer
+}
+
+func defaultDeps() deps {
+	return deps{
+		loadSettings: server.NewSetting,
+		detectTools:  maptool.DetectTools,
+		installSignals: func(ctx context.Context) (context.Context, context.CancelFunc) {
+			return signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+		},
+		render: realRender,
+		stdout: os.Stdout,
+		stderr: os.Stderr,
 	}
 }
 
-func printMaptoolUsage(w *os.File) {
+// Run is the entry point for `ocap-webserver maptool ...`. Returns the process exit code.
+func Run(args []string) int {
+	return dispatch(args, defaultDeps())
+}
+
+func dispatch(args []string, d deps) int {
+	if len(args) == 0 {
+		printUsage(d.stderr)
+		fmt.Fprintln(d.stderr, "error: missing subcommand: expected 'render'")
+		return 2
+	}
+	switch args[0] {
+	case "render":
+		return runRender(args[1:], d)
+	case "-h", "--help":
+		printUsage(d.stdout)
+		return 0
+	default:
+		printUsage(d.stderr)
+		fmt.Fprintf(d.stderr, "error: unknown maptool subcommand: %q\n", args[0])
+		return 2
+	}
+}
+
+func printUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s maptool render <input.zip> [flags]\n", os.Args[0])
 	fmt.Fprintf(w, "       %s maptool render --batch <dir>  [flags]\n\n", os.Args[0])
 	fmt.Fprintf(w, "Flags:\n")
@@ -57,9 +85,9 @@ func printMaptoolUsage(w *os.File) {
 	fmt.Fprintf(w, "      --force                 overwrite an existing <world>/ output directory\n")
 }
 
-func parseMaptoolRenderFlags(args []string) (maptoolOptions, error) {
+func parseRenderFlags(args []string) (renderOptions, error) {
 	fs := flag.NewFlagSet("render", flag.ContinueOnError)
-	var opts maptoolOptions
+	var opts renderOptions
 	fs.StringVar(&opts.Out, "o", "", "output directory")
 	fs.StringVar(&opts.Out, "out", "", "output directory")
 	fs.StringVar(&opts.Batch, "batch", "", "directory of *.zip files")
@@ -96,7 +124,7 @@ func parseMaptoolRenderFlags(args []string) (maptoolOptions, error) {
 }
 
 // enumerateInputs returns the absolute paths of all zip files to render, in deterministic order.
-func enumerateInputs(opts maptoolOptions) ([]string, error) {
+func enumerateInputs(opts renderOptions) ([]string, error) {
 	if opts.Batch != "" {
 		entries, err := os.ReadDir(opts.Batch)
 		if err != nil {
@@ -125,38 +153,33 @@ func enumerateInputs(opts maptoolOptions) ([]string, error) {
 	return []string{opts.Input}, nil
 }
 
-
-func runMaptoolRender(args []string) error {
-	opts, err := parseMaptoolRenderFlags(args)
+func runRender(args []string, d deps) int {
+	opts, err := parseRenderFlags(args)
 	if err != nil {
-		printMaptoolUsage(os.Stderr)
-		return err
+		printUsage(d.stderr)
+		fmt.Fprintln(d.stderr, "error:", err)
+		return 2
 	}
 
 	if opts.Out == "" {
-		setting, err := server.NewSetting()
+		setting, err := d.loadSettings()
 		if err != nil {
-			return fmt.Errorf("settings: %w", err)
+			fmt.Fprintln(d.stderr, "error: settings:", err)
+			return 2
 		}
 		opts.Out = setting.Maps
 	}
 
-	tools := maptool.DetectTools()
+	tools := d.detectTools()
 	if err := preflight(tools); err != nil {
-		return err
+		fmt.Fprintln(d.stderr, err)
+		return 2
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := d.installSignals(context.Background())
 	defer stop()
 
-	code := orchestrate(ctx, opts, realRender(tools), os.Stdout)
-	if code != 0 {
-		// signal.NotifyContext's stop unregisters the signal handler.
-		// os.Exit skips defers, so call it explicitly first.
-		stop()
-		os.Exit(code)
-	}
-	return nil
+	return orchestrate(ctx, opts, d.render(tools), d.stdout)
 }
 
 // errSkippedExists signals a final dir already exists and --force was not set.
@@ -197,7 +220,7 @@ func (c *worldClaim) publish(world, finalDir string, force bool, publishFn func(
 }
 
 // orchestrate is the testable core of `maptool render`. It returns the exit code.
-func orchestrate(ctx context.Context, opts maptoolOptions, render renderFunc, out io.Writer) int {
+func orchestrate(ctx context.Context, opts renderOptions, render renderFunc, out io.Writer) int {
 	fm := chooseFormatter(opts.LogFormat, out)
 
 	inputs, err := enumerateInputs(opts)

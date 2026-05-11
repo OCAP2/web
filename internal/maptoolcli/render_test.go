@@ -47,6 +47,39 @@ func TestPublishPartial_OverwritesExisting(t *testing.T) {
 	assert.Equal(t, "new", string(data))
 }
 
+// ---------------------------------------------------------------------------
+// preflight tests
+// ---------------------------------------------------------------------------
+
+func TestPreflight_AllRequiredPresent(t *testing.T) {
+	tools := maptool.ToolSet{
+		{Name: "pmtiles", Required: true, Found: true},
+		{Name: "tippecanoe", Required: true, Found: true},
+		{Name: "gdalwarp", Required: false, Found: false},
+	}
+	assert.NoError(t, preflight(tools))
+}
+
+func TestPreflight_RequiredToolMissing(t *testing.T) {
+	tools := maptool.ToolSet{
+		{Name: "pmtiles", Required: true, Found: false},
+		{Name: "tippecanoe", Required: true, Found: true},
+	}
+	err := preflight(tools)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pmtiles")
+	assert.Contains(t, err.Error(), "ghcr.io/ocap2/web:full")
+}
+
+func TestPreflight_NonRequiredToolMissing(t *testing.T) {
+	tools := maptool.ToolSet{
+		{Name: "pmtiles", Required: true, Found: true},
+		{Name: "tippecanoe", Required: true, Found: true},
+		{Name: "gdalwarp", Required: false, Found: false},
+	}
+	assert.NoError(t, preflight(tools))
+}
+
 // TestRealRender_EndToEnd renders a real grad_meh fixture through the full
 // pipeline. It is skipped unless OCAP_MAPTOOL_FIXTURE_ZIP points at a real
 // grad_meh export AND all required external tools are present.

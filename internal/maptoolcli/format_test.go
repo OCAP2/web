@@ -3,6 +3,8 @@ package maptoolcli
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -50,3 +52,52 @@ func TestJSONFormatter_EmitsValidJSONLines(t *testing.T) {
 type assertErr string
 
 func (e assertErr) Error() string { return string(e) }
+
+func TestTextFormatter_SummaryMultipleNames(t *testing.T) {
+	var buf bytes.Buffer
+	f := newTextFormatter(&buf, false)
+	f.Summary(summary{
+		OK:      []string{"altis", "stratis"},
+		Skipped: []string{"chernarus", "livonia"},
+		Failed:  map[string]string{},
+	})
+	out := buf.String()
+	assert.Contains(t, out, "altis")
+	assert.Contains(t, out, "stratis")
+	assert.Contains(t, out, "2 ok / 2 skipped / 0 failed")
+}
+
+// ---------------------------------------------------------------------------
+// chooseFormatter tests
+// ---------------------------------------------------------------------------
+
+func TestChooseFormatter_JSON(t *testing.T) {
+	var buf bytes.Buffer
+	f := chooseFormatter("json", &buf)
+	_, ok := f.(*jsonFormatter)
+	assert.True(t, ok, "mode=json must return *jsonFormatter")
+}
+
+func TestChooseFormatter_Text(t *testing.T) {
+	var buf bytes.Buffer
+	f := chooseFormatter("text", &buf)
+	_, ok := f.(*textFormatter)
+	assert.True(t, ok, "mode=text must return *textFormatter")
+}
+
+func TestChooseFormatter_TextWithFile(t *testing.T) {
+	// Pass a real *os.File (non-TTY) to exercise the *os.File type assertion in text mode.
+	tmpFile, err := os.CreateTemp(t.TempDir(), "chooseFormatter-*.txt")
+	require.NoError(t, err)
+	defer tmpFile.Close()
+	f := chooseFormatter("text", tmpFile)
+	_, ok := f.(*textFormatter)
+	assert.True(t, ok, "mode=text with *os.File non-TTY must return *textFormatter")
+}
+
+func TestChooseFormatter_AutoWithNonTTY(t *testing.T) {
+	// bytes.Buffer is not *os.File, so auto falls back to json.
+	f := chooseFormatter("auto", io.Discard)
+	_, ok := f.(*jsonFormatter)
+	assert.True(t, ok, "mode=auto with non-TTY writer must return *jsonFormatter")
+}
