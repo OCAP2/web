@@ -183,7 +183,9 @@ export function AdminPage(): JSX.Element {
   }
 
   async function confirmRemoveBulk(): Promise<void> {
-    const ids = Array.from(selected());
+    // Defensive: never remove config admins even if they somehow got into the set.
+    const admins = adminIds();
+    const ids = Array.from(selected()).filter((id) => !admins.includes(id));
     setConfirmBulk(false);
     let removed = 0;
     for (const id of ids) {
@@ -216,14 +218,18 @@ export function AdminPage(): JSX.Element {
     });
   }
 
+  const selectableFiltered = createMemo(() =>
+    filtered().filter((e) => !adminIds().includes(e.steamId)),
+  );
+
   const allFilteredSelected = createMemo(() => {
-    const list = filtered();
+    const list = selectableFiltered();
     const sel = selected();
     return list.length > 0 && list.every((e) => sel.has(e.steamId));
   });
 
   function toggleAllFiltered(): void {
-    const list = filtered();
+    const list = selectableFiltered();
     const allOn = allFilteredSelected();
     setSelected((prev) => {
       const next = new Set<string>(prev);
@@ -433,9 +439,6 @@ export function AdminPage(): JSX.Element {
             <>
               <span class={styles.dialogBodyEmphasis}>{confirmSingle()!.steamId}</span>{" "}
               {t("admin_confirm_remove_body")}
-              <Show when={adminIds().includes(confirmSingle()!.steamId)}>
-                <span class={styles.dialogBodyWarn}>{t("admin_confirm_remove_admin_note")}</span>
-              </Show>
             </>
           }
           confirmLabel={t("admin_confirm_remove")}
@@ -691,8 +694,10 @@ function AllowlistRow(props: {
       <button
         class={`${styles.checkbox} ${props.selected ? styles.checkboxActive : ""}`}
         onClick={props.onSelect}
+        disabled={props.isAdmin}
         type="button"
         aria-pressed={props.selected}
+        title={props.isAdmin ? t("admin_remove_locked_tooltip") : undefined}
       >
         <Show when={props.selected}>
           <CheckIcon size={11} />
@@ -742,8 +747,9 @@ function AllowlistRow(props: {
       <button
         class={styles.removeBtn}
         onClick={props.onRemove}
+        disabled={props.isAdmin}
         type="button"
-        title={t("admin_remove_tooltip")}
+        title={props.isAdmin ? t("admin_remove_locked_tooltip") : t("admin_remove_tooltip")}
       >
         <TrashIcon size={13} />
       </button>

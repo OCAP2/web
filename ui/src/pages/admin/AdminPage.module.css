@@ -958,10 +958,16 @@
   transition: all 0.12s;
 }
 
-.row:hover .removeBtn {
+.row:hover .removeBtn:not(:disabled) {
   background: color-mix(in srgb, var(--accent-danger) 8%, transparent);
   border-color: color-mix(in srgb, var(--accent-danger) 20%, transparent);
   color: var(--accent-danger);
+}
+
+.removeBtn:disabled,
+.checkbox:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* ─── Empty state ────────────────────────────────────────────────────── */

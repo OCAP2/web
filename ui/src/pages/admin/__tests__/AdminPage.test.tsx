@@ -153,6 +153,25 @@ describe("AdminPage", () => {
     });
   });
 
+  it("disables the remove button on rows whose Steam ID is a configured admin", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: ["76561198012345678"] }));
+    mockGetAllowlist.mockResolvedValue(["76561198012345678", "76561198087654321"]);
+
+    const screen = renderPage();
+    await waitFor(() => screen.getByTitle("This Steam ID is also listed as an admin in setting.json"));
+
+    const lockedButtons = screen.getAllByTitle(/Configured as admin in setting.json/);
+    // Both the checkbox and the trash button on the admin row carry the locked tooltip.
+    expect(lockedButtons.length).toBeGreaterThanOrEqual(2);
+    for (const btn of lockedButtons) {
+      expect((btn as HTMLButtonElement).disabled).toBe(true);
+    }
+    // The other (non-admin) row still has an enabled remove button.
+    const removeButtons = screen.getAllByTitle("Remove from allowlist");
+    expect(removeButtons.length).toBe(1);
+    expect((removeButtons[0] as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("opens confirm dialog before removing a single entry", async () => {
     mockGetAdminAuthConfig.mockResolvedValue(configFixture());
     mockGetAllowlist.mockResolvedValue(["76561198087654321"]);
