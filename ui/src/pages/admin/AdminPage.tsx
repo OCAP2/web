@@ -6,8 +6,12 @@ import { useI18n } from "../../hooks/useLocale";
 import {
   ArrowLeftIcon,
   ShieldCheckIcon,
+  // Used by coming-soon UI that is currently commented out:
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   UsersIcon,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   FileTextIcon,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   SettingsIcon,
   AlertTriangleIcon,
   LockIcon,
@@ -255,9 +259,11 @@ export function AdminPage(): JSX.Element {
               <span class={styles.sidebarItemLabel}>{t("admin_nav_allowlist")}</span>
               <span class={styles.sidebarItemCount}>{allowlist().length}</span>
             </div>
-            <SidebarSoonItem icon={<UsersIcon size={16} />} label={t("admin_nav_users")} soon={t("admin_nav_coming_soon")} />
-            <SidebarSoonItem icon={<FileTextIcon size={16} />} label={t("admin_nav_audit")} soon={t("admin_nav_coming_soon")} />
-            <SidebarSoonItem icon={<SettingsIcon size={16} />} label={t("admin_nav_settings")} soon={t("admin_nav_coming_soon")} />
+            {/* Coming-soon sidebar items hidden until implemented:
+              <SidebarSoonItem icon={<UsersIcon size={16} />} label={t("admin_nav_users")} soon={t("admin_nav_coming_soon")} />
+              <SidebarSoonItem icon={<FileTextIcon size={16} />} label={t("admin_nav_audit")} soon={t("admin_nav_coming_soon")} />
+              <SidebarSoonItem icon={<SettingsIcon size={16} />} label={t("admin_nav_settings")} soon={t("admin_nav_coming_soon")} />
+            */}
           </nav>
           <div class={styles.sidebarFooter} />
         </aside>
@@ -368,33 +374,34 @@ export function AdminPage(): JSX.Element {
             </div>
           </Show>
 
-          {/* Future sections */}
-          <div class={styles.comingGrid}>
-            <ComingSoonCard
-              icon={<UsersIcon size={16} />}
-              title={t("admin_coming_users_title")}
-              body={t("admin_coming_users_body")}
-              soonLabel={t("admin_nav_coming_soon")}
-            />
-            <ComingSoonCard
-              icon={<FileTextIcon size={16} />}
-              title={t("admin_coming_audit_title")}
-              body={t("admin_coming_audit_body")}
-              soonLabel={t("admin_nav_coming_soon")}
-            />
-            <ComingSoonCard
-              icon={<SettingsIcon size={16} />}
-              title={t("admin_coming_settings_title")}
-              body={t("admin_coming_settings_body")}
-              soonLabel={t("admin_nav_coming_soon")}
-            />
-            <ComingSoonCard
-              icon={<LockIcon size={16} />}
-              title={t("admin_coming_tokens_title")}
-              body={t("admin_coming_tokens_body")}
-              soonLabel={t("admin_nav_coming_soon")}
-            />
-          </div>
+          {/* Future sections hidden until implemented:
+            <div class={styles.comingGrid}>
+              <ComingSoonCard
+                icon={<UsersIcon size={16} />}
+                title={t("admin_coming_users_title")}
+                body={t("admin_coming_users_body")}
+                soonLabel={t("admin_nav_coming_soon")}
+              />
+              <ComingSoonCard
+                icon={<FileTextIcon size={16} />}
+                title={t("admin_coming_audit_title")}
+                body={t("admin_coming_audit_body")}
+                soonLabel={t("admin_nav_coming_soon")}
+              />
+              <ComingSoonCard
+                icon={<SettingsIcon size={16} />}
+                title={t("admin_coming_settings_title")}
+                body={t("admin_coming_settings_body")}
+                soonLabel={t("admin_nav_coming_soon")}
+              />
+              <ComingSoonCard
+                icon={<LockIcon size={16} />}
+                title={t("admin_coming_tokens_title")}
+                body={t("admin_coming_tokens_body")}
+                soonLabel={t("admin_nav_coming_soon")}
+              />
+            </div>
+          */}
         </main>
       </div>
 
@@ -440,6 +447,7 @@ export function AdminPage(): JSX.Element {
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SidebarSoonItem(props: { icon: JSX.Element; label: string; soon: string }): JSX.Element {
   return (
     <div class={`${styles.sidebarItem} ${styles.sidebarItemDisabled}`}>
@@ -747,6 +755,7 @@ function EmptyState(props: { onPaste: () => void }): JSX.Element {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ComingSoonCard(props: {
   icon: JSX.Element;
   title: string;
