@@ -266,6 +266,13 @@ describe("RecordingSelector", () => {
     const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
 
+    const trigger = screen.getByTestId("map-filter-dropdown-trigger");
+    fireEvent.click(trigger);
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("map-filter-Stratis")).toBeDefined();
+    });
+
     const stratisButton = screen.getByTestId("map-filter-Stratis");
     fireEvent.click(stratisButton);
 
@@ -279,6 +286,14 @@ describe("RecordingSelector", () => {
   it("does not crash when rapidly toggling map filters", async () => {
     const { findByTestId, queryByTestId } = renderPage();
     await findByTestId("recording-1");
+
+    const trigger = screen.getByTestId("map-filter-dropdown-trigger");
+    fireEvent.click(trigger);
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("map-filter-Altis")).toBeDefined();
+      expect(screen.getByTestId("map-filter-Stratis")).toBeDefined();
+    });
 
     const altisButton = screen.getByTestId("map-filter-Altis");
     const stratisButton = screen.getByTestId("map-filter-Stratis");
@@ -614,7 +629,7 @@ describe("RecordingSelector", () => {
 
     // 2 unique maps: Altis and Stratis
     expect(screen.getByText("2")).toBeDefined();
-    expect(screen.getByText("Maps")).toBeDefined();
+    expect(screen.getAllByText("Maps").length).toBeGreaterThan(0);
   });
 
   // ── Auth error toast ──
