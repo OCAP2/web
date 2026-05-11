@@ -5,6 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // maptoolOptions holds parsed CLI flags for `maptool render`.
@@ -81,6 +84,36 @@ func parseMaptoolRenderFlags(args []string) (maptoolOptions, error) {
 		return opts, fmt.Errorf("--log-format must be auto|text|json, got %q", opts.LogFormat)
 	}
 	return opts, nil
+}
+
+// enumerateInputs returns the absolute paths of all zip files to render, in deterministic order.
+func enumerateInputs(opts maptoolOptions) ([]string, error) {
+	if opts.Batch != "" {
+		entries, err := os.ReadDir(opts.Batch)
+		if err != nil {
+			return nil, fmt.Errorf("read batch dir: %w", err)
+		}
+		var inputs []string
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if !strings.EqualFold(filepath.Ext(e.Name()), ".zip") {
+				continue
+			}
+			inputs = append(inputs, filepath.Join(opts.Batch, e.Name()))
+		}
+		if len(inputs) == 0 {
+			return nil, fmt.Errorf("no .zip files in %s", opts.Batch)
+		}
+		sort.Strings(inputs)
+		return inputs, nil
+	}
+
+	if _, err := os.Stat(opts.Input); err != nil {
+		return nil, fmt.Errorf("input: %w", err)
+	}
+	return []string{opts.Input}, nil
 }
 
 func runMaptoolRender(args []string) error {
