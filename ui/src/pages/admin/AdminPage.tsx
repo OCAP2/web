@@ -300,21 +300,33 @@ export function AdminPage(): JSX.Element {
           </Show>
 
           <Show when={!allowlistResource.loading}>
-            <div class={styles.panel}>
+            <div class={`${styles.panel} ${mismatch() ? styles.panelDisabled : ""}`}>
               <div class={styles.panelHeader}>
                 <div>
                   <div class={styles.panelTitleRow}>
                     <div class={styles.panelTitle}>{t("admin_allowlist_title")}</div>
-                    <div class={styles.countPill}>
-                      {allowlist().length}{" "}
-                      {allowlist().length === 1 ? t("admin_allowlist_count_person") : t("admin_allowlist_count_people")}
-                    </div>
+                    <Show
+                      when={!mismatch()}
+                      fallback={
+                        <div
+                          class={styles.inactivePill}
+                          title={t("admin_inactive_tooltip")}
+                        >
+                          {t("admin_inactive_pill")}
+                        </div>
+                      }
+                    >
+                      <div class={styles.countPill}>
+                        {allowlist().length}{" "}
+                        {allowlist().length === 1 ? t("admin_allowlist_count_person") : t("admin_allowlist_count_people")}
+                      </div>
+                    </Show>
                   </div>
                   <div class={styles.panelSubtitle}>{t("admin_allowlist_subtitle")}</div>
                 </div>
               </div>
 
-              <AddBar onAdd={handleAdd} onBulkAdd={handleBulkAdd} />
+              <AddBar onAdd={handleAdd} onBulkAdd={handleBulkAdd} disabled={mismatch()} />
 
               <Show when={allowlist().length > 0}>
                 <div class={styles.toolbar}>
@@ -338,7 +350,9 @@ export function AdminPage(): JSX.Element {
                   <button
                     class={`${styles.selectAllBtn} ${allFilteredSelected() ? styles.selectAllBtnActive : ""}`}
                     onClick={toggleAllFiltered}
+                    disabled={mismatch()}
                     type="button"
+                    title={mismatch() ? t("admin_inactive_tooltip") : undefined}
                   >
                     <div class={`${styles.miniCheckbox} ${allFilteredSelected() ? styles.miniCheckboxActive : ""}`}>
                       <Show when={allFilteredSelected()}>
@@ -383,6 +397,7 @@ export function AdminPage(): JSX.Element {
                           entry={entry}
                           selected={selected().has(entry.steamId)}
                           isAdmin={adminIds().includes(entry.steamId)}
+                          disabled={mismatch()}
                           onSelect={() => toggleOne(entry.steamId)}
                           onRemove={() => setConfirmSingle(entry)}
                           onCopy={() => handleCopy(entry.steamId)}
@@ -555,6 +570,7 @@ function ConfigRow(props: { label: string; note?: string; children: JSX.Element 
 function AddBar(props: {
   onAdd: (id: string) => void | Promise<void>;
   onBulkAdd: (ids: string[]) => void | Promise<void>;
+  disabled?: boolean;
 }): JSX.Element {
   const { t } = useI18n();
   const [input, setInput] = createSignal("");
@@ -578,6 +594,8 @@ function AddBar(props: {
     setBulkOpen(false);
   }
 
+  const disabledTitle = () => (props.disabled ? t("admin_inactive_tooltip") : undefined);
+
   return (
     <div class={styles.addBar}>
       <div class={styles.addRow}>
@@ -590,6 +608,8 @@ function AddBar(props: {
               if (e.key === "Enter") submit();
             }}
             placeholder={t("admin_add_placeholder")}
+            disabled={props.disabled}
+            title={disabledTitle()}
           />
           <Show when={trimmed()}>
             <div class={`${styles.addStatusIcon} ${showSuccess() ? styles.addStatusOk : styles.addStatusErr}`}>
@@ -602,8 +622,9 @@ function AddBar(props: {
         <button
           class={styles.addBtn}
           onClick={submit}
-          disabled={!isValidSteamId(trimmed())}
+          disabled={props.disabled || !isValidSteamId(trimmed())}
           type="button"
+          title={disabledTitle()}
         >
           <PlusIcon size={14} />
           <span>{t("admin_add_button")}</span>
@@ -611,7 +632,9 @@ function AddBar(props: {
         <button
           class={`${styles.bulkToggle} ${bulkOpen() ? styles.bulkToggleActive : ""}`}
           onClick={() => setBulkOpen((o) => !o)}
+          disabled={props.disabled}
           type="button"
+          title={disabledTitle()}
         >
           <span class={`${styles.bulkToggleChevron} ${bulkOpen() ? styles.bulkToggleChevronOpen : ""}`}>
             <ChevronDownIcon size={12} />
@@ -672,6 +695,7 @@ function AllowlistRow(props: {
   entry: AllowlistEntry;
   selected: boolean;
   isAdmin: boolean;
+  disabled?: boolean;
   onSelect: () => void;
   onRemove: () => void;
   onCopy: () => void;
@@ -694,10 +718,16 @@ function AllowlistRow(props: {
       <button
         class={`${styles.checkbox} ${props.selected ? styles.checkboxActive : ""}`}
         onClick={props.onSelect}
-        disabled={props.isAdmin}
+        disabled={props.isAdmin || props.disabled}
         type="button"
         aria-pressed={props.selected}
-        title={props.isAdmin ? t("admin_remove_locked_tooltip") : undefined}
+        title={
+          props.disabled
+            ? t("admin_inactive_tooltip")
+            : props.isAdmin
+              ? t("admin_remove_locked_tooltip")
+              : undefined
+        }
       >
         <Show when={props.selected}>
           <CheckIcon size={11} />
@@ -747,9 +777,15 @@ function AllowlistRow(props: {
       <button
         class={styles.removeBtn}
         onClick={props.onRemove}
-        disabled={props.isAdmin}
+        disabled={props.isAdmin || props.disabled}
         type="button"
-        title={props.isAdmin ? t("admin_remove_locked_tooltip") : t("admin_remove_tooltip")}
+        title={
+          props.disabled
+            ? t("admin_inactive_tooltip")
+            : props.isAdmin
+              ? t("admin_remove_locked_tooltip")
+              : t("admin_remove_tooltip")
+        }
       >
         <TrashIcon size={13} />
       </button>

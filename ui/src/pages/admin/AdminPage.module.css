@@ -443,6 +443,24 @@
   font-weight: 700;
 }
 
+.inactivePill {
+  padding: 2px var(--space-sm);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 20%, transparent);
+  color: var(--accent-warning);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: help;
+}
+
+.panelDisabled .addBar,
+.panelDisabled .rowList {
+  opacity: 0.5;
+}
+
 .panelSubtitle {
   font-size: var(--font-size-md);
   color: var(--text-dim);

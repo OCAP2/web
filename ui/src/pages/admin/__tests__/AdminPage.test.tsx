@@ -153,6 +153,20 @@ describe("AdminPage", () => {
     });
   });
 
+  it("disables add/remove/bulk controls when auth.mode is not steamAllowlist", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ mode: "public", adminSteamIds: ["76561198000000001"] }));
+    mockGetAllowlist.mockResolvedValue(["76561198087654321"]);
+
+    const screen = renderPage();
+    await waitFor(() => screen.getByText("INACTIVE"));
+
+    expect((screen.getByPlaceholderText(/Add Steam64 ID/) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByText("ADD").closest("button") as HTMLButtonElement).disabled).toBe(true);
+    // The row remove button + select-all + bulk toggle all carry the inactive tooltip too.
+    const inactiveTitled = screen.queryAllByTitle(/auth\.mode is not steamAllowlist/);
+    expect(inactiveTitled.length).toBeGreaterThanOrEqual(4);
+  });
+
   it("disables the remove button on rows whose Steam ID is a configured admin", async () => {
     mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: ["76561198012345678"] }));
     mockGetAllowlist.mockResolvedValue(["76561198012345678", "76561198087654321"]);
