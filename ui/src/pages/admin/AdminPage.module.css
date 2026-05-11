@@ -27,15 +27,22 @@
 
 /* ─── Header (aligned with MapManager) ───────────────────────────────── */
 .header {
-  padding: 14px 24px 0;
+  padding: 14px 24px 12px;
   flex-shrink: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-dark) 95%, transparent) 0%,
+    color-mix(in srgb, var(--bg-dark) 70%, transparent) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: var(--border-subtle);
 }
 
 .headerTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
 }
 
 .headerLeft {
