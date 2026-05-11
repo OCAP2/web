@@ -149,6 +149,55 @@ describe("useCustomize", () => {
     expect(parsed.websiteURL).toBeUndefined();
   });
 
+  it("applies pageTitle to document.title and restores on unmount", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    mockGetCustomize.mockResolvedValue({
+      enabled: true,
+      pageTitle: "Custom Server Title",
+    });
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      expect(document.title).toBe("Custom Server Title");
+    });
+
+    unmount();
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
+  it("does not override document.title when pageTitle is empty", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    mockGetCustomize.mockResolvedValue({
+      enabled: true,
+      pageTitle: "",
+    });
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.title).toBe("OCAP2");
+
+    unmount();
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
   it("cleans up applied properties on unmount", async () => {
     mockGetCustomize.mockResolvedValue({
       enabled: true,
