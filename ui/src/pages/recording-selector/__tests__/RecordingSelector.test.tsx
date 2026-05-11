@@ -971,7 +971,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const logoutBtn = screen.getByTitle("Sign out");
+    const logoutBtn = await screen.findByTitle("Sign out");
     fireEvent.click(logoutBtn);
 
     await vi.waitFor(() => {
@@ -1089,7 +1089,7 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-1");
 
     // Click upload button
-    const uploadBtn = screen.getByTitle("Upload Recording");
+    const uploadBtn = await screen.findByTitle("Upload Recording");
     fireEvent.click(uploadBtn);
 
     // Upload dialog should appear
@@ -1131,7 +1131,7 @@ describe("RecordingSelector (Admin)", () => {
     await findByTestId("recording-1");
 
     // Open upload zone
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1150,7 +1150,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1168,7 +1168,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1186,7 +1186,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1205,7 +1205,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1237,7 +1237,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1259,7 +1259,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1292,7 +1292,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     await vi.waitFor(() => {
@@ -1341,7 +1341,7 @@ describe("RecordingSelector (Admin)", () => {
     const { findByTestId } = renderPage();
     await findByTestId("recording-1");
 
-    const uploadBtn = screen.getByTitle("Upload Recording") as HTMLButtonElement;
+    const uploadBtn = await screen.findByTitle("Upload Recording") as HTMLButtonElement;
     fireEvent.click(uploadBtn);
 
     // No file: "Select a file to upload"

@@ -1121,6 +1121,7 @@ describe("ApiClient", () => {
 
       expect(fetch).toHaveBeenCalledWith("/aar/api/v1/auth/config", {
         cache: "no-cache",
+        headers: {},
       });
       expect(result).toEqual({ mode: "password" });
     });
@@ -1232,7 +1233,7 @@ describe("ApiClient", () => {
       });
 
       const client = new ApiClient("/aar/");
-      await expect(client.getRecordings()).rejects.toThrow("Authentication required");
+      await expect(client.getRecordings()).rejects.toMatchObject({ status: 401 });
 
       expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/42/test");
       expect(hrefSetter).toHaveBeenCalledWith("/");
@@ -1255,7 +1256,7 @@ describe("ApiClient", () => {
       });
 
       const client = new ApiClient("/aar/");
-      await expect(client.getRecordingData("test")).rejects.toThrow("Authentication required");
+      await expect(client.getRecordingData("test")).rejects.toMatchObject({ status: 401 });
 
       expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/7/mission?t=100");
       expect(hrefSetter).toHaveBeenCalledWith("/");

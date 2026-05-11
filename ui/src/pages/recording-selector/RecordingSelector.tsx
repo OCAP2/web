@@ -27,7 +27,7 @@ export function RecordingSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { isAdmin, authMode, authError, dismissAuthError } = useAuth();
+  const { isAdmin, authError, dismissAuthError } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);

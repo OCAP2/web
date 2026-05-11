@@ -79,12 +79,23 @@ async function apiErrorFromResponse(
       }
     }
   } catch {
-    // ignore body read failures
+    // ignore body read failures (test mocks, network races, etc.)
   }
   const message = detail
     ? `${prefix}: ${response.status} ${response.statusText} — ${detail}`
     : `${prefix}: ${response.status} ${response.statusText}`;
   return new ApiError(message, response.status, response.statusText, detail);
+}
+
+/** Redirect viewer-flow requests to the login page when their session expires. */
+function redirectToLogin(): void {
+  sessionStorage.setItem(
+    "ocap_return_to",
+    window.location.pathname + window.location.search,
+  );
+  const base =
+    ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
+  window.location.href = base + "/";
 }
 
 // ─── Raw server response shape (snake_case from Go JSON tags) ───
@@ -225,17 +236,10 @@ export class ApiClient {
    * GET {baseUrl}/api/v1/customize
    */
   async getCustomize(): Promise<CustomizeConfig> {
-    const response = await fetch(`${this.baseUrl}/api/v1/customize`, {
-      cache: "no-cache",
-    });
-    if (!response.ok) {
-      throw new ApiError(
-        `GET customize failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    return response.json() as Promise<CustomizeConfig>;
+    return this.requestJson<CustomizeConfig>(
+      `${this.baseUrl}/api/v1/customize`,
+      { cache: "no-cache" },
+    );
   }
 
   /**
@@ -378,49 +382,56 @@ export class ApiClient {
   }
 
   async getAuthConfig(): Promise<AuthConfig> {
-    const response = await fetch(`${this.baseUrl}/api/v1/auth/config`, {
-      cache: "no-cache",
-    });
-    if (!response.ok) {
+    try {
+      return await this.requestJson<AuthConfig>(
+        `${this.baseUrl}/api/v1/auth/config`,
+        { cache: "no-cache" },
+      );
+    } catch {
       return { mode: "public" };
     }
-    return response.json() as Promise<AuthConfig>;
   }
 
   async passwordLogin(password: string): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/api/v1/auth/password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (!response.ok) {
-      throw new ApiError(
-        response.status === 401 ? "Invalid password" : "Login failed",
-        response.status,
-        response.statusText,
+    try {
+      const data = await this.requestJson<{ token: string }>(
+        `${this.baseUrl}/api/v1/auth/password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        },
       );
+      setAuthToken(data.token);
+      return data.token;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const message = err.status === 401 ? "Invalid password" : "Login failed";
+        throw new ApiError(message, err.status, err.statusText, err.detail);
+      }
+      throw err;
     }
-    const data = (await response.json()) as { token: string };
-    setAuthToken(data.token);
-    return data.token;
   }
 
   async getMe(): Promise<AuthState> {
-    const response = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
-      headers: authHeaders(),
-      cache: "no-cache",
-    });
-    if (!response.ok) {
+    try {
+      return await this.requestJson<AuthState>(
+        `${this.baseUrl}/api/v1/auth/me`,
+        { cache: "no-cache" },
+      );
+    } catch {
       return { authenticated: false };
     }
-    return response.json() as Promise<AuthState>;
   }
 
   async logout(): Promise<void> {
-    await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
-      method: "POST",
-      headers: authHeaders(),
-    });
+    try {
+      await this.request(`${this.baseUrl}/api/v1/auth/logout`, {
+        method: "POST",
+      });
+    } catch {
+      // logout is fire-and-forget
+    }
     setAuthToken(null);
   }
 
@@ -430,72 +441,36 @@ export class ApiClient {
     id: string,
     data: { missionName?: string; tag?: string; date?: string; focusStart?: number | null; focusEnd?: number | null },
   ): Promise<Recording> {
-    const response = await fetch(
+    const raw = await this.requestJson<RawRecording>(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       },
     );
-    if (!response.ok) {
-      throw new ApiError(
-        `Edit failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    const raw = (await response.json()) as RawRecording;
     return mapRecording(raw);
   }
 
   async deleteRecording(id: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}`,
-      {
-        method: "DELETE",
-        headers: authHeaders(),
-      },
+      { method: "DELETE" },
     );
-    if (!response.ok) {
-      throw new ApiError(
-        `Delete failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   async retryConversion(id: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(id)}/retry`,
-      {
-        method: "POST",
-        headers: authHeaders(),
-      },
+      { method: "POST" },
     );
-    if (!response.ok) {
-      throw new ApiError(
-        `Retry failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   async uploadRecording(formData: FormData): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/operations/add`, {
+    await this.request(`${this.baseUrl}/api/v1/operations/add`, {
       method: "POST",
-      headers: authHeaders(),
       body: formData,
     });
-    if (!response.ok) {
-      throw new ApiError(
-        `Upload failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   // ─── Marker blacklist methods ───
@@ -525,21 +500,10 @@ export class ApiClient {
     playerEntityId: number,
     method: "PUT" | "DELETE",
   ): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/operations/${encodeURIComponent(operationId)}/marker-blacklist/${playerEntityId}`,
-      {
-        method,
-        headers: authHeaders(),
-      },
+      { method },
     );
-    if (!response.ok) {
-      const action = method === "PUT" ? "Add" : "Remove";
-      throw new ApiError(
-        `${action} blacklist failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   // ─── Allowlist methods (admin) ───
@@ -558,23 +522,17 @@ export class ApiClient {
   }
 
   async addToAllowlist(steamId: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/auth/allowlist/${encodeURIComponent(steamId)}`,
-      { method: "PUT", headers: authHeaders() },
+      { method: "PUT" },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "Add to allowlist failed");
-    }
   }
 
   async removeFromAllowlist(steamId: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/auth/allowlist/${encodeURIComponent(steamId)}`,
-      { method: "DELETE", headers: authHeaders() },
+      { method: "DELETE" },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "Remove from allowlist failed");
-    }
   }
 
   // ─── MapTool methods ───
@@ -592,17 +550,10 @@ export class ApiClient {
   }
 
   async deleteMapToolMap(name: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/maptool/maps/${encodeURIComponent(name)}`,
-      { method: "DELETE", headers: authHeaders() },
+      { method: "DELETE" },
     );
-    if (!response.ok) {
-      throw new ApiError(
-        `Delete map failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   async importMapToolZip(
@@ -657,17 +608,10 @@ export class ApiClient {
   }
 
   async cancelMapToolJob(id: string): Promise<void> {
-    const response = await fetch(
+    await this.request(
       `${this.baseUrl}/api/v1/maptool/jobs/${encodeURIComponent(id)}/cancel`,
-      { method: "POST", headers: authHeaders() },
+      { method: "POST" },
     );
-    if (!response.ok) {
-      throw new ApiError(
-        `Cancel job failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
   }
 
   getMapToolEventsUrl(): string {
@@ -678,63 +622,64 @@ export class ApiClient {
 
   // ─── Internal fetch helpers ───
 
+  /**
+   * Single fetch chokepoint: merges auth headers, throws ApiError with
+   * the server's error detail on non-ok responses. Every other helper
+   * routes through this so error handling and auth stay consistent.
+   */
+  private async request(url: string, init?: RequestInit): Promise<Response> {
+    const initHeaders = (init?.headers ?? {}) as Record<string, string>;
+    const headers: Record<string, string> = { ...authHeaders(), ...initHeaders };
+    const response = await fetch(url, { ...init, headers });
+    if (!response.ok) {
+      const method = init?.method ?? "GET";
+      throw await apiErrorFromResponse(response, `${method} ${url} failed`);
+    }
+    return response;
+  }
+
+  private async requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await this.request(url, init);
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Authenticated GET that redirects to the login flow on 401 (viewer
+   * session expired). Used by the public viewer pages where we want a
+   * graceful login bounce rather than a thrown error.
+   */
+  private async fetchJson<T>(url: string): Promise<T> {
+    try {
+      return await this.requestJson<T>(url, { cache: "no-store" });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        redirectToLogin();
+      }
+      throw err;
+    }
+  }
+
+  /** Same shape as fetchJson but for binary payloads (gzipped JSON, protobuf). */
+  private async fetchBuffer(url: string): Promise<ArrayBuffer> {
+    try {
+      const response = await this.request(url);
+      return await response.arrayBuffer();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        redirectToLogin();
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Authenticated request returning JSON. Does NOT redirect on 401 —
+   * admin-flow callers handle auth state themselves.
+   */
   private async fetchJsonAuth<T>(
     url: string,
     method: string = "GET",
   ): Promise<T> {
-    const response = await fetch(url, {
-      method,
-      headers: authHeaders(),
-      cache: "no-cache",
-    });
-    if (!response.ok) {
-      throw new ApiError(
-        `${method} ${url} failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    return response.json() as Promise<T>;
-  }
-
-  private async fetchJson<T>(url: string): Promise<T> {
-    const response = await fetch(url, {
-      headers: authHeaders(),
-      cache: "no-store",
-    });
-    if (response.status === 401) {
-      sessionStorage.setItem("ocap_return_to", window.location.pathname + window.location.search);
-      const base = ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
-      window.location.href = base + "/";
-      throw new ApiError("Authentication required", 401, "Unauthorized");
-    }
-    if (!response.ok) {
-      throw new ApiError(
-        `GET ${url} failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    return response.json() as Promise<T>;
-  }
-
-  private async fetchBuffer(url: string): Promise<ArrayBuffer> {
-    const response = await fetch(url, {
-      headers: authHeaders(),
-    });
-    if (response.status === 401) {
-      sessionStorage.setItem("ocap_return_to", window.location.pathname + window.location.search);
-      const base = ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
-      window.location.href = base + "/";
-      throw new ApiError("Authentication required", 401, "Unauthorized");
-    }
-    if (!response.ok) {
-      throw new ApiError(
-        `GET ${url} failed: ${response.status} ${response.statusText}`,
-        response.status,
-        response.statusText,
-      );
-    }
-    return response.arrayBuffer();
+    return this.requestJson<T>(url, { method, cache: "no-cache" });
   }
 }
