@@ -63,12 +63,12 @@ export function AdminPage(): JSX.Element {
     if (toastTimer) clearTimeout(toastTimer);
   });
 
-  const [config] = createResource<AdminAuthConfig>(async () => {
+  const [config] = createResource<AdminAuthConfig | undefined>(async () => {
     try {
       return await api.getAdminAuthConfig();
     } catch {
       showToast("error", t("admin_toast_load_failed"));
-      throw new Error("load failed");
+      return undefined;
     }
   });
 

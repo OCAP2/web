@@ -206,4 +206,203 @@ describe("AdminPage", () => {
       expect(mockRemoveFromAllowlist).toHaveBeenCalledWith("76561198087654321");
     });
   });
+
+  it("cancels the remove dialog without calling the API", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198087654321"]);
+
+    const screen = renderPage();
+    await waitFor(() => screen.getByText("76561198087654321"));
+
+    fireEvent.click(screen.getByTitle("Remove from allowlist"));
+    await waitFor(() => screen.getByText("Remove from allowlist?"));
+
+    fireEvent.click(screen.getByText("Cancel"));
+    await waitFor(() => {
+      expect(screen.queryByText("Remove from allowlist?")).toBeNull();
+    });
+    expect(mockRemoveFromAllowlist).not.toHaveBeenCalled();
+  });
+
+  it("surfaces an error toast when add fails", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+    mockAddToAllowlist.mockRejectedValue(new Error("backend exploded"));
+
+    const screen = renderPage();
+    const input = (await screen.findByPlaceholderText(/Add Steam64 ID/)) as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "76561198099999999" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByText("backend exploded")).toBeTruthy();
+    });
+  });
+
+  it("rejects duplicate IDs with a warn toast and skips the API call", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198099999999"]);
+
+    const screen = renderPage();
+    const input = (await screen.findByPlaceholderText(/Add Steam64 ID/)) as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "76561198099999999" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByText(/is already on the allowlist/)).toBeTruthy();
+    });
+    expect(mockAddToAllowlist).not.toHaveBeenCalled();
+  });
+
+  it("performs bulk add and summarises added / skipped / invalid counts", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000001"]);
+    mockAddToAllowlist.mockResolvedValue(undefined);
+
+    const screen = renderPage();
+    await screen.findByPlaceholderText(/Add Steam64 ID/);
+
+    fireEvent.click(screen.getByText("Bulk add"));
+    const textarea = (await screen.findByPlaceholderText(/76561198012345678/)) as HTMLTextAreaElement;
+    fireEvent.input(textarea, {
+      target: {
+        value: [
+          "76561198000000001", // duplicate
+          "76561198000000002", // valid
+          "76561198000000003", // valid
+          "not-a-steam-id",    // invalid
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(screen.getByText("ADD ALL"));
+
+    await waitFor(() => {
+      expect(mockAddToAllowlist).toHaveBeenCalledTimes(2);
+    });
+    expect(mockAddToAllowlist).toHaveBeenCalledWith("76561198000000002");
+    expect(mockAddToAllowlist).toHaveBeenCalledWith("76561198000000003");
+    // Summary toast mentions the counts.
+    expect(screen.queryByText(/Added 2/)).toBeTruthy();
+  });
+
+  it("cancels bulk-add when Cancel inside the bulk panel is clicked", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    await screen.findByPlaceholderText(/Add Steam64 ID/);
+
+    fireEvent.click(screen.getByText("Bulk add"));
+    const textarea = (await screen.findByPlaceholderText(/76561198012345678/)) as HTMLTextAreaElement;
+    fireEvent.input(textarea, { target: { value: "76561198000000002" } });
+    fireEvent.click(screen.getByText("Cancel"));
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/76561198012345678/)).toBeNull();
+    });
+    expect(mockAddToAllowlist).not.toHaveBeenCalled();
+  });
+
+  it("selects all rows and bulk-removes via the confirm dialog", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002", "76561198000000003"]);
+    mockRemoveFromAllowlist.mockResolvedValue(undefined);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+
+    fireEvent.click(screen.getByText(/Select all/));
+    const bulkBtn = await screen.findByText("REMOVE SELECTED");
+    fireEvent.click(bulkBtn);
+
+    const confirm = await screen.findByText(/REMOVE 2/);
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(mockRemoveFromAllowlist).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("toggles select-all on and off", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002", "76561198000000003"]);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+
+    fireEvent.click(screen.getByText(/Select all/));
+    await screen.findByText(/Deselect all/);
+    fireEvent.click(screen.getByText(/Deselect all/));
+    await screen.findByText(/Select all/);
+    expect(screen.queryByText("REMOVE SELECTED")).toBeNull();
+  });
+
+  it("clears the search via the X button", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+
+    const screen = renderPage();
+    const search = (await screen.findByPlaceholderText(/Search by Steam ID/)) as HTMLInputElement;
+    fireEvent.input(search, { target: { value: "xyz" } });
+    await waitFor(() => expect(search.value).toBe("xyz"));
+
+    const wrapper = search.parentElement!;
+    const clear = wrapper.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(clear);
+    await waitFor(() => expect(search.value).toBe(""));
+  });
+
+  it("copies the Steam ID to the clipboard with a success toast", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    const screen = renderPage();
+    const copyBtn = await screen.findByTitle("Click to copy");
+    fireEvent.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledWith("76561198000000002");
+    await waitFor(() => {
+      expect(screen.getByText(/Copied to clipboard/)).toBeTruthy();
+    });
+  });
+
+  it("renders an error toast when the admin config load fails", async () => {
+    mockGetAdminAuthConfig.mockRejectedValue(new Error("network down"));
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Failed to load admin data.")).toBeTruthy();
+    });
+  });
+
+  it("shows the empty state and focuses the input via the CTA", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    await screen.findByText("Nobody on the allowlist yet");
+
+    const cta = screen.getByText(/PASTE YOUR FIRST STEAM ID/);
+    const input = screen.getByPlaceholderText(/Add Steam64 ID/) as HTMLInputElement;
+    fireEvent.click(cta);
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("renders the no-match message when search filters everything out", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+
+    const screen = renderPage();
+    const search = (await screen.findByPlaceholderText(/Search by Steam ID/)) as HTMLInputElement;
+    fireEvent.input(search, { target: { value: "zzzz" } });
+    await waitFor(() => {
+      expect(screen.getByText(/No matches for/)).toBeTruthy();
+    });
+  });
 });
