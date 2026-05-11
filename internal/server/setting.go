@@ -140,10 +140,6 @@ func NewSetting() (setting Setting, err error) {
 		return
 	}
 
-	// Viper doesn't split comma-separated env var strings into slices,
-	// so a value like "id1,id2" ends up as ["id1,id2"]. Expand it.
-	setting.Auth.AdminSteamIDs = splitCSV(setting.Auth.AdminSteamIDs)
-
 	if err = validateAuthConfig(setting.Auth); err != nil {
 		return
 	}
@@ -188,18 +184,4 @@ func validateAuthConfig(auth Auth) error {
 		}
 	}
 	return nil
-}
-
-// splitCSV expands a []string where one element may contain comma-separated
-// values (from an env var) into individual trimmed entries.
-func splitCSV(in []string) []string {
-	var out []string
-	for _, s := range in {
-		for _, part := range strings.Split(s, ",") {
-			if v := strings.TrimSpace(part); v != "" {
-				out = append(out, v)
-			}
-		}
-	}
-	return out
 }
