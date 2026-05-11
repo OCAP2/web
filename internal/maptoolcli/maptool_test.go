@@ -99,44 +99,6 @@ func TestEnumerateInputs_BatchEmpty(t *testing.T) {
 	assert.Contains(t, err.Error(), "no .zip")
 }
 
-func TestResolveTarget_Fresh(t *testing.T) {
-	out := t.TempDir()
-	decision, err := resolveTarget(out, "altis", false)
-	require.NoError(t, err)
-	assert.Equal(t, targetDecisionProceed, decision.Action)
-	assert.Equal(t, filepath.Join(out, "altis"), decision.FinalDir)
-	assert.Equal(t, filepath.Join(out, ".altis.partial"), decision.PartialDir)
-}
-
-func TestResolveTarget_AlreadyExistsSkip(t *testing.T) {
-	out := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(out, "altis"), 0755))
-
-	decision, err := resolveTarget(out, "altis", false)
-	require.NoError(t, err)
-	assert.Equal(t, targetDecisionSkip, decision.Action)
-}
-
-func TestResolveTarget_AlreadyExistsForce(t *testing.T) {
-	out := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(out, "altis"), 0755))
-
-	decision, err := resolveTarget(out, "altis", true)
-	require.NoError(t, err)
-	assert.Equal(t, targetDecisionProceed, decision.Action)
-}
-
-func TestResolveTarget_PartialDirCleanedBeforeRun(t *testing.T) {
-	out := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(out, ".altis.partial"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(out, ".altis.partial", "stale.txt"), []byte("x"), 0644))
-
-	_, err := resolveTarget(out, "altis", false)
-	require.NoError(t, err)
-	_, err = os.Stat(filepath.Join(out, ".altis.partial"))
-	assert.True(t, os.IsNotExist(err), "stale partial dir must be removed before render")
-}
-
 // fakeRender lets tests drive the orchestrator without touching the real pipeline.
 type fakeRender struct {
 	mu        sync.Mutex
@@ -255,4 +217,77 @@ func TestOrchestrate_ParallelismIsBounded(t *testing.T) {
 	code := orchestrate(context.Background(), opts, renderFn, &buf)
 	assert.Equal(t, 0, code)
 	assert.LessOrEqual(t, peak.Load(), int32(2), "peak inflight must not exceed --jobs")
+}
+
+// Two inputs whose grad_meh meta.json both report the same world name must be
+// rejected: one publishes, the others fail with a clear duplicate error so we
+// never silently overwrite a finished world with a sibling's render.
+func TestOrchestrate_RejectsDuplicateWorldFromMeta(t *testing.T) {
+	inDir := t.TempDir()
+	outDir := t.TempDir()
+	for _, name := range []string{"export-a.zip", "export-b.zip"} {
+		require.NoError(t, os.WriteFile(filepath.Join(inDir, name), []byte("x"), 0644))
+	}
+
+	// Both inputs claim the same internal world name ("altis").
+	renderFn := func(ctx context.Context, inputZip, outDir string, fm formatter) (string, error) {
+		if err := os.MkdirAll(outDir, 0755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(filepath.Join(outDir, "map.json"), []byte(`{}`), 0644); err != nil {
+			return "", err
+		}
+		return "altis", nil
+	}
+
+	var buf bytes.Buffer
+	opts := maptoolOptions{Batch: inDir, Out: outDir, Jobs: 1, LogFormat: "json"}
+	code := orchestrate(context.Background(), opts, renderFn, &buf)
+	assert.Equal(t, 1, code)
+	assert.Contains(t, buf.String(), "already produced from another input")
+
+	// Exactly one altis output exists; no partial dirs left behind.
+	_, err := os.Stat(filepath.Join(outDir, "altis", "map.json"))
+	require.NoError(t, err)
+	entries, err := os.ReadDir(outDir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		assert.NotContains(t, e.Name(), ".partial-", "partial dirs must be cleaned up")
+	}
+}
+
+// Two inputs whose filename-stems collide (case-insensitive) must each get a
+// unique working partial dir so they cannot clobber each other mid-render.
+// The second-in-line fails the worldClaim, but its render dir was distinct.
+func TestOrchestrate_UniquePartialDirsForSameGuess(t *testing.T) {
+	inDir := t.TempDir()
+	outDir := t.TempDir()
+	// "altis.zip" and "Altis.zip" both lowercase to "altis".
+	require.NoError(t, os.WriteFile(filepath.Join(inDir, "altis.zip"), []byte("x"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(inDir, "Altis.zip"), []byte("x"), 0644))
+
+	var observedPartials sync.Map
+	renderFn := func(ctx context.Context, inputZip, outDir string, fm formatter) (string, error) {
+		observedPartials.Store(outDir, true)
+		// Hold long enough that both goroutines overlap.
+		time.Sleep(30 * time.Millisecond)
+		if err := os.MkdirAll(outDir, 0755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(filepath.Join(outDir, "map.json"), []byte(`{}`), 0644); err != nil {
+			return "", err
+		}
+		// Report distinct real world names per input so the publish step doesn't reject.
+		// (Use the case-sensitive basename so altis.zip != Altis.zip.)
+		return "w-" + filepath.Base(inputZip), nil
+	}
+
+	var buf bytes.Buffer
+	opts := maptoolOptions{Batch: inDir, Out: outDir, Jobs: 2, LogFormat: "json"}
+	code := orchestrate(context.Background(), opts, renderFn, &buf)
+	assert.Equal(t, 0, code)
+
+	count := 0
+	observedPartials.Range(func(_, _ any) bool { count++; return true })
+	assert.Equal(t, 2, count, "each input must get a unique partial dir")
 }

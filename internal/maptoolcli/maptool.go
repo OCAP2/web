@@ -125,39 +125,6 @@ func enumerateInputs(opts maptoolOptions) ([]string, error) {
 	return []string{opts.Input}, nil
 }
 
-type targetAction int
-
-const (
-	targetDecisionProceed targetAction = iota
-	targetDecisionSkip
-)
-
-type targetDecision struct {
-	Action     targetAction
-	FinalDir   string
-	PartialDir string
-}
-
-// resolveTarget computes output paths and decides whether to render or skip.
-// It also removes any stale .partial dir from a previous interrupted run, so the
-// render stage starts with a clean slate.
-func resolveTarget(outDir, world string, force bool) (targetDecision, error) {
-	final := filepath.Join(outDir, world)
-	partial := filepath.Join(outDir, "."+world+".partial")
-
-	if _, err := os.Stat(final); err == nil {
-		if !force {
-			return targetDecision{Action: targetDecisionSkip, FinalDir: final, PartialDir: partial}, nil
-		}
-	} else if !os.IsNotExist(err) {
-		return targetDecision{}, fmt.Errorf("stat final dir: %w", err)
-	}
-
-	if err := os.RemoveAll(partial); err != nil {
-		return targetDecision{}, fmt.Errorf("clean partial dir: %w", err)
-	}
-	return targetDecision{Action: targetDecisionProceed, FinalDir: final, PartialDir: partial}, nil
-}
 
 func runMaptoolRender(args []string) error {
 	opts, err := parseMaptoolRenderFlags(args)
@@ -184,8 +151,48 @@ func runMaptoolRender(args []string) error {
 
 	code := orchestrate(ctx, opts, realRender(tools), os.Stdout)
 	if code != 0 {
+		// signal.NotifyContext's stop unregisters the signal handler.
+		// os.Exit skips defers, so call it explicitly first.
+		stop()
 		os.Exit(code)
 	}
+	return nil
+}
+
+// errSkippedExists signals a final dir already exists and --force was not set.
+var errSkippedExists = errors.New("already exists")
+
+// worldClaim serializes publish operations on output worlds and rejects
+// duplicate worlds within the same run (two inputs producing the same world name).
+type worldClaim struct {
+	mu   sync.Mutex
+	seen map[string]bool
+}
+
+func newWorldClaim() *worldClaim { return &worldClaim{seen: map[string]bool{}} }
+
+// publish runs the publish callback under a mutex, after asserting:
+//   - this world hasn't already been published in this run
+//   - the final dir doesn't exist (or --force is set)
+//
+// Returns errSkippedExists if the final dir is present and force is false.
+func (c *worldClaim) publish(world, finalDir string, force bool, publishFn func() error) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.seen[world] {
+		return fmt.Errorf("world %q was already produced from another input in this run", world)
+	}
+	if _, err := os.Stat(finalDir); err == nil {
+		if !force {
+			return errSkippedExists
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat final dir: %w", err)
+	}
+	if err := publishFn(); err != nil {
+		return err
+	}
+	c.seen[world] = true
 	return nil
 }
 
@@ -213,48 +220,65 @@ func orchestrate(ctx context.Context, opts maptoolOptions, render renderFunc, ou
 
 	sem := make(chan struct{}, opts.Jobs)
 	results := make(chan result, len(inputs))
+	claims := newWorldClaim()
 	var wg sync.WaitGroup
 
-	for _, in := range inputs {
-		in := in
+	for idx, in := range inputs {
+		idx, in := idx, in
 		wg.Add(1)
 		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			world, decision, err := resolveForInput(in, opts)
-			if err != nil {
-				results <- result{input: in, err: err}
+			guess := worldGuess(in)
+			if guess == "" {
+				results <- result{input: in, err: fmt.Errorf("cannot derive world name from %q", in)}
 				return
 			}
-			if decision.Action == targetDecisionSkip {
-				results <- result{input: in, world: world, skipped: "already exists; use --force to re-render"}
-				fm.MapSkipped(world, "already exists")
+
+			// Best-effort pre-render skip check on the filename guess.
+			// The post-render claim is the authoritative check that prevents races.
+			finalGuess := filepath.Join(opts.Out, guess)
+			if _, statErr := os.Stat(finalGuess); statErr == nil && !opts.Force {
+				fm.MapSkipped(guess, "already exists")
+				results <- result{input: in, world: guess, skipped: "already exists"}
 				return
 			}
-			fm.MapStart(world, in)
-			renderedWorld, rerr := render(ctx, in, decision.PartialDir, fm)
+
+			// Unique partial dir per input: two inputs that resolve to the same
+			// guess (e.g. Altis.zip + altis.zip on a case-sensitive FS) get
+			// distinct working dirs and cannot clobber each other.
+			partial := filepath.Join(opts.Out, fmt.Sprintf(".%s.partial-%d", guess, idx))
+			if err := os.RemoveAll(partial); err != nil {
+				results <- result{input: in, world: guess, err: fmt.Errorf("clean partial dir: %w", err)}
+				return
+			}
+
+			fm.MapStart(guess, in)
+			renderedWorld, rerr := render(ctx, in, partial, fm)
 			if rerr != nil {
-				fm.MapFailed(world, in, rerr)
-				results <- result{input: in, world: world, err: rerr}
+				_ = os.RemoveAll(partial)
+				fm.MapFailed(guess, in, rerr)
+				results <- result{input: in, world: guess, err: rerr}
 				return
 			}
-			// The renderer reads meta.json and reports the real world name.
-			// The filename-guessed dir name may differ — recompute the final
-			// path to match the real world, and re-check for skip-on-collision.
-			finalDir := decision.FinalDir
-			if renderedWorld != "" && renderedWorld != world {
-				world = renderedWorld
-				finalDir = filepath.Join(opts.Out, world)
-				if _, err := os.Stat(finalDir); err == nil && !opts.Force {
-					_ = os.RemoveAll(decision.PartialDir)
-					fm.MapSkipped(world, "already exists (renamed from input filename)")
+			world := renderedWorld
+			if world == "" {
+				world = guess
+			}
+
+			finalDir := filepath.Join(opts.Out, world)
+			err := claims.publish(world, finalDir, opts.Force, func() error {
+				return publishPartial(partial, finalDir)
+			})
+			if err != nil {
+				_ = os.RemoveAll(partial)
+				if errors.Is(err, errSkippedExists) {
+					fm.MapSkipped(world, "already exists")
 					results <- result{input: in, world: world, skipped: "already exists"}
 					return
 				}
-			}
-			if err := publishPartial(decision.PartialDir, finalDir); err != nil {
 				fm.MapFailed(world, in, err)
 				results <- result{input: in, world: world, err: err}
 				return
@@ -289,13 +313,9 @@ func orchestrate(ctx context.Context, opts maptoolOptions, render renderFunc, ou
 	return 0
 }
 
-// resolveForInput maps an input zip path to (worldGuess, decision).
-// The world is later replaced by the real meta.WorldName inside orchestrate.
-func resolveForInput(inputZip string, opts maptoolOptions) (string, targetDecision, error) {
-	world := strings.ToLower(strings.TrimSuffix(filepath.Base(inputZip), filepath.Ext(inputZip)))
-	if world == "" {
-		return "", targetDecision{}, fmt.Errorf("cannot derive world name from %q", inputZip)
-	}
-	d, err := resolveTarget(opts.Out, world, opts.Force)
-	return world, d, err
+// worldGuess derives a provisional world name from the input zip's basename.
+// The real world name is read from grad_meh meta.json by the renderer and
+// becomes authoritative for the final output directory.
+func worldGuess(inputZip string) string {
+	return strings.ToLower(strings.TrimSuffix(filepath.Base(inputZip), filepath.Ext(inputZip)))
 }
