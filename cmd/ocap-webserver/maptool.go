@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // maptoolOptions holds parsed CLI flags for `maptool render`.
@@ -157,4 +160,115 @@ func runMaptoolRender(args []string) error {
 		return err
 	}
 	return errors.New("not implemented")
+}
+
+// orchestrate is the testable core of `maptool render`. It returns the exit code.
+func orchestrate(ctx context.Context, opts maptoolOptions, render renderFunc, out io.Writer) int {
+	fm := chooseFormatter(opts.LogFormat, out)
+
+	inputs, err := enumerateInputs(opts)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 2
+	}
+
+	if err := os.MkdirAll(opts.Out, 0755); err != nil {
+		fmt.Fprintln(os.Stderr, "error: create out dir:", err)
+		return 2
+	}
+
+	type result struct {
+		input   string
+		world   string
+		err     error
+		skipped string
+	}
+
+	sem := make(chan struct{}, opts.Jobs)
+	results := make(chan result, len(inputs))
+	var wg sync.WaitGroup
+
+	for _, in := range inputs {
+		in := in
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			world, decision, err := resolveForInput(in, opts)
+			if err != nil {
+				results <- result{input: in, err: err}
+				return
+			}
+			if decision.Action == targetDecisionSkip {
+				results <- result{input: in, world: world, skipped: "already exists; use --force to re-render"}
+				fm.MapSkipped(world, "already exists")
+				return
+			}
+			fm.MapStart(world, in)
+			renderedWorld, rerr := render(ctx, in, decision.PartialDir, fm)
+			if rerr != nil {
+				fm.MapFailed(world, in, rerr)
+				results <- result{input: in, world: world, err: rerr}
+				return
+			}
+			// The renderer reads meta.json and reports the real world name.
+			// The filename-guessed dir name may differ — recompute the final
+			// path to match the real world, and re-check for skip-on-collision.
+			finalDir := decision.FinalDir
+			if renderedWorld != "" && renderedWorld != world {
+				world = renderedWorld
+				finalDir = filepath.Join(opts.Out, world)
+				if _, err := os.Stat(finalDir); err == nil && !opts.Force {
+					_ = os.RemoveAll(decision.PartialDir)
+					fm.MapSkipped(world, "already exists (renamed from input filename)")
+					results <- result{input: in, world: world, skipped: "already exists"}
+					return
+				}
+			}
+			if err := publishPartial(decision.PartialDir, finalDir); err != nil {
+				fm.MapFailed(world, in, err)
+				results <- result{input: in, world: world, err: err}
+				return
+			}
+			fm.MapDone(world, finalDir)
+			results <- result{input: in, world: world}
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	s := summary{Failed: map[string]string{}}
+	for r := range results {
+		switch {
+		case r.err != nil:
+			name := r.world
+			if name == "" {
+				name = filepath.Base(r.input)
+			}
+			s.Failed[name] = r.err.Error()
+		case r.skipped != "":
+			s.Skipped = append(s.Skipped, r.world)
+		default:
+			s.OK = append(s.OK, r.world)
+		}
+	}
+	fm.Summary(s)
+
+	if len(s.Failed) > 0 {
+		return 1
+	}
+	return 0
+}
+
+// resolveForInput maps an input zip path to (worldGuess, decision).
+// The world is later replaced by the real meta.WorldName inside orchestrate.
+func resolveForInput(inputZip string, opts maptoolOptions) (string, targetDecision, error) {
+	world := strings.ToLower(strings.TrimSuffix(filepath.Base(inputZip), filepath.Ext(inputZip)))
+	if world == "" {
+		return "", targetDecision{}, fmt.Errorf("cannot derive world name from %q", inputZip)
+	}
+	d, err := resolveTarget(opts.Out, world, opts.Force)
+	return world, d, err
 }
