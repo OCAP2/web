@@ -897,7 +897,7 @@
 }
 
 .adminBadgeMuted {
-  color: var(--text-dimmest);
+  color: color-mix(in srgb, var(--accent-success) 70%, var(--text-secondary));
   font-weight: 500;
 }
 
