@@ -360,6 +360,15 @@ export function RecordingSelector(): JSX.Element {
 
               <div class={styles.adminArea}>
                 <AuthBadge />
+                <Show when={isAdmin() && authMode() === "steamAllowlist"}>
+                  <button
+                    class={styles.adminIconButton}
+                    onClick={() => navigate("/admin")}
+                    title={t("admin_icon_button_tooltip")}
+                  >
+                    <ShieldCheckIcon />
+                  </button>
+                </Show>
                 <Show when={isAdmin()}>
                   <a
                     class={styles.adminIconButton}
@@ -377,15 +386,6 @@ export function RecordingSelector(): JSX.Element {
                       title={t("map_manager")}
                     >
                       <GlobeIcon />
-                    </button>
-                  </Show>
-                  <Show when={authMode() === "steamAllowlist"}>
-                    <button
-                      class={styles.adminIconButton}
-                      onClick={() => navigate("/admin")}
-                      title={t("admin_icon_button_tooltip")}
-                    >
-                      <ShieldCheckIcon />
                     </button>
                   </Show>
                   <button
