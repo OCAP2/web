@@ -360,7 +360,7 @@ export function RecordingSelector(): JSX.Element {
 
               <div class={styles.adminArea}>
                 <AuthBadge />
-                <Show when={isAdmin() && authMode() === "steamAllowlist"}>
+                <Show when={isAdmin()}>
                   <button
                     class={styles.adminIconButton}
                     onClick={() => navigate("/admin")}
@@ -368,8 +368,6 @@ export function RecordingSelector(): JSX.Element {
                   >
                     <ShieldCheckIcon />
                   </button>
-                </Show>
-                <Show when={isAdmin()}>
                   <a
                     class={styles.adminIconButton}
                     href={`${basePath}swagger/`}
