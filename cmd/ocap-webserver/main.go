@@ -16,6 +16,7 @@ import (
 	"github.com/OCAP2/web/internal/convertcli"
 	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/maptool"
+	"github.com/OCAP2/web/internal/maptoolcli"
 	"github.com/OCAP2/web/internal/server"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-fuego/fuego"
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "maptool" {
-		if err := runMaptool(os.Args[2:]); err != nil {
+		if err := maptoolcli.Run(os.Args[2:]); err != nil {
 			log.Fatalf("maptool: %v", err)
 		}
 		return

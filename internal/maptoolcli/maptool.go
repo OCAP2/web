@@ -1,4 +1,4 @@
-package main
+package maptoolcli
 
 import (
 	"context"
@@ -28,7 +28,8 @@ type maptoolOptions struct {
 	Force     bool
 }
 
-func runMaptool(args []string) error {
+// Run executes the `maptool` CLI subcommand.
+func Run(args []string) error {
 	if len(args) == 0 {
 		printMaptoolUsage(os.Stderr)
 		return errors.New("missing subcommand: expected 'render'")
