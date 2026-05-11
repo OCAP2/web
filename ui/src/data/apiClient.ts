@@ -87,15 +87,22 @@ async function apiErrorFromResponse(
   return new ApiError(message, response.status, response.statusText, detail);
 }
 
-/** Redirect viewer-flow requests to the login page when their session expires. */
+/**
+ * Redirect viewer-flow requests to the root login page when their session
+ * expires. No-op when the user is already there — otherwise a 401 from
+ * the root page itself would trigger an infinite reload loop (e.g. in
+ * password mode where the operator hasn't logged in yet).
+ */
 function redirectToLogin(): void {
-  sessionStorage.setItem(
-    "ocap_return_to",
-    window.location.pathname + window.location.search,
-  );
   const base =
     ((globalThis as Record<string, unknown>).__BASE_PATH__ as string) ?? "";
-  window.location.href = base + "/";
+  const target = base + "/";
+  const here = window.location.pathname;
+  if (here === target || here === target.replace(/\/$/, "") || here === "/") {
+    return;
+  }
+  sessionStorage.setItem("ocap_return_to", here + window.location.search);
+  window.location.href = target;
 }
 
 // ─── Raw server response shape (snake_case from Go JSON tags) ───

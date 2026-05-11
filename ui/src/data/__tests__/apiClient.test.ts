@@ -1261,6 +1261,30 @@ describe("ApiClient", () => {
       expect(sessionStorage.getItem("ocap_return_to")).toBe("/recording/7/mission?t=100");
       expect(hrefSetter).toHaveBeenCalledWith("/");
     });
+
+    it("does NOT redirect on 401 when already at the root path", async () => {
+      sessionStorage.removeItem("ocap_return_to");
+      mockFetchError(401, "Unauthorized");
+
+      const hrefSetter = vi.fn();
+      Object.defineProperty(window, "location", {
+        value: {
+          ...window.location,
+          pathname: "/",
+          search: "",
+          get href() { return "http://localhost/"; },
+          set href(v: string) { hrefSetter(v); },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const client = new ApiClient();
+      await expect(client.getRecordings()).rejects.toMatchObject({ status: 401 });
+
+      expect(hrefSetter).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem("ocap_return_to")).toBeNull();
+    });
   });
 
   // ─── Error body parsing (apiErrorFromResponse) ───
