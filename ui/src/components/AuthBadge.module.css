@@ -91,32 +91,47 @@
 .authControls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-sm);
 }
 
 .passwordForm {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-xs);
 }
 
 .passwordInput {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-color, #444);
-  border-radius: 4px;
-  background: var(--input-bg, #1a1a2e);
-  color: var(--text-color, #e0e0e0);
-  font-size: 0.8rem;
+  padding: 6px var(--space-md);
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
   width: 140px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.passwordInput:focus {
+  border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
 .passwordSubmit {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-color, #444);
-  border-radius: 4px;
-  background: var(--accent-color, #4a9eff);
-  color: white;
-  font-size: 0.8rem;
+  padding: 6px var(--space-md);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  color: var(--accent-primary);
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.passwordSubmit:hover:not(:disabled) {
+  filter: brightness(1.15);
 }
 
 .passwordSubmit:disabled {
@@ -127,18 +142,19 @@
 .authError {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  color: var(--error-color, #ff4444);
-  font-size: 0.75rem;
+  gap: var(--space-xs);
+  color: var(--accent-danger);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
   max-width: 250px;
 }
 
 .dismissError {
-  background: none;
+  background: transparent;
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   padding: 0;
   line-height: 1;
 }

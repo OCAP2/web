@@ -38,14 +38,14 @@ export function AuthBadge(): JSX.Element {
             <form onSubmit={handlePasswordSubmit} class={styles.passwordForm}>
               <input
                 type="password"
-                placeholder="Password"
+                placeholder={t("password_placeholder")}
                 value={password()}
                 onInput={(e) => setPassword(e.currentTarget.value)}
                 class={styles.passwordInput}
                 disabled={loading()}
               />
               <button type="submit" class={styles.passwordSubmit} disabled={loading() || !password()}>
-                Unlock
+                {t("password_unlock")}
               </button>
             </form>
           </Show>
