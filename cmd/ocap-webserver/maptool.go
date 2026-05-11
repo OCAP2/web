@@ -116,6 +116,40 @@ func enumerateInputs(opts maptoolOptions) ([]string, error) {
 	return []string{opts.Input}, nil
 }
 
+type targetAction int
+
+const (
+	targetDecisionProceed targetAction = iota
+	targetDecisionSkip
+)
+
+type targetDecision struct {
+	Action     targetAction
+	FinalDir   string
+	PartialDir string
+}
+
+// resolveTarget computes output paths and decides whether to render or skip.
+// It also removes any stale .partial dir from a previous interrupted run, so the
+// render stage starts with a clean slate.
+func resolveTarget(outDir, world string, force bool) (targetDecision, error) {
+	final := filepath.Join(outDir, world)
+	partial := filepath.Join(outDir, "."+world+".partial")
+
+	if _, err := os.Stat(final); err == nil {
+		if !force {
+			return targetDecision{Action: targetDecisionSkip, FinalDir: final, PartialDir: partial}, nil
+		}
+	} else if !os.IsNotExist(err) {
+		return targetDecision{}, fmt.Errorf("stat final dir: %w", err)
+	}
+
+	if err := os.RemoveAll(partial); err != nil {
+		return targetDecision{}, fmt.Errorf("clean partial dir: %w", err)
+	}
+	return targetDecision{Action: targetDecisionProceed, FinalDir: final, PartialDir: partial}, nil
+}
+
 func runMaptoolRender(args []string) error {
 	_, err := parseMaptoolRenderFlags(args)
 	if err != nil {

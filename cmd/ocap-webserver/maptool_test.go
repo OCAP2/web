@@ -90,3 +90,41 @@ func TestEnumerateInputs_BatchEmpty(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no .zip")
 }
+
+func TestResolveTarget_Fresh(t *testing.T) {
+	out := t.TempDir()
+	decision, err := resolveTarget(out, "altis", false)
+	require.NoError(t, err)
+	assert.Equal(t, targetDecisionProceed, decision.Action)
+	assert.Equal(t, filepath.Join(out, "altis"), decision.FinalDir)
+	assert.Equal(t, filepath.Join(out, ".altis.partial"), decision.PartialDir)
+}
+
+func TestResolveTarget_AlreadyExistsSkip(t *testing.T) {
+	out := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(out, "altis"), 0755))
+
+	decision, err := resolveTarget(out, "altis", false)
+	require.NoError(t, err)
+	assert.Equal(t, targetDecisionSkip, decision.Action)
+}
+
+func TestResolveTarget_AlreadyExistsForce(t *testing.T) {
+	out := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(out, "altis"), 0755))
+
+	decision, err := resolveTarget(out, "altis", true)
+	require.NoError(t, err)
+	assert.Equal(t, targetDecisionProceed, decision.Action)
+}
+
+func TestResolveTarget_PartialDirCleanedBeforeRun(t *testing.T) {
+	out := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(out, ".altis.partial"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(out, ".altis.partial", "stale.txt"), []byte("x"), 0644))
+
+	_, err := resolveTarget(out, "altis", false)
+	require.NoError(t, err)
+	_, err = os.Stat(filepath.Join(out, ".altis.partial"))
+	assert.True(t, os.IsNotExist(err), "stale partial dir must be removed before render")
+}
