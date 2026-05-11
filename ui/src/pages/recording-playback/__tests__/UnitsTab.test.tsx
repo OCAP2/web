@@ -227,6 +227,50 @@ describe("UnitsTab", () => {
     expect(twos.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("counts deleted units as dead and styles them", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([
+        unitDef({
+          id: 1,
+          name: "Alive Unit",
+          side: "WEST",
+          groupName: "Alpha",
+          role: "Grenadier",
+          positions: [
+            { position: [100, 200], direction: 0, alive: 1 },
+            { position: [100, 200], direction: 0, alive: 1 },
+          ],
+        }),
+        unitDef({
+          id: 2,
+          name: "Deleted Unit",
+          side: "WEST",
+          groupName: "Alpha",
+          endFrame: 1,
+          role: "Autorifleman",
+          positions: [{ position: [100, 200], direction: 0, alive: 1 }],
+        }),
+      ]),
+    );
+
+    // Advance to frame 1 so snapshots are populated
+    engine.seekTo(1);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // Deleted unit counts as dead: alive=1, total=2
+    expect(screen.getByText("1")).toBeTruthy(); // alive count in group header
+
+    // Deleted unit row must have the dead styling
+    const deletedRow = screen.getByText("Deleted Unit").closest("button");
+    expect(deletedRow?.className).toMatch(/unitRowDead/);
+  });
+
   it("only renders populated side tabs when multiple sides have units", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(

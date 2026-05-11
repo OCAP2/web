@@ -313,23 +313,23 @@ describe("EntityCanvasLayer", () => {
       return (layer as any).interpDurationSec;
     }
 
-    it("sets interpDurationSec to 1/speed (frame interval)", () => {
+    it("stores the supplied frame interval as the interpolation duration", () => {
       layer.setSmoothingEnabled(true, 1);
       expect(getInterpDuration()).toBeCloseTo(1.0);
 
-      layer.setSmoothingEnabled(true, 2);
+      layer.setSmoothingEnabled(true, 0.5);
       expect(getInterpDuration()).toBeCloseTo(0.5);
 
-      layer.setSmoothingEnabled(true, 5);
+      layer.setSmoothingEnabled(true, 0.2);
       expect(getInterpDuration()).toBeCloseTo(0.2);
 
-      layer.setSmoothingEnabled(true, 10);
+      layer.setSmoothingEnabled(true, 0.1);
       expect(getInterpDuration()).toBeCloseTo(0.1);
     });
 
-    it("entities reach target within one frame interval at high speed", () => {
+    it("entities reach target within one frame interval", () => {
       layer.addEntity(1, DEFAULT_OPTS);
-      layer.setSmoothingEnabled(true, 10);
+      layer.setSmoothingEnabled(true, 0.1);
       const interpDur = getInterpDuration(); // 0.1s
 
       // Move to new position — starts interpolation
@@ -343,25 +343,24 @@ describe("EntityCanvasLayer", () => {
       expect(progress).toBe(1);
     });
 
-    it("does not exceed 1s duration for fractional speeds", () => {
-      layer.setSmoothingEnabled(true, 0.5);
-      // speed 0.5 → 1/0.5 = 2s, but the guard caps at 1/speed
-      // which is correct: at 0.5x, frames come every 2s
+    it("respects long frame intervals (slow capture rate or fractional speed)", () => {
+      // E.g. captureDelayMs=1000, speed=0.5 → 2s interval
+      layer.setSmoothingEnabled(true, 2.0);
       expect(getInterpDuration()).toBeCloseTo(2.0);
     });
 
-    it("handles edge case of speed 0 without division error", () => {
+    it("falls back to 1s duration when interval is zero", () => {
       layer.setSmoothingEnabled(true, 0);
       expect(getInterpDuration()).toBe(1);
       expect(Number.isFinite(getInterpDuration())).toBe(true);
     });
 
-    it("preserves duration when speed is not provided", () => {
-      layer.setSmoothingEnabled(true, 4);
+    it("preserves duration when interval is not provided", () => {
+      layer.setSmoothingEnabled(true, 0.25);
       const dur = getInterpDuration();
       expect(dur).toBeCloseTo(0.25);
 
-      // Toggle smoothing without changing speed
+      // Toggle smoothing without changing interval
       layer.setSmoothingEnabled(false);
       expect(getInterpDuration()).toBeCloseTo(0.25); // unchanged
     });
@@ -835,7 +834,7 @@ describe("EntityCanvasLayer — render paths", () => {
 
   it("clamps interpolation progress to 1", () => {
     layer.addEntity(1, DEFAULT_OPTS);
-    layer.setSmoothingEnabled(true, 10); // 0.1s duration
+    layer.setSmoothingEnabled(true, 0.1); // 0.1s duration
     layer.updateEntity(1, makeState({ position: [1010, 2010] }));
     render(1.0); // well past 0.1s
     expect(getEntity(1).interpProgress).toBe(1);
@@ -913,6 +912,39 @@ describe("EntityCanvasLayer — render paths", () => {
     const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
     expect(texts).toContain("Unit1");
     expect(texts).not.toContain("AI Unit");
+  });
+
+  it("shows AI vehicle type labels in 'players' mode", () => {
+    (layer as any).config.nameDisplayMode = () => "players";
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "T-72",
+      crew: { count: 3, names: [] },
+    });
+    layer.addEntity(2, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "AI Rifleman",
+      position: [1100, 2000],
+    });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("T-72 (3)");
+    expect(texts).not.toContain("AI Rifleman");
+  });
+
+  it("hides AI vehicle type labels when nameMode is 'none'", () => {
+    (layer as any).config.nameDisplayMode = () => "none";
+    layer.addEntity(1, {
+      ...DEFAULT_OPTS,
+      isPlayer: false,
+      name: "T-72",
+      crew: { count: 3, names: [] },
+    });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).not.toContain("T-72 (3)");
   });
 
   it("renders vehicle crew label with background pill", () => {
@@ -1029,6 +1061,76 @@ describe("EntityCanvasLayer — render paths", () => {
     // Render advances interpolation
     render();
     expect(p.interpProgress).toBeGreaterThan(0);
+  });
+
+  it("produces constant-velocity projectile motion when interval matches tween duration", () => {
+    // Simulates the bridge passing frameIntervalSec = captureDelayMs/1000/speed.
+    // For captureDelay 0.5s @ 1× speed, interval is 0.5s — tween must complete
+    // within that window so each segment advances by the full keyframe step.
+    const intervalSec = 0.5;
+    layer.setSmoothingEnabled(true, intervalSec);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+
+    // Snap onto first keyframe (distance from origin triggers snap).
+    layer.updateProjectile(1, { position: [1000, 1000], direction: 0, alpha: 1 });
+
+    // Drive 4 ticks, each separated by exactly `intervalSec` of render time,
+    // with the shell advancing 30m per tick along x. Capture displayed x at
+    // the moment of each tick (right after updateProjectile, before any
+    // further rAF advances it). Use one full-interval render() per tick so
+    // interpProgress reaches exactly 1.0 (rAF granularity is mocked anyway).
+    const step = 30;
+    const displayedAtTick: number[] = [];
+    for (let tick = 1; tick <= 4; tick++) {
+      render(intervalSec);
+      const target = 1000 + tick * step;
+      layer.updateProjectile(1, { position: [target, 1000], direction: 0, alpha: 1 });
+      displayedAtTick.push((layer as any).projectiles.get(1).prevX);
+    }
+
+    // With interval == interpDuration, each tween fully reaches its target
+    // before the next tick — displayed position advances by `step` every
+    // tick. Velocity is constant: no acceleration profile, no kinks.
+    expect(displayedAtTick[1] - displayedAtTick[0]).toBeCloseTo(step, 5);
+    expect(displayedAtTick[2] - displayedAtTick[1]).toBeCloseTo(step, 5);
+    expect(displayedAtTick[3] - displayedAtTick[2]).toBeCloseTo(step, 5);
+  });
+
+  it("regression: oversized tween duration produces accelerating velocity (the old bug)", () => {
+    // Pre-fix behavior was to pass `1/speed` regardless of captureDelayMs.
+    // For captureDelay 0.5s the tween was 1s — twice the real interval —
+    // and each tick reset the tween at t≈0.5, leaving the shell lagging
+    // behind with a velocity that ramps up across ticks instead of being
+    // constant. This pins the old configuration so a future regression
+    // to it would be caught.
+    const intervalSec = 0.5;
+    const oversizedDuration = 1.0;
+    layer.setSmoothingEnabled(true, oversizedDuration);
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+    });
+
+    layer.updateProjectile(1, { position: [1000, 1000], direction: 0, alpha: 1 });
+
+    const step = 30;
+    const displayedAtTick: number[] = [];
+    for (let tick = 1; tick <= 3; tick++) {
+      render(intervalSec);
+      const target = 1000 + tick * step;
+      layer.updateProjectile(1, { position: [target, 1000], direction: 0, alpha: 1 });
+      displayedAtTick.push((layer as any).projectiles.get(1).prevX);
+    }
+
+    // First-tick advance is roughly half a step (tween only reached 50%).
+    const firstAdvance = displayedAtTick[1] - displayedAtTick[0];
+    // Second-tick advance is larger (catching up). Velocity not constant.
+    const secondAdvance = displayedAtTick[2] - displayedAtTick[1];
+    expect(firstAdvance).toBeLessThan(step * 0.7);
+    expect(secondAdvance).toBeGreaterThan(firstAdvance);
   });
 
   it("uses cached projectile positions during zoom", () => {

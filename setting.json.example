@@ -38,5 +38,14 @@
 		"adminSteamIds": [],
 		"steamApiKey": "",
 		"password": ""
+	},
+	"httpServer": {
+		"readTimeout": "120s",
+		"readHeaderTimeout": "30s",
+		"writeTimeout": "120s",
+		"idleTimeout": "120s"
+	},
+	"cors": {
+		"allowedOrigins": []
 	}
 }

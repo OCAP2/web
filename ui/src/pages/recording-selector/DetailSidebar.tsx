@@ -125,19 +125,19 @@ export function DetailSidebar(props: {
                           </div>
                           <div class={styles.sideCardStats}>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue}>{count.units.toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue}>{count.units.toLocaleString(locale())}</div>
                               <div class={styles.sideCardStatLabel}>{t("total")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: alive() > 0 ? C.success : C.dimmer }}>{alive().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: alive() > 0 ? C.success : C.dimmer }}>{alive().toLocaleString(locale())}</div>
                               <div class={styles.sideCardStatLabel}>{t("alive")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: dead() > 0 ? C.danger : C.dimmer }}>{dead().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: dead() > 0 ? C.danger : C.dimmer }}>{dead().toLocaleString(locale())}</div>
                               <div class={styles.sideCardStatLabel}>{t("dead")}</div>
                             </div>
                             <div class={styles.sideCardStat}>
-                              <div class={styles.sideCardStatValue} style={{ color: kills() > 0 ? C.warning : C.dimmer }}>{kills().toLocaleString()}</div>
+                              <div class={styles.sideCardStatValue} style={{ color: kills() > 0 ? C.warning : C.dimmer }}>{kills().toLocaleString(locale())}</div>
                               <div class={styles.sideCardStatLabel}>{t("kills_label")}</div>
                             </div>
                           </div>
@@ -165,7 +165,7 @@ export function DetailSidebar(props: {
                 <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-danger) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-danger) 8%, transparent)" }}>
                   <div class={styles.sidebarCombatCellTop}>
                     <span class={styles.sidebarCombatIcon}><CrosshairIcon /></span>
-                    <span class={styles.sidebarCombatCellValue} style={{ color: C.danger }}>{kills().toLocaleString()}</span>
+                    <span class={styles.sidebarCombatCellValue} style={{ color: C.danger }}>{kills().toLocaleString(locale())}</span>
                   </div>
                   <div class={styles.sidebarCombatCellLabel}>{t("total_kills")}</div>
                 </div>
@@ -173,7 +173,7 @@ export function DetailSidebar(props: {
                   <div class={styles.sidebarCombatCell} style={{ background: "color-mix(in srgb, var(--accent-primary) 4%, transparent)", "border-color": "color-mix(in srgb, var(--accent-primary) 8%, transparent)" }}>
                     <div class={styles.sidebarCombatCellTop}>
                       <span style={{ color: `${C.primary}88` }}><UsersIcon /></span>
-                      <span class={styles.sidebarCombatCellValue} style={{ color: C.primary }}>{playerKills().toLocaleString()}</span>
+                      <span class={styles.sidebarCombatCellValue} style={{ color: C.primary }}>{playerKills().toLocaleString(locale())}</span>
                     </div>
                     <div class={styles.sidebarCombatCellLabel}>{t("player_kills")}</div>
                   </div>

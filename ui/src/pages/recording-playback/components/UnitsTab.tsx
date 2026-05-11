@@ -4,6 +4,7 @@ import type { Side } from "../../../data/types";
 import type { Unit } from "../../../playback/entities/unit";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
+import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
 import { activeSide, setActiveSide } from "../shortcuts";
 import { CrosshairIcon, ChevronRightIcon, EyeOffIcon, EyeIcon, NavigationIcon } from "../../../components/Icons";
@@ -32,7 +33,9 @@ export interface UnitsTabProps {
 
 export function UnitsTab(props: UnitsTabProps): JSX.Element {
   const engine = useEngine();
+  const customize = useCustomize();
   const { t } = useI18n();
+  const showKillCount = (): boolean => !customize().disableKillCount;
   const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
   const [selectedUnit, setSelectedUnit] = createSignal<number | null>(null);
 
@@ -68,7 +71,7 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
 
   const isAlive = (unitId: number): boolean => {
     const snap = engine.entitySnapshots().get(unitId);
-    return snap ? !!snap.alive : true;
+    return snap ? !!snap.alive : false;
   };
 
   // Frame-aware kill counts
@@ -221,7 +224,7 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
                                 <span class={styles.unitRole}>{unit.role}</span>
                               </Show>
                             </span>
-                            <Show when={(killDeathCounts().kills.get(unit.id) ?? 0) > 0}>
+                            <Show when={showKillCount() && (killDeathCounts().kills.get(unit.id) ?? 0) > 0}>
                               <span class={styles.unitKills}>
                                 <CrosshairIcon size={10} />
                                 {killDeathCounts().kills.get(unit.id)}
@@ -240,6 +243,7 @@ export function UnitsTab(props: UnitsTabProps): JSX.Element {
                               onToggleFollow={toggleFollow}
                               onToggleBlacklist={props.onToggleBlacklist}
                               side={activeSide()}
+                              showKillCount={showKillCount()}
                             />
                           </Show>
                         </>
@@ -267,6 +271,7 @@ interface UnitDetailCardProps {
   onToggleFollow: (unitId: number) => void;
   onToggleBlacklist?: (playerEntityId: number) => void;
   side: Side;
+  showKillCount: boolean;
 }
 
 function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
@@ -277,24 +282,26 @@ function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
     >
       {/* Stats row */}
       <div class={styles.detailStats}>
-        <div class={styles.detailStatPill}>
-          <div
-            class={styles.detailStatValue}
-            style={{ color: props.kills > 0 ? "var(--accent-danger)" : "var(--text-dimmest)" }}
-          >
-            {props.kills}
+        <Show when={props.showKillCount}>
+          <div class={styles.detailStatPill}>
+            <div
+              class={styles.detailStatValue}
+              classList={{ [styles.detailStatValueKills]: props.kills > 0 }}
+            >
+              {props.kills}
+            </div>
+            <div class={styles.detailStatLabel}>KILLS</div>
           </div>
-          <div class={styles.detailStatLabel}>KILLS</div>
-        </div>
-        <div class={styles.detailStatPill}>
-          <div
-            class={styles.detailStatValue}
-            style={{ color: props.deaths > 0 ? "var(--accent-warning)" : "var(--text-dimmest)" }}
-          >
-            {props.deaths}
+          <div class={styles.detailStatPill}>
+            <div
+              class={styles.detailStatValue}
+              classList={{ [styles.detailStatValueDeaths]: props.deaths > 0 }}
+            >
+              {props.deaths}
+            </div>
+            <div class={styles.detailStatLabel}>DEATHS</div>
           </div>
-          <div class={styles.detailStatLabel}>DEATHS</div>
-        </div>
+        </Show>
         <div class={styles.detailStatPill}>
           {(() => {
             const visible = props.isBlacklisted ? 0 : props.markerCount;
@@ -302,7 +309,7 @@ function UnitDetailCard(props: UnitDetailCardProps): JSX.Element {
               <>
                 <div
                   class={styles.detailStatValue}
-                  style={{ color: visible > 0 ? "#A78BFA" : "var(--text-dimmest)" }}
+                  classList={{ [styles.detailStatValueMarkers]: visible > 0 }}
                 >
                   {visible}
                 </div>

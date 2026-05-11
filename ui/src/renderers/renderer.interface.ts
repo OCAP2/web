@@ -57,7 +57,16 @@ export interface MapRenderer {
   setMapStyle(index: number): void;
 
   // Settings
-  setSmoothingEnabled(enabled: boolean, speed?: number): void;
+  /**
+   * Enable or disable sub-frame smoothing.
+   *
+   * `frameIntervalSec` is the wall-clock duration between consecutive
+   * position updates (i.e. `captureDelayMs / 1000 / playbackSpeed`). The
+   * renderer sizes its tween to that interval so positions reach their
+   * target before the next update arrives — otherwise lag accumulates and
+   * fast markers (e.g. projectiles) appear to step.
+   */
+  setSmoothingEnabled(enabled: boolean, frameIntervalSec?: number): void;
   nameDisplayMode: () => "players" | "all" | "none";
   setNameDisplayMode(mode: "players" | "all" | "none"): void;
 

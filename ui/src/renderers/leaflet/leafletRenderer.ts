@@ -49,6 +49,7 @@ interface InternalMarkerHandle {
   /** Per-entity state for popup visibility — kept in sync by updateEntityMarker. */
   isPlayer: boolean;
   isInVehicle: boolean;
+  isVehicle: boolean;
 }
 
 interface InternalBriefingHandle {
@@ -779,7 +780,16 @@ export class LeafletRenderer implements MapRenderer {
     marker.bindPopup(popup).openPopup();
 
     const iconKey = `${opts.iconType}:${opts.side}:1`;
-    const internal: InternalMarkerHandle = { marker, id, lastDirection: 0, iconKey, popupName: popupContent, isPlayer: opts.isPlayer, isInVehicle: false };
+    const internal: InternalMarkerHandle = {
+      marker,
+      id,
+      lastDirection: 0,
+      iconKey,
+      popupName: popupContent,
+      isPlayer: opts.isPlayer,
+      isInVehicle: false,
+      isVehicle: opts.crew !== undefined,
+    };
     (marker as any)._ocapInternal = internal;
     return wrapMarker(internal);
   }
@@ -791,6 +801,7 @@ export class LeafletRenderer implements MapRenderer {
     // Keep per-entity state in sync for refreshPopupVisibility
     internal.isPlayer = state.isPlayer;
     internal.isInVehicle = state.isInVehicle;
+    internal.isVehicle = state.crew !== undefined;
 
     // Update position
     const latlng = this.armaToLatLng(state.position);
@@ -833,7 +844,11 @@ export class LeafletRenderer implements MapRenderer {
           display = "none";
         } else if (this._nameDisplayMode() === "none") {
           display = "none";
-        } else if (this._nameDisplayMode() === "players" && !state.isPlayer) {
+        } else if (
+          this._nameDisplayMode() === "players" &&
+          !state.isPlayer &&
+          !internal.isVehicle
+        ) {
           display = "none";
         }
         popupEl.style.display = display;
@@ -1215,7 +1230,7 @@ export class LeafletRenderer implements MapRenderer {
 
   // ==================== Settings ====================
 
-  setSmoothingEnabled(_enabled: boolean, _speed?: number): void {
+  setSmoothingEnabled(_enabled: boolean, _frameIntervalSec?: number): void {
     // no-op: CSS marker transitions removed
   }
 
@@ -1244,7 +1259,12 @@ export class LeafletRenderer implements MapRenderer {
         display = "none";
       } else if (this._nameDisplayMode() === "none") {
         display = "none";
-      } else if (this._nameDisplayMode() === "players" && internal && !internal.isPlayer) {
+      } else if (
+        this._nameDisplayMode() === "players" &&
+        internal &&
+        !internal.isPlayer &&
+        !internal.isVehicle
+      ) {
         display = "none";
       }
       popupEl.style.display = display;

@@ -3,6 +3,7 @@ import type { JSX } from "solid-js";
 import type { Side } from "../../../data/types";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
+import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
 import styles from "./SidePanel.module.css";
 
@@ -33,7 +34,9 @@ interface LeaderboardEntry {
 
 export function StatsTab(): JSX.Element {
   const engine = useEngine();
+  const customize = useCustomize();
   const { t } = useI18n();
+  const showPlayerKillCount = (): boolean => !customize().disableKillCount;
 
   // Frame-aware kill/death counts
   const killDeathCounts = createMemo(() =>
@@ -112,13 +115,13 @@ export function StatsTab(): JSX.Element {
                     </div>
                     <div class={styles.forceStatGrid}>
                       <div class={styles.forceStatPill}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--text-secondary)" }}>
+                        <div class={`${styles.forceStatNum} ${styles.forceStatNumTotal}`}>
                           {stat.total}
                         </div>
                         <div class={styles.forceStatLabel}>{t("total")}</div>
                       </div>
                       <div class={styles.forceStatPill}>
-                        <div class={styles.forceStatNum} style={{ color: "var(--accent-success)" }}>
+                        <div class={`${styles.forceStatNum} ${styles.forceStatNumAlive}`}>
                           {stat.alive}
                         </div>
                         <div class={styles.forceStatLabel}>{t("alive")}</div>
@@ -126,7 +129,7 @@ export function StatsTab(): JSX.Element {
                       <div class={styles.forceStatPill}>
                         <div
                           class={styles.forceStatNum}
-                          style={{ color: stat.kills > 0 ? "var(--accent-danger)" : "var(--text-dimmest)" }}
+                          classList={{ [styles.forceStatNumKills]: stat.kills > 0 }}
                         >
                           {stat.kills}
                         </div>
@@ -135,7 +138,7 @@ export function StatsTab(): JSX.Element {
                       <div class={styles.forceStatPill}>
                         <div
                           class={styles.forceStatNum}
-                          style={{ color: stat.deaths > 0 ? "var(--accent-warning)" : "var(--text-dimmest)" }}
+                          classList={{ [styles.forceStatNumDeaths]: stat.deaths > 0 }}
                         >
                           {stat.deaths}
                         </div>
@@ -150,7 +153,7 @@ export function StatsTab(): JSX.Element {
         </div>
 
         {/* Leaderboard */}
-        <Show when={leaderboard().length > 0}>
+        <Show when={showPlayerKillCount() && leaderboard().length > 0}>
           <div>
             <div class={styles.statsLabel}>{t("leaderboard")}</div>
             <div class={styles.leaderboard} style={{ "margin-top": "8px" }}>

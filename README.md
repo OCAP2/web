@@ -85,16 +85,16 @@ The egg uses the project's Docker image (`ghcr.io/ocap2/web`) directly. Persiste
 
 ## Configuration
 
-The configuration file is called `setting.json`. All settings can also be set via environment variables with the `OCAP_` prefix. Nested keys use underscores: `admin.sessionTTL` → `OCAP_ADMIN_SESSIONTTL`.
+The configuration file is called `setting.json`. All settings can also be set via environment variables with the `OCAP_` prefix. Nested keys use underscores: `auth.sessionTTL` → `OCAP_AUTH_SESSIONTTL`.
 
 ```json
 {
   "listen": "127.0.0.1:5000",
   "secret": "your-secret",
   "logger": true,
-  "admin": {
+  "auth": {
     "sessionTTL": "24h",
-    "allowedSteamIds": ["76561198012345678"],
+    "adminSteamIds": ["76561198012345678"],
     "steamApiKey": ""
   },
   "customize": {
@@ -108,6 +108,9 @@ The configuration file is called `setting.json`. All settings can also be set vi
   },
   "streaming": {
     "enabled": true
+  },
+  "cors": {
+    "allowedOrigins": []
   }
 }
 ```
@@ -141,9 +144,9 @@ Admin access uses Steam OpenID — no passwords. Admins authenticate via their S
 
 | Setting | Env Var | Description | Default |
 |---------|---------|-------------|---------|
-| `admin.sessionTTL` | `OCAP_ADMIN_SESSIONTTL` | How long admin sessions last | `24h` |
-| `admin.allowedSteamIds` | `OCAP_ADMIN_ALLOWEDSTEAMIDS` | Steam64 IDs authorized for admin access (comma-separated in env var) | `[]` |
-| `admin.steamApiKey` | `OCAP_ADMIN_STEAMAPIKEY` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
+| `auth.sessionTTL` | `OCAP_AUTH_SESSIONTTL` | How long admin sessions last | `24h` |
+| `auth.adminSteamIds` | `OCAP_AUTH_ADMINSTEAMIDS` | Steam64 IDs authorized for admin access (comma-separated in env var) | `[]` |
+| `auth.steamApiKey` | `OCAP_AUTH_STEAMAPIKEY` | Steam Web API key for fetching display names and avatars ([get one here](https://steamcommunity.com/dev/apikey)) | `""` |
 
 The Steam API key is optional. Without it, the admin badge shows the raw Steam64 ID. With it, the admin's Steam profile picture and display name are shown.
 
@@ -219,6 +222,22 @@ Live mission data can be streamed to the server via WebSocket.
 | `streaming.enabled` | `OCAP_STREAMING_ENABLED` | Enable the WebSocket streaming endpoint | `false` |
 | `streaming.pingInterval` | `OCAP_STREAMING_PINGINTERVAL` | Interval between WebSocket keepalive pings | `30s` |
 | `streaming.pingTimeout` | `OCAP_STREAMING_PINGTIMEOUT` | Timeout waiting for pong response | `10s` |
+
+### CORS
+
+All responses include CORS headers so external services and web apps can fetch from the API.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `cors.allowedOrigins` | `OCAP_CORS_ALLOWEDORIGINS` | Origins allowed to make cross-origin requests. Empty list permits all origins (`*`). Comma-separated in env var. | `[]` (all origins) |
+
+When `allowedOrigins` is empty the server responds with `Access-Control-Allow-Origin: *`, which is appropriate for public read APIs. Restrict to specific origins if you want to limit which external sites can call admin endpoints:
+
+```json
+"cors": {
+  "allowedOrigins": ["https://admin.example.com", "https://replay.example.com"]
+}
+```
 
 ## Large Recording Support
 

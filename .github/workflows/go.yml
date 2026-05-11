@@ -84,7 +84,7 @@ jobs:
 
       - name: Download artifact (main.breakdown)
         id: download-main-breakdown
-        uses: dawidd6/action-download-artifact@v16
+        uses: dawidd6/action-download-artifact@v21
         if: github.event_name == 'pull_request'
         with:
           branch: main
@@ -122,7 +122,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: fgrosse/go-coverage-report@v1.2.0
+      - uses: fgrosse/go-coverage-report@v1.3.0
         with:
           coverage-artifact-name: "code-coverage"
           coverage-file-name: "cover.out"

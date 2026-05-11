@@ -1,7 +1,7 @@
 import type { JSX } from "solid-js";
 import { createSignal, createMemo, createEffect, on, onMount, Show, For } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { ApiClient } from "../../data/apiClient";
+import { ApiClient, getAuthToken } from "../../data/apiClient";
 import { useAuth } from "../../hooks/useAuth";
 import { useI18n } from "../../hooks/useLocale";
 import type { ToolSet, HealthCheck, MapInfo } from "./types";
@@ -91,6 +91,10 @@ export function MapManager(): JSX.Element {
 
   // ─── Load data ───
   onMount(async () => {
+    if (!getAuthToken()) {
+      navigate("/", { replace: true });
+      return;
+    }
     try {
       const [t, m, h] = await Promise.all([
         api.getMapToolTools(),
@@ -181,11 +185,16 @@ export function MapManager(): JSX.Element {
             <Show when={authenticated()}>
               <button
                 class={styles.importBtn}
+                title={t("mm_import_map_tooltip")}
                 onClick={() => setShowImport(true)}
               >
                 <FilePlusIcon size={12} /> {t("mm_import_map")}
               </button>
-              <button class={styles.restyleBtn} onClick={handleRestyle}>
+              <button
+                class={styles.restyleBtn}
+                title={t("mm_restyle_all_tooltip")}
+                onClick={handleRestyle}
+              >
                 <PaletteIcon size={12} /> {t("mm_restyle_all")}
               </button>
             </Show>
@@ -335,6 +344,7 @@ export function MapManager(): JSX.Element {
                 <Show when={!search()}>
                   <button
                     class={styles.emptyImportBtn}
+                    title={t("mm_import_map_tooltip")}
                     onClick={() => setShowImport(true)}
                   >
                     <FilePlusIcon size={12} /> {t("mm_import_map")}

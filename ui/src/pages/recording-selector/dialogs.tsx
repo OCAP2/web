@@ -17,12 +17,9 @@ export function EditModal(props: {
 }): JSX.Element {
   const { t } = useI18n();
   const tagListId = createUniqueId();
-  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
-  const [name, setName] = createSignal(props.rec.missionName);
-  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
-  const [tag, setTag] = createSignal(props.rec.tag ?? "");
-  // eslint-disable-next-line solid/reactivity -- intentional one-time init for form state
-  const [date, setDate] = createSignal(isoToLocalInput(props.rec.date));
+const [name, setName] = createSignal(props.rec.missionName);
+const [tag, setTag] = createSignal(props.rec.tag ?? "");
+const [date, setDate] = createSignal(isoToLocalInput(props.rec.date));
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();

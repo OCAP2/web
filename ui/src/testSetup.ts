@@ -1,3 +1,34 @@
+// Node.js v22.12+ exposes localStorage as a native global. In v25 it is SQLite-backed
+// and requires --localstorage-file; without it the object exists but getItem/setItem
+// are not functions, which breaks jsdom's own storage mock. Replace it with a plain
+// in-memory store whenever the native version is broken.
+if (
+  typeof localStorage !== "undefined" &&
+  typeof localStorage.getItem !== "function"
+) {
+  const _store: Record<string, string> = Object.create(null);
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (key: string) => _store[key] ?? null,
+      setItem: (key: string, value: string) => {
+        _store[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete _store[key];
+      },
+      clear: () => {
+        for (const k in _store) delete _store[k];
+      },
+      get length() {
+        return Object.keys(_store).length;
+      },
+      key: (i: number) => Object.keys(_store)[i] ?? null,
+    } satisfies Storage,
+    writable: true,
+    configurable: true,
+  });
+}
+
 // Polyfill ResizeObserver for JSDOM (needed by @tanstack/virtual)
 if (typeof globalThis.ResizeObserver === "undefined") {
   globalThis.ResizeObserver = class ResizeObserver {

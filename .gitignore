@@ -2,6 +2,9 @@
 .idea
 .vscode
 
+# Local development
+.claude/settings.local.json
+
 # Build artifacts
 /ocap-webserver
 /ocap-webserver.exe

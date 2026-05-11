@@ -55,7 +55,7 @@ func app() error {
 	logHandler := slog.NewJSONHandler(logOutput, nil)
 	slog.SetDefault(slog.New(logHandler))
 
-	operation, err := server.NewRepoOperation(setting.DB)
+	operation, err := server.NewRepoOperationWithDataDir(setting.DB, setting.Data)
 	if err != nil {
 		return fmt.Errorf("operation: %w", err)
 	}
@@ -90,6 +90,12 @@ func app() error {
 			}),
 		),
 	)
+
+	// Apply HTTP server settings
+	s.Server.ReadTimeout = setting.HttpServer.ReadTimeout
+	s.Server.ReadHeaderTimeout = setting.HttpServer.ReadHeaderTimeout
+	s.Server.WriteTimeout = setting.HttpServer.WriteTimeout
+	s.Server.IdleTimeout = setting.HttpServer.IdleTimeout
 
 	// Create conversion worker if enabled (before handler so we can pass it)
 	ctx, cancel := context.WithCancel(context.Background())

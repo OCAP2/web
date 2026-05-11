@@ -132,11 +132,15 @@ export function useRenderBridge(
     engine.unfollowEntity();
   });
 
-  // Smoothing: enable CSS transitions on markers during playback
+  // Smoothing: enable sub-frame interpolation during playback. The interval
+  // passed is the wall-clock gap between two position updates so the renderer
+  // can size its tween to complete in exactly one frame interval.
   createEffect(() => {
     const playing = engine.isPlaying();
     const speed = engine.playbackSpeed();
-    renderer.setSmoothingEnabled(playing, speed);
+    const captureDelayMs = engine.captureDelayMs();
+    const frameIntervalSec = speed > 0 ? captureDelayMs / 1000 / speed : 1;
+    renderer.setSmoothingEnabled(playing, frameIntervalSec);
   });
 
   // Side panel visibility → CSS custom property

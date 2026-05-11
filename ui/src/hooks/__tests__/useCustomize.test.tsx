@@ -61,6 +61,7 @@ describe("useCustomize", () => {
 
   it("applies cssOverrides to document.documentElement.style", async () => {
     mockGetCustomize.mockResolvedValue({
+      enabled: true,
       cssOverrides: {
         "--accent-primary": "#fcb00d",
         "--bg-dark": "#1a2a1a",
@@ -82,6 +83,7 @@ describe("useCustomize", () => {
 
   it("ignores properties not starting with --", async () => {
     mockGetCustomize.mockResolvedValue({
+      enabled: true,
       cssOverrides: {
         "--accent-primary": "#fcb00d",
         "color": "red",
@@ -103,8 +105,53 @@ describe("useCustomize", () => {
     expect(document.documentElement.style.getPropertyValue("background")).toBe("");
   });
 
+  it("does not apply config when enabled is false", async () => {
+    mockGetCustomize.mockResolvedValue({
+      enabled: false,
+      websiteURL: "https://should-not-appear.com",
+      cssOverrides: {
+        "--accent-primary": "#ff0000",
+      },
+    });
+
+    let received: CustomizeConfig | undefined;
+    render(() => (
+      <CustomizeProvider>
+        <TestConsumer onConfig={(c) => (received = c)} />
+      </CustomizeProvider>
+    ));
+
+    // Give onMount time to run
+    await new Promise((r) => setTimeout(r, 10));
+    expect(received).toEqual({});
+    expect(document.documentElement.style.getPropertyValue("--accent-primary")).toBe("");
+  });
+
+  it("honors disableKillCount even when customize is not enabled", async () => {
+    mockGetCustomize.mockResolvedValue({
+      enabled: false,
+      disableKillCount: true,
+      websiteURL: "https://should-not-appear.com",
+    });
+
+    const { getByTestId } = render(() => (
+      <CustomizeProvider>
+        <TestConsumer onConfig={() => {}} />
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+      expect(parsed.disableKillCount).toBe(true);
+    });
+    // Branding fields must NOT leak through when customize is disabled.
+    const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+    expect(parsed.websiteURL).toBeUndefined();
+  });
+
   it("cleans up applied properties on unmount", async () => {
     mockGetCustomize.mockResolvedValue({
+      enabled: true,
       cssOverrides: {
         "--accent-primary": "#fcb00d",
       },

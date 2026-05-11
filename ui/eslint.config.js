@@ -1,16 +1,16 @@
 import js from "@eslint/js";
-import solid from "eslint-plugin-solid/configs/typescript";
 import * as tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import globals from "globals";
 
 export default [
+  {
+    ignores: [".vite/**", "dist/**", "vite.config.ts", "vitest.config.ts"],
+  },
   js.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
-    ...solid,
     plugins: {
-      ...solid.plugins,
       "@typescript-eslint": tsPlugin,
     },
     languageOptions: {
@@ -23,7 +23,8 @@ export default [
       },
     },
     rules: {
-      ...solid.rules,
+      // SolidJS ref pattern: `let ref; <div ref={ref} />` assigns via callback
+      "no-unassigned-vars": "off",
       // Use TS-aware version that understands _ prefix and type imports
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -42,9 +43,6 @@ export default [
       globals: {
         ...globals.node,
       },
-    },
-    rules: {
-      "solid/reactivity": "off",
     },
   },
 ];

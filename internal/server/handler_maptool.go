@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -96,9 +97,15 @@ func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
 func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
 	r := c.Request()
 
+	err := r.ParseMultipartForm(1024 << 20) // 1 GB
+	if err != nil {
+		slog.Warn("failed to parse multipart form", "error", err)
+		return maptool.JobInfo{}, fuego.BadRequestError{Err: err, Detail: "failed to parse multipart form"}
+	}
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		return maptool.JobInfo{}, fuego.BadRequestError{Detail: "file field is required"}
+		return maptool.JobInfo{}, fuego.BadRequestError{Err: err, Detail: "file field is required"}
 	}
 	defer file.Close()
 
@@ -137,8 +144,12 @@ func (h *Handler) importMapToolZip(c ContextNoBody) (maptool.JobInfo, error) {
 		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("not a valid grad_meh export: %v", err)}
 	}
 
-	worldName := maptool.WorldNameFromDir(gradMehDir)
-	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, worldName, extractDir)
+	meta, err := maptool.ReadGradMehMeta(gradMehDir)
+	if err != nil {
+		os.RemoveAll(extractDir)
+		return maptool.JobInfo{}, fuego.BadRequestError{Detail: fmt.Sprintf("invalid grad_meh meta.json: %v", err)}
+	}
+	snap, err := h.maptoolMgr.SubmitWithCleanup(gradMehDir, meta.WorldName, extractDir)
 	if err != nil {
 		os.RemoveAll(extractDir)
 		return maptool.JobInfo{}, fuego.InternalServerError{Err: err, Detail: "failed to submit import job"}
@@ -257,4 +268,3 @@ func (h *Handler) mapToolEventStream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-

@@ -44,4 +44,5 @@ export const LOCALE_LABELS: Record<Locale, { label: string; flag: string }> = {
   fr: { label: "Fran\u00E7ais", flag: "\uD83C\uDDEB\uD83C\uDDF7" },
   it: { label: "Italiano", flag: "\uD83C\uDDEE\uD83C\uDDF9" },
   ru: { label: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",  flag: "\uD83C\uDDF7\uD83C\uDDFA" },
+  uk: { label: "\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430",  flag: "\ud83c\uddfa\ud83c\udde6" },
 };

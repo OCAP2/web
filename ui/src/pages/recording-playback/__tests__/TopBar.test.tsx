@@ -295,7 +295,7 @@ describe("TopBar", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ websiteLogo: "/custom-logo.png" }),
+          json: () => Promise.resolve({ enabled: true, websiteLogo: "/custom-logo.png" }),
         });
       }
       return originalFetch(url);
@@ -332,6 +332,7 @@ describe("TopBar", () => {
           status: 200,
           json: () =>
             Promise.resolve({
+              enabled: true,
               websiteLogo: "/custom-logo.png",
               websiteURL: "https://example.com",
             }),
@@ -372,6 +373,7 @@ describe("TopBar", () => {
           status: 200,
           json: () =>
             Promise.resolve({
+              enabled: true,
               headerTitle: "My Server",
               headerSubtitle: "Best Arma Group",
             }),

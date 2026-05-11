@@ -17,7 +17,7 @@ export function MapDetail(props: {
   onClose: () => void;
   onDelete: () => void;
 }): JSX.Element {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hue = () => mapHue(props.map.name);
 
   return (
@@ -69,7 +69,7 @@ export function MapDetail(props: {
             <div class={styles.infoItem}>
               <div class={styles.infoLabel}>{t("mm_world_size")}</div>
               <div class={styles.infoValue} style={{ color: "var(--text-muted)" }}>
-                {props.map.worldSize!.toLocaleString()} m
+                {props.map.worldSize!.toLocaleString(locale())} m
               </div>
             </div>
           </Show>

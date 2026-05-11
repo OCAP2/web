@@ -17,7 +17,7 @@ func OpenAPIUIHandler(_ string) http.Handler {
 	<title>OCAP2 Web API</title>
 </head>
 <body>
-	<script id="api-reference" data-url="swagger/openapi.json" data-configuration='{"darkMode":true,"showDeveloperTools":"never"}'></script>
+	<script id="api-reference" data-url="openapi.json" data-configuration='{"darkMode":true,"showDeveloperTools":"never"}'></script>
 	<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
 </html>`

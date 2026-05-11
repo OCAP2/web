@@ -20,7 +20,7 @@ func TestOpenAPIUIHandler(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))
 
 	body := rec.Body.String()
-	assert.Contains(t, body, `data-url="swagger/openapi.json"`, "should use relative spec URL")
+	assert.Contains(t, body, `data-url="openapi.json"`, "should use relative spec URL")
 	assert.NotContains(t, body, "/ignored/absolute/path", "should not use absolute spec URL")
 	assert.Contains(t, body, `"darkMode":true`, "should enable dark mode")
 	assert.Contains(t, body, "OCAP2 Web API", "should have the page title")

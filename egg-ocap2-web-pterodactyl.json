@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-04-26T00:00:00+00:00",
+  "name": "OCAP2 Web",
+  "author": "ocap2@github.com",
+  "description": "OCAP2 Web Server — archives and replays Arma 3 military simulation missions on interactive Leaflet maps.",
+  "features": [],
+  "docker_images": {
+    "ghcr.io/ocap2/web:full": "ghcr.io/ocap2/web:full",
+    "ghcr.io/ocap2/web:latest": "ghcr.io/ocap2/web:latest"
+  },
+  "file_denylist": [],
+  "startup": "/usr/local/ocap/app",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\":\"Server running\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\nset -eu\n\n## Create persistent data directories\nmkdir -p /mnt/server/data /mnt/server/db /mnt/server/maps\n\n## Fix ownership so the container user (UID 999) can write to them.\n## See https://github.com/pelican-dev/panel/issues/2098\nchown -R 999:999 /mnt/server\n\necho \"Installation complete\"",
+      "container": "alpine:3.23",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "OCAP Secret",
+      "description": "Shared secret for mission uploads and streaming authentication. Must be changed from the default.",
+      "env_variable": "OCAP_SECRET",
+      "default_value": "change-me",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20",
+      "field_type": "text"
+    },
+    {
+      "name": "Listen Address",
+      "description": "Address and port the server binds to. Uses the Pterodactyl-allocated port by default.",
+      "env_variable": "OCAP_LISTEN",
+      "default_value": "0.0.0.0:5000",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20",
+      "field_type": "text"
+    },
+    {
+      "name": "Database Path",
+      "description": "Path to the SQLite database file.",
+      "env_variable": "OCAP_DB",
+      "default_value": "/home/container/db/data.db",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Data Directory",
+      "description": "Directory for mission data files (uploads and converted protobuf).",
+      "env_variable": "OCAP_DATA",
+      "default_value": "/home/container/data",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Maps Directory",
+      "description": "Directory for map tile files (PMTiles).",
+      "env_variable": "OCAP_MAPS",
+      "default_value": "/home/container/maps",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Enable Conversion",
+      "description": "Enable background conversion of JSON missions to chunked protobuf format for faster streaming playback.",
+      "env_variable": "OCAP_CONVERSION_ENABLED",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Enable Streaming",
+      "description": "Enable the WebSocket streaming endpoint for live mission data ingestion from Arma 3.",
+      "env_variable": "OCAP_STREAMING_ENABLED",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Allowed Steam IDs",
+      "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID. Leave empty to disable Steam admin login.",
+      "env_variable": "OCAP_AUTH_ADMINSTEAMIDS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Steam API Key",
+      "description": "Steam Web API key for fetching player display names and avatars. Get one at https://steamcommunity.com/dev/apikey. Optional — without it, the admin badge shows the Steam ID instead of a name.",
+      "env_variable": "OCAP_AUTH_STEAMAPIKEY",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "CSS Overrides",
+      "description": "JSON object of CSS variable overrides for UI theming.",
+      "env_variable": "OCAP_CUSTOMIZE_CSSOVERRIDES",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    }
+  ]
+}

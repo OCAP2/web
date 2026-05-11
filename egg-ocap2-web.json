@@ -8,11 +8,12 @@
     "author": "ocap2@github.com",
     "uuid": "b3f5a8e2-7c41-4d6f-9e1a-2f8b0c3d4e5f",
     "description": "OCAP2 Web Server — archives and replays Arma 3 military simulation missions on interactive Leaflet maps. Provides a web interface for browsing operations, streaming playback, and mission upload via API.",
-    "image": null,
+    "image": "ghcr.io/ocap2/web:full",
     "tags": [],
     "features": null,
     "docker_images": {
-        "ghcr.io/ocap2/web:latest": "ghcr.io/ocap2/web:latest"
+        "Full (with map tools)": "ghcr.io/ocap2/web:full",
+        "Slim": "ghcr.io/ocap2/web:latest"
     },
     "file_denylist": [],
     "startup_commands": {
@@ -20,15 +21,15 @@
     },
     "config": {
         "files": "{}",
-        "startup": "{\"done\":\"http server started on\"}",
+        "startup": "{\"done\":\"Server running\"}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\nset -euo pipefail\n\n## Create persistent data directories\nmkdir -p /mnt/server/data /mnt/server/db /mnt/server/maps\n\necho \"Installation complete\"",
-            "container": "ghcr.io/ocap2/web:latest",
-            "entrypoint": "bash"
+            "script": "#!/bin/ash\nset -eu\n\n## Create persistent data directories\nmkdir -p /mnt/server/data /mnt/server/db /mnt/server/maps\n\n## Fix ownership so the container user (UID 999) can write to them.\n## See https://github.com/pelican-dev/panel/issues/2098\nchown -R 999:999 /mnt/server\n\necho \"Installation complete\"",
+            "container": "alpine:3.23",
+            "entrypoint": "ash"
         }
     },
     "variables": [
@@ -46,7 +47,7 @@
             "name": "Listen Address",
             "description": "Address and port the server binds to. Uses the Pelican-allocated port by default.",
             "env_variable": "OCAP_LISTEN",
-            "default_value": "0.0.0.0:{{server.allocations.default.port}}",
+            "default_value": "0.0.0.0:5000",
             "user_viewable": true,
             "user_editable": false,
             "rules": ["required", "string"],
@@ -105,7 +106,7 @@
         {
             "name": "Allowed Steam IDs",
             "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID. Leave empty to disable Steam admin login.",
-            "env_variable": "OCAP_ADMIN_ALLOWEDSTEAMIDS",
+            "env_variable": "OCAP_AUTH_ADMINSTEAMIDS",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
@@ -115,7 +116,7 @@
         {
             "name": "Steam API Key",
             "description": "Steam Web API key for fetching player display names and avatars. Get one at https://steamcommunity.com/dev/apikey. Optional — without it, the admin badge shows the Steam ID instead of a name.",
-            "env_variable": "OCAP_ADMIN_STEAMAPIKEY",
+            "env_variable": "OCAP_AUTH_STEAMAPIKEY",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,

@@ -317,6 +317,19 @@
   font-weight: 700;
   font-family: var(--font-mono);
   line-height: 1;
+  color: var(--text-dimmest);
+}
+
+.detailStatValueKills {
+  color: var(--accent-danger);
+}
+
+.detailStatValueDeaths {
+  color: var(--accent-warning);
+}
+
+.detailStatValueMarkers {
+  color: var(--accent-purple);
 }
 
 .detailStatLabel {
@@ -607,6 +620,23 @@
   font-weight: 700;
   font-family: var(--font-mono);
   line-height: 1;
+  color: var(--text-dimmest);
+}
+
+.forceStatNumTotal {
+  color: var(--text-secondary);
+}
+
+.forceStatNumAlive {
+  color: var(--accent-success);
+}
+
+.forceStatNumKills {
+  color: var(--accent-danger);
+}
+
+.forceStatNumDeaths {
+  color: var(--accent-warning);
 }
 
 .forceStatLabel {

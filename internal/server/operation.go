@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -64,17 +67,26 @@ type Filter struct {
 }
 
 type RepoOperation struct {
-	db *sql.DB
+	db      *sql.DB
+	dataDir string
 }
 
 func NewRepoOperation(pathDB string) (*RepoOperation, error) {
+	return NewRepoOperationWithDataDir(pathDB, "")
+}
+
+// NewRepoOperationWithDataDir opens the operation repository and runs migrations,
+// including filesystem migrations that rename mission data files/directories
+// under dataDir. If dataDir is empty, filesystem migrations are skipped.
+func NewRepoOperationWithDataDir(pathDB, dataDir string) (*RepoOperation, error) {
 	db, err := sql.Open("sqlite3", pathDB)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &RepoOperation{
-		db: db,
+		db:      db,
+		dataDir: dataDir,
 	}
 
 	if err := r.migration(); err != nil {
@@ -233,7 +245,13 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	if version < 11 {
-		if err = r.runMigration(11,
+		if err = r.migrateDecodeFilenames(11); err != nil {
+			return err
+		}
+	}
+
+	if version < 12 {
+		if err = r.runMigration(12,
 			`CREATE TABLE IF NOT EXISTS steam_allowlist (
 				steam_id TEXT NOT NULL PRIMARY KEY
 			)`,
@@ -243,6 +261,137 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	return nil
+}
+
+// decodeFilename returns the URL-decoded form of name if it contains percent
+// escapes that decode to a different string; otherwise it returns name
+// unchanged. It is used both by the upload handler (to sanitize incoming
+// filenames) and by migration 11 (to repair already-stored ones).
+func decodeFilename(name string) string {
+	if !strings.Contains(name, "%") {
+		return name
+	}
+	decoded, err := url.PathUnescape(name)
+	if err != nil {
+		return name
+	}
+	return decoded
+}
+
+// migrateDecodeFilenames URL-decodes filenames stored in the operations table
+// and renames the corresponding `<filename>.json.gz` file and `<filename>/`
+// directory (created by streaming/converted recordings) under the data
+// directory. URL-encoded names like
+// `Tavern%20WW2%20-%20Japanese%20Invasion%20of%20Nanjing%20V2_...`
+// were leaking through the upload path; this migration repairs existing
+// records and storage so the names match what the addon actually sends.
+func (r *RepoOperation) migrateDecodeFilenames(version int) error {
+	slog.Info("running database migration", "version", version)
+
+	rows, err := r.db.Query(`SELECT id, filename FROM operations WHERE filename LIKE '%\%%' ESCAPE '\'`)
+	if err != nil {
+		return fmt.Errorf("v%d query: %w", version, err)
+	}
+
+	type rename struct {
+		id       int64
+		oldName  string
+		newName  string
+	}
+	var renames []rename
+	for rows.Next() {
+		var id int64
+		var oldName string
+		if err := rows.Scan(&id, &oldName); err != nil {
+			rows.Close()
+			return fmt.Errorf("v%d scan: %w", version, err)
+		}
+		newName := decodeFilename(oldName)
+		if newName == oldName {
+			continue
+		}
+		renames = append(renames, rename{id: id, oldName: oldName, newName: newName})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("v%d rows: %w", version, err)
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin v%d migration: %w", version, err)
+	}
+	defer tx.Rollback()
+
+	for _, rn := range renames {
+		// Skip if another row already has the decoded name (would collide).
+		var existingID int64
+		err := tx.QueryRow(`SELECT id FROM operations WHERE filename = ? AND id != ?`, rn.newName, rn.id).Scan(&existingID)
+		if err == nil {
+			slog.Warn("v11 skipping rename: target filename already exists in DB",
+				"id", rn.id, "old", rn.oldName, "new", rn.newName, "existing_id", existingID)
+			continue
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("v%d collision check: %w", version, err)
+		}
+
+		if r.dataDir != "" {
+			if err := renameMissionPaths(r.dataDir, rn.oldName, rn.newName); err != nil {
+				return fmt.Errorf("v%d rename %q -> %q: %w", version, rn.oldName, rn.newName, err)
+			}
+		}
+
+		if _, err := tx.Exec(`UPDATE operations SET filename = ? WHERE id = ?`, rn.newName, rn.id); err != nil {
+			return fmt.Errorf("v%d update id %d: %w", version, rn.id, err)
+		}
+		slog.Info("v11 renamed recording", "id", rn.id, "old", rn.oldName, "new", rn.newName)
+	}
+
+	if _, err := tx.Exec(`INSERT INTO version (db) VALUES (?)`, version); err != nil {
+		return fmt.Errorf("v%d set version: %w", version, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	slog.Info("database migration completed", "version", version, "renamed", len(renames))
+	return nil
+}
+
+// renameMissionPaths renames `<dataDir>/<old>.json.gz` -> `<dataDir>/<new>.json.gz`
+// and `<dataDir>/<old>/` -> `<dataDir>/<new>/`. Missing source paths are not
+// errors. If a destination already exists, the rename is skipped with a
+// warning to avoid clobbering data.
+func renameMissionPaths(dataDir, oldName, newName string) error {
+	oldGz := filepath.Join(dataDir, oldName+".json.gz")
+	newGz := filepath.Join(dataDir, newName+".json.gz")
+	if err := safeRename(oldGz, newGz); err != nil {
+		return err
+	}
+
+	oldDir := filepath.Join(dataDir, oldName)
+	newDir := filepath.Join(dataDir, newName)
+	if err := safeRename(oldDir, newDir); err != nil {
+		return err
+	}
+	return nil
+}
+
+func safeRename(oldPath, newPath string) error {
+	srcInfo, err := os.Lstat(oldPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	if _, err := os.Lstat(newPath); err == nil {
+		slog.Warn("rename target already exists, skipping",
+			"old", oldPath, "new", newPath, "is_dir", srcInfo.IsDir())
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return os.Rename(oldPath, newPath)
 }
 
 func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {

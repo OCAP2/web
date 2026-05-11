@@ -17,8 +17,8 @@ import (
 	"strings"
 	"testing"
 
-	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/OCAP2/web/internal/storage"
+	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 	"github.com/go-fuego/fuego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -338,7 +338,7 @@ func TestIntegration_UploadWithoutConversion(t *testing.T) {
 
 	// Step 2: Query operations API and verify the operation is completed
 	t.Run("QueryShowsCompleted", func(t *testing.T) {
-		mockCtx := fuego.NewMockContextNoBody()
+		mockCtx := fuego.NewMockContext[any](nil, Filter{})
 
 		ops, err := hdlr.GetOperations(mockCtx)
 		require.NoError(t, err)
