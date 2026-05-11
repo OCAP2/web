@@ -27,7 +27,7 @@ export function RecordingSelector(): JSX.Element {
   const navigate = useNavigate();
   const api = new ApiClient();
   const customize = useCustomize();
-  const { isAdmin, authError, dismissAuthError } = useAuth();
+  const { authenticated, isAdmin, authError, dismissAuthError } = useAuth();
 
   // State
   const [showUpload, setShowUpload] = createSignal(false);
@@ -52,28 +52,36 @@ export function RecordingSelector(): JSX.Element {
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
 
-  // Fetch recordings
-  onMount(async () => {
+  // Refetch recordings + worlds whenever the auth state changes (login,
+  // logout, initial getMe resolving). Tracking authenticated() ties the
+  // effect to the signal; the empty initial run still fires on mount.
+  createEffect(() => {
+    void authenticated();
     setLoading(true);
-    try {
-      const [recs, info, worlds] = await Promise.all([
-        api.getRecordings(),
-        api.getVersion().catch(() => null),
-        api.getWorlds().catch(() => []),
-      ]);
-      setRecordings(recs.reverse());
-      if (info) setBuildInfo(info);
-      const lookup = new Map<string, string>();
-      for (const w of worlds) {
-        lookup.set(w.name, w.displayName);
-      }
-      setWorldNames(lookup);
-    } catch {
-      setRecordings([]);
-    } finally {
-      setLoading(false);
-    }
-    api.getMapToolTools().then(() => setMapToolEnabled(true)).catch(() => { });
+    void Promise.all([
+      api.getRecordings(),
+      api.getVersion().catch(() => null),
+      api.getWorlds().catch(() => []),
+    ])
+      .then(([recs, info, worlds]) => {
+        setRecordings(recs.reverse());
+        if (info) setBuildInfo(info);
+        const lookup = new Map<string, string>();
+        for (const w of worlds) {
+          lookup.set(w.name, w.displayName);
+        }
+        setWorldNames(lookup);
+      })
+      .catch(() => {
+        setRecordings([]);
+        setWorldNames(new Map());
+      })
+      .finally(() => setLoading(false));
+  });
+
+  createEffect(() => {
+    void authenticated();
+    api.getMapToolTools().then(() => setMapToolEnabled(true)).catch(() => setMapToolEnabled(false));
   });
 
   // Keyboard shortcuts
