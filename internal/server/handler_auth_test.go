@@ -867,6 +867,88 @@ func TestAddToAllowlist_Handler(t *testing.T) {
 	assert.Equal(t, []string{"76561198012345678"}, ids)
 }
 
+func TestAddToAllowlist_Handler_MissingSteamID(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{}
+
+	_, err := hdlr.AddToAllowlist(mockCtx)
+	require.Error(t, err)
+	var bad fuego.BadRequestError
+	require.ErrorAs(t, err, &bad)
+	assert.Contains(t, bad.Detail, "steamId is required")
+}
+
+func TestRemoveFromAllowlist_Handler_MissingSteamID(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{}
+
+	_, err := hdlr.RemoveFromAllowlist(mockCtx)
+	require.Error(t, err)
+	var bad fuego.BadRequestError
+	require.ErrorAs(t, err, &bad)
+	assert.Contains(t, bad.Detail, "steamId is required")
+}
+
+func TestGetAdminAuthConfig_FullyPopulated(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{
+			Auth: Auth{
+				Mode:          "steamAllowlist",
+				SessionTTL:    24 * time.Hour,
+				AdminSteamIDs: []string{"76561198000000001", "76561198000000002"},
+				SteamAPIKey:   "secret-key-here",
+			},
+		},
+	}
+
+	resp, err := hdlr.GetAdminAuthConfig(fuego.NewMockContextNoBody())
+	require.NoError(t, err)
+	assert.Equal(t, "steamAllowlist", resp.Mode)
+	assert.Equal(t, []string{"76561198000000001", "76561198000000002"}, resp.AdminSteamIDs)
+	assert.True(t, resp.SteamAPIKeyConfigured)
+	assert.Equal(t, "24h0m0s", resp.SessionTTL)
+}
+
+func TestGetAdminAuthConfig_EmptyAdminsReturnsSliceNotNil(t *testing.T) {
+	hdlr := Handler{
+		setting: Setting{
+			Auth: Auth{
+				Mode:       "public",
+				SessionTTL: time.Hour,
+				// AdminSteamIDs left as nil intentionally
+			},
+		},
+	}
+
+	resp, err := hdlr.GetAdminAuthConfig(fuego.NewMockContextNoBody())
+	require.NoError(t, err)
+	assert.Equal(t, "public", resp.Mode)
+	assert.NotNil(t, resp.AdminSteamIDs)
+	assert.Empty(t, resp.AdminSteamIDs)
+	assert.False(t, resp.SteamAPIKeyConfigured)
+	assert.Equal(t, "1h0m0s", resp.SessionTTL)
+
+	// JSON shape: adminSteamIds must serialize as [], never null.
+	b, err := json.Marshal(resp)
+	require.NoError(t, err)
+	assert.Contains(t, string(b), `"adminSteamIds":[]`)
+}
+
+func TestGetAdminAuthConfig_SteamAPIKeyAbsentVsPresent(t *testing.T) {
+	withoutKey := Handler{setting: Setting{Auth: Auth{Mode: "steam", SessionTTL: time.Hour}}}
+	withKey := Handler{setting: Setting{Auth: Auth{Mode: "steam", SessionTTL: time.Hour, SteamAPIKey: "x"}}}
+
+	r1, err := withoutKey.GetAdminAuthConfig(fuego.NewMockContextNoBody())
+	require.NoError(t, err)
+	assert.False(t, r1.SteamAPIKeyConfigured)
+
+	r2, err := withKey.GetAdminAuthConfig(fuego.NewMockContextNoBody())
+	require.NoError(t, err)
+	assert.True(t, r2.SteamAPIKeyConfigured)
+}
+
 func TestRemoveFromAllowlist_Handler(t *testing.T) {
 	hdlr := newAllowlistAuthHandler(t, nil)
 	ctx := context.Background()
