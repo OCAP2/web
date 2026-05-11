@@ -1,4 +1,4 @@
-package main
+package convertcli
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 	"github.com/OCAP2/web/internal/storage"
 )
 
-func runConvert(args []string) error {
+// Run executes the `convert` CLI subcommand.
+func Run(args []string) error {
 	fs := flag.NewFlagSet("convert", flag.ExitOnError)
 	inputFile := fs.String("input", "", "Convert a single JSON file")
 	all := fs.Bool("all", false, "Convert all pending operations")

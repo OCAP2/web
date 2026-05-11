@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/conversion"
+	"github.com/OCAP2/web/internal/convertcli"
 	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/OCAP2/web/internal/server"
@@ -22,7 +23,7 @@ import (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "convert" {
-		if err := runConvert(os.Args[2:]); err != nil {
+		if err := convertcli.Run(os.Args[2:]); err != nil {
 			log.Fatalf("convert: %v", err)
 		}
 		return
