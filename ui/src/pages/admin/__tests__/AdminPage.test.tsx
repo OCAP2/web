@@ -596,6 +596,55 @@ describe("AdminPage", () => {
     });
   });
 
+  it("dismisses the toast via its close button", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+    mockAddToAllowlist.mockResolvedValue(undefined);
+
+    const screen = renderPage();
+    const input = (await screen.findByPlaceholderText(/Add Steam64 ID/)) as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "76561198000000044" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    const toast = await screen.findByText(/Added/);
+
+    // The toast's close button sits next to the message inside the toast container.
+    const container = toast.parentElement!;
+    const dismiss = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(dismiss);
+    await waitFor(() => {
+      expect(screen.queryByText(/Added/)).toBeNull();
+    });
+  });
+
+  it("cancels the bulk-remove confirm dialog without calling the API", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: [] }));
+    mockGetAllowlist.mockResolvedValue(["76561198000000077"]);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000077");
+    fireEvent.click(screen.getByText(/Select all/));
+    fireEvent.click(await screen.findByText("REMOVE SELECTED"));
+    fireEvent.click(await screen.findByText("Cancel"));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Remove selected entries/i)).toBeNull();
+    });
+    expect(mockRemoveFromAllowlist).not.toHaveBeenCalled();
+  });
+
+  it("submit() on Enter with an invalid Steam ID is a no-op", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    const input = (await screen.findByPlaceholderText(/Add Steam64 ID/)) as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "12345" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockAddToAllowlist).not.toHaveBeenCalled();
+    expect(input.value).toBe("12345"); // input is NOT cleared because submit was a no-op
+  });
+
   it("renders the no-match message when search filters everything out", async () => {
     mockGetAdminAuthConfig.mockResolvedValue(configFixture());
     mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
