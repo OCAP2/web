@@ -480,6 +480,7 @@ export function AdminPage(): JSX.Element {
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
+/* v8 ignore start -- placeholder component for the commented-out coming-soon sidebar */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SidebarSoonItem(props: { icon: JSX.Element; label: string; soon: string }): JSX.Element {
   return (
@@ -490,6 +491,7 @@ function SidebarSoonItem(props: { icon: JSX.Element; label: string; soon: string
     </div>
   );
 }
+/* v8 ignore stop */
 
 function ModeMismatchBanner(props: { mode: string }): JSX.Element {
   const { t } = useI18n();
@@ -812,6 +814,7 @@ function EmptyState(props: { onPaste: () => void }): JSX.Element {
   );
 }
 
+/* v8 ignore start -- placeholder component for the commented-out coming-soon grid */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ComingSoonCard(props: {
   icon: JSX.Element;
@@ -832,6 +835,7 @@ function ComingSoonCard(props: {
     </div>
   );
 }
+/* v8 ignore stop */
 
 function ConfirmDialog(props: {
   title: string;

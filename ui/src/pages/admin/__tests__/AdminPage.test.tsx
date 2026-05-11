@@ -394,6 +394,125 @@ describe("AdminPage", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("shows the API-key-absent fallback in the config strip", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ steamApiKeyConfigured: false }));
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Not configured")).toBeTruthy();
+      expect(screen.getByText(/display names will fall back to Steam ID/)).toBeTruthy();
+    });
+  });
+
+  it("navigates back to recordings via the back button", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+
+    const screen = renderPage();
+    const back = await screen.findByTitle("Back to recordings");
+    fireEvent.click(back);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+  });
+
+  it("surfaces ApiError detail on remove failure", async () => {
+    const { ApiError } = await import("../../../data/apiClient");
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+    mockRemoveFromAllowlist.mockRejectedValue(
+      new ApiError("fail", 409, "Conflict", "still has active sessions"),
+    );
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+
+    fireEvent.click(screen.getByTitle("Remove from allowlist"));
+    fireEvent.click(await screen.findByText("REMOVE"));
+    await waitFor(() => {
+      expect(screen.getByText(/still has active sessions/)).toBeTruthy();
+    });
+  });
+
+  it("surfaces ApiError status when no detail is present", async () => {
+    const { ApiError } = await import("../../../data/apiClient");
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+    mockRemoveFromAllowlist.mockRejectedValue(new ApiError("fail", 500, "Internal Server Error"));
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+    fireEvent.click(screen.getByTitle("Remove from allowlist"));
+    fireEvent.click(await screen.findByText("REMOVE"));
+    await waitFor(() => {
+      expect(screen.getByText(/500 Internal Server Error/)).toBeTruthy();
+    });
+  });
+
+  it("falls back to a generic action-failed toast for unknown error shapes", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
+    mockRemoveFromAllowlist.mockRejectedValue("plain string, not an Error");
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+    fireEvent.click(screen.getByTitle("Remove from allowlist"));
+    fireEvent.click(await screen.findByText("REMOVE"));
+    await waitFor(() => {
+      expect(screen.getByText(/Action failed/)).toBeTruthy();
+    });
+  });
+
+  it("toggles a single row checkbox on and off", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue(["76561198000000002", "76561198000000003"]);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000002");
+
+    // Per-row checkbox button is sibling of the row's content; click the first one.
+    const rows = screen.getAllByTitle("Click to copy");
+    const firstRowParent = rows[0].closest("[class*='_row_']")!;
+    const checkbox = firstRowParent.querySelector("button[aria-pressed]") as HTMLButtonElement;
+    fireEvent.click(checkbox);
+    await waitFor(() => {
+      expect(checkbox.getAttribute("aria-pressed")).toBe("true");
+    });
+    fireEvent.click(checkbox);
+    await waitFor(() => {
+      expect(checkbox.getAttribute("aria-pressed")).toBe("false");
+    });
+  });
+
+  it("shows an error toast when the allowlist load fails", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockRejectedValue(new Error("boom"));
+
+    const screen = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Failed to load admin data.")).toBeTruthy();
+    });
+  });
+
+  it("replaces the toast in flight when two actions fire back-to-back", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture());
+    mockGetAllowlist.mockResolvedValue([]);
+    mockAddToAllowlist.mockResolvedValue(undefined);
+
+    const screen = renderPage();
+    const input = (await screen.findByPlaceholderText(/Add Steam64 ID/)) as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "76561198000000002" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => screen.getByText(/Added/));
+
+    fireEvent.input(input, { target: { value: "76561198000000003" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(screen.queryAllByText(/76561198000000003/).length).toBeGreaterThan(0);
+    });
+  });
+
   it("renders the no-match message when search filters everything out", async () => {
     mockGetAdminAuthConfig.mockResolvedValue(configFixture());
     mockGetAllowlist.mockResolvedValue(["76561198000000002"]);
