@@ -24,17 +24,11 @@ import (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "convert" {
-		if err := convertcli.Run(os.Args[2:]); err != nil {
-			log.Fatalf("convert: %v", err)
-		}
-		return
+		os.Exit(convertcli.Run(os.Args[2:]))
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "maptool" {
-		if err := maptoolcli.Run(os.Args[2:]); err != nil {
-			log.Fatalf("maptool: %v", err)
-		}
-		return
+		os.Exit(maptoolcli.Run(os.Args[2:]))
 	}
 
 	if err := app(); err != nil {
