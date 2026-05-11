@@ -936,6 +936,37 @@ func TestGetAdminAuthConfig_EmptyAdminsReturnsSliceNotNil(t *testing.T) {
 	assert.Contains(t, string(b), `"adminSteamIds":[]`)
 }
 
+func TestGetAllowlist_Handler_RepoError(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	// Force the repo error path by closing the underlying DB.
+	require.NoError(t, hdlr.repoOperation.db.Close())
+
+	_, err := hdlr.GetAllowlist(fuego.NewMockContextNoBody())
+	require.Error(t, err)
+}
+
+func TestAddToAllowlist_Handler_RepoError(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	require.NoError(t, hdlr.repoOperation.db.Close())
+
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{"steamId": "76561198012345678"}
+
+	_, err := hdlr.AddToAllowlist(mockCtx)
+	require.Error(t, err)
+}
+
+func TestRemoveFromAllowlist_Handler_RepoError(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, nil)
+	require.NoError(t, hdlr.repoOperation.db.Close())
+
+	mockCtx := fuego.NewMockContextNoBody()
+	mockCtx.PathParams = map[string]string{"steamId": "76561198012345678"}
+
+	_, err := hdlr.RemoveFromAllowlist(mockCtx)
+	require.Error(t, err)
+}
+
 func TestGetAdminAuthConfig_SteamAPIKeyAbsentVsPresent(t *testing.T) {
 	withoutKey := Handler{setting: Setting{Auth: Auth{Mode: "steam", SessionTTL: time.Hour}}}
 	withKey := Handler{setting: Setting{Auth: Auth{Mode: "steam", SessionTTL: time.Hour, SteamAPIKey: "x"}}}
@@ -1008,6 +1039,21 @@ func TestSteamCallback_AllowlistMode_DeniedUser(t *testing.T) {
 	hdlr.SteamCallback(rec, req)
 	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 	assert.Contains(t, rec.Header().Get("Location"), "auth_error=not_allowed")
+}
+
+func TestSteamCallback_AllowlistMode_DBErrorRedirectsToSteamError(t *testing.T) {
+	hdlr := newAllowlistAuthHandler(t, []string{"76561198099999999"}) // different admin → goes through allowlist check
+	hdlr.openIDVerifier = mockVerifier{claimedID: "https://steamcommunity.com/openid/id/76561198012345678"}
+	// Force IsOnAllowlist to fail by closing the underlying DB.
+	require.NoError(t, hdlr.repoOperation.db.Close())
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/steam/callback?nonce=abc", nil)
+	req.AddCookie(&http.Cookie{Name: cookieNonce, Value: "abc"})
+	rec := httptest.NewRecorder()
+
+	hdlr.SteamCallback(rec, req)
+	assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+	assert.Contains(t, rec.Header().Get("Location"), "auth_error=steam_error")
 }
 
 func TestSteamCallback_AllowlistMode_AdminBypass(t *testing.T) {
