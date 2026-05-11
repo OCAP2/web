@@ -513,6 +513,89 @@ describe("AdminPage", () => {
     });
   });
 
+  it("bulk-add keeps the local list in sync with which IDs actually succeeded", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: [] }));
+    mockGetAllowlist.mockResolvedValue([]);
+    // Middle entry fails server-side; first and third succeed.
+    mockAddToAllowlist
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("backend timeout"))
+      .mockResolvedValueOnce(undefined);
+
+    const screen = renderPage();
+    await screen.findByPlaceholderText(/Add Steam64 ID/);
+    fireEvent.click(screen.getByText("Bulk add"));
+    const textarea = (await screen.findByPlaceholderText(/76561198012345678/)) as HTMLTextAreaElement;
+    fireEvent.input(textarea, {
+      target: {
+        value: ["76561198000000011", "76561198000000022", "76561198000000033"].join("\n"),
+      },
+    });
+    fireEvent.click(screen.getByText("ADD ALL"));
+
+    await waitFor(() => {
+      expect(mockAddToAllowlist).toHaveBeenCalledTimes(3);
+    });
+    // Local state should contain only the two that succeeded — NOT the failed middle ID.
+    await waitFor(() => {
+      expect(screen.getByText("76561198000000011")).toBeTruthy();
+      expect(screen.queryByText("76561198000000022")).toBeNull();
+      expect(screen.getByText("76561198000000033")).toBeTruthy();
+    });
+    // Summary distinguishes "failed" from "invalid format".
+    expect(screen.queryByText(/1 failed/)).toBeTruthy();
+    expect(screen.queryByText(/invalid format/)).toBeNull();
+  });
+
+  it("bulk-remove keeps failed rows visible and reports the failure count", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: [] }));
+    mockGetAllowlist.mockResolvedValue([
+      "76561198000000011",
+      "76561198000000022",
+      "76561198000000033",
+    ]);
+    // Middle removal fails.
+    mockRemoveFromAllowlist
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("server error"))
+      .mockResolvedValueOnce(undefined);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000011");
+
+    fireEvent.click(screen.getByText(/Select all/));
+    fireEvent.click(await screen.findByText("REMOVE SELECTED"));
+    fireEvent.click(await screen.findByText((_, el) => el?.textContent?.trim() === "REMOVE 3"));
+
+    await waitFor(() => {
+      expect(mockRemoveFromAllowlist).toHaveBeenCalledTimes(3);
+    });
+    // The failed row is still on screen.
+    await waitFor(() => {
+      expect(screen.queryByText("76561198000000011")).toBeNull();
+      expect(screen.getByText("76561198000000022")).toBeTruthy();
+      expect(screen.queryByText("76561198000000033")).toBeNull();
+    });
+    expect(screen.queryByText(/Removed 2/)).toBeTruthy();
+    expect(screen.queryByText(/1 failed/)).toBeTruthy();
+  });
+
+  it("uses singular wording when exactly one entry is removed", async () => {
+    mockGetAdminAuthConfig.mockResolvedValue(configFixture({ adminSteamIds: [] }));
+    mockGetAllowlist.mockResolvedValue(["76561198000000011"]);
+    mockRemoveFromAllowlist.mockResolvedValue(undefined);
+
+    const screen = renderPage();
+    await screen.findByText("76561198000000011");
+    fireEvent.click(screen.getByText(/Select all/));
+    fireEvent.click(await screen.findByText("REMOVE SELECTED"));
+    fireEvent.click(await screen.findByText((_, el) => el?.textContent?.trim() === "REMOVE 1"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Removed 1 entry from the allowlist/)).toBeTruthy();
+    });
+  });
+
   it("renders the no-match message when search filters everything out", async () => {
     mockGetAdminAuthConfig.mockResolvedValue(configFixture());
     mockGetAllowlist.mockResolvedValue(["76561198000000002"]);

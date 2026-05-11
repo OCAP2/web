@@ -113,8 +113,8 @@ export function AdminPage(): JSX.Element {
 
   async function handleBulkAdd(ids: string[]): Promise<void> {
     const existing = new Set(allowlist().map((e) => e.steamId));
-    const valid: string[] = [];
-    let skipped = 0;
+    const candidates: string[] = [];
+    let duplicates = 0;
     let invalid = 0;
     for (const id of ids) {
       if (!isValidSteamId(id)) {
@@ -122,29 +122,41 @@ export function AdminPage(): JSX.Element {
         continue;
       }
       if (existing.has(id)) {
-        skipped++;
+        duplicates++;
         continue;
       }
-      valid.push(id);
+      candidates.push(id);
       existing.add(id);
     }
 
-    let added = 0;
-    for (const id of valid) {
+    const added: string[] = [];
+    let failed = 0;
+    for (const id of candidates) {
       try {
         await api.addToAllowlist(id);
-        added++;
+        added.push(id);
       } catch {
-        invalid++;
+        failed++;
       }
     }
-    if (added > 0) {
-      setAllowlist((prev) => [...prev, ...valid.slice(0, added).map((id) => ({ steamId: id }))]);
+    if (added.length > 0) {
+      setAllowlist((prev) => [...prev, ...added.map((id) => ({ steamId: id }))]);
     }
     showToast(
-      invalid > 0 ? "warn" : "success",
-      `${t("admin_toast_added_prefix")} ${added}, ${t("admin_toast_skipped")} ${skipped} ${t("admin_toast_duplicates")}, ${invalid} ${t("admin_toast_invalid")}`,
+      invalid > 0 || failed > 0 ? "warn" : "success",
+      bulkAddSummary(added.length, duplicates, invalid, failed),
     );
+  }
+
+  function bulkAddSummary(added: number, duplicates: number, invalid: number, failed: number): string {
+    const parts = [`${t("admin_toast_added_prefix")} ${added}`];
+    if (duplicates > 0) {
+      const word = duplicates === 1 ? t("admin_toast_duplicate") : t("admin_toast_duplicates");
+      parts.push(`${t("admin_toast_skipped")} ${duplicates} ${word}`);
+    }
+    if (invalid > 0) parts.push(`${invalid} ${t("admin_toast_invalid")}`);
+    if (failed > 0) parts.push(`${failed} ${t("admin_toast_failed")}`);
+    return parts.join(", ") + ".";
   }
 
   async function performRemove(entry: AllowlistEntry): Promise<void> {
@@ -187,21 +199,29 @@ export function AdminPage(): JSX.Element {
     const admins = adminIds();
     const ids = Array.from(selected()).filter((id) => !admins.includes(id));
     setConfirmBulk(false);
-    let removed = 0;
+    const succeeded = new Set<string>();
     for (const id of ids) {
       try {
         await api.removeFromAllowlist(id);
-        removed++;
+        succeeded.add(id);
       } catch {
-        // swallowed; summary reflects partial success
+        // failure reported in summary; keep the row visible
       }
     }
-    setAllowlist((prev) => prev.filter((e) => !selected().has(e.steamId)));
-    setSelected(new Set<string>());
-    showToast(
-      removed === ids.length ? "success" : "warn",
-      `${t("admin_toast_removed_prefix")} ${removed} ${t("admin_toast_removed_count_suffix")}`,
-    );
+    setAllowlist((prev) => prev.filter((e) => !succeeded.has(e.steamId)));
+    setSelected((prev) => {
+      const next = new Set<string>(prev);
+      for (const id of succeeded) next.delete(id);
+      return next;
+    });
+    const failed = ids.length - succeeded.size;
+    const entryWord = succeeded.size === 1
+      ? t("admin_toast_removed_count_singular")
+      : t("admin_toast_removed_count_suffix");
+    let message = `${t("admin_toast_removed_prefix")} ${succeeded.size} ${entryWord}`;
+    if (failed > 0) message += ` (${failed} ${t("admin_toast_failed")})`;
+    else message += ".";
+    showToast(failed === 0 ? "success" : "warn", message);
   }
 
   function handleCopy(id: string): void {
