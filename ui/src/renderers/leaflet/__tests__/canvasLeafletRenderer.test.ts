@@ -3,7 +3,6 @@ import { CanvasLeafletRenderer } from "../canvasLeafletRenderer";
 import type {
   EntityMarkerOpts,
   EntityMarkerState,
-  MarkerHandle,
 } from "../../renderer.types";
 import type { ArmaCoord } from "../../../utils/coordinates";
 
@@ -262,7 +261,7 @@ describe("CanvasLeafletRenderer", () => {
         weight: 1,
         opacity: 1,
       });
-      const h2 = renderer.addLine([2, 2] as ArmaCoord, [3, 3] as ArmaCoord, {
+      renderer.addLine([2, 2] as ArmaCoord, [3, 3] as ArmaCoord, {
         color: "blue",
         weight: 1,
         opacity: 1,

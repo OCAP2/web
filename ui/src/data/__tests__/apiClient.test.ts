@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiClient, ApiError, setAuthToken, getAuthToken } from "../apiClient";
-import type { CustomizeConfig, BuildInfo, AuthConfig } from "../apiClient";
+import type { CustomizeConfig, BuildInfo } from "../apiClient";
 
 // ─── Helpers ───
 

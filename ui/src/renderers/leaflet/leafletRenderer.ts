@@ -10,7 +10,6 @@ import type {
   MarkerHandle,
   EntityMarkerOpts,
   EntityMarkerState,
-  CrewInfo,
   BriefingMarkerHandle,
   BriefingMarkerDef,
   BriefingMarkerState,
