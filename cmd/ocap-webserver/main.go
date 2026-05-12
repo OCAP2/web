@@ -13,27 +13,21 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/conversion"
-	"github.com/OCAP2/web/internal/convertcli"
 	"github.com/OCAP2/web/internal/frontend"
 	"github.com/OCAP2/web/internal/maptool"
-	"github.com/OCAP2/web/internal/maptoolcli"
 	"github.com/OCAP2/web/internal/server"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-fuego/fuego"
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "convert" {
-		os.Exit(convertcli.Run(os.Args[2:]))
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "maptool" {
-		os.Exit(maptoolcli.Run(os.Args[2:]))
-	}
-
-	if err := app(); err != nil {
-		log.Fatalf("fatal: %v", err)
-	}
+	os.Exit(runRoot(os.Args[1:], os.Stdout, os.Stderr, func() int {
+		if err := app(); err != nil {
+			log.Printf("fatal: %v", err)
+			return 1
+		}
+		return 0
+	}))
 }
 
 func app() error {
