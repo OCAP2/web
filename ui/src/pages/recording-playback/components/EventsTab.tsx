@@ -145,8 +145,8 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-danger)",
           } : undefined}
           onClick={() => setShowHits(!showHits())}
-          title={t("hits")}
-          aria-label={t("hits")}
+          title={t("hits_tooltip")}
+          aria-label={t("hits_tooltip")}
         >
           {t("hits")}
         </button>
@@ -160,10 +160,10 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-success)",
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
-          title={t("connections_long")}
-          aria-label={t("connections_long")}
+          title={t("connections_tooltip")}
+          aria-label={t("connections_tooltip")}
         >
-          {t("connections")}
+          {t("connections_short")}
         </button>
         <button
           class={styles.filterToggle}
@@ -175,8 +175,8 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-danger)",
           } : undefined}
           onClick={() => setFriendlyFireOnly(!friendlyFireOnly())}
-          title={t("friendly_fire")}
-          aria-label={t("friendly_fire")}
+          title={t("friendly_fire_tooltip")}
+          aria-label={t("friendly_fire_tooltip")}
         >
           <AlertTriangleIcon size={14} />
         </button>
