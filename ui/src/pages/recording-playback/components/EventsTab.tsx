@@ -145,6 +145,8 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-danger)",
           } : undefined}
           onClick={() => setShowHits(!showHits())}
+          title={t("hits")}
+          aria-label={t("hits")}
         >
           {t("hits")}
         </button>
@@ -158,6 +160,8 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-success)",
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
+          title={t("connections")}
+          aria-label={t("connections")}
         >
           {t("connections")}
         </button>
