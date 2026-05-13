@@ -88,7 +88,7 @@ export class EventManager {
       if (victim instanceof Unit && causer instanceof Unit) {
         if (event.victimId !== event.causedById) {
           causer.killCount++;
-          if (victim.side === causer.side) {
+          if (event.isFriendlyFire()) {
             causer.teamKillCount++;
           }
         }
@@ -137,12 +137,7 @@ export class EventManager {
       // Kill for causer (non-self kills only)
       if (event.causedById !== event.victimId) {
         kills.set(event.causedById, (kills.get(event.causedById) ?? 0) + 1);
-        // Team kill: same side, both sides known
-        if (
-          event.causerSide !== undefined &&
-          event.victimSide !== undefined &&
-          event.causerSide === event.victimSide
-        ) {
+        if (event.isFriendlyFire()) {
           teamKills.set(event.causedById, (teamKills.get(event.causedById) ?? 0) + 1);
         }
       }

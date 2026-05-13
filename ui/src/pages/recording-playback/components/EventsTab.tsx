@@ -16,16 +16,6 @@ import { EventFilters, DEFAULT_EVENT_FILTERS } from "./EventFilters";
 import type { EventFilterState } from "./EventFilters";
 import styles from "./SidePanel.module.css";
 
-function isFriendlyFire(event: HitKilledEvent): boolean {
-  return (
-    event.causerSide !== undefined &&
-    event.victimSide !== undefined &&
-    event.causerSide === event.victimSide &&
-    event.victimId !== event.causedById &&
-    !event.victimIsVehicle
-  );
-}
-
 function sideColor(side?: string): string {
   switch (side) {
     case "WEST": return SIDE_COLORS_UI.WEST;
@@ -82,7 +72,7 @@ export function EventsTab(): JSX.Element {
     if (f.sideFilter === "all") return true;
     // Side filter only applies to HitKilled events; everything else passes through.
     if (!(event instanceof HitKilledEvent)) return true;
-    const ff = isFriendlyFire(event);
+    const ff = event.isFriendlyFire();
     if (f.sideFilter === "friendlyFireOnly") return ff;
     if (f.sideFilter === "hideFriendlyFire") return !ff;
     return true;
