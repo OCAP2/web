@@ -731,6 +731,66 @@ describe("EventsTab", () => {
     expect(screen.queryByText("Objective completed")).toBeNull();
   });
 
+  it("side filter does not affect non-HitKilled events (connections pass through)", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Joiner", side: "WEST" }),
+      unitDef({ id: 2, name: "FFVictim", side: "WEST" }),
+      unitDef({ id: 3, name: "FFKiller", side: "WEST" }),
+    ];
+    const events = [
+      connectEvent(0, "connected", "Joiner"),
+      killedEvent(1, 2, 3, "M4A1", 100), // friendly fire
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Connections off by default; enable them, and select Friendly fire only.
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
+    fireEvent.click(screen.getByText("Friendly fire only"));
+
+    // The FF kill remains, AND the connection event passes through the side filter.
+    expect(screen.getByText("FFVictim")).toBeTruthy();
+    expect(screen.getByText(/Joiner/)).toBeTruthy();
+  });
+
+  it("side filter does not affect captures or mission events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Capper", side: "WEST" }),
+      unitDef({ id: 2, name: "Victim", side: "WEST" }),
+      unitDef({ id: 3, name: "Killer", side: "EAST" }),
+    ];
+    const events = [
+      capturedEvent(0, "Capper", "sector"),
+      endMissionEvent(1, "WEST", "BLUFOR wins"),
+      killedEvent(2, 2, 3, "AK-47", 100), // cross-side kill
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Hide friendly fire"));
+
+    // Capture and end-mission survive the side filter; cross-side kill also visible.
+    expect(screen.getByText(/Capper/)).toBeTruthy();
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+    expect(screen.getByText("Victim")).toBeTruthy();
+  });
+
   it("unchecking 'Terminal hacks' hides terminal hack events", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "Hacker", side: "WEST" })];

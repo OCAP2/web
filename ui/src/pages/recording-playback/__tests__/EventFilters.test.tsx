@@ -165,4 +165,26 @@ describe("EventFilters - active indicator", () => {
     // Hidden while open (so users see the panel itself).
     expect(container.querySelector("[aria-hidden='true']")).toBeNull();
   });
+
+  it("button has the active style while open AND when filters differ from default", () => {
+    // Covers both halves of the `open() || isNonDefault()` branch:
+    // 1. open=true, defaults=true (open the panel from default state)
+    const { container } = renderEventFilters();
+    const btn = container.querySelector("button");
+    expect(btn).not.toBeNull();
+    // Initially closed + default -> not active style.
+    expect(btn?.className).not.toMatch(/_filterBtnActive_/);
+
+    openPanel();
+    // open=true contributes -> active style.
+    expect(btn?.className).toMatch(/_filterBtnActive_/);
+
+    // Close again, now toggle a filter -> isNonDefault contributes -> active style.
+    openPanel();
+    expect(btn?.className).not.toMatch(/_filterBtnActive_/);
+    openPanel();
+    fireEvent.click(screen.getByText("Hits"));
+    // Panel still open, both conditions true.
+    expect(btn?.className).toMatch(/_filterBtnActive_/);
+  });
 });
