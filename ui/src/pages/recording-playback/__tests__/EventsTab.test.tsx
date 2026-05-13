@@ -598,4 +598,157 @@ describe("EventsTab", () => {
     expect(screen.getByText(/AlphaPlayer/)).toBeTruthy();
     expect(screen.queryByText(/BravoPlayer/)).toBeNull();
   });
+
+  it("side filter 'Friendly fire only' restricts to same-side kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "CrossVictim", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100), // WEST kills WEST → friendly fire
+      killedEvent(1, 3, 2, "M4A1", 100), // WEST kills EAST → cross-side
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Both kills visible by default.
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.getByText("CrossVictim")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Friendly fire only"));
+
+    // Only the friendly-fire kill remains; the cross-side kill is gone.
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.queryByText("CrossVictim")).toBeNull();
+  });
+
+  it("side filter 'Hide friendly fire' excludes same-side kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "EnemyVictim", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100), // WEST kills WEST → friendly fire
+      killedEvent(1, 3, 2, "M4A1", 100), // WEST kills EAST → normal
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Hide friendly fire"));
+
+    // Only the cross-side kill remains.
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText("EnemyVictim")).toBeTruthy();
+  });
+
+  it("unchecking 'Kills' hides killed events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Victim", side: "WEST" }),
+      unitDef({ id: 2, name: "Killer", side: "EAST" }),
+    ];
+    const events = [killedEvent(0, 1, 2, "M4A1", 100)];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("Victim")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Kills"));
+
+    expect(screen.queryByText("Victim")).toBeNull();
+    expect(screen.getByText("No events to display")).toBeTruthy();
+  });
+
+  it("unchecking 'Captures' hides captured events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Capturer", side: "WEST" })];
+    const events = [capturedEvent(0, "CapturerName", "sector")];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/CapturerName/)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Captures"));
+
+    expect(screen.queryByText(/CapturerName/)).toBeNull();
+  });
+
+  it("unchecking 'Mission events' hides EndMission and General events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Alpha", side: "WEST" })];
+    const events = [
+      endMissionEvent(0, "WEST", "BLUFOR wins"),
+      generalEvent(1, "Objective completed"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+    expect(screen.getByText("Objective completed")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Mission events"));
+
+    expect(screen.queryByText("BLUFOR wins")).toBeNull();
+    expect(screen.queryByText("Objective completed")).toBeNull();
+  });
+
+  it("unchecking 'Terminal hacks' hides terminal hack events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Hacker", side: "WEST" })];
+    const events = [terminalHackEvent(0, "terminalHackStarted", "Hacker")];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/started hacking/)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Terminal hacks"));
+
+    expect(screen.queryByText(/started hacking/)).toBeNull();
+  });
 });
