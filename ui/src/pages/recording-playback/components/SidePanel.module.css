@@ -430,6 +430,7 @@
 
 .filterInput {
   flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.05);
   border: var(--border-subtle);
   border-radius: 6px;

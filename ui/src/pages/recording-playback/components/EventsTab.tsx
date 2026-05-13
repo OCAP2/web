@@ -172,10 +172,9 @@ export function EventsTab(): JSX.Element {
           } : undefined}
           onClick={() => setFriendlyFireOnly(!friendlyFireOnly())}
           title={t("friendly_fire")}
+          aria-label={t("friendly_fire")}
         >
           <AlertTriangleIcon size={14} />
-          {" "}
-          {t("friendly_fire")}
         </button>
       </div>
 
