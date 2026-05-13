@@ -53,12 +53,27 @@ export function EventsTab(): JSX.Element {
   const [filterText, setFilterText] = createSignal("");
   const [showHits, setShowHits] = createSignal(false);
   const [showConnects, setShowConnects] = createSignal(false);
+  const [friendlyFireOnly, setFriendlyFireOnly] = createSignal(false);
+
+  const isFriendlyFire = (event: HitKilledEvent): boolean =>
+    event.causerSide !== undefined &&
+    event.victimSide !== undefined &&
+    event.causerSide === event.victimSide &&
+    event.victimId !== event.causedById &&
+    !event.victimIsVehicle;
 
   const filteredEvents = createMemo(() => {
     const all = engine.activeEvents();
     const text = filterText().toLowerCase();
+    const ffOnly = friendlyFireOnly();
 
     const filtered = all.filter((event) => {
+      // Friendly-fire-only mode: hard filter, restricts to same-side HitKilled events.
+      if (ffOnly) {
+        if (!(event instanceof HitKilledEvent)) return false;
+        if (!isFriendlyFire(event)) return false;
+      }
+
       // Type-based filtering
       if (event instanceof HitKilledEvent && event.type === "hit" && !showHits()) {
         return false;
@@ -145,6 +160,22 @@ export function EventsTab(): JSX.Element {
           onClick={() => setShowConnects(!showConnects())}
         >
           {t("connections")}
+        </button>
+        <button
+          class={styles.filterToggle}
+          classList={{
+            [styles.filterToggleInactive]: !friendlyFireOnly(),
+          }}
+          style={friendlyFireOnly() ? {
+            background: "rgba(255,74,74,0.15)",
+            color: "var(--accent-danger)",
+          } : undefined}
+          onClick={() => setFriendlyFireOnly(!friendlyFireOnly())}
+          title={t("friendly_fire")}
+        >
+          <AlertTriangleIcon size={14} />
+          {" "}
+          {t("friendly_fire")}
         </button>
       </div>
 
