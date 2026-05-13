@@ -160,8 +160,8 @@ export function EventsTab(): JSX.Element {
             color: "var(--accent-success)",
           } : undefined}
           onClick={() => setShowConnects(!showConnects())}
-          title={t("connections")}
-          aria-label={t("connections")}
+          title={t("connections_long")}
+          aria-label={t("connections_long")}
         >
           {t("connections")}
         </button>

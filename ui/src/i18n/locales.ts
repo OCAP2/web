@@ -1197,6 +1197,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Yhd",
     uk: "Приєд.",
   },
+  connections_long: {
+    ru: "Подключения",
+    en: "Connections",
+    de: "Verbindungen",
+    cs: "Připojení",
+    it: "Connessioni",
+    fr: "Connexions",
+    fi: "Yhteydet",
+    uk: "Підключення",
+  },
   friendly_fire: {
     ru: "Дружеский огонь",
     en: "Friendly Fire",
