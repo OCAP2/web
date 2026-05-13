@@ -214,6 +214,12 @@ export const TargetIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const FilterIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size)} height={s(p.size)}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+);
+
 export const SettingsIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size)} height={s(p.size)}>
     <circle cx="12" cy="12" r="3" />

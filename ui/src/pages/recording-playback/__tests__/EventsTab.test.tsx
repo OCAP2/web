@@ -159,7 +159,8 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    // Toggle hits on
+    // Open the event filters panel and toggle hits on
+    fireEvent.click(screen.getByLabelText("Event filters"));
     fireEvent.click(screen.getByText("Hits"));
 
     // Now the hit event should be visible
@@ -196,8 +197,9 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    // Toggle connections on
-    fireEvent.click(screen.getByText("Conn"));
+    // Open the event filters panel and toggle connections on
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
 
     // Now the connect event should be visible
     expect(screen.getByText(/JoinedPlayer/)).toBeTruthy();
@@ -587,7 +589,8 @@ describe("EventsTab", () => {
     ));
 
     // Enable connection events
-    fireEvent.click(screen.getByText("Conn"));
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
 
     const input = screen.getByPlaceholderText("Search events...");
     fireEvent.input(input, { target: { value: "AlphaPlayer" } });

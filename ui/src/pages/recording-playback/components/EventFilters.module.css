@@ -1,0 +1,197 @@
+/* ─── EventFilters ─── */
+
+.wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.filterBtn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-interactive);
+  border: var(--border-subtle);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtn:hover {
+  filter: brightness(1.15);
+}
+
+.filterBtnActive {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  color: var(--accent-primary);
+}
+
+.activeDot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+/* ─── Panel ─── */
+
+.panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 8px 6px;
+  min-width: 220px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-dropdown);
+  z-index: var(--z-dropdown);
+  animation: fadeIn 0.12s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sectionLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.sectionBorder {
+  border-top: var(--border-subtle);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+/* ─── Checkbox items ─── */
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.checkItem:hover {
+  background: var(--bg-interactive);
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.checkboxActive {
+  border: 1.5px solid var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+}
+
+.checkboxInactive {
+  border: 1.5px solid var(--text-dimmest);
+  background: transparent;
+}
+
+.checkboxDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1.5px;
+  background: var(--accent-primary);
+}
+
+/* ─── Radio items ─── */
+
+.radioItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.radioItem:hover {
+  background: var(--bg-interactive);
+}
+
+.radioItemActive {
+  background: color-mix(in srgb, var(--accent-primary) 6%, transparent);
+}
+
+.radio {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.radioActive {
+  border: 1.5px solid var(--accent-primary);
+}
+
+.radioInactive {
+  border: 1.5px solid var(--text-dimmest);
+}
+
+.radioDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+/* ─── Shared text ─── */
+
+.itemText {
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
+}
+
+.itemTextActive {
+  color: var(--text-secondary);
+}
+
+.itemTextInactive {
+  color: var(--text-muted);
+}

@@ -12,7 +12,19 @@ import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
 import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon } from "../../../components/Icons";
+import { EventFilters, DEFAULT_EVENT_FILTERS } from "./EventFilters";
+import type { EventFilterState } from "./EventFilters";
 import styles from "./SidePanel.module.css";
+
+function isFriendlyFire(event: HitKilledEvent): boolean {
+  return (
+    event.causerSide !== undefined &&
+    event.victimSide !== undefined &&
+    event.causerSide === event.victimSide &&
+    event.victimId !== event.causedById &&
+    !event.victimIsVehicle
+  );
+}
 
 function sideColor(side?: string): string {
   switch (side) {
@@ -51,36 +63,39 @@ export function EventsTab(): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
   const [filterText, setFilterText] = createSignal("");
-  const [showHits, setShowHits] = createSignal(false);
-  const [showConnects, setShowConnects] = createSignal(false);
-  const [friendlyFireOnly, setFriendlyFireOnly] = createSignal(false);
+  const [filters, setFilters] = createSignal<EventFilterState>(DEFAULT_EVENT_FILTERS);
 
-  const isFriendlyFire = (event: HitKilledEvent): boolean =>
-    event.causerSide !== undefined &&
-    event.victimSide !== undefined &&
-    event.causerSide === event.victimSide &&
-    event.victimId !== event.causedById &&
-    !event.victimIsVehicle;
+  const passesEventType = (event: GameEvent, f: EventFilterState): boolean => {
+    if (event instanceof HitKilledEvent) {
+      return event.type === "killed" ? f.showKills : f.showHits;
+    }
+    if (event instanceof ConnectEvent) return f.showConnections;
+    if (event instanceof CapturedEvent) return f.showCaptures;
+    if (event instanceof TerminalHackEvent) return f.showTerminalHacks;
+    if (event instanceof EndMissionEvent || event instanceof GeneralMissionEvent) {
+      return f.showMissionEvents;
+    }
+    return true;
+  };
+
+  const passesSideFilter = (event: GameEvent, f: EventFilterState): boolean => {
+    if (f.sideFilter === "all") return true;
+    // Side filter only applies to HitKilled events; everything else passes through.
+    if (!(event instanceof HitKilledEvent)) return true;
+    const ff = isFriendlyFire(event);
+    if (f.sideFilter === "friendlyFireOnly") return ff;
+    if (f.sideFilter === "hideFriendlyFire") return !ff;
+    return true;
+  };
 
   const filteredEvents = createMemo(() => {
     const all = engine.activeEvents();
     const text = filterText().toLowerCase();
-    const ffOnly = friendlyFireOnly();
+    const f = filters();
 
     const filtered = all.filter((event) => {
-      // Friendly-fire-only mode: hard filter, restricts to same-side HitKilled events.
-      if (ffOnly) {
-        if (!(event instanceof HitKilledEvent)) return false;
-        if (!isFriendlyFire(event)) return false;
-      }
-
-      // Type-based filtering
-      if (event instanceof HitKilledEvent && event.type === "hit" && !showHits()) {
-        return false;
-      }
-      if (event instanceof ConnectEvent && !showConnects()) {
-        return false;
-      }
+      if (!passesEventType(event, f)) return false;
+      if (!passesSideFilter(event, f)) return false;
 
       // Text search
       if (text) {
@@ -135,51 +150,7 @@ export function EventsTab(): JSX.Element {
           value={filterText()}
           onInput={(e) => setFilterText(e.currentTarget.value)}
         />
-        <button
-          class={styles.filterToggle}
-          classList={{
-            [styles.filterToggleInactive]: !showHits(),
-          }}
-          style={showHits() ? {
-            background: "rgba(255,74,74,0.15)",
-            color: "var(--accent-danger)",
-          } : undefined}
-          onClick={() => setShowHits(!showHits())}
-          title={t("hits_tooltip")}
-          aria-label={t("hits_tooltip")}
-        >
-          {t("hits")}
-        </button>
-        <button
-          class={styles.filterToggle}
-          classList={{
-            [styles.filterToggleInactive]: !showConnects(),
-          }}
-          style={showConnects() ? {
-            background: "rgba(45,212,160,0.15)",
-            color: "var(--accent-success)",
-          } : undefined}
-          onClick={() => setShowConnects(!showConnects())}
-          title={t("connections_tooltip")}
-          aria-label={t("connections_tooltip")}
-        >
-          {t("connections_short")}
-        </button>
-        <button
-          class={styles.filterToggle}
-          classList={{
-            [styles.filterToggleInactive]: !friendlyFireOnly(),
-          }}
-          style={friendlyFireOnly() ? {
-            background: "rgba(255,74,74,0.15)",
-            color: "var(--accent-danger)",
-          } : undefined}
-          onClick={() => setFriendlyFireOnly(!friendlyFireOnly())}
-          title={t("friendly_fire_tooltip")}
-          aria-label={t("friendly_fire_tooltip")}
-        >
-          <AlertTriangleIcon size={14} />
-        </button>
+        <EventFilters state={filters} setState={setFilters} />
       </div>
 
       {/* Event list */}
