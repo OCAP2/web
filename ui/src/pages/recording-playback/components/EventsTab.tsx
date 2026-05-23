@@ -216,13 +216,13 @@ export function EventsTab(): JSX.Element {
                     ) : event instanceof EndMissionEvent ? (
                       <>
                         <span class={styles.eventNames}>
-                          <Show when={event.side}>
-                            <span style={{ color: sideColor(event.side) }}>
-                              {event.side}
-                            </span>
+                          <span style={{ color: sideColor(event.side) }}>
+                            {event.side}
+                          </span>
+                          <Show when={event.message}>
                             {" "}
+                            <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                           </Show>
-                          <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                         </span>
                         <span class={styles.eventMeta}>
                           <span class={styles.eventTime}>
