@@ -684,6 +684,14 @@ func (r *RepoOperation) UpdateSchemaVersion(ctx context.Context, id int64, versi
 	return err
 }
 
+// UpdateStreamingMeta updates duration and player count for a live streaming operation.
+func (r *RepoOperation) UpdateStreamingMeta(ctx context.Context, id int64, duration float64, playerCount int) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE operations SET mission_duration = ?, player_count = ? WHERE id = ?`,
+		duration, playerCount, id)
+	return err
+}
+
 // UpdateMissionDuration updates the mission duration for an operation
 func (r *RepoOperation) UpdateMissionDuration(ctx context.Context, id int64, duration float64) error {
 	_, err := r.db.ExecContext(ctx,
@@ -738,6 +746,22 @@ func unmarshalSideComposition(raw string) SideComposition {
 		sc[side] = SideCounts{Players: 0, Units: count}
 	}
 	return sc
+}
+
+// Update writes the streaming-finalize mutable fields for an existing operation.
+// Stats columns (player_count, kill_count, side_composition, player_kill_count)
+// are owned by UpdateStreamingMeta / UpdateOperationStats and not touched here.
+func (r *RepoOperation) Update(ctx context.Context, op *Operation) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE operations SET
+			world_name = ?, mission_name = ?, mission_duration = ?, filename = ?,
+			date = ?, tag = ?, storage_format = ?, conversion_status = ?,
+			schema_version = ?, chunk_count = ?
+		WHERE id = ?`,
+		op.WorldName, op.MissionName, op.MissionDuration, op.Filename,
+		op.Date, op.Tag, op.StorageFormat, op.ConversionStatus,
+		op.SchemaVersion, op.ChunkCount, op.ID)
+	return err
 }
 
 // SelectStatsBackfill returns completed protobuf operations that have no stats yet

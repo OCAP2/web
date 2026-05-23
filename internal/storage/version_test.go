@@ -23,9 +23,14 @@ func TestSchemaVersion_String(t *testing.T) {
 			want:    "v1",
 		},
 		{
+			name:    "version 2",
+			version: SchemaVersionV2,
+			want:    "v2",
+		},
+		{
 			name:    "current version",
 			version: CurrentSchemaVersion,
-			want:    "v1",
+			want:    "v2",
 		},
 	}
 

@@ -2,6 +2,7 @@ import type { Recording, WorldConfig } from "../../data/types";
 import type { ApiClient } from "../../data/apiClient";
 import { JsonDecoder } from "../../data/decoders/jsonDecoder";
 import { ProtobufDecoder } from "../../data/decoders/protobufDecoder";
+import { ProtobufDecoderV2 } from "../../data/decoders/protobufDecoderV2";
 import type { DecoderStrategy } from "../../data/decoders/decoder.interface";
 import { ChunkManager } from "../../data/chunkManager";
 import type { PlaybackEngine } from "../../playback/engine";
@@ -34,7 +35,8 @@ export async function loadRecording(
   let manifest;
 
   if (rec.storageFormat === "protobuf") {
-    decoder = new ProtobufDecoder();
+    const version = rec.schemaVersion ?? 1;
+    decoder = version >= 2 ? new ProtobufDecoderV2() : new ProtobufDecoder();
     const chunkMgr = new ChunkManager(decoder, api);
     manifest = await chunkMgr.loadManifest(filename);
     await chunkMgr.loadChunk(0);

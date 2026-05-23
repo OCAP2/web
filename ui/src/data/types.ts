@@ -55,6 +55,40 @@ export interface EntityState {
   groupName?: string;
   /** Per-frame side (may change mid-mission). */
   side?: Side;
+  // v2 soldier extensions
+  /** Role within vehicle (driver, gunner, commander, cargo). */
+  vehicleRole?: string;
+  /** Stance (STAND, CROUCH, PRONE). */
+  stance?: string;
+  /** Whether soldier has stable vitals (ACE3 medical). */
+  hasStableVitals?: boolean;
+  /** Whether soldier is being dragged/carried. */
+  isDraggedCarried?: boolean;
+  /** Combat scores. */
+  scores?: SoldierScores;
+  // v2 vehicle extensions
+  /** Vehicle fuel level (0-1). */
+  fuel?: number;
+  /** Vehicle damage level (0-1). */
+  damage?: number;
+  /** Vehicle lock state. */
+  locked?: boolean;
+  /** Vehicle engine state. */
+  engineOn?: boolean;
+  /** Turret horizontal angle. */
+  turretAzimuth?: number;
+  /** Turret vertical angle. */
+  turretElevation?: number;
+}
+
+/** Soldier combat scores (v2). */
+export interface SoldierScores {
+  infantryKills: number;
+  vehicleKills: number;
+  armorKills: number;
+  airKills: number;
+  deaths: number;
+  totalScore: number;
 }
 
 // --------------- Event discriminated union ---------------
@@ -148,6 +182,46 @@ export interface Manifest {
   times: Array<{ frameNum: number; systemTimeUtc: string; date?: string; timeMultiplier?: number }>;
   extensionVersion?: string;
   addonVersion?: string;
+  // v2 extensions
+  telemetry?: TelemetrySample[];
+  world?: {
+    worldSize?: number;
+    latitude?: number;
+    longitude?: number;
+    author?: string;
+    displayName?: string;
+  };
+  mission?: {
+    serverName?: string;
+    briefingName?: string;
+    extensionBuild?: string;
+    playableSlots?: { west: number; east: number; independent: number; civilian: number };
+    sideFriendly?: { eastWest: boolean; eastIndependent: boolean; westIndependent: boolean };
+    addons?: Array<{ name: string; workshopId: string }>;
+  };
+}
+
+/** Telemetry sample: FPS + optional entity counts, weather, and player network data. */
+export interface TelemetrySample {
+  frameNum: number;
+  fpsAverage: number;
+  fpsMin: number;
+  globalCounts?: {
+    unitsAlive: number;
+    unitsDead: number;
+    groups: number;
+    vehicles: number;
+    weaponHolders: number;
+    playersAlive: number;
+    playersDead: number;
+    playersConnected: number;
+  };
+  weather?: {
+    fog: number;
+    overcast: number;
+    rain: number;
+  };
+  playerCount?: number;
 }
 
 /** A decoded chunk: entity ID -> array of states for this chunk's frames. */

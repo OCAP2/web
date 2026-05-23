@@ -1,0 +1,398 @@
+syntax = "proto3";
+package ocap.v2;
+option go_package = "github.com/OCAP2/web/pkg/schemas/protobuf/v2";
+
+// ─── Shared ───
+
+message Position3D {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+enum Side {
+  SIDE_UNKNOWN = 0;
+  SIDE_WEST = 1;
+  SIDE_EAST = 2;
+  SIDE_GUER = 3;
+  SIDE_CIV = 4;
+  SIDE_GLOBAL = 5;
+}
+
+// ─── Manifest (loaded once) ───
+
+message Manifest {
+  uint32 version = 1;           // = 2
+  WorldMeta world = 2;
+  MissionMeta mission = 3;
+  uint32 frame_count = 4;
+  uint32 chunk_size = 5;
+  uint32 capture_delay_ms = 6;
+  uint32 chunk_count = 7;
+
+  repeated SoldierDef soldiers = 10;
+  repeated VehicleDef vehicles = 11;
+  repeated Event events = 12;
+  repeated MarkerDef markers = 13;
+  repeated TimeSample times = 14;
+}
+
+message WorldMeta {
+  string world_name = 1;
+  float world_size = 2;
+  float latitude = 3;
+  float longitude = 4;
+  string author = 5;
+  string display_name = 6;
+}
+
+message MissionMeta {
+  string mission_name = 1;
+  string briefing_name = 2;
+  string author = 3;
+  string server_name = 4;
+  string extension_version = 5;
+  string addon_version = 6;
+  string extension_build = 7;
+  string tag = 8;
+  PlayableSlots playable_slots = 9;
+  SideFriendly side_friendly = 10;
+  repeated Addon addons = 11;
+}
+
+message PlayableSlots {
+  uint32 west = 1;
+  uint32 east = 2;
+  uint32 independent = 3;
+  uint32 civilian = 4;
+}
+
+message SideFriendly {
+  bool east_west = 1;
+  bool east_independent = 2;
+  bool west_independent = 3;
+}
+
+message Addon {
+  string name = 1;
+  string workshop_id = 2;
+}
+
+// ─── Entity definitions ───
+
+message SoldierDef {
+  uint32 id = 1;
+  string name = 2;
+  Side side = 3;
+  string group_name = 4;
+  string role = 5;
+  uint32 start_frame = 6;
+  uint32 end_frame = 7;
+  bool is_player = 8;
+  string class_name = 9;
+  string player_uid = 10;
+  repeated FiredFrame frames_fired = 11;
+}
+
+message VehicleDef {
+  uint32 id = 1;
+  string name = 2;
+  string vehicle_class = 3;   // ocapType: car, tank, heli, etc.
+  string class_name = 4;
+  uint32 start_frame = 5;
+  uint32 end_frame = 6;
+  string customization = 7;
+}
+
+message FiredFrame {
+  uint32 frame_num = 1;
+  Position3D start_pos = 2;
+  Position3D end_pos = 3;
+  string weapon = 4;
+  string magazine = 5;
+  string firing_mode = 6;
+}
+
+// ─── Events (typed) ───
+
+message Event {
+  uint32 frame_num = 1;
+  oneof event {
+    KillEvent kill = 10;
+    HitEvent hit = 11;
+    ProjectileEvent projectile = 12;
+    ChatEvent chat = 13;
+    RadioEvent radio = 14;
+    Ace3DeathEvent ace3_death = 15;
+    Ace3UnconsciousEvent ace3_unconscious = 16;
+    GeneralEvent general = 17;
+    ConnectEvent connect = 18;
+    EndMissionEvent end_mission = 19;
+    TelemetryEvent telemetry = 20;
+  }
+}
+
+message KillEvent {
+  uint32 victim_soldier_id = 1;
+  uint32 victim_vehicle_id = 2;
+  uint32 killer_soldier_id = 3;
+  uint32 killer_vehicle_id = 4;
+  string weapon_name = 5;
+  string weapon_magazine = 6;
+  string event_text = 7;
+  float distance = 8;
+  bool victim_is_vehicle = 9;
+  bool killer_is_vehicle = 10;
+}
+
+message HitEvent {
+  uint32 victim_soldier_id = 1;
+  uint32 victim_vehicle_id = 2;
+  uint32 shooter_soldier_id = 3;
+  uint32 shooter_vehicle_id = 4;
+  string weapon_name = 5;
+  string weapon_magazine = 6;
+  string event_text = 7;
+  float distance = 8;
+  bool victim_is_vehicle = 9;
+  bool shooter_is_vehicle = 10;
+}
+
+message ProjectileEvent {
+  uint32 firer_id = 1;
+  uint32 vehicle_id = 2;
+  string weapon = 3;        // WeaponDisplay
+  string magazine = 4;      // MagazineDisplay
+  string simulation_type = 5;
+  repeated TrajectoryPoint trajectory = 6;
+  repeated ProjectileHit hits = 7;
+  string muzzle = 8;        // MuzzleDisplay
+  string magazine_icon = 9; // MagazineIcon (Arma path for ammo icon)
+}
+
+message TrajectoryPoint {
+  Position3D position = 1;
+  uint32 frame_num = 2;
+}
+
+message ProjectileHit {
+  uint32 frame_num = 1;
+  Position3D position = 2;
+  uint32 soldier_id = 3;
+  uint32 vehicle_id = 4;
+  bool hit_soldier = 5;
+  bool hit_vehicle = 6;
+  repeated string components_hit = 7;
+}
+
+message ChatEvent {
+  uint32 soldier_id = 1;
+  string channel = 2;
+  string from_name = 3;
+  string message = 4;
+  string player_uid = 5;
+}
+
+message RadioEvent {
+  uint32 soldier_id = 1;
+  string radio = 2;
+  string radio_type = 3;
+  string start_end = 4;
+  int32 channel = 5;
+  bool is_additional = 6;
+  float frequency = 7;
+}
+
+message Ace3DeathEvent {
+  uint32 soldier_id = 1;
+  string reason = 2;
+  uint32 last_damage_source_id = 3;
+  bool has_damage_source = 4;
+}
+
+message Ace3UnconsciousEvent {
+  uint32 soldier_id = 1;
+  bool is_unconscious = 2;
+}
+
+message TelemetryEvent {
+  float fps_average = 1;
+  float fps_min = 2;
+  SideEntityCounts side_entity_counts = 3;
+  GlobalEntityCount global_counts = 4;
+  ScriptCounts scripts = 5;
+  WeatherData weather = 6;
+  repeated PlayerNetworkData players = 7;
+}
+
+message SideEntityCounts {
+  SideEntityCount east = 1;
+  SideEntityCount west = 2;
+  SideEntityCount independent = 3;
+  SideEntityCount civilian = 4;
+}
+
+message SideEntityCount {
+  EntityLocality local = 1;
+  EntityLocality remote = 2;
+}
+
+message EntityLocality {
+  uint32 units_total = 1;
+  uint32 units_alive = 2;
+  uint32 units_dead = 3;
+  uint32 groups = 4;
+  uint32 vehicles = 5;
+  uint32 weapon_holders = 6;
+}
+
+message GlobalEntityCount {
+  uint32 units_alive = 1;
+  uint32 units_dead = 2;
+  uint32 groups = 3;
+  uint32 vehicles = 4;
+  uint32 weapon_holders = 5;
+  uint32 players_alive = 6;
+  uint32 players_dead = 7;
+  uint32 players_connected = 8;
+}
+
+message ScriptCounts {
+  uint32 spawn = 1;
+  uint32 exec_vm = 2;
+  uint32 exec = 3;
+  uint32 exec_fsm = 4;
+  uint32 pfh = 5;
+}
+
+message WeatherData {
+  float fog = 1;
+  float overcast = 2;
+  float rain = 3;
+  float humidity = 4;
+  float waves = 5;
+  float wind_dir = 6;
+  float wind_str = 7;
+  float gusts = 8;
+  float lightnings = 9;
+  float moon_intensity = 10;
+  float moon_phase = 11;
+  float sun_or_moon = 12;
+}
+
+message PlayerNetworkData {
+  string uid = 1;
+  string name = 2;
+  float ping = 3;
+  float bw = 4;
+  float desync = 5;
+}
+
+message GeneralEvent {
+  string name = 1;
+  string message = 2;
+  // Populated for captured/contested/capturedFlag from core.GeneralEvent.ExtraData.
+  string object_type = 3;
+  string unit_name = 4;
+  string side = 5;
+}
+
+message ConnectEvent {
+  string unit_name = 1;
+  bool is_connect = 2;    // true = connected, false = disconnected
+}
+
+message EndMissionEvent {
+  string side = 1;
+  string message = 2;
+}
+
+// ─── Chunks (loaded on demand) ───
+
+message Chunk {
+  uint32 index = 1;
+  uint32 start_frame = 2;
+  uint32 frame_count = 3;
+  repeated Frame frames = 4;
+}
+
+message Frame {
+  uint32 frame_num = 1;
+  repeated SoldierState soldiers = 2;
+  repeated VehicleState vehicles = 3;
+}
+
+message SoldierState {
+  uint32 id = 1;
+  Position3D position = 2;
+  uint32 bearing = 3;
+  uint32 lifestate = 4;       // 0=dead, 1=alive, 2=unconscious
+  uint32 vehicle_id = 5;
+  bool in_vehicle = 6;
+  string name = 7;
+  bool is_player = 8;
+  string group_name = 9;
+  string side = 10;
+  string role = 11;
+  string vehicle_role = 12;
+  string stance = 13;
+  bool has_stable_vitals = 14;
+  bool is_dragged_carried = 15;
+  SoldierScores scores = 16;
+}
+
+message SoldierScores {
+  uint32 infantry_kills = 1;
+  uint32 vehicle_kills = 2;
+  uint32 armor_kills = 3;
+  uint32 air_kills = 4;
+  uint32 deaths = 5;
+  uint32 total_score = 6;
+}
+
+message VehicleState {
+  uint32 id = 1;
+  Position3D position = 2;
+  uint32 bearing = 3;
+  bool alive = 4;
+  repeated uint32 crew_ids = 5;
+  float fuel = 6;
+  float damage = 7;
+  bool locked = 8;
+  bool engine_on = 9;
+  string side = 10;
+  float turret_azimuth = 11;
+  float turret_elevation = 12;
+}
+
+// ─── Markers ───
+
+message MarkerDef {
+  string type = 1;
+  string text = 2;
+  uint32 start_frame = 3;
+  uint32 end_frame = 4;
+  int32 player_id = 5;
+  string color = 6;
+  Side side = 7;
+  repeated MarkerPosition positions = 8;
+  repeated float size = 9;
+  string shape = 10;
+  string brush = 11;
+}
+
+message MarkerPosition {
+  uint32 frame_num = 1;
+  Position3D position = 2;
+  float direction = 3;
+  float alpha = 4;
+  repeated float line_coords = 5;
+}
+
+message TimeSample {
+  uint32 frame_num = 1;
+  string system_time_utc = 2;
+  string date = 3;
+  float time_multiplier = 4;
+  float time = 5;
+}

@@ -1,3 +1,5 @@
+github.com/OCAP2/extension/v5 v5.0.0-alpha.1.0.20260216221044-4932fc4f0a04 h1:D+cP4mCigM7dCgPwcS+YcJPbE/tH2BqB6+85N9WbcIs=
+github.com/OCAP2/extension/v5 v5.0.0-alpha.1.0.20260216221044-4932fc4f0a04/go.mod h1:vhxiM92vYBjJ/J6zrwbYDiaPrUNwMRyWZ05duCGjHXg=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dlclark/regexp2 v1.11.0 h1:G/nrcoOa7ZXlpoa/91N3X7mM3r8eIlMBBJZvsz/mxKI=

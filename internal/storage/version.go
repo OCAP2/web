@@ -8,7 +8,8 @@ type SchemaVersion uint32
 const (
 	SchemaVersionUnknown SchemaVersion = 0
 	SchemaVersionV1      SchemaVersion = 1
-	CurrentSchemaVersion               = SchemaVersionV1
+	SchemaVersionV2      SchemaVersion = 2
+	CurrentSchemaVersion               = SchemaVersionV2
 )
 
 func (v SchemaVersion) String() string {
