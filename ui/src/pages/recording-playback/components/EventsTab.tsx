@@ -219,6 +219,7 @@ export function EventsTab(): JSX.Element {
                           <span style={{ color: sideColor(event.side) }}>
                             {event.side}
                           </span>
+                          {" "}
                           <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
                         </span>
                         <span class={styles.eventMeta}>
