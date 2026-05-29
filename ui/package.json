@@ -23,7 +23,7 @@
     "leaflet-rotatedmarker": "^0.2.0",
     "maplibre-gl": "^5.24.0",
     "pmtiles": "^4.4.1",
-    "solid-js": "^1.9.12"
+    "solid-js": "^1.9.13"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
