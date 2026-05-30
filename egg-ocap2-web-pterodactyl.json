@@ -100,7 +100,7 @@
     },
     {
       "name": "Allowed Steam IDs",
-      "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID. Leave empty to disable Steam admin login.",
+      "description": "Comma-separated list of Steam64 IDs authorized for admin login via Steam OpenID, e.g. 76561198012345678,76561198087654321 (no brackets, no quotes). Leave empty to disable Steam admin login.",
       "env_variable": "OCAP_AUTH_ADMINSTEAMIDS",
       "default_value": "",
       "user_viewable": true,
