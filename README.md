@@ -47,6 +47,8 @@ Docker images are available for `linux/amd64` and `linux/arm64` architectures in
 
 The **full** variant includes all tools needed for the Map Manager — an admin page that processes Arma 3 map data (grad_meh exports) into PMTiles and MapLibre styles directly from the web UI. The server auto-detects the available tools at startup; no extra configuration is needed.
 
+> Running the standalone binary instead of the full image? You can install the map toolchain (GDAL, tippecanoe, pmtiles) yourself — see [docs/map-tools-installation.md](docs/map-tools-installation.md) for per-platform instructions.
+
 ```bash
 # Slim — just the web server
 docker run --name ocap-web -d \
