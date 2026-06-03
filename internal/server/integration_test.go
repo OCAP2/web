@@ -435,6 +435,138 @@ func TestIntegration_UploadAndServeGzippedJSON(t *testing.T) {
 	})
 }
 
+// uploadJSONRecording builds and executes a multipart upload of a gzipped JSON
+// recording with the given filename via StoreOperation.
+func uploadJSONRecording(t *testing.T, hdlr *Handler, filename, missionName string) *httptest.ResponseRecorder {
+	t.Helper()
+	recording := map[string]interface{}{
+		"worldName":   "altis",
+		"missionName": missionName,
+		"endFrame":    5,
+		"entities":    []interface{}{},
+		"events":      []interface{}{},
+	}
+	var gzBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzBuf)
+	require.NoError(t, json.NewEncoder(gw).Encode(recording))
+	require.NoError(t, gw.Close())
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", filename)
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", missionName)
+	writer.WriteField("missionDuration", "300")
+	part, err := writer.CreateFormFile("file", filename+".json.gz")
+	require.NoError(t, err)
+	_, err = io.Copy(part, &gzBuf)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	hdlr.StoreOperation(rec, req)
+	return rec
+}
+
+// TestIntegration_UploadSameFilenameReplaces verifies that re-uploading a
+// recording with an existing filename replaces the old one instead of creating
+// a duplicate row that shares (and corrupts) the same on-disk files. It also
+// asserts the stale protobuf directory from a prior conversion is removed.
+func TestIntegration_UploadSameFilenameReplaces(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(dbPath)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := &Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	const filename = "shared_name"
+
+	// First upload.
+	require.Equal(t, http.StatusOK, uploadJSONRecording(t, hdlr, filename, "First").Code)
+
+	// Simulate a prior conversion having produced a protobuf directory with a
+	// stale chunk that must not survive the replacement.
+	chunksDir := filepath.Join(dataDir, filename, "chunks")
+	require.NoError(t, os.MkdirAll(chunksDir, 0755))
+	staleChunk := filepath.Join(chunksDir, "0099.pb")
+	require.NoError(t, os.WriteFile(staleChunk, []byte("stale"), 0644))
+
+	// Second upload with the SAME filename.
+	require.Equal(t, http.StatusOK, uploadJSONRecording(t, hdlr, filename, "Second").Code)
+
+	ctx := context.Background()
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	require.Len(t, ops, 1, "re-upload must replace, not duplicate")
+	assert.Equal(t, "Second", ops[0].MissionName)
+
+	// The stale protobuf directory must have been removed by the replacement.
+	_, err = os.Stat(staleChunk)
+	assert.True(t, os.IsNotExist(err), "stale protobuf chunk must be removed on replace")
+}
+
+// TestIntegration_FailedReuploadPreservesExisting verifies that a re-upload
+// which fails (here: the multipart "file" part is omitted) does NOT destroy the
+// existing recording. Replacement must not delete the old row/files until the
+// new upload is safely written.
+func TestIntegration_FailedReuploadPreservesExisting(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(dbPath)
+	require.NoError(t, err)
+	defer repo.db.Close()
+
+	hdlr := &Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	const filename = "keep_me"
+
+	// First, a valid upload that succeeds.
+	require.Equal(t, http.StatusOK, uploadJSONRecording(t, hdlr, filename, "Original").Code)
+	jsonGzPath := filepath.Join(dataDir, filename+".json.gz")
+	require.FileExists(t, jsonGzPath)
+
+	// Now re-upload the SAME filename but omit the "file" part → must fail.
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	writer.WriteField("secret", "test-secret")
+	writer.WriteField("filename", filename)
+	writer.WriteField("worldName", "altis")
+	writer.WriteField("missionName", "Botched")
+	writer.WriteField("missionDuration", "300")
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	hdlr.StoreOperation(rec, req)
+	require.NotEqual(t, http.StatusOK, rec.Code, "upload without a file part must fail")
+
+	// The original recording must still exist — both the DB row and its file.
+	ctx := context.Background()
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	require.Len(t, ops, 1, "original recording must survive a botched re-upload")
+	assert.Equal(t, "Original", ops[0].MissionName)
+	assert.FileExists(t, jsonGzPath, "original data file must survive a botched re-upload")
+}
+
 // TestIntegration_UploadAndServeRawJSON tests uploading a raw (non-gzipped) JSON file.
 // StoreOperation detects the missing gzip header and compresses it before saving as .json.gz.
 // GetData then serves it with Content-Encoding: gzip and the browser can decompress it.

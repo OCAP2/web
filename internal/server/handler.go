@@ -420,11 +420,10 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.repoOperation.Store(ctx, &op); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	// Write the new recording file BEFORE mutating any existing state. A
+	// malformed or failed upload (missing file part, disk error) must never
+	// destroy the recording it would replace. The .json.gz path is keyed by
+	// filename, so os.Create overwrites any previous source file in place.
 	form, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -463,6 +462,24 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	// Replace semantics: the new file is now safely on disk. Store the row,
+	// atomically dropping any previous recording with the same filename (the
+	// filename is the unique on-disk storage key). Doing this only after a
+	// successful write — and atomically — ensures a malformed or failed upload
+	// can never destroy the recording it would replace.
+	if err = h.repoOperation.StoreReplacingByFilename(ctx, &op); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Remove any stale protobuf directory from a previous conversion of this
+	// filename (a no-op for a brand-new upload). The new .json.gz was written
+	// above; conversion, if enabled, rebuilds the directory from it.
+	pbDir := filepath.Join(h.setting.Data, filename)
+	if err := os.RemoveAll(pbDir); err != nil {
+		slog.Warn("failed to remove stale protobuf directory", "path", pbDir, "error", err)
 	}
 
 	// Trigger conversion immediately if enabled (async, non-blocking).

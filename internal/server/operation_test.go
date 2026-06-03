@@ -86,6 +86,87 @@ func TestMigrationV5NormalizeFilenames(t *testing.T) {
 	assert.True(t, filenames["mission_clean"])
 }
 
+// pre-v13 schema with all columns added by migrations 1-12, used to seed a
+// database that predates the filename uniqueness constraint.
+const preV13Schema = `
+	CREATE TABLE version (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, db INTEGER);
+	CREATE TABLE operations (
+		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		world_name TEXT NOT NULL, mission_name TEXT NOT NULL, mission_duration INTEGER NOT NULL,
+		filename TEXT NOT NULL, date TEXT NOT NULL, tag TEXT NOT NULL DEFAULT '',
+		storage_format TEXT DEFAULT 'json', conversion_status TEXT DEFAULT 'completed',
+		schema_version INTEGER DEFAULT 1, chunk_count INTEGER DEFAULT 0,
+		player_count INTEGER DEFAULT 0, kill_count INTEGER DEFAULT 0,
+		side_composition TEXT DEFAULT '{}', player_kill_count INTEGER DEFAULT 0,
+		focus_start INTEGER DEFAULT NULL, focus_end INTEGER DEFAULT NULL
+	);
+	CREATE TABLE marker_blacklist (
+		operation_id INTEGER NOT NULL, player_entity_id INTEGER NOT NULL,
+		PRIMARY KEY (operation_id, player_entity_id)
+	);
+	CREATE TABLE steam_allowlist (steam_id TEXT NOT NULL PRIMARY KEY);
+	INSERT INTO version (db) VALUES (12);
+`
+
+// TestMigrationV13DedupeFilenames verifies that migration 13 removes
+// duplicate-filename rows (keeping the newest) and enforces uniqueness, so
+// installs that already accumulated duplicates (the root cause of the
+// shared-file corruption bug) are repaired and prevented going forward.
+func TestMigrationV13DedupeFilenames(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	db, err := sql.Open("sqlite3", pathDB)
+	require.NoError(t, err)
+	_, err = db.Exec(preV13Schema)
+	require.NoError(t, err)
+	// Two rows sharing a filename (the bug), plus a unique one.
+	_, err = db.Exec(`
+		INSERT INTO operations (id, world_name, mission_name, mission_duration, filename, date)
+			VALUES (1, 'altis', 'Old', 3600, 'dup_mission', '2026-01-01');
+		INSERT INTO operations (id, world_name, mission_name, mission_duration, filename, date)
+			VALUES (2, 'altis', 'New', 3600, 'dup_mission', '2026-01-02');
+		INSERT INTO operations (id, world_name, mission_name, mission_duration, filename, date)
+			VALUES (3, 'altis', 'Solo', 3600, 'solo_mission', '2026-01-03');
+		INSERT INTO marker_blacklist (operation_id, player_entity_id) VALUES (1, 42);
+		INSERT INTO marker_blacklist (operation_id, player_entity_id) VALUES (2, 99);
+	`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	// Run migrations (including v13).
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	ctx := context.Background()
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+
+	// One row per filename; the newest (id=2, "New") survives the dedupe.
+	require.Len(t, ops, 2)
+	byName := map[string]Operation{}
+	for _, op := range ops {
+		byName[op.Filename] = op
+	}
+	require.Contains(t, byName, "dup_mission")
+	assert.Equal(t, "New", byName["dup_mission"].MissionName)
+	assert.EqualValues(t, 2, byName["dup_mission"].ID)
+	require.Contains(t, byName, "solo_mission")
+
+	// Blacklist entries for the dropped row are gone; the survivor's remain.
+	var orphans int
+	require.NoError(t, repo.db.QueryRow(
+		`SELECT COUNT(*) FROM marker_blacklist WHERE operation_id NOT IN (SELECT id FROM operations)`).Scan(&orphans))
+	assert.Equal(t, 0, orphans, "orphaned blacklist entries must be cleaned")
+
+	// Uniqueness is now enforced: a raw insert of an existing filename fails.
+	_, err = repo.db.Exec(
+		`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date)
+			VALUES ('altis', 'Dupe', 3600, 'solo_mission', '2026-01-05')`)
+	require.Error(t, err, "duplicate filename insert must be rejected by unique index")
+}
+
 func TestOperationStorageFormat(t *testing.T) {
 	dir := t.TempDir()
 	pathDB := filepath.Join(dir, "test.db")
@@ -438,7 +519,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 12, version)
+	assert.Equal(t, 13, version)
 }
 
 func TestMigrationV10NormalizeWorldName(t *testing.T) {
@@ -448,11 +529,12 @@ func TestMigrationV10NormalizeWorldName(t *testing.T) {
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
 
-	// Insert rows with mixed-case world names directly (bypassing Store normalization)
-	for _, wn := range []string{"Altis", "altis", "ENOCH", "enoch", "Cup_Chernarus_A3"} {
+	// Insert rows with mixed-case world names directly (bypassing Store normalization).
+	// Filenames must be distinct (filename is unique as of migration 13).
+	for i, wn := range []string{"Altis", "altis", "ENOCH", "enoch", "Cup_Chernarus_A3"} {
 		_, err = repo.db.Exec(
-			`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES (?, 'test', 100, 'f', '2026-01-01', '')`,
-			wn)
+			`INSERT INTO operations (world_name, mission_name, mission_duration, filename, date, tag) VALUES (?, 'test', 100, ?, '2026-01-01', '')`,
+			wn, fmt.Sprintf("f%d", i))
 		require.NoError(t, err)
 	}
 	require.NoError(t, repo.db.Close())
@@ -545,7 +627,7 @@ func TestMigrationV11DecodeFilenames(t *testing.T) {
 	// Version recorded.
 	var version int
 	require.NoError(t, repo2.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version))
-	assert.Equal(t, 12, version)
+	assert.Equal(t, 13, version)
 }
 
 func TestDecodeFilename(t *testing.T) {
@@ -850,7 +932,7 @@ func TestMigrationV11_DBCollisionSkipped(t *testing.T) {
 	// Version still bumped.
 	var version int
 	require.NoError(t, repo2.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version))
-	assert.Equal(t, 12, version)
+	assert.Equal(t, 13, version)
 }
 
 func TestMigrationV11_FilesystemCollisionSkipped(t *testing.T) {

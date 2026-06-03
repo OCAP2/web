@@ -206,16 +206,23 @@ func (h *Handler) DeleteOperation(c ContextNoBody) (any, error) {
 	}
 
 	// Clean up files (best-effort, don't fail the request)
-	jsonGzPath := filepath.Join(h.setting.Data, op.Filename+".json.gz")
+	removeRecordingArtifacts(h.setting.Data, op.Filename)
+
+	c.SetStatus(http.StatusNoContent)
+	return nil, nil
+}
+
+// removeRecordingArtifacts removes a recording's on-disk data: the
+// `<filename>.json.gz` source file and the `<filename>/` protobuf directory.
+// Missing paths are not errors; failures are logged and ignored (best-effort).
+func removeRecordingArtifacts(dataDir, filename string) {
+	jsonGzPath := filepath.Join(dataDir, filename+".json.gz")
 	if err := os.Remove(jsonGzPath); err != nil && !os.IsNotExist(err) {
 		slog.Warn("failed to remove file", "path", jsonGzPath, "error", err)
 	}
 
-	pbDir := filepath.Join(h.setting.Data, op.Filename)
+	pbDir := filepath.Join(dataDir, filename)
 	if err := os.RemoveAll(pbDir); err != nil {
 		slog.Warn("failed to remove directory", "path", pbDir, "error", err)
 	}
-
-	c.SetStatus(http.StatusNoContent)
-	return nil, nil
 }
