@@ -304,6 +304,33 @@ func TestStoreOperation(t *testing.T) {
 		assert.Equal(t, time.Now().Format("2006-01-02"), op.Date)
 	})
 
+	t.Run("rejects malformed date", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		require.NoError(t, writer.WriteField("secret", "test-secret"))
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Bad Date Mission"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "baddate_upload"))
+		require.NoError(t, writer.WriteField("date", "not-a-date"))
+
+		fileWriter, err := writer.CreateFormFile("file", "baddate_upload.json.gz")
+		require.NoError(t, err)
+		gw := gzip.NewWriter(fileWriter)
+		_, err = gw.Write([]byte(`{"test": "data"}`))
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
 	t.Run("wrong secret", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)

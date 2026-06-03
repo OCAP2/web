@@ -318,6 +318,16 @@ func (*Handler) GetHealthcheck(c ContextNoBody) (HealthResponse, error) {
 	return HealthResponse{Status: "ok"}, nil
 }
 
+// isValidOperationDate reports whether s is an acceptable operation date:
+// either a plain calendar date (YYYY-MM-DD) or a full RFC3339 timestamp.
+func isValidOperationDate(s string) bool {
+	if _, err := time.Parse("2006-01-02", s); err == nil {
+		return true
+	}
+	_, err := time.Parse(time.RFC3339, s)
+	return err == nil
+}
+
 func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	var (
 		ctx    = r.Context()
@@ -359,9 +369,14 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 
 	// Honor a client-supplied date (admin UI upload). The Arma addon does not
 	// send one, so fall back to the current date to preserve its behavior.
+	// Accept either a plain date (YYYY-MM-DD) or an RFC3339 timestamp (the
+	// admin UI sends the latter) and reject anything else to keep the column clean.
 	date := r.FormValue("date")
 	if date == "" {
 		date = time.Now().Format("2006-01-02")
+	} else if !isValidOperationDate(date) {
+		http.Error(w, "Invalid date format", http.StatusBadRequest)
+		return
 	}
 
 	op := Operation{
