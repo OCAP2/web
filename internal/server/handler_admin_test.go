@@ -855,3 +855,31 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	_, err = os.Stat(jsonGzPath)
 	assert.NoError(t, err, "json.gz should still exist")
 }
+
+func TestRemoveRecordingArtifacts(t *testing.T) {
+	t.Run("removes json and protobuf dir", func(t *testing.T) {
+		dataDir := t.TempDir()
+		jsonGz := filepath.Join(dataDir, "rec.json.gz")
+		require.NoError(t, os.WriteFile(jsonGz, []byte("data"), 0644))
+		pbDir := filepath.Join(dataDir, "rec")
+		require.NoError(t, os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755))
+
+		removeRecordingArtifacts(dataDir, "rec")
+
+		assert.NoFileExists(t, jsonGz)
+		assert.NoDirExists(t, pbDir)
+	})
+
+	t.Run("refuses unsafe filenames and leaves data dir intact", func(t *testing.T) {
+		for _, name := range []string{"", ".", "..", "/"} {
+			dataDir := t.TempDir()
+			canary := filepath.Join(dataDir, "canary.txt")
+			require.NoError(t, os.WriteFile(canary, []byte("keep"), 0644))
+
+			removeRecordingArtifacts(dataDir, name)
+
+			assert.FileExists(t, canary, "data dir must survive removeRecordingArtifacts(%q)", name)
+			assert.DirExists(t, dataDir)
+		}
+	})
+}

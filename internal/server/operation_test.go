@@ -1613,3 +1613,42 @@ func TestUnmarshalSideComposition(t *testing.T) {
 		assert.Nil(t, unmarshalSideComposition("not json"))
 	})
 }
+
+func TestStoreReplacingByFilename(t *testing.T) {
+	dir := t.TempDir()
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	ctx := context.Background()
+
+	// Existing recording with a blacklist entry.
+	old := &Operation{WorldName: "altis", MissionName: "Old", MissionDuration: 100, Filename: "dup", Date: "2026-01-01"}
+	require.NoError(t, repo.Store(ctx, old))
+	require.NoError(t, repo.AddBlacklist(ctx, old.ID, 7))
+
+	// Replace it.
+	fresh := &Operation{WorldName: "altis", MissionName: "New", MissionDuration: 200, Filename: "dup", Date: "2026-01-02"}
+	require.NoError(t, repo.StoreReplacingByFilename(ctx, fresh))
+
+	// Exactly one row for the filename, and it is the new one with a new ID.
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	require.Len(t, ops, 1)
+	assert.Equal(t, "New", ops[0].MissionName)
+	assert.NotEqual(t, old.ID, fresh.ID)
+	assert.Equal(t, fresh.ID, ops[0].ID)
+
+	// The replaced recording's blacklist entries were cascaded away.
+	var orphans int
+	require.NoError(t, repo.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM marker_blacklist WHERE operation_id = ?`, old.ID).Scan(&orphans))
+	assert.Equal(t, 0, orphans)
+
+	// Replacing a never-before-seen filename is just an insert.
+	other := &Operation{WorldName: "altis", MissionName: "Solo", MissionDuration: 50, Filename: "solo", Date: "2026-01-03"}
+	require.NoError(t, repo.StoreReplacingByFilename(ctx, other))
+	ops, err = repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	assert.Len(t, ops, 2)
+}

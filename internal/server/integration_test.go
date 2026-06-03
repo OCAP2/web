@@ -567,6 +567,36 @@ func TestIntegration_FailedReuploadPreservesExisting(t *testing.T) {
 	assert.FileExists(t, jsonGzPath, "original data file must survive a botched re-upload")
 }
 
+// TestIntegration_UploadWriteFailureLeavesNoRow verifies that when the upload
+// file cannot be written (here: a read-only data directory), the request fails
+// and no operation row is created — the file is written before any DB mutation.
+func TestIntegration_UploadWriteFailureLeavesNoRow(t *testing.T) {
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "data")
+	require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	hdlr := &Handler{
+		repoOperation: repo,
+		setting:       Setting{Data: dataDir, Secret: "test-secret"},
+	}
+
+	// Make the data directory read-only so the temp file cannot be created.
+	require.NoError(t, os.Chmod(dataDir, 0555))
+	defer func() { assert.NoError(t, os.Chmod(dataDir, 0755)) }()
+
+	rec := uploadJSONRecording(t, hdlr, "write_fail", "Write Fail")
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	ctx := context.Background()
+	ops, err := repo.Select(ctx, Filter{Older: "2099-12-31", Newer: "2000-01-01"})
+	require.NoError(t, err)
+	assert.Empty(t, ops, "a failed write must not create a DB row")
+}
+
 // TestIntegration_UploadRejectsUnsafeFilename verifies that a filename which
 // would resolve to the data directory itself (e.g. empty or ".") is rejected,
 // rather than letting the stale-directory cleanup os.RemoveAll the whole data
