@@ -357,11 +357,18 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	// directories. Mirror the cleanup performed by migration v11.
 	filename = decodeFilename(filename)
 
+	// Honor a client-supplied date (admin UI upload). The Arma addon does not
+	// send one, so fall back to the current date to preserve its behavior.
+	date := r.FormValue("date")
+	if date == "" {
+		date = time.Now().Format("2006-01-02")
+	}
+
 	op := Operation{
 		WorldName:   r.FormValue("worldName"),
 		MissionName: r.FormValue("missionName"),
 		Filename:    filename,
-		Date:        time.Now().Format("2006-01-02"),
+		Date:        date,
 		// Support old extension version tag or type
 		Tag: r.FormValue("tag") + r.FormValue("type"),
 	}
