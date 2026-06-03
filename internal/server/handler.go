@@ -367,9 +367,6 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	// directories. Mirror the cleanup performed by migration v11.
 	filename = decodeFilename(filename)
 
-	// Reject names that would resolve to the data directory or its parent — the
-	// filename is used directly in filepath.Join for both file writes and
-	// os.RemoveAll, so an empty/"."/".."/separator name could wipe the data dir.
 	if isInvalidStorageName(filename) {
 		http.Error(w, "Invalid filename", http.StatusBadRequest)
 		return
@@ -428,11 +425,8 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write the new recording file BEFORE mutating any existing state, and write
-	// it to a temp file first. A malformed or interrupted upload (missing file
-	// part, disconnect mid-stream, disk error) must never truncate or destroy
-	// the recording it would replace — only the temp file is at risk until the
-	// upload fully succeeds.
+	// Write to a temp file first so a malformed or interrupted upload can never
+	// truncate the recording it would replace.
 	form, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -457,9 +451,7 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stream the upload into the temp file, gzipping on the fly if needed.
-	// Close the file before renaming so the data is flushed and the rename is
-	// valid on all platforms.
+	// Close before renaming: flushes the data, and Windows can't rename an open file.
 	writeErr := func() error {
 		defer tmpFile.Close()
 		if isGzipped {
@@ -478,25 +470,19 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Atomically swap the new file into place. Only now is the previous file
-	// replaced; if anything above failed, the original is untouched.
 	if err := os.Rename(tmpPath, finalPath); err != nil {
 		os.Remove(tmpPath)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Replace semantics: the new file is now in place. Store the row, atomically
-	// dropping any previous recording with the same filename (the filename is
-	// the unique on-disk storage key).
 	if err = h.repoOperation.StoreReplacingByFilename(ctx, &op); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Remove any stale protobuf directory from a previous conversion of this
-	// filename (a no-op for a brand-new upload). The new .json.gz was written
-	// above; conversion, if enabled, rebuilds the directory from it.
+	// Drop the stale protobuf directory from any previous conversion of this
+	// filename; conversion, if enabled, rebuilds it.
 	pbDir := filepath.Join(h.setting.Data, filename)
 	if err := os.RemoveAll(pbDir); err != nil {
 		slog.Warn("failed to remove stale protobuf directory", "path", pbDir, "error", err)

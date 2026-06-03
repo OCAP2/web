@@ -261,14 +261,10 @@ func (r *RepoOperation) migration() (err error) {
 	}
 
 	if version < 13 {
-		// The filename is the on-disk storage key (`<filename>.json.gz` and the
-		// `<filename>/` protobuf directory), but historically nothing enforced
-		// its uniqueness. Duplicate rows therefore shared — and corrupted — the
-		// same files: uploads overwrote them, conversions merged into them, and
-		// deleting one row removed files still referenced by its twin. Drop the
-		// older duplicate(s), keeping the newest row per filename (they all point
-		// at the same shared files, so no on-disk data is lost), clean up any
-		// now-orphaned blacklist entries, then enforce uniqueness going forward.
+		// filename is the on-disk storage key but was never unique; duplicate
+		// rows shared and corrupted each other's files. Keep the newest row per
+		// filename (duplicates point at the same files, so nothing is lost), drop
+		// orphaned blacklist rows, then enforce uniqueness from here on.
 		if err = r.runMigration(13,
 			`DELETE FROM operations WHERE id NOT IN (SELECT MAX(id) FROM operations GROUP BY filename)`,
 			`DELETE FROM marker_blacklist WHERE operation_id NOT IN (SELECT id FROM operations)`,
