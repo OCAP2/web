@@ -367,6 +367,14 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	// directories. Mirror the cleanup performed by migration v11.
 	filename = decodeFilename(filename)
 
+	// Reject names that would resolve to the data directory or its parent — the
+	// filename is used directly in filepath.Join for both file writes and
+	// os.RemoveAll, so an empty/"."/".."/separator name could wipe the data dir.
+	if isInvalidStorageName(filename) {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
 	// Honor a client-supplied date (admin UI upload). The Arma addon does not
 	// send one, so fall back to the current date to preserve its behavior.
 	// Accept either a plain date (YYYY-MM-DD) or an RFC3339 timestamp (the
@@ -420,10 +428,11 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write the new recording file BEFORE mutating any existing state. A
-	// malformed or failed upload (missing file part, disk error) must never
-	// destroy the recording it would replace. The .json.gz path is keyed by
-	// filename, so os.Create overwrites any previous source file in place.
+	// Write the new recording file BEFORE mutating any existing state, and write
+	// it to a temp file first. A malformed or interrupted upload (missing file
+	// part, disconnect mid-stream, disk error) must never truncate or destroy
+	// the recording it would replace — only the temp file is at risk until the
+	// upload fully succeeds.
 	form, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -440,35 +449,46 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	}
 	isGzipped := header[0] == 0x1f && header[1] == 0x8b
 
-	outFile, err := os.Create(filepath.Join(h.setting.Data, filename+".json.gz"))
+	finalPath := filepath.Join(h.setting.Data, filename+".json.gz")
+	tmpPath := finalPath + ".tmp"
+	tmpFile, err := os.Create(tmpPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer outFile.Close()
 
-	if isGzipped {
-		if _, err = io.Copy(outFile, br); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	// Stream the upload into the temp file, gzipping on the fly if needed.
+	// Close the file before renaming so the data is flushed and the rename is
+	// valid on all platforms.
+	writeErr := func() error {
+		defer tmpFile.Close()
+		if isGzipped {
+			_, err := io.Copy(tmpFile, br)
+			return err
 		}
-	} else {
-		gw := gzip.NewWriter(outFile)
-		if _, err = io.Copy(gw, br); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		gw := gzip.NewWriter(tmpFile)
+		if _, err := io.Copy(gw, br); err != nil {
+			return err
 		}
-		if err = gw.Close(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		return gw.Close()
+	}()
+	if writeErr != nil {
+		os.Remove(tmpPath)
+		http.Error(w, writeErr.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// Replace semantics: the new file is now safely on disk. Store the row,
-	// atomically dropping any previous recording with the same filename (the
-	// filename is the unique on-disk storage key). Doing this only after a
-	// successful write — and atomically — ensures a malformed or failed upload
-	// can never destroy the recording it would replace.
+	// Atomically swap the new file into place. Only now is the previous file
+	// replaced; if anything above failed, the original is untouched.
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		os.Remove(tmpPath)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Replace semantics: the new file is now in place. Store the row, atomically
+	// dropping any previous recording with the same filename (the filename is
+	// the unique on-disk storage key).
 	if err = h.repoOperation.StoreReplacingByFilename(ctx, &op); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -483,7 +483,7 @@ func TestIntegration_UploadSameFilenameReplaces(t *testing.T) {
 
 	repo, err := NewRepoOperation(dbPath)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := &Handler{
 		repoOperation: repo,
@@ -528,7 +528,7 @@ func TestIntegration_FailedReuploadPreservesExisting(t *testing.T) {
 
 	repo, err := NewRepoOperation(dbPath)
 	require.NoError(t, err)
-	defer repo.db.Close()
+	defer func() { assert.NoError(t, repo.db.Close()) }()
 
 	hdlr := &Handler{
 		repoOperation: repo,
@@ -565,6 +565,38 @@ func TestIntegration_FailedReuploadPreservesExisting(t *testing.T) {
 	require.Len(t, ops, 1, "original recording must survive a botched re-upload")
 	assert.Equal(t, "Original", ops[0].MissionName)
 	assert.FileExists(t, jsonGzPath, "original data file must survive a botched re-upload")
+}
+
+// TestIntegration_UploadRejectsUnsafeFilename verifies that a filename which
+// would resolve to the data directory itself (e.g. empty or ".") is rejected,
+// rather than letting the stale-directory cleanup os.RemoveAll the whole data
+// dir. A marker file in the data dir must survive a rejected upload.
+func TestIntegration_UploadRejectsUnsafeFilename(t *testing.T) {
+	for _, name := range []string{"", ".", "..", "/"} {
+		t.Run("name="+name, func(t *testing.T) {
+			dir := t.TempDir()
+			dbPath := filepath.Join(dir, "test.db")
+			dataDir := filepath.Join(dir, "data")
+			require.NoError(t, os.MkdirAll(dataDir, 0755))
+
+			repo, err := NewRepoOperation(dbPath)
+			require.NoError(t, err)
+			defer func() { assert.NoError(t, repo.db.Close()) }()
+
+			hdlr := &Handler{
+				repoOperation: repo,
+				setting:       Setting{Data: dataDir, Secret: "test-secret"},
+			}
+
+			// A pre-existing file in the data directory that must not be wiped.
+			canary := filepath.Join(dataDir, "canary.txt")
+			require.NoError(t, os.WriteFile(canary, []byte("keep"), 0644))
+
+			rec := uploadJSONRecording(t, hdlr, name, "Bad Name")
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.FileExists(t, canary, "data directory must survive a rejected upload")
+		})
+	}
 }
 
 // TestIntegration_UploadAndServeRawJSON tests uploading a raw (non-gzipped) JSON file.

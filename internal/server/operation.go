@@ -281,6 +281,17 @@ func (r *RepoOperation) migration() (err error) {
 	return nil
 }
 
+// isInvalidStorageName reports whether name is unsafe to use as a recording's
+// on-disk storage key. Names like "", ".", ".." or any containing a path
+// separator make filepath.Join(dataDir, name) resolve to the data directory
+// itself or its parent — catastrophic for os.RemoveAll. Such names must be
+// rejected before any file operation keyed on the filename.
+func isInvalidStorageName(name string) bool {
+	return strings.TrimSpace(name) == "" ||
+		name == "." || name == ".." ||
+		strings.ContainsAny(name, `/\`)
+}
+
 // decodeFilename returns the URL-decoded form of name if it contains percent
 // escapes that decode to a different string; otherwise it returns name
 // unchanged. It is used both by the upload handler (to sanitize incoming
@@ -517,6 +528,13 @@ func (r *RepoOperation) StoreReplacingByFilename(ctx context.Context, operation 
 	}
 	defer tx.Rollback()
 
+	// Drop the replaced recording's marker blacklist entries too — they are keyed
+	// by operation_id with no cascade, so they would otherwise orphan.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM marker_blacklist WHERE operation_id IN (SELECT id FROM operations WHERE filename = ?)`,
+		operation.Filename); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM operations WHERE filename = ?`, operation.Filename); err != nil {
 		return err
 	}

@@ -216,6 +216,13 @@ func (h *Handler) DeleteOperation(c ContextNoBody) (any, error) {
 // `<filename>.json.gz` source file and the `<filename>/` protobuf directory.
 // Missing paths are not errors; failures are logged and ignored (best-effort).
 func removeRecordingArtifacts(dataDir, filename string) {
+	// Defense in depth: never let an empty/"."/".."/separator filename turn the
+	// RemoveAll below into a wipe of the entire data directory.
+	if isInvalidStorageName(filename) {
+		slog.Warn("refusing to remove recording artifacts for invalid filename", "filename", filename)
+		return
+	}
+
 	jsonGzPath := filepath.Join(dataDir, filename+".json.gz")
 	if err := os.Remove(jsonGzPath); err != nil && !os.IsNotExist(err) {
 		slog.Warn("failed to remove file", "path", jsonGzPath, "error", err)
