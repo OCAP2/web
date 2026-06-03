@@ -39,6 +39,16 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 	}
 	defer reader.Close()
 
+	// Remove any output from a previous conversion before recreating the
+	// directory. Otherwise a re-conversion (e.g. a re-uploaded recording that
+	// reuses a filename, or a retried failed conversion) merges new chunks into
+	// the stale directory, leaving orphaned high-index chunks that corrupt
+	// playback. outputPath is the `<filename>/` directory, distinct from the
+	// `<filename>.json.gz` source, so the input is never touched.
+	if err := os.RemoveAll(outputPath); err != nil {
+		return fmt.Errorf("clean output directory: %w", err)
+	}
+
 	// Create output directory
 	if err := os.MkdirAll(outputPath, 0755); err != nil {
 		return fmt.Errorf("create output directory: %w", err)

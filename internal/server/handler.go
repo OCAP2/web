@@ -367,6 +367,11 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	// directories. Mirror the cleanup performed by migration v11.
 	filename = decodeFilename(filename)
 
+	if isInvalidStorageName(filename) {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
 	// Honor a client-supplied date (admin UI upload). The Arma addon does not
 	// send one, so fall back to the current date to preserve its behavior.
 	// Accept either a plain date (YYYY-MM-DD) or an RFC3339 timestamp (the
@@ -420,11 +425,8 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.repoOperation.Store(ctx, &op); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	// Write to a temp file first so a malformed or interrupted upload can never
+	// truncate the recording it would replace.
 	form, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -441,28 +443,49 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 	}
 	isGzipped := header[0] == 0x1f && header[1] == 0x8b
 
-	outFile, err := os.Create(filepath.Join(h.setting.Data, filename+".json.gz"))
+	finalPath := filepath.Join(h.setting.Data, filename+".json.gz")
+	tmpPath := finalPath + ".tmp"
+	tmpFile, err := os.Create(tmpPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer outFile.Close()
 
-	if isGzipped {
-		if _, err = io.Copy(outFile, br); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	// Close before renaming: flushes the data, and Windows can't rename an open file.
+	writeErr := func() error {
+		defer tmpFile.Close()
+		if isGzipped {
+			_, err := io.Copy(tmpFile, br)
+			return err
 		}
-	} else {
-		gw := gzip.NewWriter(outFile)
-		if _, err = io.Copy(gw, br); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		gw := gzip.NewWriter(tmpFile)
+		if _, err := io.Copy(gw, br); err != nil {
+			return err
 		}
-		if err = gw.Close(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		return gw.Close()
+	}()
+	if writeErr != nil {
+		os.Remove(tmpPath)
+		http.Error(w, writeErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		os.Remove(tmpPath)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = h.repoOperation.StoreReplacingByFilename(ctx, &op); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Drop the stale protobuf directory from any previous conversion of this
+	// filename; conversion, if enabled, rebuilds it.
+	pbDir := filepath.Join(h.setting.Data, filename)
+	if err := os.RemoveAll(pbDir); err != nil {
+		slog.Warn("failed to remove stale protobuf directory", "path", pbDir, "error", err)
 	}
 
 	// Trigger conversion immediately if enabled (async, non-blocking).
