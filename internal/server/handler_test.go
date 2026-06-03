@@ -243,6 +243,67 @@ func TestStoreOperation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("uses client-supplied date", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		require.NoError(t, writer.WriteField("secret", "test-secret"))
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Dated Mission"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "dated_upload"))
+		require.NoError(t, writer.WriteField("date", "2022-02-21T00:00:00.000Z"))
+
+		fileWriter, err := writer.CreateFormFile("file", "dated_upload.json.gz")
+		require.NoError(t, err)
+		gw := gzip.NewWriter(fileWriter)
+		_, err = gw.Write([]byte(`{"test": "data"}`))
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		op, err := repo.GetByFilename(context.Background(), "dated_upload")
+		require.NoError(t, err)
+		assert.Equal(t, "2022-02-21T00:00:00.000Z", op.Date)
+	})
+
+	t.Run("defaults to current date when omitted", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		require.NoError(t, writer.WriteField("secret", "test-secret"))
+		require.NoError(t, writer.WriteField("worldName", "altis"))
+		require.NoError(t, writer.WriteField("missionName", "Undated Mission"))
+		require.NoError(t, writer.WriteField("missionDuration", "3600"))
+		require.NoError(t, writer.WriteField("filename", "undated_upload"))
+
+		fileWriter, err := writer.CreateFormFile("file", "undated_upload.json.gz")
+		require.NoError(t, err)
+		gw := gzip.NewWriter(fileWriter)
+		_, err = gw.Write([]byte(`{"test": "data"}`))
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
+		require.NoError(t, writer.Close())
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/add", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		rec := httptest.NewRecorder()
+
+		hdlr.StoreOperation(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		op, err := repo.GetByFilename(context.Background(), "undated_upload")
+		require.NoError(t, err)
+		assert.Equal(t, time.Now().Format("2006-01-02"), op.Date)
+	})
+
 	t.Run("wrong secret", func(t *testing.T) {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
