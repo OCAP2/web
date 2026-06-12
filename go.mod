@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/yohcop/openid-go v1.0.1
 	golang.org/x/image v0.41.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	golang.org/x/term v0.43.0
 	google.golang.org/protobuf v1.36.11
 )
