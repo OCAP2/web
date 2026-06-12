@@ -18,7 +18,7 @@ RUN go build -ldflags "-X github.com/OCAP2/web/internal/server.BuildVersion=$bui
 ARG PMTILES_VERSION=1.30.0
 RUN go install "github.com/protomaps/go-pmtiles@v${PMTILES_VERSION}"
 
-FROM alpine:3.23
+FROM alpine:3.24
 ARG VARIANT=slim
 WORKDIR /usr/local/ocap
 RUN adduser -D -h /home/container container && \
