@@ -169,12 +169,11 @@ func NewSetting() (setting Setting, err error) {
 		return setting, fmt.Errorf("create maps directory: %w", err)
 	}
 
-	// OCAP_TMP redirects all scratch (map upload, extraction, pipeline working
-	// dirs + the gdal/tippecanoe subprocesses they spawn) off the system /tmp,
-	// which is often too small (e.g. Pelican containers). os.TempDir() re-reads
-	// TMPDIR per call and both tools honor it; CPL_TMPDIR pins gdal regardless.
-	// Resolve to absolute first: subprocesses run with a different working dir
-	// (runCmdDir sets cmd.Dir), so a relative TMPDIR would resolve wrongly.
+	// One redirect covers every maptool scratch site: Go temp (os.TempDir()
+	// re-reads TMPDIR per call) and gdal/tippecanoe subprocess scratch (they
+	// inherit the env; gdal also honors CPL_TMPDIR). Must be absolute —
+	// subprocesses run in a different cwd (runCmdDir), so a relative TMPDIR
+	// would resolve against the wrong dir.
 	if setting.Tmp != "" {
 		if setting.Tmp, err = filepath.Abs(setting.Tmp); err != nil {
 			return setting, fmt.Errorf("resolve tmp directory: %w", err)
