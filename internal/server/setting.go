@@ -23,6 +23,7 @@ type Setting struct {
 	Maps       string     `json:"maps" yaml:"maps"`
 	Data       string     `json:"data" yaml:"data"`
 	Static     string     `json:"static" yaml:"static"`
+	Tmp        string     `json:"tmp" yaml:"tmp"`
 	Logger     bool       `json:"logger" yaml:"logger"`
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
@@ -101,6 +102,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "")
+	viper.SetDefault("tmp", "")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.enabled", false)
 	viper.SetDefault("customize.websiteURL", "")
@@ -165,6 +167,22 @@ func NewSetting() (setting Setting, err error) {
 	}
 	if err = os.MkdirAll(setting.Maps, 0755); err != nil {
 		return setting, fmt.Errorf("create maps directory: %w", err)
+	}
+
+	// One redirect covers every maptool scratch site: Go temp (os.TempDir()
+	// re-reads TMPDIR per call) and gdal/tippecanoe subprocess scratch (they
+	// inherit the env; gdal also honors CPL_TMPDIR). Must be absolute —
+	// subprocesses run in a different cwd (runCmdDir), so a relative TMPDIR
+	// would resolve against the wrong dir.
+	if setting.Tmp != "" {
+		if setting.Tmp, err = filepath.Abs(setting.Tmp); err != nil {
+			return setting, fmt.Errorf("resolve tmp directory: %w", err)
+		}
+		if err = os.MkdirAll(setting.Tmp, 0755); err != nil {
+			return setting, fmt.Errorf("create tmp directory: %w", err)
+		}
+		os.Setenv("TMPDIR", setting.Tmp)
+		os.Setenv("CPL_TMPDIR", setting.Tmp)
 	}
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {

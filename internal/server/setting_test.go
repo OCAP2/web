@@ -102,6 +102,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "maps", setting.Maps)
 		assert.Equal(t, "data", setting.Data)
 		assert.Equal(t, "", setting.Static)
+		assert.Equal(t, "", setting.Tmp)
 		assert.False(t, setting.Logger)
 	})
 
@@ -392,6 +393,84 @@ func TestNewSetting_EnvVars(t *testing.T) {
 		assert.True(t, setting.Conversion.Enabled)
 		assert.Equal(t, uint32(600), setting.Conversion.ChunkSize)
 	})
+}
+
+func TestNewSetting_Tmp(t *testing.T) {
+	defer viper.Reset()
+
+	// NewSetting mutates process-global TMPDIR/CPL_TMPDIR; restore so it does
+	// not leak into other tests (t.TempDir itself honors TMPDIR).
+	oldTmpdir, hadTmpdir := os.LookupEnv("TMPDIR")
+	oldCPL, hadCPL := os.LookupEnv("CPL_TMPDIR")
+	defer func() {
+		restoreEnv("TMPDIR", oldTmpdir, hadTmpdir)
+		restoreEnv("CPL_TMPDIR", oldCPL, hadCPL)
+	}()
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "setting.json")
+	require.NoError(t, os.WriteFile(configPath, []byte(`{"secret": "base-secret"}`), 0644))
+
+	viper.Reset()
+	viper.AddConfigPath(dir)
+
+	tmpDir := filepath.Join(t.TempDir(), "scratch")
+	os.Setenv("OCAP_TMP", tmpDir)
+	defer os.Unsetenv("OCAP_TMP")
+
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.Equal(t, tmpDir, setting.Tmp)
+	info, statErr := os.Stat(tmpDir)
+	require.NoError(t, statErr, "tmp directory should have been created")
+	assert.True(t, info.IsDir())
+	assert.Equal(t, tmpDir, os.Getenv("TMPDIR"), "TMPDIR should point at OCAP_TMP")
+	assert.Equal(t, tmpDir, os.Getenv("CPL_TMPDIR"), "CPL_TMPDIR should point at OCAP_TMP")
+}
+
+func restoreEnv(key, val string, had bool) {
+	if had {
+		os.Setenv(key, val)
+	} else {
+		os.Unsetenv(key)
+	}
+}
+
+func TestNewSetting_TmpRelative(t *testing.T) {
+	defer viper.Reset()
+
+	oldTmpdir, hadTmpdir := os.LookupEnv("TMPDIR")
+	oldCPL, hadCPL := os.LookupEnv("CPL_TMPDIR")
+	defer func() {
+		restoreEnv("TMPDIR", oldTmpdir, hadTmpdir)
+		restoreEnv("CPL_TMPDIR", oldCPL, hadCPL)
+	}()
+
+	// Run from a temp cwd so a relative OCAP_TMP resolves there (and the created
+	// dir is cleaned up) instead of polluting the package directory.
+	work := t.TempDir()
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(work))
+	defer os.Chdir(oldWd)
+
+	require.NoError(t, os.WriteFile(filepath.Join(work, "setting.json"), []byte(`{"secret": "base-secret"}`), 0644))
+
+	viper.Reset()
+	viper.AddConfigPath(work)
+
+	os.Setenv("OCAP_TMP", "rel-scratch")
+	defer os.Unsetenv("OCAP_TMP")
+
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.True(t, filepath.IsAbs(setting.Tmp), "relative OCAP_TMP should be made absolute, got %q", setting.Tmp)
+	assert.Equal(t, setting.Tmp, os.Getenv("TMPDIR"))
+	info, statErr := os.Stat(setting.Tmp)
+	require.NoError(t, statErr, "resolved tmp directory should exist")
+	assert.True(t, info.IsDir())
 }
 
 func TestSetting_AuthSessionTTL(t *testing.T) {
