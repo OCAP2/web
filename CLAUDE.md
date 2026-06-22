@@ -91,7 +91,8 @@ Settings loaded via Viper with priority: environment variables → config files 
 
 **Environment variables** (prefix `OCAP_`):
 - `OCAP_LISTEN`, `OCAP_SECRET`, `OCAP_PREFIXURL`
-- `OCAP_DB`, `OCAP_DATA`, `OCAP_MAPS`, `OCAP_MARKERS`, `OCAP_AMMO`, `OCAP_STATIC`
+- `OCAP_DB`, `OCAP_DATA`, `OCAP_MAPS`, `OCAP_MARKERS`, `OCAP_AMMO`, `OCAP_STATIC`, `OCAP_TMP`
+- `OCAP_TMP` redirects scratch space for map uploads/processing (and the gdal/tippecanoe subprocesses) by setting `TMPDIR`/`CPL_TMPDIR`. Unset = system temp. Set it to a path with space when `/tmp` is too small (e.g. Pelican).
 - `OCAP_CUSTOMIZE_WEBSITEURL`, `OCAP_CUSTOMIZE_WEBSITELOGO`
 
 ## Pelican Panel

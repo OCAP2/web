@@ -23,6 +23,7 @@ type Setting struct {
 	Maps       string     `json:"maps" yaml:"maps"`
 	Data       string     `json:"data" yaml:"data"`
 	Static     string     `json:"static" yaml:"static"`
+	Tmp        string     `json:"tmp" yaml:"tmp"`
 	Logger     bool       `json:"logger" yaml:"logger"`
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
@@ -101,6 +102,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "")
+	viper.SetDefault("tmp", "")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.enabled", false)
 	viper.SetDefault("customize.websiteURL", "")
@@ -165,6 +167,18 @@ func NewSetting() (setting Setting, err error) {
 	}
 	if err = os.MkdirAll(setting.Maps, 0755); err != nil {
 		return setting, fmt.Errorf("create maps directory: %w", err)
+	}
+
+	// OCAP_TMP redirects all scratch (map upload, extraction, pipeline working
+	// dirs + the gdal/tippecanoe subprocesses they spawn) off the system /tmp,
+	// which is often too small (e.g. Pelican containers). os.TempDir() re-reads
+	// TMPDIR per call and both tools honor it; CPL_TMPDIR pins gdal regardless.
+	if setting.Tmp != "" {
+		if err = os.MkdirAll(setting.Tmp, 0755); err != nil {
+			return setting, fmt.Errorf("create tmp directory: %w", err)
+		}
+		os.Setenv("TMPDIR", setting.Tmp)
+		os.Setenv("CPL_TMPDIR", setting.Tmp)
 	}
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {

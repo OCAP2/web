@@ -132,6 +132,16 @@
             "user_editable": true,
             "rules": ["nullable", "string"],
             "sort": 10
+        },
+        {
+            "name": "Temp Directory",
+            "description": "Scratch directory for processing map uploads (extraction, tiling). Map imports need significant temporary space and the system /tmp is often too small. Keep this on the persistent volume.",
+            "env_variable": "OCAP_TMP",
+            "default_value": "/home/container/tmp",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": ["required", "string"],
+            "sort": 11
         }
     ]
 }
