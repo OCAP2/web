@@ -437,6 +437,42 @@ func restoreEnv(key, val string, had bool) {
 	}
 }
 
+func TestNewSetting_TmpRelative(t *testing.T) {
+	defer viper.Reset()
+
+	oldTmpdir, hadTmpdir := os.LookupEnv("TMPDIR")
+	oldCPL, hadCPL := os.LookupEnv("CPL_TMPDIR")
+	defer func() {
+		restoreEnv("TMPDIR", oldTmpdir, hadTmpdir)
+		restoreEnv("CPL_TMPDIR", oldCPL, hadCPL)
+	}()
+
+	// Run from a temp cwd so a relative OCAP_TMP resolves there (and the created
+	// dir is cleaned up) instead of polluting the package directory.
+	work := t.TempDir()
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(work))
+	defer os.Chdir(oldWd)
+
+	require.NoError(t, os.WriteFile(filepath.Join(work, "setting.json"), []byte(`{"secret": "base-secret"}`), 0644))
+
+	viper.Reset()
+	viper.AddConfigPath(work)
+
+	os.Setenv("OCAP_TMP", "rel-scratch")
+	defer os.Unsetenv("OCAP_TMP")
+
+	setting, err := NewSetting()
+	require.NoError(t, err)
+
+	assert.True(t, filepath.IsAbs(setting.Tmp), "relative OCAP_TMP should be made absolute, got %q", setting.Tmp)
+	assert.Equal(t, setting.Tmp, os.Getenv("TMPDIR"))
+	info, statErr := os.Stat(setting.Tmp)
+	require.NoError(t, statErr, "resolved tmp directory should exist")
+	assert.True(t, info.IsDir())
+}
+
 func TestSetting_AuthSessionTTL(t *testing.T) {
 	defer viper.Reset()
 

@@ -173,7 +173,12 @@ func NewSetting() (setting Setting, err error) {
 	// dirs + the gdal/tippecanoe subprocesses they spawn) off the system /tmp,
 	// which is often too small (e.g. Pelican containers). os.TempDir() re-reads
 	// TMPDIR per call and both tools honor it; CPL_TMPDIR pins gdal regardless.
+	// Resolve to absolute first: subprocesses run with a different working dir
+	// (runCmdDir sets cmd.Dir), so a relative TMPDIR would resolve wrongly.
 	if setting.Tmp != "" {
+		if setting.Tmp, err = filepath.Abs(setting.Tmp); err != nil {
+			return setting, fmt.Errorf("resolve tmp directory: %w", err)
+		}
 		if err = os.MkdirAll(setting.Tmp, 0755); err != nil {
 			return setting, fmt.Errorf("create tmp directory: %w", err)
 		}
