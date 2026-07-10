@@ -11,8 +11,8 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/yohcop/openid-go v1.0.1
-	golang.org/x/image v0.43.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/image v0.44.0
+	golang.org/x/sync v0.22.0
 	golang.org/x/term v0.45.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -45,6 +45,6 @@ require (
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
