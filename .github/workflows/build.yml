@@ -318,7 +318,7 @@ jobs:
         working-directory: ui
         run: npm ci && npm run build
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: true
