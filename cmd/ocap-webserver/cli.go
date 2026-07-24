@@ -47,7 +47,7 @@ func printRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  serve      Start the web server")
 	fmt.Fprintln(w, "  convert    Convert mission JSON to protobuf storage")
-	fmt.Fprintln(w, "  maptool    Render grad_meh map exports to tile bundles")
+	fmt.Fprintln(w, "  maptool    Render grad_meh map exports to tile bundles, or run 'maptool doctor' to diagnose the toolchain")
 	fmt.Fprintln(w, "  help       Show this help")
 	fmt.Fprintln(w, "  version    Show build version")
 	fmt.Fprintln(w)
