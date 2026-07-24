@@ -58,12 +58,14 @@ func Run(args []string) int {
 func dispatch(args []string, d deps) int {
 	if len(args) == 0 {
 		printUsage(d.stderr)
-		fmt.Fprintln(d.stderr, "error: missing subcommand: expected 'render'")
+		fmt.Fprintln(d.stderr, "error: missing subcommand: expected 'render' or 'doctor'")
 		return 2
 	}
 	switch args[0] {
 	case "render":
 		return runRender(args[1:], d)
+	case "doctor":
+		return runDoctor(args[1:], d)
 	case "-h", "--help":
 		printUsage(d.stdout)
 		return 0
@@ -75,14 +77,20 @@ func dispatch(args []string, d deps) int {
 }
 
 func printUsage(w io.Writer) {
-	fmt.Fprintf(w, "Usage: %s maptool render <input.zip> [flags]\n", os.Args[0])
-	fmt.Fprintf(w, "       %s maptool render --batch <dir>  [flags]\n\n", os.Args[0])
-	fmt.Fprintf(w, "Flags:\n")
+	fmt.Fprintf(w, "Usage: %s maptool <command> [flags]\n\n", os.Args[0])
+	fmt.Fprintf(w, "Commands:\n")
+	fmt.Fprintf(w, "  doctor         Diagnose the map toolchain (GDAL, tippecanoe, pmtiles)\n")
+	fmt.Fprintf(w, "                 and print install instructions for missing tools\n")
+	fmt.Fprintf(w, "  render         Render grad_meh map exports to tile bundles\n")
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "Render flags:\n")
 	fmt.Fprintf(w, "  -o, --out <dir>             output directory (default: maps dir from config)\n")
 	fmt.Fprintf(w, "      --batch <dir>           render every *.zip in the directory\n")
 	fmt.Fprintf(w, "  -j, --jobs <N>              concurrent maps in batch mode (default 1)\n")
 	fmt.Fprintf(w, "      --log-format auto|text|json   default: auto (text on TTY, JSON otherwise)\n")
 	fmt.Fprintf(w, "      --force                 overwrite an existing <world>/ output directory\n")
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "Run 'ocap-webserver maptool doctor --help' for doctor-specific options.\n")
 }
 
 func parseRenderFlags(args []string) (renderOptions, error) {
