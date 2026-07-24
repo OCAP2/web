@@ -58,14 +58,18 @@ func Run(args []string) int {
 func dispatch(args []string, d deps) int {
 	if len(args) == 0 {
 		printUsage(d.stderr)
-		fmt.Fprintln(d.stderr, "error: missing subcommand: expected 'render' or 'doctor'")
+		fmt.Fprintln(d.stderr, "error: missing subcommand: expected 'tools', 'doctor', 'install', or 'render'")
 		return 2
 	}
 	switch args[0] {
-	case "render":
-		return runRender(args[1:], d)
+	case "tools":
+		return runTools(args[1:], d)
 	case "doctor":
 		return runDoctor(args[1:], d)
+	case "install":
+		return runInstall(args[1:], d)
+	case "render":
+		return runRender(args[1:], d)
 	case "-h", "--help":
 		printUsage(d.stdout)
 		return 0
@@ -79,8 +83,10 @@ func dispatch(args []string, d deps) int {
 func printUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s maptool <command> [flags]\n\n", os.Args[0])
 	fmt.Fprintf(w, "Commands:\n")
-	fmt.Fprintf(w, "  doctor         Diagnose the map toolchain (GDAL, tippecanoe, pmtiles)\n")
-	fmt.Fprintf(w, "                 and print install instructions for missing tools\n")
+	fmt.Fprintf(w, "  tools          Show installed map toolchain status\n")
+	fmt.Fprintf(w, "  doctor         Deep-diagnose the map toolchain with gotcha detection\n")
+	fmt.Fprintf(w, "                 and install instructions for missing tools\n")
+	fmt.Fprintf(w, "  install        Print platform-specific install instructions\n")
 	fmt.Fprintf(w, "  render         Render grad_meh map exports to tile bundles\n")
 	fmt.Fprintf(w, "\n")
 	fmt.Fprintf(w, "Render flags:\n")
