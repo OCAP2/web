@@ -24,11 +24,13 @@ export function CustomizeProvider(props: {
       const data = await api.getCustomize();
       if (!mounted) return;
       if (!data.enabled) {
-        // disableKillCount is a privacy toggle, not a branding option, so
-        // honor it even when customize itself is not enabled.
-        if (data.disableKillCount) {
-          setConfig({ disableKillCount: true });
-        }
+        // disableKillCount is a privacy toggle and hideMapFilters is a layout
+        // preference — neither is a branding option, so honor them even when
+        // customize itself is not enabled.
+        const fallback: CustomizeConfig = {};
+        if (data.disableKillCount) fallback.disableKillCount = true;
+        if (data.hideMapFilters) fallback.hideMapFilters = true;
+        if (Object.keys(fallback).length > 0) setConfig(fallback);
         return;
       }
       setConfig(data);

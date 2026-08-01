@@ -47,6 +47,7 @@ type Customize struct {
 	WebsiteLogo      string            `json:"websiteLogo" yaml:"websiteLogo"`
 	WebsiteLogoSize  string            `json:"websiteLogoSize" yaml:"websiteLogoSize"`
 	DisableKillCount bool              `json:"disableKillCount" yaml:"disableKillCount"`
+	HideMapFilters   bool              `json:"hideMapFilters" yaml:"hideMapFilters"`
 	HeaderTitle      string            `json:"headerTitle" yaml:"headerTitle"`
 	HeaderSubtitle   string            `json:"headerSubtitle" yaml:"headerSubtitle"`
 	PageTitle        string            `json:"pageTitle" yaml:"pageTitle"`
@@ -109,6 +110,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("customize.websiteLogo", "")
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 	viper.SetDefault("customize.disableKillCount", false)
+	viper.SetDefault("customize.hideMapFilters", false)
 	viper.SetDefault("customize.headerTitle", "")
 	viper.SetDefault("customize.headerSubtitle", "")
 	viper.SetDefault("customize.pageTitle", "")

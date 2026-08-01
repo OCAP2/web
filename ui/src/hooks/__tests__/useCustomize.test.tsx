@@ -149,6 +149,27 @@ describe("useCustomize", () => {
     expect(parsed.websiteURL).toBeUndefined();
   });
 
+  it("honors hideMapFilters even when customize is not enabled", async () => {
+    mockGetCustomize.mockResolvedValue({
+      enabled: false,
+      hideMapFilters: true,
+      websiteURL: "https://should-not-appear.com",
+    });
+
+    const { getByTestId } = render(() => (
+      <CustomizeProvider>
+        <TestConsumer onConfig={() => {}} />
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+      expect(parsed.hideMapFilters).toBe(true);
+    });
+    const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+    expect(parsed.websiteURL).toBeUndefined();
+  });
+
   it("applies pageTitle to document.title and restores on unmount", async () => {
     const originalTitle = document.title;
     document.title = "OCAP2";

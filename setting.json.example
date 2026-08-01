@@ -14,6 +14,7 @@
 	"customize": {
 		"disableKillCount": false,
 		"enabled": false,
+		"hideMapFilters": false,
 		"headerSubtitle": "",
 		"headerTitle": "",
 		"pageTitle": "",
