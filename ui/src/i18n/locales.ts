@@ -1097,6 +1097,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Ammukset",
     uk: "Снаряди",
   },
+  layer_projectile_labels: {
+    ru: "Подписи снарядов",
+    en: "Projectile labels",
+    de: "Projektilbeschriftungen",
+    cs: "Popisky projektilů",
+    it: "Etichette proiettili",
+    fr: "Étiquettes de projectiles",
+    fi: "Ammusten nimet",
+    uk: "Підписи снарядів",
+  },
   layer_map_icons: {
     ru: "Иконки карты",
     en: "Map icons",

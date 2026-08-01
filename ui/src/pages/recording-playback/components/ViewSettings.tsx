@@ -126,6 +126,35 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
             }}
           </For>
 
+          {/* Projectile labels — toggle name labels while keeping icons */}
+          <button
+            class={styles.checkItem}
+            onClick={() =>
+              renderer.setProjectileLabelsVisible(!renderer.projectileLabelsVisible())
+            }
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: renderer.projectileLabelsVisible(),
+                [styles.checkboxInactive]: !renderer.projectileLabelsVisible(),
+              }}
+            >
+              <Show when={renderer.projectileLabelsVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: renderer.projectileLabelsVisible(),
+                [styles.itemTextInactive]: !renderer.projectileLabelsVisible(),
+              }}
+            >
+              {t("layer_projectile_labels")}
+            </span>
+          </button>
+
           {/* ── Time Format ── */}
           <div class={`${styles.sectionLabel} ${styles.sectionBorder}`}>
             {t("section_time_format")}
