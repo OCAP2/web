@@ -49,6 +49,8 @@ interface InternalMarkerHandle {
   isPlayer: boolean;
   isInVehicle: boolean;
   isVehicle: boolean;
+  /** True when this vehicle has at least one player aboard (used for "players only" labels). */
+  crewHasPlayer: boolean;
 }
 
 interface InternalBriefingHandle {
@@ -794,6 +796,7 @@ export class LeafletRenderer implements MapRenderer {
       isPlayer: opts.isPlayer,
       isInVehicle: false,
       isVehicle: opts.crew !== undefined,
+      crewHasPlayer: !!opts.crew && opts.crew.names.length > 0,
     };
     (marker as any)._ocapInternal = internal;
     return wrapMarker(internal);
@@ -807,6 +810,7 @@ export class LeafletRenderer implements MapRenderer {
     internal.isPlayer = state.isPlayer;
     internal.isInVehicle = state.isInVehicle;
     internal.isVehicle = state.crew !== undefined;
+    internal.crewHasPlayer = !!state.crew && state.crew.names.length > 0;
 
     // Update position
     const latlng = this.armaToLatLng(state.position);
@@ -852,7 +856,7 @@ export class LeafletRenderer implements MapRenderer {
         } else if (
           this._nameDisplayMode() === "players" &&
           !state.isPlayer &&
-          !internal.isVehicle
+          !internal.crewHasPlayer
         ) {
           display = "none";
         }
@@ -1275,7 +1279,7 @@ export class LeafletRenderer implements MapRenderer {
         this._nameDisplayMode() === "players" &&
         internal &&
         !internal.isPlayer &&
-        !internal.isVehicle
+        !internal.crewHasPlayer
       ) {
         display = "none";
       }

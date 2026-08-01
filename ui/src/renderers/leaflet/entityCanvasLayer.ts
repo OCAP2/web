@@ -879,11 +879,12 @@ export class EntityCanvasLayer {
       // Vehicle types stay visible in "players" mode so AI vehicles can still be
       // identified without showing every AI infantry name.
       const isVehicle = e.crew !== undefined;
+      const crewHasPlayer = isVehicle && e.crew!.names.length > 0;
       if (
         !hideLabels &&
         nameMode !== "none" &&
         !e.isInVehicle &&
-        (nameMode === "all" || e.isPlayer || isVehicle)
+        (nameMode === "all" || e.isPlayer || (isVehicle && crewHasPlayer))
       ) {
         const [, ih] = e.iconSize;
         const crew = e.crew;
