@@ -121,6 +121,7 @@ export interface EntityCanvasConfig {
   nameDisplayMode: () => "players" | "all" | "none";
   layerVisible: () => boolean;
   projectileLayerVisible: () => boolean;
+  projectileLabelsVisible: () => boolean;
   // Grid
   worldSize: number;
   latLngToArma: (latlng: L.LatLng) => ArmaCoord;
@@ -744,7 +745,7 @@ export class EntityCanvasLayer {
       ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
 
       // Draw label above icon (matching Leaflet popup placement)
-      if (p.text) {
+      if (p.text && this.config.projectileLabelsVisible()) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.font = fontNormal;
         ctx.textAlign = "center";

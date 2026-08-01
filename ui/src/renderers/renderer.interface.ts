@@ -51,6 +51,10 @@ export interface MapRenderer {
   markerDisplayMode: () => "all" | "noLabels" | "none";
   setMarkerDisplayMode(mode: "all" | "noLabels" | "none"): void;
 
+  // Projectile label visibility (signal accessor)
+  projectileLabelsVisible: () => boolean;
+  setProjectileLabelsVisible(visible: boolean): void;
+
   // Map styles (signal accessors)
   mapStyles: () => MapStyleInfo[];
   activeStyleIndex: () => number;

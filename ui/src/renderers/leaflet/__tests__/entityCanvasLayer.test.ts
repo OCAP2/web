@@ -64,6 +64,7 @@ function makeConfig(overrides?: Partial<EntityCanvasConfig>): EntityCanvasConfig
     nameDisplayMode: () => "all",
     layerVisible: () => true,
     projectileLayerVisible: () => true,
+    projectileLabelsVisible: () => true,
     worldSize: 30720,
     latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
     ...overrides,
@@ -676,6 +677,7 @@ describe("EntityCanvasLayer — render paths", () => {
       nameDisplayMode: () => "all" as const,
       layerVisible: () => true,
       projectileLayerVisible: () => true,
+      projectileLabelsVisible: () => true,
       worldSize: 30720,
       latLngToArma: (ll) => [ll.lng, ll.lat] as [number, number],
     };
@@ -734,6 +736,32 @@ describe("EntityCanvasLayer — render paths", () => {
     layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
     render();
     expect(mockCtx.drawImage).toHaveBeenCalled();
+  });
+
+  it("draws projectile labels when projectile labels are visible", () => {
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+      text: "Shooter Grenade",
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).toContain("Shooter Grenade");
+  });
+
+  it("hides projectile labels while keeping icons when disabled", () => {
+    (layer as any).config.projectileLabelsVisible = () => false;
+    layer.addProjectile(1, {
+      iconUrl: "http://example.com/grenade.png",
+      iconSize: [35, 35],
+      text: "Shooter Grenade",
+    });
+    layer.updateProjectile(1, { position: [100, 100], direction: 0, alpha: 1 });
+    render();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+    const texts = mockCtx.fillText.mock.calls.map((c: any[]) => c[0]);
+    expect(texts).not.toContain("Shooter Grenade");
   });
 
   it("continues when layer hidden but grid visible", () => {
