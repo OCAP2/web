@@ -330,7 +330,7 @@ describe("RecordingSelector", () => {
           json: () => Promise.resolve({ enabled: true, hideMapFilters: true }),
         } as Response);
       }
-      return (recordingsFetch as ReturnType<typeof vi.fn>)(input);
+      return recordingsFetch(input);
     });
 
     const { findByTestId, queryByTestId } = renderPage();
