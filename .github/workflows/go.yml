@@ -1,3 +1,4 @@
+# Workflow name is matched by coverage-comment.yml's workflow_run trigger — keep in sync when renaming.
 name: Go
 
 on:
@@ -119,10 +120,29 @@ jobs:
     permissions:
       contents: read
       actions: read
-      pull-requests: write
 
     steps:
-      - uses: fgrosse/go-coverage-report@v1.3.1
+      - name: Generate coverage report
+        id: report
+        uses: fgrosse/go-coverage-report@v1.3.1
         with:
           coverage-artifact-name: "code-coverage"
           coverage-file-name: "cover.out"
+          # Fork PRs get a read-only GITHUB_TOKEN, so commenting from here always
+          # fails. coverage-comment.yml posts the report instead.
+          skip-comment: true
+
+      - name: Stage coverage comment
+        env:
+          REPORT: ${{ steps.report.outputs.coverage_report }}
+        run: |
+          mkdir -p coverage-comment
+          printf '%s\n' "$REPORT" > coverage-comment/report.md
+          echo '${{ github.event.pull_request.number }}' > coverage-comment/pr-number.txt
+
+      - name: Upload coverage comment
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-coverage-comment
+          path: coverage-comment/
+          if-no-files-found: error

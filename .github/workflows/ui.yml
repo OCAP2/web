@@ -1,3 +1,4 @@
+# Workflow name is matched by coverage-comment.yml's workflow_run trigger — keep in sync when renaming.
 name: UI
 
 on:
@@ -25,7 +26,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v7
@@ -74,12 +74,26 @@ jobs:
           path: ui/coverage-base/
           if_no_artifact_found: warn
 
-      - name: Coverage report
+      # The report itself is rendered and posted by coverage-comment.yml, which has the
+      # write token fork PRs don't get. Staged into a fixed layout so the artifact root
+      # stays stable whether or not the base coverage was found.
+      - name: Stage coverage report data
         if: github.event_name == 'pull_request'
-        uses: davelosert/vitest-coverage-report-action@v2
+        run: |
+          mkdir -p report/coverage report/coverage-base
+          cp coverage/coverage-summary.json coverage/coverage-final.json report/coverage/
+          if [ -f coverage-base/coverage-summary.json ]; then
+            cp coverage-base/coverage-summary.json report/coverage-base/
+          fi
+        working-directory: ui
+
+      - name: Upload coverage report data
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
         with:
-          working-directory: ui
-          json-summary-compare-path: ${{ steps.download-base-coverage.outputs.found_artifact == 'true' && 'coverage-base/coverage-summary.json' || '' }}
+          name: ui-coverage-report
+          path: ui/report/
+          if-no-files-found: error
 
       - name: Push coverage badge
         if: github.ref_name == 'main'

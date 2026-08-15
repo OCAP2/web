@@ -1,0 +1,112 @@
+# Posts the coverage reports produced by the Go and UI workflows onto the pull request.
+#
+# GitHub hands fork PRs a read-only GITHUB_TOKEN regardless of the `permissions:` a job
+# requests, so those workflows cannot comment themselves. They render the report and
+# upload it as an artifact; this workflow runs in the context of the base repository,
+# where the token can write, and posts it.
+#
+# workflow_run only fires for the copy of this file on the default branch — changes here
+# take effect after merge, not on the pull request that introduces them.
+name: Coverage comment
+
+on:
+  workflow_run:
+    workflows: [Go, UI]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+
+  go:
+    name: "Go coverage comment"
+    if: github.event.workflow_run.name == 'Go' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download coverage comment
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: go-coverage-comment
+          path: coverage-comment
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post coverage comment
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -s coverage-comment/report.md ]; then
+            echo "::notice::No coverage report to post"
+            exit 0
+          fi
+
+          PR=$(tr -d '[:space:]' < coverage-comment/pr-number.txt)
+          case "$PR" in
+            ''|*[!0-9]*) echo "::error::Malformed pull request number: '$PR'"; exit 1 ;;
+          esac
+
+          # The artifact was built by a run of untrusted fork code. Only comment on a pull
+          # request whose head is actually the commit this run tested.
+          ACTUAL_SHA=$(gh api "repos/$GH_REPO/pulls/$PR" -q .head.sha)
+          if [ "$ACTUAL_SHA" != "$HEAD_SHA" ]; then
+            echo "::notice::Skipping: PR #$PR is at $ACTUAL_SHA, this run tested $HEAD_SHA"
+            exit 0
+          fi
+
+          # awk rather than `head -n 1`: under pipefail, head closing the pipe early makes
+          # gh exit on SIGPIPE and takes the whole step down.
+          COMMENT_ID=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
+            -q '.[] | select(.user.login=="github-actions[bot]" and (.body | test("Coverage Δ")) ) | .id' | awk 'NR==1')
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api -X PATCH "repos/$GH_REPO/issues/comments/$COMMENT_ID" -F body=@coverage-comment/report.md
+          else
+            gh pr comment "$PR" --body-file coverage-comment/report.md
+          fi
+
+  ui:
+    name: "UI coverage comment"
+    if: github.event.workflow_run.name == 'UI' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Base-branch checkout, not the fork's — the action reads vitest.config.ts for
+      # coverage thresholds and nothing from it is executed.
+      - uses: actions/checkout@v7
+
+      - name: Download coverage report data
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: ui-coverage-report
+          path: ui
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for base coverage
+        id: base
+        if: steps.download.outcome == 'success'
+        run: |
+          if [ -f ui/coverage-base/coverage-summary.json ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Resolves the pull request from the triggering run on its own.
+      - name: Coverage report
+        if: steps.download.outcome == 'success'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          working-directory: ui
+          json-summary-compare-path: ${{ steps.base.outputs.found == 'true' && 'coverage-base/coverage-summary.json' || '' }}
