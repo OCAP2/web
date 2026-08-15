@@ -76,7 +76,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
     if (!id) return;
     const name = props.recordingFilename?.() ?? id;
     const url = new URL(window.location.origin);
-    url.pathname = `/recording/${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
+    url.pathname = `${basePath}recording/${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
     void navigator.clipboard.writeText(url.toString()).then(() => {
       clearTimeout(copiedTimer);
       setShowCopied(true);
