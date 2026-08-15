@@ -146,6 +146,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Empty(t, setting.Customize.WebsiteURL)
 		assert.Empty(t, setting.Customize.WebsiteLogo)
 		assert.False(t, setting.Customize.DisableKillCount)
+		assert.False(t, setting.Customize.HideMapFilters)
 	})
 
 	t.Run("customize values from config", func(t *testing.T) {
@@ -158,6 +159,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 				"websiteLogo": "/logo.png",
 				"websiteLogoSize": "64px",
 				"disableKillCount": true,
+				"hideMapFilters": true,
 				"headerTitle": "My Community",
 				"headerSubtitle": "After Action Reviews"
 			}
@@ -175,6 +177,7 @@ func TestNewSetting_ConfigFile(t *testing.T) {
 		assert.Equal(t, "/logo.png", setting.Customize.WebsiteLogo)
 		assert.Equal(t, "64px", setting.Customize.WebsiteLogoSize)
 		assert.True(t, setting.Customize.DisableKillCount)
+		assert.True(t, setting.Customize.HideMapFilters)
 		assert.Equal(t, "My Community", setting.Customize.HeaderTitle)
 		assert.Equal(t, "After Action Reviews", setting.Customize.HeaderSubtitle)
 	})

@@ -313,6 +313,36 @@ describe("RecordingSelector", () => {
     });
   });
 
+  it("shows the map filter dropdown by default", async () => {
+    const { findByTestId, queryByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    expect(queryByTestId("map-filter-dropdown-trigger")).not.toBeNull();
+  });
+
+  it("hides the map filter dropdown when customize.hideMapFilters is set", async () => {
+    const recordingsFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/customize")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ enabled: true, hideMapFilters: true }),
+        } as Response);
+      }
+      return recordingsFetch(input);
+    });
+
+    const { findByTestId, queryByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    await vi.waitFor(() => {
+      expect(queryByTestId("map-filter-dropdown-trigger")).toBeNull();
+    });
+    // Other filters are unaffected
+    expect(queryByTestId("search-input")).not.toBeNull();
+  });
+
   // ── Clear filters ──
 
   it("shows clear button when filter is active and clears on click", async () => {

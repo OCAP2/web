@@ -20,6 +20,7 @@ export interface CustomizeConfig {
   websiteLogo?: string;
   websiteLogoSize?: string;
   disableKillCount?: boolean;
+  hideMapFilters?: boolean;
   headerTitle?: string;
   headerSubtitle?: string;
   pageTitle?: string;
