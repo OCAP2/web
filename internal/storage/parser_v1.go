@@ -167,13 +167,13 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return event
 	}
 
-	// Additive player detail and server FPS events keep their structured payload as JSON in
+	// Additive player-detail, weather, and server FPS events keep their structured payload as JSON in
 	// the generic protobuf message field. Older readers safely ignore these
 	// unknown event names, while newer readers can reconstruct the object.
 	if event.Type == "inventorySnapshot" || event.Type == "medicalSnapshot" ||
 		event.Type == "staminaSnapshot" || event.Type == "radioSnapshot" ||
 		event.Type == "tfarSettings" || event.Type == "acreSettings" ||
-		event.Type == "serverFps" || event.Type == "zeusEntity" ||
+		event.Type == "serverFps" || event.Type == "weather" || event.Type == "zeusEntity" ||
 		event.Type == "zeusRemoteControl" || event.Type == "zeusCamera" ||
 		event.Type == "zeusPing" || event.Type == "explosion" ||
 		event.Type == "serviceEvent" || event.Type == "staticWeapon" ||

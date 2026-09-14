@@ -301,6 +301,31 @@ export interface ServerFpsEventDef {
   fps: number;
 }
 
+/**
+ * One global weather sample. Vanilla environment commands are always present.
+ * `temperature` and ACE humidity are written only when ACE Weather is enabled
+ * via CBA; older recordings omit the whole event.
+ */
+export interface WeatherPayload {
+  overcast: number;
+  rain?: number;
+  fog?: number;
+  windSpeed?: number;
+  windDir?: number;
+  gusts?: number;
+  lightnings?: number;
+  humidity?: number;
+  waves?: number;
+  moonPhase?: number;
+  temperature?: number;
+  ace?: boolean;
+}
+
+export interface WeatherEventDef {
+  type: "weather";
+  payload: WeatherPayload;
+}
+
 export interface ZeusEntityPayload {
   curatorId: number;
   name: string;
@@ -460,6 +485,7 @@ export type EventDef = { frameNum: number } & (
   | TfarSettingsEventDef
   | AcreSettingsEventDef
   | ServerFpsEventDef
+  | WeatherEventDef
   | ZeusEntityEventDef
   | ZeusRemoteControlEventDef
   | ZeusCameraEventDef

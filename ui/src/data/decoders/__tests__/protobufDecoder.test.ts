@@ -140,6 +140,46 @@ describe("ProtobufDecoder.decodeManifest", () => {
     ]);
   });
 
+  it("decodes additive weather payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Weather",
+      endFrame: 180,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        {
+          frameNum: 60,
+          type: "weather",
+          message: JSON.stringify({
+            overcast: 0.42,
+            rain: 0.1,
+            moonPhase: 0.81,
+            temperature: 16.3,
+            ace: true,
+          }),
+        },
+        { frameNum: 120, type: "weather", message: JSON.stringify({ rain: 0.5 }) },
+      ],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([
+      {
+        frameNum: 60,
+        type: "weather",
+        payload: {
+          overcast: 0.42,
+          rain: 0.1,
+          moonPhase: 0.81,
+          temperature: 16.3,
+          ace: true,
+        },
+      },
+    ]);
+  });
+
   it("decodes additive Zeus payloads from the generic event message", () => {
     const buffer = encodePb(PbManifest, {
       version: 1,

@@ -24,6 +24,7 @@ import { CapturedEvent } from "./events/capturedEvent";
 import { TerminalHackEvent } from "./events/terminalHackEvent";
 import { PlayerSnapshotEvent } from "./events/playerSnapshotEvent";
 import { ServerFpsEvent } from "./events/serverFpsEvent";
+import { WeatherEvent } from "./events/weatherEvent";
 import {
   ZeusCameraEvent,
   ZeusEntityEvent,
@@ -87,6 +88,8 @@ function createGameEvent(def: EventDef): GameEvent | null {
       return null;
     case "serverFps":
       return new ServerFpsEvent(def.frameNum, id, def.fps);
+    case "weather":
+      return new WeatherEvent(def.frameNum, id, def.payload);
     case "zeusEntity":
       return new ZeusEntityEvent(def.frameNum, id, def.payload);
     case "zeusRemoteControl":

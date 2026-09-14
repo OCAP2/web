@@ -17,6 +17,7 @@ import {
   parseAcreSettingsPayload,
   parseTfarSettingsPayload,
 } from "../radioPropagation";
+import { parseWeatherPayload } from "../weather";
 import {
   Manifest as PbManifest,
   Chunk as PbChunk,
@@ -194,6 +195,15 @@ function convertEvent(pb: PbEvent): EventDef | null {
         const payload = JSON.parse(pb.message) as { fps?: unknown };
         if (typeof payload?.fps !== "number" || !Number.isFinite(payload.fps) || payload.fps < 0) return null;
         return { frameNum, type, fps: payload.fps };
+      } catch {
+        return null;
+      }
+    }
+    case "weather": {
+      try {
+        const payload = parseWeatherPayload(JSON.parse(pb.message));
+        if (!payload) return null;
+        return { frameNum, type, payload };
       } catch {
         return null;
       }

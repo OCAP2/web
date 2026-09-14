@@ -19,6 +19,7 @@ func snapshotEvent(frame uint32, eventType, message string) *pbv1.Event {
 func TestSplitPlayerSnapshots(t *testing.T) {
 	events := []*pbv1.Event{
 		snapshotEvent(1, "serverFps", `{"fps":48}`),
+		snapshotEvent(1, "weather", `{"overcast":0.4,"moonPhase":0.8}`),
 		snapshotEvent(5, "inventorySnapshot", `{"unitId":7,"massUnits":695}`),
 		snapshotEvent(6, "killed", ""),
 		snapshotEvent(9, "medicalSnapshot", `{"unitId":12,"ace":{"heartRate":80}}`),
@@ -31,12 +32,13 @@ func TestSplitPlayerSnapshots(t *testing.T) {
 	manifest, byUnit := SplitPlayerSnapshots(events)
 
 	// Global events stay where every reader already looks for them.
-	require.Len(t, manifest, 5)
+	require.Len(t, manifest, 6)
 	require.Equal(t, "serverFps", manifest[0].Type)
-	require.Equal(t, "killed", manifest[1].Type)
-	require.Equal(t, "tfarSettings", manifest[2].Type)
-	require.Equal(t, "zeusEntity", manifest[3].Type)
-	require.Equal(t, "zeusCamera", manifest[4].Type)
+	require.Equal(t, "weather", manifest[1].Type)
+	require.Equal(t, "killed", manifest[2].Type)
+	require.Equal(t, "tfarSettings", manifest[3].Type)
+	require.Equal(t, "zeusEntity", manifest[4].Type)
+	require.Equal(t, "zeusCamera", manifest[5].Type)
 
 	require.Equal(t, []uint32{7, 12}, SortedUnitIDs(byUnit))
 	require.Len(t, byUnit[7], 2)
@@ -113,6 +115,7 @@ func TestConverterWritesPlayerSnapshotSidecars(t *testing.T) {
 		],
 		"events": [
 			[1, "serverFps", {"fps": 48}],
+			[1, "weather", {"overcast": 0.4, "moonPhase": 0.8, "ace": false}],
 			[2, "zeusEntity", {"curatorId": 90, "name": "Danny", "playerUid": "7656", "bodyUnitId": -1}],
 			[3, "zeusCamera", {"curatorId": 90, "x": 100, "y": 200, "dir": 90, "fov": 0.75}],
 			[4, "zeusRemoteControl", {"curatorId": 90, "unitId": 7, "active": true}],
@@ -138,13 +141,17 @@ func TestConverterWritesPlayerSnapshotSidecars(t *testing.T) {
 		require.False(t, IsPlayerSnapshotEvent(e.Type), "player snapshot %s left in manifest", e.Type)
 	}
 	// The global samples are untouched by the split.
-	var sawFps bool
+	var sawFps, sawWeather bool
 	for _, e := range manifest.Events {
 		if e.Type == "serverFps" {
 			sawFps = true
 		}
+		if e.Type == "weather" {
+			sawWeather = true
+		}
 	}
 	require.True(t, sawFps, "serverFps must stay in the manifest")
+	require.True(t, sawWeather, "weather must stay in the manifest")
 	var sawZeus int
 	for _, e := range manifest.Events {
 		if e.Type == "zeusEntity" || e.Type == "zeusCamera" || e.Type == "zeusRemoteControl" {

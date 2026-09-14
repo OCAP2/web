@@ -646,6 +646,56 @@
   text-transform: uppercase;
 }
 
+.weatherHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.weatherSource {
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weatherCard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.weatherMetric {
+  padding: 7px 3px;
+  text-align: center;
+  border-radius: 5px;
+}
+
+.weatherValue {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-on-accent);
+}
+
+.weatherLabel {
+  margin-top: 4px;
+  color: var(--text-on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .forceSummary {
   display: flex;
   flex-direction: column;

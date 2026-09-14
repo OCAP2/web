@@ -147,6 +147,34 @@ func TestParseServerFpsEventPreservesPayload(t *testing.T) {
 	require.Equal(t, 47.25, payload["fps"])
 }
 
+func TestParseWeatherEventPreservesPayload(t *testing.T) {
+	event := parseEventArray([]interface{}{
+		float64(60),
+		"weather",
+		map[string]interface{}{
+			"overcast":   0.42,
+			"rain":       0.1,
+			"fog":        0.2,
+			"windSpeed":  3.4,
+			"windDir":    247.0,
+			"humidity":   0.68,
+			"moonPhase":  0.81,
+			"temperature": 16.3,
+			"ace":        true,
+		},
+	})
+
+	require.NotNil(t, event)
+	require.Equal(t, "weather", event.Type)
+	require.Equal(t, uint32(60), event.FrameNum)
+
+	var payload map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(event.Message), &payload))
+	require.Equal(t, 0.42, payload["overcast"])
+	require.Equal(t, 16.3, payload["temperature"])
+	require.Equal(t, true, payload["ace"])
+}
+
 func TestParseZeusPingEventPreservesPayload(t *testing.T) {
 	event := parseEventArray([]interface{}{
 		float64(120),

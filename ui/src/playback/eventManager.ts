@@ -5,6 +5,7 @@ import { GameEvent } from "./events/gameEvent";
 import { HitKilledEvent } from "./events/hitKilledEvent";
 import { PlayerSnapshotEvent } from "./events/playerSnapshotEvent";
 import { ServerFpsEvent } from "./events/serverFpsEvent";
+import { WeatherEvent } from "./events/weatherEvent";
 import {
   ZeusCameraEvent,
   ZeusEntityEvent,
@@ -13,7 +14,7 @@ import {
 } from "./events/zeusEvents";
 import { ExplosionEvent, RadioTransmissionEvent } from "./events/supportEvents";
 import { applySnapshotDiff, isSnapshotDiff } from "../data/snapshotDiff";
-import type { PlayerSnapshotPayload, PlayerSnapshotType } from "../data/types";
+import type { PlayerSnapshotPayload, PlayerSnapshotType, WeatherPayload } from "../data/types";
 import { ZEUS_RC_KILL_GRACE_FRAMES, type ZeusCameraSample, type ZeusEntityInfo, type ZeusFrameState } from "./zeus";
 
 /**
@@ -26,6 +27,7 @@ export class EventManager {
   private frameIndex: Map<number, GameEvent[]> = new Map();
   private playerSnapshots = new Map<number, Map<PlayerSnapshotType, PlayerSnapshotEvent[]>>();
   private serverFpsEvents: ServerFpsEvent[] = [];
+  private weatherEvents: WeatherEvent[] = [];
   private zeusEntities = new Map<number, ZeusEntityInfo>();
   private zeusRemoteControl: ZeusRemoteControlEvent[] = [];
   private zeusCameras = new Map<number, ZeusCameraEvent[]>();
@@ -57,6 +59,11 @@ export class EventManager {
     if (event instanceof ServerFpsEvent) {
       this.serverFpsEvents.push(event);
       this.serverFpsEvents.sort((a, b) => a.frameNum - b.frameNum);
+      return;
+    }
+    if (event instanceof WeatherEvent) {
+      this.weatherEvents.push(event);
+      this.weatherEvents.sort((a, b) => a.frameNum - b.frameNum);
       return;
     }
     if (event instanceof ZeusEntityEvent) {
@@ -211,6 +218,14 @@ export class EventManager {
       : (sorted[middle - 1] + sorted[middle]) / 2;
 
     return { current: samples[samples.length - 1].fps, average, median };
+  }
+
+  /** Latest weather sample at or before the requested playback frame. */
+  getWeatherAt(frame: number): WeatherPayload | undefined {
+    for (let i = this.weatherEvents.length - 1; i >= 0; i--) {
+      if (this.weatherEvents[i].frameNum <= frame) return this.weatherEvents[i].payload;
+    }
+    return undefined;
   }
 
   /**
@@ -497,6 +512,7 @@ export class EventManager {
     this.frameIndex = new Map();
     this.playerSnapshots = new Map();
     this.serverFpsEvents = [];
+    this.weatherEvents = [];
     this.zeusEntities = new Map();
     this.zeusRemoteControl = [];
     this.zeusCameras = new Map();

@@ -25,6 +25,7 @@ func TestProtobufWriterV1MovesPlayerSnapshotsToSidecars(t *testing.T) {
 		WorldName: "altis", MissionName: "snapshot writer", EndFrame: 99, ChunkSize: 50,
 		Events: []Event{
 			{FrameNum: 1, Type: "serverFps", Message: `{"fps":48}`},
+			{FrameNum: 1, Type: "weather", Message: `{"overcast":0.4,"rain":0,"fog":0.1,"moonPhase":0.8}`},
 			{FrameNum: 1, Type: "tfarSettings", Message: `{"terrainInterceptionCoefficient":7,"globalRadioRangeCoef":1}`},
 			{FrameNum: 1, Type: "acreSettings", Message: `{"terrainLoss":1,"signalModel":2}`},
 			{FrameNum: 5, Type: "inventorySnapshot", Message: `{"unitId":7,"massUnits":695}`},
@@ -50,7 +51,7 @@ func TestProtobufWriterV1MovesPlayerSnapshotsToSidecars(t *testing.T) {
 		assert.False(t, IsPlayerSnapshotEvent(e.Type), "player snapshot %s left in manifest", e.Type)
 		kept[e.Type]++
 	}
-	assert.Equal(t, map[string]int{"serverFps": 1, "tfarSettings": 1, "acreSettings": 1, "killed": 1}, kept)
+	assert.Equal(t, map[string]int{"serverFps": 1, "weather": 1, "tfarSettings": 1, "acreSettings": 1, "killed": 1}, kept)
 
 	require.Equal(t, []uint32{7, 12}, manifest.SnapshotUnitIds)
 	for _, unitID := range manifest.SnapshotUnitIds {

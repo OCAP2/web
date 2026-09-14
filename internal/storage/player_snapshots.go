@@ -21,9 +21,10 @@ const SnapshotsDirName = "snapshots"
 // one unit at a time, so the protobuf writer moves them out of the manifest
 // into snapshots/<unitId>.pb and the UI fetches the one series it needs.
 //
-// serverFps, tfarSettings, acreSettings and the Zeus events are deliberately
-// absent: they are needed for map-wide playback (Stats, range circles, VIRTUAL
-// faction, camera cones) without selecting a unit, so they stay in the manifest.
+// serverFps, weather, tfarSettings, acreSettings and the Zeus events are
+// deliberately absent: they are needed for map-wide playback (Stats, range
+// circles, VIRTUAL faction, camera cones) without selecting a unit, so they
+// stay in the manifest.
 var playerSnapshotEventTypes = map[string]struct{}{
 	"inventorySnapshot": {},
 	"medicalSnapshot":   {},

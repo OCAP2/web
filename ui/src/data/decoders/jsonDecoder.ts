@@ -16,6 +16,7 @@ import {
   parseAcreSettingsPayload,
   parseTfarSettingsPayload,
 } from "../radioPropagation";
+import { parseWeatherPayload } from "../weather";
 
 // ───────── Legacy JSON shape ─────────
 
@@ -338,6 +339,11 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
       const fps = (raw[2] as { fps?: unknown } | undefined)?.fps;
       if (typeof fps !== "number" || !Number.isFinite(fps) || fps < 0) return null;
       return { frameNum, type, fps };
+    }
+    case "weather": {
+      const payload = parseWeatherPayload(raw[2]);
+      if (!payload) return null;
+      return { frameNum, type, payload };
     }
     case "explosion": {
       const payload = raw[2];

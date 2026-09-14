@@ -9,6 +9,12 @@ import { buildMovementStats, formatDistance } from "../movement";
 import styles from "./SidePanel.module.css";
 import commsStyles from "./CommsTab.module.css";
 import movementStyles from "./MovementTable.module.css";
+import {
+  compassFromDegrees,
+  formatPercent,
+  moonPhaseEmoji,
+  moonPhaseName,
+} from "../../../data/weather";
 
 const SIDES: Side[] = ["WEST", "EAST", "GUER", "CIV", "VIRTUAL"];
 
@@ -47,6 +53,63 @@ export function StatsTab(): JSX.Element {
   const serverFps = createMemo(() =>
     engine.eventManager.getServerFpsStats(engine.currentFrame()),
   );
+
+  const weather = createMemo(() =>
+    engine.eventManager.getWeatherAt(engine.currentFrame()),
+  );
+
+  const weatherMetrics = createMemo(() => {
+    const sample = weather();
+    if (!sample) return undefined;
+    const metrics: { value: string; label: string }[] = [
+      { value: formatPercent(sample.overcast), label: t("weather_overcast") },
+    ];
+    if (sample.rain !== undefined) {
+      metrics.push({ value: formatPercent(sample.rain), label: t("weather_rain") });
+    }
+    if (sample.fog !== undefined) {
+      metrics.push({ value: formatPercent(sample.fog), label: t("weather_fog") });
+    }
+    if (sample.windSpeed !== undefined) {
+      const dir = sample.windDir !== undefined
+        ? `${compassFromDegrees(sample.windDir)} ${Math.round(sample.windDir)}°`
+        : "";
+      metrics.push({
+        value: `${sample.windSpeed.toFixed(1)} m/s`,
+        label: dir ? `${t("weather_wind")} ${dir}` : t("weather_wind"),
+      });
+    } else if (sample.windDir !== undefined) {
+      metrics.push({
+        value: `${compassFromDegrees(sample.windDir)} ${Math.round(sample.windDir)}°`,
+        label: t("weather_wind"),
+      });
+    }
+    if (sample.humidity !== undefined) {
+      metrics.push({ value: formatPercent(sample.humidity), label: t("weather_humidity") });
+    }
+    if (sample.temperature !== undefined) {
+      metrics.push({
+        value: `${sample.temperature.toFixed(1)} °C`,
+        label: t("weather_temperature"),
+      });
+    }
+    if (sample.moonPhase !== undefined) {
+      metrics.push({
+        value: `${moonPhaseEmoji(sample.moonPhase)} ${formatPercent(sample.moonPhase)}`,
+        label: t(`weather_moon_${moonPhaseName(sample.moonPhase)}`),
+      });
+    }
+    if (sample.gusts !== undefined) {
+      metrics.push({ value: formatPercent(sample.gusts), label: t("weather_gusts") });
+    }
+    if (sample.lightnings !== undefined) {
+      metrics.push({ value: formatPercent(sample.lightnings), label: t("weather_lightnings") });
+    }
+    if (sample.waves !== undefined) {
+      metrics.push({ value: formatPercent(sample.waves), label: t("weather_waves") });
+    }
+    return metrics;
+  });
 
   // Distance covers the whole mission, so a chunked recording needs every chunk;
   // a JSON one resolves immediately and this never blocks.
@@ -270,6 +333,29 @@ export function StatsTab(): JSX.Element {
               </For>
             </div>
           </div>
+        </Show>
+
+        <Show when={weatherMetrics()} keyed>
+          {(metrics) => (
+            <div>
+              <div class={styles.weatherHeader}>
+                <div class={`${styles.statsLabel} ${styles.serverFpsTitle}`}>{t("weather")}</div>
+                <div class={styles.weatherSource}>
+                  {weather()?.ace ? t("weather_ace") : t("weather_vanilla")}
+                </div>
+              </div>
+              <div class={styles.weatherCard}>
+                <For each={metrics}>
+                  {(metric) => (
+                    <div class={styles.weatherMetric}>
+                      <div class={styles.weatherValue}>{metric.value}</div>
+                      <div class={styles.weatherLabel}>{metric.label}</div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+          )}
         </Show>
 
         {/* ── Distance and pace ── */}

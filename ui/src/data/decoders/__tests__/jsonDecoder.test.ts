@@ -41,6 +41,46 @@ describe("JsonDecoder.decodeManifest", () => {
     expect(manifest.events).toEqual([{ frameNum: 0, type: "serverFps", fps: 47.25 }]);
   });
 
+  it("decodes additive weather events and rejects samples without overcast", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Weather",
+      endFrame: 180,
+      captureDelay: 1,
+      events: [
+        [0, "weather", {
+          overcast: 0.42,
+          rain: 0.1,
+          fog: 0.2,
+          windSpeed: 3.4,
+          windDir: 247,
+          humidity: 0.68,
+          moonPhase: 0.81,
+          temperature: 16.3,
+          ace: true,
+        }],
+        [60, "weather", { rain: 0.5 }],
+        [120, "weather", { overcast: "bad" }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([{
+      frameNum: 0,
+      type: "weather",
+      payload: {
+        overcast: 0.42,
+        rain: 0.1,
+        fog: 0.2,
+        windSpeed: 3.4,
+        windDir: 247,
+        humidity: 0.68,
+        moonPhase: 0.81,
+        temperature: 16.3,
+        ace: true,
+      },
+    }]);
+  });
+
   it("decodes additive Zeus events and skips malformed payloads", () => {
     const manifest = decoder.decodeManifest(toBuffer({
       worldName: "Altis",
