@@ -121,6 +121,15 @@
   text-transform: uppercase;
 }
 
+/* Traits tab: one dataGrid per group (engine, ACE, coefficients, custom). */
+.traitGroup + .traitGroup {
+  margin-top: 10px;
+}
+
+.traitActive b {
+  color: var(--accent-success);
+}
+
 /* Shown while a chunked recording fetches this player's snapshot sidecar. */
 .loading {
   padding: 12px;

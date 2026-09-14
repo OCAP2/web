@@ -136,10 +136,36 @@ export interface GearContainer extends GearItem {
   items: GearItem[];
 }
 
+/**
+ * What a unit is allowed to do. The engine traits come from `getAllUnitTraits`;
+ * `ace` holds the graded training ACE reads instead of them, present only for
+ * the ACE components loaded on the client.
+ */
+export interface UnitTraits {
+  medic?: boolean;
+  engineer?: boolean;
+  explosiveSpecialist?: boolean;
+  uavHacker?: boolean;
+  camouflageCoef?: number;
+  audibleCoef?: number;
+  loadCoef?: number;
+  /** Traits a mission or mod added with `setUnitTrait`, by name. */
+  custom?: Record<string, string | number | boolean>;
+  ace?: {
+    /** 0 none, 1 medic, 2 doctor. */
+    medic?: number;
+    /** 0 none, 1 engineer, 2 advanced engineer. */
+    engineer?: number;
+    eod?: boolean;
+  };
+}
+
 export interface InventorySnapshot {
   unitId: number;
   playerUid?: string;
   reason?: "periodic" | "death" | string;
+  /** Recorded with the loadout, so a diff carries it only when it changes. */
+  traits?: UnitTraits;
   /** Raw Arma mass units. */
   massUnits?: number;
   load: number;

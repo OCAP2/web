@@ -61,6 +61,7 @@ import {
 } from "../profileDiff";
 import styles from "./PlayerProfileCard.module.css";
 import { exportAceArsenal, exportVanillaArsenal } from "../arsenalExport";
+import { diffTraits, formatMultiplier, traitGroups, traitLevelKey, type TraitField } from "../traits";
 
 type RangeMode = "simple" | "approx";
 
@@ -104,6 +105,9 @@ const TAB_DEFS = [
   { id: "medical", type: "medicalSnapshot", labelKey: "profile_tab_medical", missingKey: "profile_label_medical" },
   { id: "stamina", type: "staminaSnapshot", labelKey: "profile_tab_stamina", missingKey: "profile_label_stamina" },
   { id: "radio", type: "radioSnapshot", labelKey: "profile_tab_radios", missingKey: "profile_label_radio" },
+  // Traits ride inside the inventory snapshot; the tab is offered only when the
+  // recording actually carries a trait block (see availableTabs).
+  { id: "traits", type: "inventorySnapshot", labelKey: "profile_tab_traits", missingKey: "profile_label_gear" },
 ] as const;
 type TabId = (typeof TAB_DEFS)[number]["id"];
 
@@ -386,17 +390,6 @@ export function PlayerProfileCard(props: Props): JSX.Element {
     }
     return kinds;
   });
-  const availableTabs = createMemo(() => TAB_DEFS.filter((entry) => trackedKinds().has(entry.type)));
-  const tabIsTracked = (id: TabId) => availableTabs().some((entry) => entry.id === id);
-
-  createEffect(() => {
-    const tabs = availableTabs();
-    if (tabs.length === 0) return;
-    if (!tabs.some((entry) => entry.id === tab())) {
-      setTab(tabs[0].id);
-    }
-  });
-
   const snapshots = createMemo(() => {
     engine.currentFrame();
     engine.playerSnapshotsVersion();
@@ -416,6 +409,24 @@ export function PlayerProfileCard(props: Props): JSX.Element {
   const radio = () => payload<RadioSnapshot>("radioSnapshot");
   const fromInventory = () => payloadAt<InventorySnapshot>(fromFrame(), "inventorySnapshot");
   const toInventory = () => payloadAt<InventorySnapshot>(toFrame(), "inventorySnapshot");
+  // The trait block is optional inside the inventory snapshot, so the Traits tab
+  // is keyed on the snapshot in view, falling back to the last one of the
+  // recording so it does not flicker while scrubbing before the first sample.
+  const traitsTracked = () =>
+    (inventory() ?? payloadAt<InventorySnapshot>(engine.endFrame(), "inventorySnapshot"))?.traits !== undefined;
+  const availableTabs = createMemo(() =>
+    TAB_DEFS.filter((entry) => trackedKinds().has(entry.type) && (entry.id !== "traits" || traitsTracked())),
+  );
+  const tabIsTracked = (id: TabId) => availableTabs().some((entry) => entry.id === id);
+
+  createEffect(() => {
+    const tabs = availableTabs();
+    if (tabs.length === 0) return;
+    if (!tabs.some((entry) => entry.id === tab())) {
+      setTab(tabs[0].id);
+    }
+  });
+
   const fromMedical = () => payloadAt<MedicalSnapshot>(fromFrame(), "medicalSnapshot");
   const toMedical = () => payloadAt<MedicalSnapshot>(toFrame(), "medicalSnapshot");
   const fromStamina = () => payloadAt<StaminaSnapshot>(fromFrame(), "staminaSnapshot");
@@ -637,6 +648,24 @@ export function PlayerProfileCard(props: Props): JSX.Element {
     props.unit.name
       ? t("profile_aria_named", { name: props.unit.name })
       : t("profile_aria", { id: props.unit.id });
+  const traitSections = createMemo(() => traitGroups((diffing() ? toInventory() : inventory())?.traits));
+  const traitChanges = createMemo(() => diffTraits(fromInventory()?.traits, toInventory()?.traits));
+  const traitValue = (field: TraitField, value: unknown): string => {
+    if (value === undefined || value === null || value === "") return t("profile_none");
+    switch (field.kind) {
+      case "bool":
+        return value === true ? t("profile_yes") : value === false ? t("profile_no") : String(value);
+      case "level": {
+        const key = traitLevelKey(field, value);
+        return key ? t(key) : String(value);
+      }
+      case "number":
+        return field.multiplier ? formatMultiplier(value) : String(value);
+      default:
+        return String(value);
+    }
+  };
+
   const killsAt = (frame: number) =>
     engine.eventManager.getKillDeathCounts(frame).kills.get(props.unit.id) ?? 0;
   const deathsAt = (frame: number) =>
@@ -1346,6 +1375,60 @@ export function PlayerProfileCard(props: Props): JSX.Element {
             </For>
           </Show>
         </Show>
+        </Show>
+
+        <Show when={tab() === "traits" && tabIsTracked("traits")}>
+          <Show when={diffing()}>
+            <Show
+              when={!sameDiffFrame() && traitChanges().length > 0}
+              fallback={<DiffEmpty sameFrame={sameDiffFrame()} />}
+            >
+              <div class={styles.dataGrid} data-testid="profile-traits-diff">
+                <For each={traitChanges()}>
+                  {(entry) => (
+                    <span>
+                      {t(entry.labelKey)}
+                      <b class={styles.fieldDelta}>
+                        {traitValue(entry, entry.from)} → {traitValue(entry, entry.to)}
+                      </b>
+                    </span>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </Show>
+          <Show when={!diffing()}>
+            <Show
+              when={traitSections().length > 0}
+              fallback={<div class={styles.noData}>{t("profile_traits_none")}</div>}
+            >
+              <SnapshotMeta event={snapshotEvent("inventorySnapshot")} />
+              <div data-testid="profile-traits">
+                <For each={traitSections()}>
+                  {(group) => (
+                    <div class={styles.traitGroup}>
+                      <div class={styles.sectionLabel}>{t(group.titleKey)}</div>
+                      <div class={styles.dataGrid}>
+                        <For each={group.fields}>
+                          {(field) => (
+                            <span
+                              classList={{
+                                [styles.traitActive]:
+                                  field.value === true || (field.kind === "level" && Number(field.value) > 0),
+                              }}
+                            >
+                              {t(field.labelKey)}
+                              <b>{traitValue(field, field.value)}</b>
+                            </span>
+                          )}
+                        </For>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </Show>
         </Show>
       </div>
     </aside>

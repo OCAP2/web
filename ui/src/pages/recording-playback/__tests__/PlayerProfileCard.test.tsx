@@ -67,6 +67,43 @@ function renderCard(
 }
 
 describe("PlayerProfileCard", () => {
+  it("offers a Traits tab listing every recorded trait", () => {
+    renderCard([
+      snapshotEvent(5, "inventorySnapshot", {
+        weapons: [],
+        magazines: [],
+        assignedItems: [],
+        traits: {
+          medic: true,
+          engineer: false,
+          uavHacker: false,
+          loadCoef: 0.9,
+          custom: { pilot: true },
+          ace: { medic: 2, engineer: 1, eod: true },
+        },
+      }),
+    ]);
+    fireEvent.click(screen.getByRole("tab", { name: "Traits" }));
+    const text = screen.getByTestId("profile-traits").textContent ?? "";
+    expect(text).toContain("Engine traits");
+    expect(text).toContain("MedicYes");
+    expect(text).toContain("EngineerNo");
+    expect(text).toContain("ACE training");
+    expect(text).toContain("Medical levelDoctor");
+    expect(text).toContain("Engineer levelEngineer");
+    expect(text).toContain("EODYes");
+    expect(text).toContain("Load×0.9");
+    expect(text).toContain("Custom traits");
+    expect(text).toContain("pilotYes");
+  });
+
+  it("does not offer a Traits tab when the recording carries no traits", () => {
+    renderCard([snapshotEvent(5, "inventorySnapshot", { weapons: [], magazines: [], assignedItems: [] })]);
+    expect(screen.queryByRole("tab", { name: "Traits" })).toBeNull();
+    expect(screen.queryByTestId("profile-traits")).toBeNull();
+  });
+
+
   it("exports the visible gear from buttons shown only on the gear tab", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
