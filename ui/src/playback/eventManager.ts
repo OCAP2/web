@@ -9,6 +9,7 @@ import { WeatherEvent } from "./events/weatherEvent";
 import {
   ZeusCameraEvent,
   ZeusEntityEvent,
+  ZeusModuleEvent,
   ZeusPingEvent,
   ZeusRemoteControlEvent,
 } from "./events/zeusEvents";
@@ -32,6 +33,7 @@ export class EventManager {
   private zeusRemoteControl: ZeusRemoteControlEvent[] = [];
   private zeusCameras = new Map<number, ZeusCameraEvent[]>();
   private zeusPings: ZeusPingEvent[] = [];
+  private zeusModules: ZeusModuleEvent[] = [];
   private explosions: ExplosionEvent[] = [];
   private transmissions: RadioTransmissionEvent[] = [];
 
@@ -110,6 +112,10 @@ export class EventManager {
       // still belongs in this.events so it shows in the event log.
       this.zeusPings.push(event);
       this.zeusPings.sort((a, b) => a.frameNum - b.frameNum);
+    }
+    if (event instanceof ZeusModuleEvent) {
+      this.zeusModules.push(event);
+      this.zeusModules.sort((a, b) => a.frameNum - b.frameNum);
     }
     this.events.push(event);
 
@@ -235,6 +241,16 @@ export class EventManager {
   getActivePings(frame: number, lifetimeFrames: number): ZeusPingEvent[] {
     return this.zeusPings.filter(
       (ping) => ping.frameNum <= frame && frame < ping.frameNum + lifetimeFrames,
+    );
+  }
+
+  /**
+   * Module placements whose map lifetime covers `frame`, oldest first.
+   * Drawn from the placement frame until `frameNum + lifetimeFrames`.
+   */
+  getActiveZeusModules(frame: number, lifetimeFrames: number): ZeusModuleEvent[] {
+    return this.zeusModules.filter(
+      (event) => event.frameNum <= frame && frame < event.frameNum + lifetimeFrames,
     );
   }
 
@@ -517,6 +533,7 @@ export class EventManager {
     this.zeusRemoteControl = [];
     this.zeusCameras = new Map();
     this.zeusPings = [];
+    this.zeusModules = [];
     this.explosions = [];
     this.transmissions = [];
     this.explosionsSorted = true;

@@ -209,6 +209,42 @@ func TestZeusPingIsNotAPlayerSnapshotEvent(t *testing.T) {
 	require.False(t, IsPlayerSnapshotEvent("zeusPing"))
 }
 
+func TestParseZeusModuleEventPreservesPayload(t *testing.T) {
+	event := parseEventArray([]interface{}{
+		float64(80),
+		"zeusModule",
+		map[string]interface{}{
+			"curatorId":    float64(90),
+			"curatorName":  "Danny",
+			"className":    "zen_modules_moduleHeal",
+			"displayName":  "Heal",
+			"category":     "ACE",
+			"source":       "zen",
+			"x":            float64(3411),
+			"y":            float64(9002),
+			"attachedUnitId": float64(7),
+			"attachedName": "Allen",
+		},
+	})
+
+	require.NotNil(t, event)
+	require.Equal(t, "zeusModule", event.Type)
+	require.Equal(t, uint32(80), event.FrameNum)
+
+	var payload map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(event.Message), &payload))
+	require.Equal(t, float64(90), payload["curatorId"])
+	require.Equal(t, "Heal", payload["displayName"])
+	require.Equal(t, "zen_modules_moduleHeal", payload["className"])
+	require.Equal(t, "Danny", payload["curatorName"])
+	require.Equal(t, float64(3411), payload["x"])
+	require.Equal(t, float64(9002), payload["y"])
+}
+
+func TestZeusModuleIsNotAPlayerSnapshotEvent(t *testing.T) {
+	require.False(t, IsPlayerSnapshotEvent("zeusModule"))
+}
+
 func TestParseExplosionEventPreservesPayload(t *testing.T) {
 	event := parseEventArray([]interface{}{
 		float64(310),

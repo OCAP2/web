@@ -15,6 +15,7 @@ export interface EventFilterState {
   showTerminalHacks: boolean;
   showMissionEvents: boolean;
   showZeusPings: boolean;
+  showZeusModules: boolean;
   showExplosions: boolean;
   showServicing: boolean;
   showConstructions: boolean;
@@ -30,6 +31,7 @@ export const DEFAULT_EVENT_FILTERS: EventFilterState = {
   showTerminalHacks: true,
   showMissionEvents: true,
   showZeusPings: true,
+  showZeusModules: true,
   // Off by default like hits: a mortar mission writes one per round, and the
   // blast circles are on the map either way.
   showExplosions: false,
@@ -56,6 +58,7 @@ const EVENT_TYPE_ITEMS: EventTypeItem[] = [
   { key: "showTerminalHacks", labelKey: "terminal_hacks" },
   { key: "showMissionEvents", labelKey: "mission_events" },
   { key: "showZeusPings", labelKey: "zeus_pings" },
+  { key: "showZeusModules", labelKey: "zeus_modules" },
   { key: "showExplosions", labelKey: "explosions" },
   { key: "showServicing", labelKey: "servicing" },
   { key: "showConstructions", labelKey: "constructions" },
@@ -77,6 +80,7 @@ function isNonDefault(state: EventFilterState): boolean {
     state.showTerminalHacks !== DEFAULT_EVENT_FILTERS.showTerminalHacks ||
     state.showMissionEvents !== DEFAULT_EVENT_FILTERS.showMissionEvents ||
     state.showZeusPings !== DEFAULT_EVENT_FILTERS.showZeusPings ||
+    state.showZeusModules !== DEFAULT_EVENT_FILTERS.showZeusModules ||
     state.showExplosions !== DEFAULT_EVENT_FILTERS.showExplosions ||
     state.showServicing !== DEFAULT_EVENT_FILTERS.showServicing ||
     state.showConstructions !== DEFAULT_EVENT_FILTERS.showConstructions ||

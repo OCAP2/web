@@ -252,6 +252,18 @@ function convertEvent(pb: PbEvent): EventDef | null {
         return null;
       }
     }
+    case "zeusModule": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.curatorId !== "number") return null;
+        if (typeof payload.displayName !== "string" || !payload.displayName) return null;
+        if (typeof payload.x !== "number" || typeof payload.y !== "number") return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
     case "capturedFlag":
       return {
         frameNum,

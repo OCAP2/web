@@ -23,8 +23,8 @@ const SnapshotsDirName = "snapshots"
 //
 // serverFps, weather, tfarSettings, acreSettings and the Zeus events are
 // deliberately absent: they are needed for map-wide playback (Stats, range
-// circles, VIRTUAL faction, camera cones) without selecting a unit, so they
-// stay in the manifest.
+// circles, VIRTUAL faction, camera cones, pings, modules) without selecting a
+// unit, so they stay in the manifest.
 var playerSnapshotEventTypes = map[string]struct{}{
 	"inventorySnapshot": {},
 	"medicalSnapshot":   {},

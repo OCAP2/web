@@ -377,6 +377,16 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
       if (typeof (payload as { curatorId?: unknown }).curatorId !== "number") return null;
       return { frameNum, type, payload } as EventDef;
     }
+    case "zeusModule": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      if (typeof (payload as { curatorId?: unknown }).curatorId !== "number") return null;
+      if (typeof (payload as { displayName?: unknown }).displayName !== "string") return null;
+      if (!(payload as { displayName: string }).displayName) return null;
+      if (typeof (payload as { x?: unknown }).x !== "number") return null;
+      if (typeof (payload as { y?: unknown }).y !== "number") return null;
+      return { frameNum, type, payload } as EventDef;
+    }
     default:
       // Unknown event types: skip
       return null;

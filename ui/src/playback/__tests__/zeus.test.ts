@@ -6,16 +6,22 @@ import { HitKilledEvent } from "../events/hitKilledEvent";
 import {
   ZeusCameraEvent,
   ZeusEntityEvent,
+  ZeusModuleEvent,
   ZeusPingEvent,
   ZeusRemoteControlEvent,
 } from "../events/zeusEvents";
 import { Unit } from "../entities/unit";
 import {
+  ZEUS_MODULE_MAP_SECONDS,
   ZEUS_PING_MAP_SECONDS,
   armaFovToDegrees,
   formatUnitTypeLabel,
   formatZeusOccupancyName,
+  groupZeusModules,
   groupZeusPings,
+  zeusModuleAlpha,
+  zeusModuleFadeFrames,
+  zeusModuleLifetimeFrames,
   zeusPingAlpha,
   zeusPingLifetimeFrames,
 } from "../zeus";
@@ -465,6 +471,84 @@ describe("Zeus pings", () => {
     it("is zero outside the lifetime", () => {
       expect(zeusPingAlpha(280, 100, 180)).toBe(0);
       expect(zeusPingAlpha(99, 100, 180)).toBe(0);
+    });
+  });
+});
+
+describe("Zeus modules", () => {
+  const placed = (frameNum: number, overrides: Record<string, unknown> = {}) =>
+    new ZeusModuleEvent(frameNum, frameNum, {
+      curatorId: 90,
+      curatorName: "Danny",
+      className: "zen_modules_moduleHeal",
+      displayName: "Heal",
+      x: 3411,
+      y: 9002,
+      ...overrides,
+    });
+
+  describe("zeusModuleLifetimeFrames", () => {
+    it("is 30 frames at the default 1 s capture delay", () => {
+      expect(zeusModuleLifetimeFrames(1000)).toBe(ZEUS_MODULE_MAP_SECONDS);
+    });
+
+    it("scales with a non-default capture delay", () => {
+      expect(zeusModuleLifetimeFrames(500)).toBe(60);
+      expect(zeusModuleLifetimeFrames(2000)).toBe(15);
+    });
+  });
+
+  describe("getActiveZeusModules", () => {
+    let events: EventManager;
+
+    beforeEach(() => {
+      events = new EventManager();
+      events.addEvent(placed(100));
+    });
+
+    it("shows the module on its own frame and until the lifetime elapses", () => {
+      expect(events.getActiveZeusModules(100, 30)).toHaveLength(1);
+      expect(events.getActiveZeusModules(129, 30)).toHaveLength(1);
+    });
+
+    it("drops the module exactly at the end of its 30 s map life", () => {
+      expect(events.getActiveZeusModules(130, 30)).toEqual([]);
+    });
+
+    it("keeps the module in the event log after it leaves the map", () => {
+      expect(events.getActiveEvents(5000)).toHaveLength(1);
+      expect(events.getActiveZeusModules(5000, 30)).toEqual([]);
+    });
+  });
+
+  describe("groupZeusModules", () => {
+    it("collapses co-located uses of the same module by one Zeus", () => {
+      const groups = groupZeusModules([placed(100), placed(110, { x: 3420, y: 9010 })]);
+      expect(groups).toHaveLength(1);
+      expect(groups[0].frames).toEqual([110, 100]);
+      expect(groups[0].displayName).toBe("Heal");
+    });
+
+    it("keeps different module names separate even at the same spot", () => {
+      const groups = groupZeusModules([
+        placed(100),
+        placed(100, { displayName: "Earthquake", className: "zen_modules_moduleEarthquake" }),
+      ]);
+      expect(groups).toHaveLength(2);
+    });
+  });
+
+  describe("zeusModuleAlpha", () => {
+    it("is solid for most of the 30 s life and fades in the last 5 s", () => {
+      expect(zeusModuleAlpha(100, 100, 30, 5)).toBe(1);
+      expect(zeusModuleAlpha(124, 100, 30, 5)).toBe(1);
+      expect(zeusModuleAlpha(128, 100, 30, 5)).toBeLessThan(1);
+      expect(zeusModuleFadeFrames(1000)).toBe(5);
+    });
+
+    it("is zero outside the lifetime", () => {
+      expect(zeusModuleAlpha(130, 100, 30, 5)).toBe(0);
+      expect(zeusModuleAlpha(99, 100, 30, 5)).toBe(0);
     });
   });
 });

@@ -119,6 +119,7 @@ func TestConverterWritesPlayerSnapshotSidecars(t *testing.T) {
 			[2, "zeusEntity", {"curatorId": 90, "name": "Danny", "playerUid": "7656", "bodyUnitId": -1}],
 			[3, "zeusCamera", {"curatorId": 90, "x": 100, "y": 200, "dir": 90, "fov": 0.75}],
 			[4, "zeusRemoteControl", {"curatorId": 90, "unitId": 7, "active": true}],
+			[4, "zeusModule", {"curatorId": 90, "curatorName": "Danny", "className": "zen_modules_moduleHeal", "displayName": "Heal", "x": 100, "y": 200}],
 			[5, "inventorySnapshot", {"unitId": 7, "massUnits": 695}],
 			[6, "killed", [7, 7, "rifle", 10]],
 			[9, "medicalSnapshot", {"unitId": 12, "ace": {"heartRate": 80}}],
@@ -154,12 +155,12 @@ func TestConverterWritesPlayerSnapshotSidecars(t *testing.T) {
 	require.True(t, sawWeather, "weather must stay in the manifest")
 	var sawZeus int
 	for _, e := range manifest.Events {
-		if e.Type == "zeusEntity" || e.Type == "zeusCamera" || e.Type == "zeusRemoteControl" {
+		if e.Type == "zeusEntity" || e.Type == "zeusCamera" || e.Type == "zeusRemoteControl" || e.Type == "zeusModule" {
 			sawZeus++
 			require.NotEmpty(t, e.Message, "%s lost its JSON payload", e.Type)
 		}
 	}
-	require.Equal(t, 3, sawZeus, "Zeus events must stay in the protobuf manifest")
+	require.Equal(t, 4, sawZeus, "Zeus events must stay in the protobuf manifest")
 
 	data, err = os.ReadFile(filepath.Join(outputPath, SnapshotsDirName, "7.pb"))
 	require.NoError(t, err)

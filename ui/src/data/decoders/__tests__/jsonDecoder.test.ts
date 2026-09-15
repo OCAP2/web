@@ -94,6 +94,8 @@ describe("JsonDecoder.decodeManifest", () => {
         [9, "zeusCamera", { x: 1, y: 2 }],
         [12, "zeusPing", { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 }],
         [13, "zeusPing", { unitId: 7, x: 1, y: 2 }],
+        [16, "zeusModule", { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", category: "ACE", source: "zen", x: 3411, y: 9002, attachedUnitId: 7, attachedName: "Allen" }],
+        [17, "zeusModule", { curatorId: 90, displayName: "Heal" }],
       ],
     }));
 
@@ -102,6 +104,7 @@ describe("JsonDecoder.decodeManifest", () => {
       { frameNum: 4, type: "zeusCamera", payload: { curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 } },
       { frameNum: 8, type: "zeusRemoteControl", payload: { curatorId: 90, unitId: 7, active: true } },
       { frameNum: 12, type: "zeusPing", payload: { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 } },
+      { frameNum: 16, type: "zeusModule", payload: { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", category: "ACE", source: "zen", x: 3411, y: 9002, attachedUnitId: 7, attachedName: "Allen" } },
     ]);
   });
 

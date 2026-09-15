@@ -194,6 +194,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
         { frameNum: 4, type: "zeusCamera", message: JSON.stringify({ curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 }) },
         { frameNum: 8, type: "zeusRemoteControl", message: JSON.stringify({ curatorId: 90, unitId: 7, active: true }) },
         { frameNum: 12, type: "zeusPing", message: JSON.stringify({ curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 }) },
+        { frameNum: 16, type: "zeusModule", message: JSON.stringify({ curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", x: 3411, y: 9002 }) },
       ],
     });
 
@@ -202,6 +203,7 @@ describe("ProtobufDecoder.decodeManifest", () => {
       { frameNum: 4, type: "zeusCamera", payload: { curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 } },
       { frameNum: 8, type: "zeusRemoteControl", payload: { curatorId: 90, unitId: 7, active: true } },
       { frameNum: 12, type: "zeusPing", payload: { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 } },
+      { frameNum: 16, type: "zeusModule", payload: { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", x: 3411, y: 9002 } },
     ]);
   });
 

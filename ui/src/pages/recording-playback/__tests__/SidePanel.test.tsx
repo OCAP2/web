@@ -124,4 +124,40 @@ describe("SidePanel", () => {
     expect(screen.queryByText("BLUFOR")).toBeNull();
   });
 
+  it("lists a Zeus module event with its recorded English name", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [unitDef({ id: 1, name: "Allen", side: "WEST", groupName: "Alpha" })],
+        [
+          {
+            frameNum: 0,
+            type: "zeusModule",
+            payload: {
+              curatorId: 90,
+              curatorName: "Danny",
+              className: "zen_modules_moduleHeal",
+              displayName: "Heal",
+              x: 100,
+              y: 200,
+              attachedName: "Allen",
+            },
+          },
+        ],
+      ),
+    );
+
+    const [activeTab] = createSignal("events");
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <SidePanel activeTab={activeTab} onTabChange={() => {}} />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/Danny/)).toBeTruthy();
+    expect(screen.getByText(/Heal/)).toBeTruthy();
+    expect(screen.getByText(/Allen/)).toBeTruthy();
+  });
+
 });

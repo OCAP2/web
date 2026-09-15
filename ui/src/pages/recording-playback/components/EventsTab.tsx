@@ -9,7 +9,7 @@ import { GeneralMissionEvent } from "../../../playback/events/generalEvent";
 import { CapturedEvent } from "../../../playback/events/capturedEvent";
 import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import { PlayerSnapshotEvent } from "../../../playback/events/playerSnapshotEvent";
-import { ZeusPingEvent } from "../../../playback/events/zeusEvents";
+import { ZeusModuleEvent, ZeusPingEvent } from "../../../playback/events/zeusEvents";
 import {
   ExplosionEvent,
   RadioTransmissionEvent,
@@ -20,7 +20,7 @@ import { formatNet } from "../../../playback/comms";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon, TargetIcon, ExplosionIcon, WrenchIcon, StaticWeaponIcon, RadioIcon } from "../../../components/Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon, TargetIcon, ExplosionIcon, WrenchIcon, StaticWeaponIcon, RadioIcon, ZapIcon } from "../../../components/Icons";
 import { EventFilters, DEFAULT_EVENT_FILTERS } from "./EventFilters";
 import type { EventFilterState } from "./EventFilters";
 import styles from "./SidePanel.module.css";
@@ -59,6 +59,9 @@ function eventStyle(event: GameEvent): { icon: JSX.Element; color: string } {
   if (event instanceof ZeusPingEvent) {
     return { icon: <TargetIcon size={16} />, color: SIDE_COLORS_UI.VIRTUAL };
   }
+  if (event instanceof ZeusModuleEvent) {
+    return { icon: <ZapIcon size={16} />, color: SIDE_COLORS_UI.VIRTUAL };
+  }
   if (event instanceof ExplosionEvent) {
     return { icon: <ExplosionIcon size={16} />, color: "var(--accent-warning)" };
   }
@@ -91,6 +94,7 @@ export function EventsTab(): JSX.Element {
     if (event instanceof CapturedEvent) return f.showCaptures;
     if (event instanceof TerminalHackEvent) return f.showTerminalHacks;
     if (event instanceof ZeusPingEvent) return f.showZeusPings;
+    if (event instanceof ZeusModuleEvent) return f.showZeusModules;
     if (event instanceof ExplosionEvent) return f.showExplosions;
     if (event instanceof ServiceEvent) return f.showServicing;
     if (event instanceof StaticWeaponEvent) return f.showConstructions;
@@ -143,6 +147,14 @@ export function EventsTab(): JSX.Element {
           if (!event.unitName.toLowerCase().includes(text)) return false;
         } else if (event instanceof ZeusPingEvent) {
           if (!event.payload.name.toLowerCase().includes(text)) return false;
+        } else if (event instanceof ZeusModuleEvent) {
+          const haystack = [
+            event.payload.curatorName ?? "",
+            event.payload.displayName ?? "",
+            event.payload.attachedName ?? "",
+            event.payload.className ?? "",
+          ].join(" ").toLowerCase();
+          if (!haystack.includes(text)) return false;
         } else if (event instanceof ExplosionEvent) {
           if (!event.payload.name.toLowerCase().includes(text)) return false;
         } else if (event instanceof ServiceEvent) {
@@ -177,6 +189,8 @@ export function EventsTab(): JSX.Element {
     } else if (event instanceof CapturedEvent && event.position) {
       engine.panToPosition(event.position);
     } else if (event instanceof ZeusPingEvent) {
+      engine.panToPosition(event.position);
+    } else if (event instanceof ZeusModuleEvent) {
       engine.panToPosition(event.position);
     } else if (event instanceof ExplosionEvent) {
       engine.panToPosition(event.position);
@@ -332,6 +346,25 @@ export function EventsTab(): JSX.Element {
                             {event.payload.name}
                           </span>
                           {" "}{t("pinged_zeus")}
+                        </span>
+                        <span class={styles.eventMeta}>
+                          <span class={styles.eventTime}>
+                            <ClockIcon size={14} />
+                            {timeStr(event.frameNum)}
+                          </span>
+                        </span>
+                      </>
+                    ) : event instanceof ZeusModuleEvent ? (
+                      <>
+                        <span class={styles.eventMessage}>
+                          <span style={{ color: SIDE_COLORS_UI.VIRTUAL }}>
+                            {event.payload.curatorName || `Zeus ${event.payload.curatorId}`}
+                          </span>
+                          {" "}{t("used_zeus_module")}{" "}
+                          {event.payload.displayName}
+                          <Show when={event.payload.attachedName}>
+                            {" "}{t("on_target")} {event.payload.attachedName}
+                          </Show>
                         </span>
                         <span class={styles.eventMeta}>
                           <span class={styles.eventTime}>

@@ -1,4 +1,4 @@
-import type { Side, ZeusPingPayload } from "../data/types";
+import type { Side, ZeusModulePayload, ZeusPingPayload } from "../data/types";
 
 /**
  * Frames after a remote-control stop during which that unit's kills still
@@ -118,6 +118,107 @@ export function zeusPingAlpha(
   const age = frame - latestFrame;
   if (age < 0 || age >= lifetimeFrames) return 0;
   const fade = Math.min(ZEUS_PING_FADE_FRAMES, lifetimeFrames);
+  const remaining = lifetimeFrames - age;
+  if (remaining >= fade) return 1;
+  return Math.max(0.15, remaining / fade);
+}
+
+/**
+ * How long a Zeus module placement stays drawn on the map, in seconds of
+ * playback time. After this it disappears from the map but remains in the
+ * event log forever.
+ */
+export const ZEUS_MODULE_MAP_SECONDS = 30;
+
+/** Seconds over which a module marker fades out at the end of its map life. */
+export const ZEUS_MODULE_FADE_SECONDS = 5;
+
+export function zeusModuleLifetimeFrames(captureDelayMs: number): number {
+  if (!Number.isFinite(captureDelayMs) || captureDelayMs <= 0) {
+    return ZEUS_MODULE_MAP_SECONDS;
+  }
+  return Math.max(1, Math.round((ZEUS_MODULE_MAP_SECONDS * 1000) / captureDelayMs));
+}
+
+export function zeusModuleFadeFrames(captureDelayMs: number): number {
+  if (!Number.isFinite(captureDelayMs) || captureDelayMs <= 0) {
+    return ZEUS_MODULE_FADE_SECONDS;
+  }
+  return Math.max(1, Math.round((ZEUS_MODULE_FADE_SECONDS * 1000) / captureDelayMs));
+}
+
+export interface ZeusModuleLike {
+  frameNum: number;
+  payload: ZeusModulePayload;
+}
+
+export interface ZeusModuleGroup {
+  key: string;
+  curatorId: number;
+  curatorName: string;
+  displayName: string;
+  attachedName: string;
+  position: [number, number];
+  frames: number[];
+  latestFrame: number;
+}
+
+export function groupZeusModules(events: ZeusModuleLike[]): ZeusModuleGroup[] {
+  const groups: ZeusModuleGroup[] = [];
+  const anchors: Array<[number, number]> = [];
+
+  for (const event of events) {
+    const { curatorId, curatorName, displayName, attachedName, x, y } = event.payload;
+    const attached = attachedName ?? "";
+
+    let matched = false;
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      if (group.curatorId !== curatorId) continue;
+      if (group.displayName !== displayName) continue;
+      if (group.attachedName !== attached) continue;
+      const [ax, ay] = anchors[i];
+      if (Math.hypot(x - ax, y - ay) > ZEUS_PING_GROUP_RADIUS_M) continue;
+
+      group.frames.push(event.frameNum);
+      if (event.frameNum > group.latestFrame) {
+        group.latestFrame = event.frameNum;
+        group.position = [x, y];
+      }
+      matched = true;
+      break;
+    }
+    if (matched) continue;
+
+    groups.push({
+      key: `${curatorId}:${displayName}:${attached}:${event.frameNum}`,
+      curatorId,
+      curatorName,
+      displayName,
+      attachedName: attached,
+      position: [x, y],
+      frames: [event.frameNum],
+      latestFrame: event.frameNum,
+    });
+    anchors.push([x, y]);
+  }
+
+  for (const group of groups) {
+    group.frames.sort((a, b) => b - a);
+  }
+
+  return groups.sort((a, b) => a.latestFrame - b.latestFrame);
+}
+
+export function zeusModuleAlpha(
+  frame: number,
+  latestFrame: number,
+  lifetimeFrames: number,
+  fadeFrames: number,
+): number {
+  const age = frame - latestFrame;
+  if (age < 0 || age >= lifetimeFrames) return 0;
+  const fade = Math.min(fadeFrames, lifetimeFrames);
   const remaining = lifetimeFrames - age;
   if (remaining >= fade) return 1;
   return Math.max(0.15, remaining / fade);

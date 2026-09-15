@@ -28,6 +28,7 @@ import { WeatherEvent } from "./events/weatherEvent";
 import {
   ZeusCameraEvent,
   ZeusEntityEvent,
+  ZeusModuleEvent,
   ZeusPingEvent,
   ZeusRemoteControlEvent,
 } from "./events/zeusEvents";
@@ -98,6 +99,8 @@ function createGameEvent(def: EventDef): GameEvent | null {
       return new ZeusCameraEvent(def.frameNum, id, def.payload);
     case "zeusPing":
       return new ZeusPingEvent(def.frameNum, id, def.payload);
+    case "zeusModule":
+      return new ZeusModuleEvent(def.frameNum, id, def.payload);
     case "explosion":
       return new ExplosionEvent(def.frameNum, id, def.payload);
     case "serviceEvent":

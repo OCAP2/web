@@ -14,9 +14,14 @@ import { Unit } from "../../playback/entities/unit";
 import { HitKilledEvent } from "../../playback/events/hitKilledEvent";
 import {
   groupZeusPings,
+  groupZeusModules,
   zeusPingAlpha,
   zeusPingLifetimeFrames,
+  zeusModuleAlpha,
+  zeusModuleFadeFrames,
+  zeusModuleLifetimeFrames,
   type ZeusPingGroup,
+  type ZeusModuleGroup,
 } from "../../playback/zeus";
 import {
   explosionAlpha,
@@ -96,6 +101,27 @@ function pingLabel(
   const name = escapeHtml(group.name || `Unit ${group.unitId}`);
   return group.frames
     .map((frame) => `[Zeus ping] - ${name} - ${escapeHtml(format(frame))}`)
+    .join("<br>");
+}
+
+function moduleColor(): string {
+  const color = SIDE_COLORS_BRIGHT.VIRTUAL ?? "#9b59b6";
+  return color.replace("#", "");
+}
+
+/**
+ * Text beside a module icon. The display name is the English string recorded
+ * in the event — do not translate it.
+ */
+function moduleLabel(
+  group: ZeusModuleGroup,
+  format: (frame: number) => string,
+): string {
+  const zeus = escapeHtml(group.curatorName || `Zeus ${group.curatorId}`);
+  const moduleName = escapeHtml(group.displayName);
+  const target = group.attachedName ? ` - ${escapeHtml(group.attachedName)}` : "";
+  return group.frames
+    .map((frame) => `[Zeus module] - ${zeus} - ${moduleName}${target} - ${escapeHtml(format(frame))}`)
     .join("<br>");
 }
 
@@ -280,6 +306,81 @@ export function useRenderBridge(
       renderer.removeBriefingMarker(render.icon);
       renderer.removeBriefingMarker(render.label);
       pingRenders.delete(key);
+    }
+  });
+
+  // Zeus modules → transient map overlay, same pattern as pings but 30 s.
+  const moduleRenders = new Map<string, PingRender>();
+
+  createEffect(() => {
+    const frame = engine.currentFrame();
+    const mode = timeMode();
+    const delay = engine.captureDelayMs();
+    const lifetime = zeusModuleLifetimeFrames(delay);
+    const fade = zeusModuleFadeFrames(delay);
+    const groups = groupZeusModules(
+      engine.eventManager.getActiveZeusModules(frame, lifetime),
+    );
+
+    const config = engine.timeConfig;
+    const format = (f: number) => formatTime(f, mode, config);
+
+    const live = new Set<string>();
+
+    for (const group of groups) {
+      live.add(group.key);
+      const labelText = moduleLabel(group, format);
+      const color = moduleColor();
+
+      let render = moduleRenders.get(group.key);
+      if (render && render.labelText !== labelText) {
+        renderer.removeBriefingMarker(render.label);
+        render.label = renderer.createBriefingMarker({
+          shape: "ICON",
+          type: "Empty",
+          color,
+          text: labelText,
+          side: "GLOBAL",
+          layer: "systemMarkers",
+          textClass: "zeus-module-label",
+        });
+        render.labelText = labelText;
+      }
+
+      if (!render) {
+        render = {
+          icon: renderer.createBriefingMarker({
+            shape: "ICON",
+            type: "zeus",
+            color,
+            side: "GLOBAL",
+            layer: "systemMarkers",
+          }),
+          label: renderer.createBriefingMarker({
+            shape: "ICON",
+            type: "Empty",
+            color,
+            text: labelText,
+            side: "GLOBAL",
+            layer: "systemMarkers",
+            textClass: "zeus-module-label",
+          }),
+          labelText,
+        };
+        moduleRenders.set(group.key, render);
+      }
+
+      const alpha = zeusModuleAlpha(frame, group.latestFrame, lifetime, fade);
+      const state = { position: group.position, direction: 0, alpha };
+      renderer.updateBriefingMarker(render.icon, state);
+      renderer.updateBriefingMarker(render.label, state);
+    }
+
+    for (const [key, render] of moduleRenders) {
+      if (live.has(key)) continue;
+      renderer.removeBriefingMarker(render.icon);
+      renderer.removeBriefingMarker(render.label);
+      moduleRenders.delete(key);
     }
   });
 

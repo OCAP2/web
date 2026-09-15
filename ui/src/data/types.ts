@@ -361,6 +361,23 @@ export interface ZeusPingPayload {
 }
 
 /**
+ * A Zeus placed a module. Names are English-only at record time; the UI must
+ * not localize `displayName`.
+ */
+export interface ZeusModulePayload {
+  curatorId: number;
+  curatorName?: string;
+  className?: string;
+  displayName: string;
+  category?: string;
+  source?: string;
+  x: number;
+  y: number;
+  attachedUnitId?: number;
+  attachedName?: string;
+}
+
+/**
  * A detonation. `radius` is the ammo's indirectHitRange straight out of CfgAmmo,
  * so it is the area the blast could damage, not a rendering choice.
  */
@@ -473,6 +490,11 @@ export interface ZeusPingEventDef {
   payload: ZeusPingPayload;
 }
 
+export interface ZeusModuleEventDef {
+  type: "zeusModule";
+  payload: ZeusModulePayload;
+}
+
 export type EventDef = { frameNum: number } & (
   | HitKilledEventDef
   | ConnectEventDef
@@ -490,6 +512,7 @@ export type EventDef = { frameNum: number } & (
   | ZeusRemoteControlEventDef
   | ZeusCameraEventDef
   | ZeusPingEventDef
+  | ZeusModuleEventDef
   | ExplosionEventDef
   | ServiceEventDef
   | StaticWeaponEventDef

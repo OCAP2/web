@@ -175,7 +175,7 @@ func parseEventArray(evtArr []interface{}) *Event {
 		event.Type == "tfarSettings" || event.Type == "acreSettings" ||
 		event.Type == "serverFps" || event.Type == "weather" || event.Type == "zeusEntity" ||
 		event.Type == "zeusRemoteControl" || event.Type == "zeusCamera" ||
-		event.Type == "zeusPing" || event.Type == "explosion" ||
+		event.Type == "zeusPing" || event.Type == "zeusModule" || event.Type == "explosion" ||
 		event.Type == "serviceEvent" || event.Type == "staticWeapon" ||
 		event.Type == "radioTransmission" {
 		if len(evtArr) > 2 {
