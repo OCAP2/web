@@ -234,8 +234,8 @@ export class LeafletRenderer implements MapRenderer {
       this.initLegacyMode(container, world, maxZoom);
     }
 
-    // Add standard controls
-    createScaleControl().addTo(this.map);
+    // Scale bar in Arma metres (Leaflet's own scale uses CRS units, not metres).
+    createScaleControl((ll) => this.latLngToArma(ll)).addTo(this.map);
 
     // SVG renderer for briefing marker shapes — avoids canvas bitmap scaling
     // during zoom animation (the old frontend does the same: window.svgRenderer = L.svg())

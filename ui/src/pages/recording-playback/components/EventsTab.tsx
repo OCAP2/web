@@ -21,8 +21,10 @@ import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
 import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon, TargetIcon, ExplosionIcon, WrenchIcon, StaticWeaponIcon, RadioIcon, ZapIcon } from "../../../components/Icons";
-import { EventFilters, DEFAULT_EVENT_FILTERS } from "./EventFilters";
+import { EventFilters, DEFAULT_EVENT_FILTERS, DEFAULT_FACTION_FILTER, allFactionsEnabled } from "./EventFilters";
 import type { EventFilterState } from "./EventFilters";
+import type { Side } from "../../../data/types";
+import type { PlaybackEngine } from "../../../playback/engine";
 import styles from "./SidePanel.module.css";
 
 function sideColor(side?: string): string {
@@ -77,11 +79,33 @@ function eventStyle(event: GameEvent): { icon: JSX.Element; color: string } {
   return { icon: <ActivityIcon size={16} />, color: "#888" };
 }
 
+/** Sides an event belongs to. Empty means the event has no faction and always passes. */
+export function eventInvolvedSides(event: GameEvent, engine: PlaybackEngine): string[] {
+  if (event instanceof HitKilledEvent) {
+    return [event.victimSide, event.causerSide].filter((s): s is string => !!s);
+  }
+  if (event instanceof EndMissionEvent) return event.side ? [event.side] : [];
+  if (event instanceof CapturedEvent) return event.side ? [event.side] : [];
+  if (event instanceof ZeusPingEvent) return event.payload.side ? [event.payload.side] : [];
+  if (event instanceof ZeusModuleEvent) return ["VIRTUAL"];
+  if (event instanceof ExplosionEvent) return event.payload.side ? [event.payload.side] : [];
+  if (event instanceof ServiceEvent) return event.payload.side ? [event.payload.side] : [];
+  if (event instanceof StaticWeaponEvent) return event.payload.side ? [event.payload.side] : [];
+  if (event instanceof RadioTransmissionEvent) {
+    const side = engine.entitySnapshots().get(event.unitId)?.side;
+    return side ? [side] : [];
+  }
+  return [];
+}
+
 export function EventsTab(): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
   const [filterText, setFilterText] = createSignal("");
-  const [filters, setFilters] = createSignal<EventFilterState>(DEFAULT_EVENT_FILTERS);
+  const [filters, setFilters] = createSignal<EventFilterState>({
+    ...DEFAULT_EVENT_FILTERS,
+    factions: { ...DEFAULT_FACTION_FILTER },
+  });
 
   const passesEventType = (event: GameEvent, f: EventFilterState): boolean => {
     // Detail snapshots drive the player profile and are intentionally hidden
@@ -117,6 +141,13 @@ export function EventsTab(): JSX.Element {
     return true;
   };
 
+  const passesFactionFilter = (event: GameEvent, f: EventFilterState): boolean => {
+    if (allFactionsEnabled(f.factions)) return true;
+    const sides = eventInvolvedSides(event, engine);
+    if (sides.length === 0) return true;
+    return sides.some((s) => f.factions[s as Side]);
+  };
+
   const filteredEvents = createMemo(() => {
     const all = engine.activeEvents();
     const text = filterText().toLowerCase();
@@ -125,6 +156,7 @@ export function EventsTab(): JSX.Element {
     const filtered = all.filter((event) => {
       if (!passesEventType(event, f)) return false;
       if (!passesSideFilter(event, f)) return false;
+      if (!passesFactionFilter(event, f)) return false;
 
       // Text search
       if (text) {

@@ -1897,6 +1897,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Piilota omien tuli",
     uk: "Сховати дружній вогонь",
   },
+  section_faction_filter: {
+    ru: "ФРАКЦИЯ",
+    en: "FACTION",
+    de: "FRAKTION",
+    cs: "FRAKCE",
+    it: "FAZIONE",
+    fr: "FACTION",
+    fi: "FAKTIO",
+    uk: "ФРАКЦІЯ",
+  },
   friendly_fire: {
     ru: "Дружеский огонь",
     en: "Friendly Fire",

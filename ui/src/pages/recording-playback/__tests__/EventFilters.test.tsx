@@ -4,6 +4,8 @@ import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
 import {
   EventFilters,
   DEFAULT_EVENT_FILTERS,
+  DEFAULT_FACTION_FILTER,
+  allFactionsEnabled,
   type EventFilterState,
 } from "../components/EventFilters";
 import { I18nProvider } from "../../../hooks/useLocale";
@@ -16,6 +18,7 @@ function renderEventFilters(initial?: Partial<EventFilterState>) {
   const [state, setStateSignal] = createSignal<EventFilterState>({
     ...DEFAULT_EVENT_FILTERS,
     ...initial,
+    factions: { ...DEFAULT_FACTION_FILTER, ...initial?.factions },
   });
   const setState = (updater: (prev: EventFilterState) => EventFilterState) => {
     setStateSignal((prev) => updater(prev));
@@ -46,6 +49,7 @@ describe("EventFilters - panel open/close", () => {
     openPanel();
     expect(screen.getByText("EVENT TYPES")).toBeTruthy();
     expect(screen.getByText("SIDE FILTER")).toBeTruthy();
+    expect(screen.getByText("FACTION")).toBeTruthy();
   });
 
   it("closes on second button click", () => {
@@ -73,6 +77,16 @@ describe("EventFilters - panel open/close", () => {
     expect(screen.getByText("All sides")).toBeTruthy();
     expect(screen.getByText("Friendly fire only")).toBeTruthy();
     expect(screen.getByText("Hide friendly fire")).toBeTruthy();
+  });
+
+  it("renders faction checkboxes for every side", () => {
+    renderEventFilters();
+    openPanel();
+    expect(screen.getByText("BLUFOR")).toBeTruthy();
+    expect(screen.getByText("OPFOR")).toBeTruthy();
+    expect(screen.getByText("Independent")).toBeTruthy();
+    expect(screen.getByText("Civilian")).toBeTruthy();
+    expect(screen.getByText("Virtual")).toBeTruthy();
   });
 });
 
@@ -137,6 +151,57 @@ describe("EventFilters - side filter", () => {
   });
 });
 
+describe("EventFilters - faction filter", () => {
+  it("all factions are enabled by default", () => {
+    const { state } = renderEventFilters();
+    expect(state().factions).toEqual(DEFAULT_FACTION_FILTER);
+  });
+
+  it("toggling a faction updates only that faction", () => {
+    const { state } = renderEventFilters();
+    openPanel();
+
+    fireEvent.click(screen.getByText("BLUFOR"));
+    expect(state().factions.WEST).toBe(false);
+    expect(state().factions.EAST).toBe(true);
+    expect(state().factions.GUER).toBe(true);
+    expect(state().factions.VIRTUAL).toBe(true);
+
+    fireEvent.click(screen.getByText("Independent"));
+    expect(state().factions.GUER).toBe(false);
+    expect(state().factions.WEST).toBe(false);
+  });
+
+  it("faction checkboxes are independent of the side-filter radio", () => {
+    const { state } = renderEventFilters();
+    openPanel();
+
+    fireEvent.click(screen.getByText("Friendly fire only"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    expect(state().sideFilter).toBe("friendlyFireOnly");
+    expect(state().factions.EAST).toBe(false);
+    expect(state().factions.WEST).toBe(true);
+  });
+
+  it("Virtual and Civilian toggles flip those sides only", () => {
+    const { state } = renderEventFilters();
+    openPanel();
+
+    fireEvent.click(screen.getByText("Virtual"));
+    fireEvent.click(screen.getByText("Civilian"));
+    expect(state().factions.VIRTUAL).toBe(false);
+    expect(state().factions.CIV).toBe(false);
+    expect(state().factions.WEST).toBe(true);
+    expect(state().factions.EAST).toBe(true);
+    expect(state().factions.GUER).toBe(true);
+  });
+
+  it("allFactionsEnabled is true only when every side is on", () => {
+    expect(allFactionsEnabled(DEFAULT_FACTION_FILTER)).toBe(true);
+    expect(allFactionsEnabled({ ...DEFAULT_FACTION_FILTER, GUER: false })).toBe(false);
+  });
+});
+
 describe("EventFilters - active indicator", () => {
   it("shows no active dot when state matches defaults", () => {
     const { container } = renderEventFilters();
@@ -153,6 +218,14 @@ describe("EventFilters - active indicator", () => {
 
   it("shows an active dot when side filter differs from default", () => {
     const { container } = renderEventFilters({ sideFilter: "friendlyFireOnly" });
+    const dot = container.querySelector("[aria-hidden='true']");
+    expect(dot).not.toBeNull();
+  });
+
+  it("shows an active dot when a faction is unchecked", () => {
+    const { container } = renderEventFilters({
+      factions: { ...DEFAULT_FACTION_FILTER, WEST: false },
+    });
     const dot = container.querySelector("[aria-hidden='true']");
     expect(dot).not.toBeNull();
   });
