@@ -27,12 +27,12 @@ describe("SidePanel", () => {
       </TestProviders>
     ));
 
-    for (const label of ["Units", "Events", "ORBAT", "Comms", "Stats"]) {
+    for (const label of ["Units", "Events", "ORBAT", "Comms", "Stats", "FPS"]) {
       expect(screen.getByText(label)).toBeTruthy();
     }
   });
 
-  // Five tabs share a panel fixed at 370px, so an inactive label can be
+  // Six tabs share a panel fixed at 420px, so a long translation can be
   // truncated to fit. The tooltip is the only place the full name survives, and
   // it is what stops a clipped tab from becoming an unidentifiable icon.
   it("gives every tab a title carrying its full label", () => {
@@ -47,7 +47,7 @@ describe("SidePanel", () => {
       </TestProviders>
     ));
 
-    for (const label of ["Units", "Events", "ORBAT", "Comms", "Stats"]) {
+    for (const label of ["Units", "Events", "ORBAT", "Comms", "Stats", "FPS"]) {
       expect(screen.getByTitle(label)).toBeTruthy();
     }
   });
@@ -71,8 +71,40 @@ describe("SidePanel", () => {
     fireEvent.click(screen.getByText("Stats"));
     expect(onTabChange).toHaveBeenCalledWith("stats");
 
-    fireEvent.click(screen.getByText("Units"));
+    fireEvent.click(screen.getByText("FPS"));
+    expect(onTabChange).toHaveBeenCalledWith("fps");
+
+    // The FPS tab's own legend also says "Units", so go by the tab's title.
+    fireEvent.click(screen.getByTitle("Units"));
     expect(onTabChange).toHaveBeenCalledWith("units");
+  });
+
+  // The FPS graph needs room, so that tab widens the panel. The width lives on
+  // the root, where the map controls and the profile card read it too, and it
+  // has to go back the moment the viewer leaves the tab or closes the panel.
+  it("widens the panel only while the FPS tab is open", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest([unitDef()]));
+
+    const [activeTab, setActiveTab] = createSignal("units");
+    const width = () => document.documentElement.style.getPropertyValue("--pb-panel-width");
+
+    const { unmount } = render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <SidePanel activeTab={activeTab} onTabChange={setActiveTab} />
+      </TestProviders>
+    ));
+
+    expect(width()).toBe("");
+    fireEvent.click(screen.getByText("FPS"));
+    expect(width()).toContain("clamp(");
+    fireEvent.click(screen.getByText("Stats"));
+    expect(width()).toBe("");
+
+    setActiveTab("fps");
+    expect(width()).toContain("clamp(");
+    unmount();
+    expect(width()).toBe("");
   });
 
   it("shows UnitsTab content when activeTab is 'units'", () => {

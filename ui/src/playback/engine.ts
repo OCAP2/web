@@ -549,6 +549,51 @@ export class PlaybackEngine {
     return Promise.all(loads).then(() => {});
   }
 
+  /**
+   * Walk the whole recording once, handing `visit` each stretch of frames
+   * together with a state reader that is valid for that stretch.
+   *
+   * The chunk cache keeps only a few chunks, so loading them all and then
+   * reading through getStateAt sees just the last ones. A reader that must see
+   * every frame comes through here instead: each chunk is read while this call
+   * still holds it, one chunk at a time, in frame order. A JSON recording is a
+   * single pass over the dense position arrays.
+   */
+  async visitAllFrames(
+    visit: (
+      firstFrame: number,
+      lastFrame: number,
+      stateAt: (entityId: number, frame: number) => EntityState | null,
+    ) => void,
+  ): Promise<void> {
+    const endFrame = this._endFrame();
+    const chunkManager = this.chunkManager;
+    const count = this.manifest?.chunkCount ?? 0;
+    if (!chunkManager || count <= 0) {
+      visit(0, endFrame, (entityId, frame) => this.getStateAt(entityId, frame));
+      return;
+    }
+
+    const chunkSize = this.manifest?.chunkSize || 300;
+    for (let index = 0; index < count; index++) {
+      const firstFrame = index * chunkSize;
+      if (firstFrame > endFrame) break;
+      const chunk = await chunkManager.loadChunk(index);
+      // A different recording was loaded while this chunk was in flight.
+      if (this.chunkManager !== chunkManager) return;
+      const lastFrame = Math.min(firstFrame + chunkSize - 1, endFrame);
+      visit(firstFrame, lastFrame, (entityId, frame) => {
+        const entity = this.entityManager.getEntity(entityId);
+        if (!entity || frame < entity.startFrame || frame > entity.endFrame) return null;
+        return (
+          chunk.entities.get(entityId)?.[frame - firstFrame] ??
+          entity.positions?.[entity.getRelativeFrameIndex(frame)] ??
+          null
+        );
+      });
+    }
+  }
+
   /** Whether a player has snapshots at all, before any sidecar is fetched. */
   hasPlayerSnapshots(unitId: number): boolean {
     return (

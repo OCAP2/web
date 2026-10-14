@@ -50,7 +50,7 @@ describe("readDeepLink", () => {
   });
 
   it("keeps every tab the side panel actually has", () => {
-    for (const tab of ["units", "events", "orbat", "comms", "stats"]) {
+    for (const tab of ["units", "events", "orbat", "comms", "stats", "fps"]) {
       expect(readDeepLink(`?tab=${tab}`).tab).toBe(tab);
     }
   });

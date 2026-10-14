@@ -1,13 +1,22 @@
-import { Switch, Match, For } from "solid-js";
+import { Switch, Match, For, createEffect, onCleanup } from "solid-js";
 import type { Accessor, JSX } from "solid-js";
-import { UsersIcon, ActivityIcon, BarChartIcon, RadioIcon, SitemapIcon } from "../../../components/Icons";
+import { UsersIcon, ActivityIcon, BarChartIcon, RadioIcon, SitemapIcon, GaugeIcon } from "../../../components/Icons";
 import { useI18n } from "../../../hooks/useLocale";
 import { UnitsTab } from "./UnitsTab";
 import { EventsTab } from "./EventsTab";
 import { StatsTab } from "./StatsTab";
+import { FpsTab } from "./FpsTab";
 import { CommsTab } from "./CommsTab";
 import { OrbatTab } from "./OrbatTab";
 import styles from "./SidePanel.module.css";
+
+/**
+ * Panel width while the FPS tab is open. The graph is the point of that tab,
+ * so it takes most of the screen, while leaving a strip of map beside it.
+ * Set on the root so everything laid out against the panel (map controls, the
+ * profile card) moves with it.
+ */
+const FPS_PANEL_WIDTH = "clamp(420px, 62vw, 1120px)";
 
 export interface SidePanelProps {
   activeTab: Accessor<string>;
@@ -27,7 +36,15 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
     { id: "orbat" as const, labelKey: "orbat", Icon: SitemapIcon },
     { id: "comms" as const, labelKey: "comms", Icon: RadioIcon },
     { id: "stats" as const, labelKey: "stats", Icon: BarChartIcon },
+    { id: "fps" as const, labelKey: "fps", Icon: GaugeIcon },
   ];
+
+  createEffect(() => {
+    const root = document.documentElement.style;
+    if (props.activeTab() === "fps") root.setProperty("--pb-panel-width", FPS_PANEL_WIDTH);
+    else root.removeProperty("--pb-panel-width");
+  });
+  onCleanup(() => document.documentElement.style.removeProperty("--pb-panel-width"));
 
   return (
     <div class={styles.panel}>
@@ -38,7 +55,7 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
               class={styles.tab}
               classList={{ [styles.tabActive]: props.activeTab() === tab.id }}
               onClick={() => props.onTabChange(tab.id)}
-              // Five tabs share a fixed-width panel, so an inactive label can be
+              // Six tabs share a fixed-width panel, so an inactive label can be
               // truncated. The tooltip is where the full name stays reachable.
               title={t(tab.labelKey)}
             >
@@ -69,6 +86,9 @@ export function SidePanel(props: SidePanelProps): JSX.Element {
         </Match>
         <Match when={props.activeTab() === "stats"}>
           <StatsTab />
+        </Match>
+        <Match when={props.activeTab() === "fps"}>
+          <FpsTab />
         </Match>
       </Switch>
 

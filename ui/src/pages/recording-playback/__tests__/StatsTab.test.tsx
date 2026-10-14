@@ -16,40 +16,19 @@ afterEach(() => {
 });
 
 describe("StatsTab", () => {
-  it("shows playhead-scoped server FPS stats above Force Summary when samples exist", () => {
+  // Server FPS moved to its own tab with the graph; Stats must not show a
+  // second, partial copy of it.
+  it("leaves server FPS to the FPS tab even when samples exist", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(makeManifest(
       [unitDef({ id: 1, side: "WEST" })],
       [
         { frameNum: 0, type: "serverFps", fps: 40 },
         { frameNum: 60, type: "serverFps", fps: 20 },
-        { frameNum: 120, type: "serverFps", fps: 30 },
-        { frameNum: 180, type: "serverFps", fps: 50 },
       ],
-      180,
+      60,
     ));
-    engine.seekTo(120);
-
-    render(() => (
-      <TestProviders engine={engine} renderer={renderer}>
-        <StatsTab />
-      </TestProviders>
-    ));
-
-    expect(screen.getByText("Server FPS")).toBeTruthy();
-    expect(screen.getByText("Current")).toBeTruthy();
-    expect(screen.getByText("Average")).toBeTruthy();
-    expect(screen.getByText("Median")).toBeTruthy();
-    expect(screen.getAllByText("30.0")).toHaveLength(3);
-
-    const fpsHeading = screen.getByText("Server FPS");
-    const forceHeading = screen.getByText("Force Summary");
-    expect(fpsHeading.compareDocumentPosition(forceHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it("hides server FPS stats for backwards-compatible recordings without samples", () => {
-    const { engine, renderer } = createTestEngine();
-    engine.loadRecording(makeManifest([unitDef({ id: 1, side: "WEST" })]));
+    engine.seekTo(60);
 
     render(() => (
       <TestProviders engine={engine} renderer={renderer}>
@@ -58,54 +37,8 @@ describe("StatsTab", () => {
     ));
 
     expect(screen.queryByText("Server FPS")).toBeNull();
-    expect(screen.queryByText("Weather")).toBeNull();
+    expect(screen.queryByText("Median")).toBeNull();
     expect(screen.getByText("Force Summary")).toBeTruthy();
-  });
-
-  it("colors each FPS number independently by threshold", () => {
-    const { engine, renderer } = createTestEngine();
-    engine.loadRecording(makeManifest(
-      [unitDef({ id: 1, side: "WEST" })],
-      [
-        { frameNum: 0, type: "serverFps", fps: 10 },
-        { frameNum: 10, type: "serverFps", fps: 25 },
-        { frameNum: 20, type: "serverFps", fps: 80 },
-      ],
-      20,
-    ));
-    engine.seekTo(20);
-
-    render(() => (
-      <TestProviders engine={engine} renderer={renderer}>
-        <StatsTab />
-      </TestProviders>
-    ));
-
-    expect(screen.getByText("Current").previousElementSibling?.getAttribute("style"))
-      .toContain("var(--accent-success)");
-    expect(screen.getByText("Average").previousElementSibling?.getAttribute("style"))
-      .toContain("var(--accent-warning)");
-    expect(screen.getByText("Median").previousElementSibling?.getAttribute("style"))
-      .toContain("rgb(255, 138, 61)");
-  });
-
-  it("colors FPS values below 20 red", () => {
-    const { engine, renderer } = createTestEngine();
-    engine.loadRecording(makeManifest(
-      [unitDef({ id: 1, side: "WEST" })],
-      [{ frameNum: 0, type: "serverFps", fps: 19.9 }],
-    ));
-
-    render(() => (
-      <TestProviders engine={engine} renderer={renderer}>
-        <StatsTab />
-      </TestProviders>
-    ));
-
-    for (const label of ["Current", "Average", "Median"]) {
-      expect(screen.getByText(label).previousElementSibling?.getAttribute("style"))
-        .toContain("var(--accent-danger)");
-    }
   });
 
   it("shows playhead-scoped weather after the leaderboard when samples exist", () => {

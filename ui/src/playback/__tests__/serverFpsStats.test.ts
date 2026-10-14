@@ -81,6 +81,30 @@ describe("server FPS samples", () => {
     expect(mgr.getServerFpsStats(30)!.current).toBe(50);
   });
 
+  // The recorder samples before its first frame and again at frame 0. Older
+  // builds stamp the early sample -1, newer ones 0; both are the start.
+  it("keeps one start sample whether the early one is stamped -1 or 0", () => {
+    for (const early of [-1, 0]) {
+      mgr.clear();
+      addSamples([
+        [early, 26],
+        [0, 27],
+        [10, 80],
+      ]);
+
+      expect(mgr.getServerFpsSamples()).toEqual([
+        { frame: 0, fps: 26 },
+        { frame: 10, fps: 80 },
+      ]);
+      expect(mgr.getServerFpsStats(10)).toEqual({ current: 80, average: 53, median: 53 });
+    }
+  });
+
+  it("keeps a lone pre-start sample, at frame 0", () => {
+    addSamples([[-1, 40]]);
+    expect(mgr.getServerFpsStats(0)).toEqual({ current: 40, average: 40, median: 40 });
+  });
+
   it("drops the samples on clear", () => {
     addSamples([[0, 40]]);
     mgr.clear();

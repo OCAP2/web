@@ -28,6 +28,7 @@ export class EventManager {
   private frameIndex: Map<number, GameEvent[]> = new Map();
   private playerSnapshots = new Map<number, Map<PlayerSnapshotType, PlayerSnapshotEvent[]>>();
   private serverFpsEvents: ServerFpsEvent[] = [];
+  private serverFpsFrames = new Set<number>();
   private weatherEvents: WeatherEvent[] = [];
   private zeusEntities = new Map<number, ZeusEntityInfo>();
   private zeusRemoteControl: ZeusRemoteControlEvent[] = [];
@@ -59,7 +60,14 @@ export class EventManager {
       return;
     }
     if (event instanceof ServerFpsEvent) {
-      this.serverFpsEvents.push(event);
+      // The recorder samples once before its first frame and again at frame 0.
+      // Older builds stamp the early one -1, newer ones clamp it to 0; either
+      // way it is the start of the recording, and one sample per frame is kept
+      // so the start does not count twice in the average and median.
+      const sample = event.frameNum < 0 ? new ServerFpsEvent(0, event.id, event.fps) : event;
+      if (this.serverFpsFrames.has(sample.frameNum)) return;
+      this.serverFpsFrames.add(sample.frameNum);
+      this.serverFpsEvents.push(sample);
       this.serverFpsEvents.sort((a, b) => a.frameNum - b.frameNum);
       return;
     }
@@ -224,6 +232,11 @@ export class EventManager {
       : (sorted[middle - 1] + sorted[middle]) / 2;
 
     return { current: samples[samples.length - 1].fps, average, median };
+  }
+
+  /** Every server FPS sample in the recording, in frame order. */
+  getServerFpsSamples(): { frame: number; fps: number }[] {
+    return this.serverFpsEvents.map((event) => ({ frame: event.frameNum, fps: event.fps }));
   }
 
   /** Latest weather sample at or before the requested playback frame. */
@@ -528,6 +541,7 @@ export class EventManager {
     this.frameIndex = new Map();
     this.playerSnapshots = new Map();
     this.serverFpsEvents = [];
+    this.serverFpsFrames.clear();
     this.weatherEvents = [];
     this.zeusEntities = new Map();
     this.zeusRemoteControl = [];

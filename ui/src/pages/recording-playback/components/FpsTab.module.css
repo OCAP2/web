@@ -1,0 +1,576 @@
+/* ── FPS tab ──
+   The side panel widens while this tab is open (see SidePanel.tsx), so the
+   layout is written for a wide panel and folds down through a container query
+   when the viewport is too narrow to give it one. */
+
+.fpsTab {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerMeta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-dimmer);
+  letter-spacing: 0.03em;
+}
+
+.headerHint {
+  color: var(--text-dim);
+}
+
+.note {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+}
+
+/* ── Summary tiles ── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tile {
+  padding: 11px 6px 10px;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  font: inherit;
+  color: inherit;
+}
+
+.tilesPending {
+  grid-column: span 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dimmest);
+  font-family: var(--font-mono);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tileValue {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tileLabel {
+  margin-top: 6px;
+  color: var(--text-on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tileSub {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tileButton {
+  cursor: pointer;
+  border-color: color-mix(in srgb, var(--accent-danger) 28%, transparent);
+  background: color-mix(in srgb, var(--accent-danger) 6%, transparent);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.tileButton:hover {
+  background: color-mix(in srgb, var(--accent-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-danger) 50%, transparent);
+}
+
+.tileButton:hover .tileSub {
+  color: var(--text-primary);
+}
+
+.tileButton:active {
+  transform: translateY(1px);
+}
+
+.tileButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.tileButtonActive {
+  border-color: color-mix(in srgb, var(--accent-danger) 70%, transparent);
+}
+
+/* ── Chart card ── */
+
+.chartCard {
+  flex: 1 0 auto;
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 8px 0 2px;
+}
+
+.chartBody {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.paneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 2px 14px 4px 12px;
+}
+
+.paneHeader + .fpsPane,
+.paneHeader + .populationPane {
+  margin-bottom: 4px;
+}
+
+.paneTitle {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fpsPane {
+  position: relative;
+  flex: 3 1 0;
+  min-height: 210px;
+}
+
+.populationPane {
+  position: relative;
+  flex: 2 1 0;
+  min-height: 160px;
+}
+
+.pane {
+  position: absolute;
+  inset: 0;
+}
+
+.paneSvg {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.paneOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  pointer-events: none;
+}
+
+/* ── SVG marks ── */
+
+.gridLine {
+  stroke: rgba(255, 255, 255, 0.055);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.baseLine {
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.tickLabel {
+  fill: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.playhead {
+  stroke: var(--text-primary);
+  stroke-opacity: 0.75;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.crosshair {
+  stroke: var(--text-muted);
+  stroke-opacity: 0.6;
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.marker {
+  pointer-events: none;
+}
+
+.markerLabel {
+  fill: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  paint-order: stroke;
+  stroke: #0b1016;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* ── Keys and legend ── */
+
+.zoneKeys {
+  display: flex;
+  gap: 12px;
+}
+
+.zoneKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.zoneSwatch {
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+  opacity: 0.55;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.legendChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.legendChip:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.legendChip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.legendChipOff {
+  opacity: 0.42;
+}
+
+.legendLabel {
+  white-space: nowrap;
+}
+
+.legendValue {
+  min-width: 2ch;
+  text-align: right;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lineKey {
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ── Tooltip ── */
+
+.tooltip {
+  position: absolute;
+  top: 30px;
+  z-index: 2;
+  pointer-events: none;
+  min-width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(12, 17, 24, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-mono);
+}
+
+.tooltipFlip {
+  transform: translateX(-100%);
+}
+
+.tooltipTime {
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.tooltipRowOff {
+  opacity: 0.45;
+}
+
+.tooltipValue {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipLabel {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Correlation and lowest moments ── */
+
+.insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.insightCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  min-width: 0;
+}
+
+.insightTitle {
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.insightNote {
+  margin-top: 6px;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.corrRow {
+  display: grid;
+  grid-template-columns: minmax(78px, 1fr) 46px 72px minmax(70px, 1.3fr);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+}
+
+.corrName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.corrValue {
+  text-align: right;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.corrStrength {
+  color: var(--text-dimmer);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.corrTrack {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.corrCenter {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.corrFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  opacity: 0.9;
+}
+
+.dipRow {
+  display: grid;
+  grid-template-columns: 16px minmax(62px, 1fr) 48px 48px 58px 54px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button.dipRow:hover {
+  background: var(--bg-interactive-hover);
+}
+
+button.dipRow:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.dipHead {
+  cursor: default;
+  color: var(--text-dimmer);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dipRowActive {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.dipRank {
+  color: var(--text-dimmest);
+  text-align: right;
+}
+
+.dipTime {
+  font-variant-numeric: tabular-nums;
+}
+
+.dipNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dipFps {
+  font-weight: 700;
+}
+
+/* ── Narrow panel ── */
+
+@container (max-width: 560px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tilesPending {
+    grid-column: span 2;
+    min-height: 56px;
+  }
+
+  .headerHint {
+    display: none;
+  }
+
+  .insights {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dipRow {
+    grid-template-columns: 14px minmax(56px, 1fr) 42px 42px 50px 48px;
+    gap: 4px;
+  }
+}

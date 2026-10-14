@@ -50,10 +50,6 @@ export function StatsTab(): JSX.Element {
   const { t } = useI18n();
   const showPlayerKillCount = (): boolean => !customize().disableKillCount;
 
-  const serverFps = createMemo(() =>
-    engine.eventManager.getServerFpsStats(engine.currentFrame()),
-  );
-
   const weather = createMemo(() =>
     engine.eventManager.getWeatherAt(engine.currentFrame()),
   );
@@ -124,14 +120,6 @@ export function StatsTab(): JSX.Element {
     return buildMovementStats(engine);
   });
 
-  const formatFps = (value: number): string => value.toFixed(1);
-  const fpsColor = (value: number): string => {
-    if (value >= 60) return "var(--accent-success)";
-    if (value >= 30) return "var(--accent-warning)";
-    if (value >= 20) return "#ff8a3d";
-    return "var(--accent-danger)";
-  };
-
   // Frame-aware kill/death counts
   const killDeathCounts = createMemo(() =>
     engine.eventManager.getKillDeathCounts(engine.currentFrame()),
@@ -183,34 +171,6 @@ export function StatsTab(): JSX.Element {
   return (
     <div class={styles.tabContent}>
       <div class={styles.statsContainer}>
-        <Show when={serverFps()} keyed>
-          {(fps) => (
-            <div>
-              <div class={`${styles.statsLabel} ${styles.serverFpsTitle}`}>{t("server_fps")}</div>
-              <div class={styles.serverFpsCard}>
-                <div class={styles.serverFpsMetric}>
-                  <div class={styles.serverFpsValue} style={{ color: fpsColor(fps.current) }}>
-                    {formatFps(fps.current)}
-                  </div>
-                  <div class={styles.serverFpsLabel}>{t("current")}</div>
-                </div>
-                <div class={styles.serverFpsMetric}>
-                  <div class={styles.serverFpsValue} style={{ color: fpsColor(fps.average) }}>
-                    {formatFps(fps.average)}
-                  </div>
-                  <div class={styles.serverFpsLabel}>{t("average")}</div>
-                </div>
-                <div class={styles.serverFpsMetric}>
-                  <div class={styles.serverFpsValue} style={{ color: fpsColor(fps.median) }}>
-                    {formatFps(fps.median)}
-                  </div>
-                  <div class={styles.serverFpsLabel}>{t("median")}</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </Show>
-
         {/* Force summary */}
         <div>
           <div class={styles.statsLabel}>{t("force_summary")}</div>

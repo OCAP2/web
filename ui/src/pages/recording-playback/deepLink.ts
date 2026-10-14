@@ -14,7 +14,7 @@
 import type { Side } from "../../data/types";
 
 /** Panel tabs a link may select. Mirrors the tab ids in <SidePanel>. */
-export const DEEP_LINK_TABS = ["units", "events", "orbat", "comms", "stats"] as const;
+export const DEEP_LINK_TABS = ["units", "events", "orbat", "comms", "stats", "fps"] as const;
 
 export type DeepLinkTab = (typeof DEEP_LINK_TABS)[number];
 

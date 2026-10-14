@@ -16,8 +16,9 @@
   top: 56px;
   left: 8px;
   bottom: calc(var(--pb-bottom-height, 90px) + 8px);
-  transition: bottom 0.15s ease;
-  width: var(--pb-panel-width, 370px);
+  /* Width moves when the FPS tab widens the panel. */
+  transition: bottom 0.15s ease, width 0.2s ease;
+  width: var(--pb-panel-width, 420px);
   display: flex;
   flex-direction: column;
   background: var(--bg-panel);
@@ -38,9 +39,11 @@
   border-bottom: var(--border-subtle);
   padding: 0 4px;
   flex-shrink: 0;
-  /* The panel is a fixed 370px and the row has to hold every tab inside it.
-     Without this the row simply overflows and the last tab is clipped at the
-     panel's rounded edge rather than the row adapting to fit. */
+  /* The panel is 420px (wider only on the FPS tab) and the row has to hold
+     every tab inside it. 420px fits every English label in full; a longer
+     translation can still run out of room, and without this the row would
+     overflow and clip the last tab at the panel's rounded edge rather than
+     adapting to fit. */
   overflow: hidden;
 }
 
@@ -49,10 +52,11 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  /* Equal shares of the panel, and allowed to shrink below their content width.
-     `min-width: 0` is the part that actually lets the label ellipsis instead of
-     forcing the row wider than its container. */
-  flex: 1 1 0;
+  /* Each tab starts at its own label's width and the spare room is shared
+     out, so a short label such as FPS does not hold space a longer one needs.
+     When a translation does not fit, `min-width: 0` lets the label ellipsis
+     instead of forcing the row wider than its container. */
+  flex: 1 1 auto;
   min-width: 0;
   padding: 8px 6px;
   border: none;
@@ -609,42 +613,13 @@
   text-transform: uppercase;
 }
 
-.serverFpsCard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin-top: 8px;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-}
 
 .serverFpsTitle {
   color: var(--text-on-accent);
 }
 
-.serverFpsMetric {
-  padding: 7px 3px;
-  text-align: center;
-  border-radius: 5px;
-}
 
-.serverFpsValue {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  line-height: 1;
-}
 
-.serverFpsLabel {
-  margin-top: 4px;
-  color: var(--text-on-accent);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 
 .weatherHeader {
   display: flex;
