@@ -246,33 +246,34 @@ func TestZeusModuleIsNotAPlayerSnapshotEvent(t *testing.T) {
 }
 
 func TestParseExplosionEventPreservesPayload(t *testing.T) {
+	payload := map[string]interface{}{
+		"x":         float64(3411),
+		"y":         float64(9002),
+		"ammo":      "Sh_155mm_AMOS",
+		"name":      "155mm HE",
+		"radius":    float64(28),
+		"power":     float64(180),
+		"firerId":   float64(17),
+		"vehicleId": float64(4),
+		"side":      "WEST",
+		"source":    "projectile",
+	}
 	event := parseEventArray([]interface{}{
 		float64(310),
 		"explosion",
-		map[string]interface{}{
-			"x":         float64(3411),
-			"y":         float64(9002),
-			"ammo":      "Sh_155mm_AMOS",
-			"name":      "155mm HE",
-			"radius":    float64(28),
-			"power":     float64(180),
-			"firerId":   float64(17),
-			"vehicleId": float64(4),
-			"side":      "WEST",
-			"source":    "projectile",
-		},
+		payload,
 	})
 
 	require.NotNil(t, event)
 	require.Equal(t, "explosion", event.Type)
 	require.Equal(t, uint32(310), event.FrameNum)
 
-	var payload map[string]interface{}
-	require.NoError(t, json.Unmarshal([]byte(event.Message), &payload))
-	require.Equal(t, "Sh_155mm_AMOS", payload["ammo"])
-	require.Equal(t, float64(28), payload["radius"])
-	require.Equal(t, float64(17), payload["firerId"])
-	require.Equal(t, "projectile", payload["source"])
+	var decoded map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(event.Message), &decoded))
+	require.Equal(t, payload, decoded)
+	require.Zero(t, event.SourceID)
+	require.Zero(t, event.TargetID)
+	require.Zero(t, event.Distance)
 }
 
 func TestParseServiceEventPreservesPayload(t *testing.T) {

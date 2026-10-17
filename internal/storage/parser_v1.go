@@ -167,6 +167,13 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return event
 	}
 
+	// Positional explosion events use the generic fields below; only object
+	// payloads carry the additive blast details in the message field.
+	isStructuredExplosion := false
+	if event.Type == "explosion" && len(evtArr) > 2 {
+		_, isStructuredExplosion = evtArr[2].(map[string]interface{})
+	}
+
 	// Additive player-detail, weather, and server FPS events keep their structured payload as JSON in
 	// the generic protobuf message field. Older readers safely ignore these
 	// unknown event names, while newer readers can reconstruct the object.
@@ -175,7 +182,7 @@ func parseEventArray(evtArr []interface{}) *Event {
 		event.Type == "tfarSettings" || event.Type == "acreSettings" ||
 		event.Type == "serverFps" || event.Type == "weather" || event.Type == "zeusEntity" ||
 		event.Type == "zeusRemoteControl" || event.Type == "zeusCamera" ||
-		event.Type == "zeusPing" || event.Type == "zeusModule" || event.Type == "explosion" ||
+		event.Type == "zeusPing" || event.Type == "zeusModule" || isStructuredExplosion ||
 		event.Type == "serviceEvent" || event.Type == "staticWeapon" ||
 		event.Type == "radioTransmission" {
 		if len(evtArr) > 2 {
