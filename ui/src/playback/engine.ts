@@ -16,6 +16,7 @@ import type { GameEvent } from "./events/gameEvent";
 import type { CounterState } from "./events/counterEvent";
 import { EntityManager } from "./entityManager";
 import { EventManager } from "./eventManager";
+import type { CombatEventSides } from "./combatEventSides";
 import { HitKilledEvent } from "./events/hitKilledEvent";
 import { ConnectEvent } from "./events/connectEvent";
 import { EndMissionEvent } from "./events/endMissionEvent";
@@ -133,7 +134,8 @@ export class PlaybackEngine {
   private renderer: MapRenderer;
   private chunkManager: ChunkManager | null = null;
   private manifest: Manifest | null = null;
-  private _worldConfig: WorldConfig | undefined;
+  private _worldConfig: Accessor<WorldConfig | undefined>;
+  private _setWorldConfig: (world: WorldConfig | undefined) => void;
 
   // ─── Signals (reactive state) ───
   private _currentFrame: Accessor<number>;
@@ -176,6 +178,10 @@ export class PlaybackEngine {
 
   constructor(renderer: MapRenderer) {
     this.renderer = renderer;
+
+    const [worldConfig, setWorldConfig] = createSignal<WorldConfig>();
+    this._worldConfig = worldConfig;
+    this._setWorldConfig = setWorldConfig;
 
     const [currentFrame, setCurrentFrame] = createSignal(0);
     this._currentFrame = currentFrame;
@@ -256,10 +262,10 @@ export class PlaybackEngine {
     return this._playerSnapshotsVersion;
   }
   get worldConfig(): WorldConfig | undefined {
-    return this._worldConfig;
+    return this._worldConfig();
   }
   setWorldConfig(world: WorldConfig | undefined): void {
-    this._worldConfig = world;
+    this._setWorldConfig(world);
   }
   get radioPropagation(): TfarRadioPropagation {
     return resolveTfarPropagation(this.manifest?.radioPropagation);
@@ -359,8 +365,14 @@ export class PlaybackEngine {
 
   /**
    * Populate entities and events from a manifest, and wire up the chunk manager.
+   * Converted recordings supply event-time sides sampled before publication,
+   * so combat classification does not depend on which chunks remain cached.
    */
-  loadRecording(manifest: Manifest, chunkManager?: ChunkManager | null): void {
+  loadRecording(
+    manifest: Manifest,
+    chunkManager?: ChunkManager | null,
+    eventSides?: CombatEventSides,
+  ): void {
     // Reset state
     this.clearTimer();
     this._setIsPlaying(false);
@@ -429,7 +441,9 @@ export class PlaybackEngine {
     }
 
     // Resolve entity references on hit/killed events
-    this.eventManager.resolveReferences(this.entityManager);
+    this.eventManager.resolveReferences(this.entityManager, (id, frame) =>
+      eventSides?.get(frame)?.get(id) ?? this.getStateAt(id, frame)?.side,
+    );
 
     // Build counter state from counter events
     this.buildCounterState(manifest.events);
@@ -604,7 +618,7 @@ export class PlaybackEngine {
     this.eventManager.clear();
     this.chunkManager = null;
     this.manifest = null;
-    this._worldConfig = undefined;
+    this._setWorldConfig(undefined);
   }
 
   // ─── Playback loop ───

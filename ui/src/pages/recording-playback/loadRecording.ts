@@ -4,6 +4,7 @@ import { JsonDecoder } from "../../data/decoders/jsonDecoder";
 import { ProtobufDecoder } from "../../data/decoders/protobufDecoder";
 import type { DecoderStrategy } from "../../data/decoders/decoder.interface";
 import { ChunkManager } from "../../data/chunkManager";
+import { loadCombatEventSides } from "../../playback/combatEventSides";
 import type { PlaybackEngine } from "../../playback/engine";
 import type { MarkerManager } from "../../playback/markerManager";
 
@@ -38,8 +39,11 @@ export async function loadRecording(
     decoder = new ProtobufDecoder();
     const chunkMgr = new ChunkManager(decoder, api);
     manifest = await chunkMgr.loadManifest(filename);
+    const eventSides = await loadCombatEventSides(manifest, chunkMgr);
+    // Combat-event reads may evict the starting chunk. Restore it before
+    // publishing the recording so the map and scores are ready together.
     await chunkMgr.loadChunk(0);
-    engine.loadRecording(manifest, chunkMgr);
+    engine.loadRecording(manifest, chunkMgr, eventSides);
   } else {
     decoder = new JsonDecoder();
     const buffer = await api.getRecordingData(filename);

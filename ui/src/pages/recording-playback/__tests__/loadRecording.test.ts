@@ -294,7 +294,7 @@ describe("loadRecording", () => {
       const rec = makeRecording({ storageFormat: "protobuf" });
       await loadRecording(api, engine, markerManager, rec);
 
-      expect(engine.loadRecording).toHaveBeenCalledWith(manifest, mockChunkMgr);
+      expect(engine.loadRecording).toHaveBeenCalledWith(manifest, mockChunkMgr, new Map());
     });
 
     it("returns correct LoadResult for protobuf path", async () => {

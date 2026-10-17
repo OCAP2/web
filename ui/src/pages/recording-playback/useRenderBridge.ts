@@ -448,9 +448,11 @@ export function useRenderBridge(
   // the comms tab or a profile card has already pulled it.
   const [commsDem, setCommsDem] = createSignal<DemGrid | null>(null);
   createEffect(() => {
-    if (commsDem()) return;
     const world = engine.worldConfig;
+    setCommsDem(null);
     if (!world) return;
+    let active = true;
+    onCleanup(() => { active = false; });
     void loadWorldDem({
       tileBaseUrl: world.tileBaseUrl,
       worldName: world.worldName,
@@ -458,8 +460,8 @@ export function useRenderBridge(
       hasDem: world.hasDem,
       hasHeightmap: world.hasHeightmap,
     }).then((grid) => {
-      if (grid) setCommsDem(grid);
-    });
+      if (active) setCommsDem(grid ?? null);
+    }).catch((error) => console.error("Failed to load transmission terrain", error));
   });
 
   // Pairing folds every Start/Stop in the recording into spans. That depends on

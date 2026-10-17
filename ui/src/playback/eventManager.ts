@@ -15,7 +15,7 @@ import {
 } from "./events/zeusEvents";
 import { ExplosionEvent, RadioTransmissionEvent } from "./events/supportEvents";
 import { applySnapshotDiff, isSnapshotDiff } from "../data/snapshotDiff";
-import type { PlayerSnapshotPayload, PlayerSnapshotType, WeatherPayload } from "../data/types";
+import type { PlayerSnapshotPayload, PlayerSnapshotType, Side, WeatherPayload } from "../data/types";
 import { ZEUS_RC_KILL_GRACE_FRAMES, type ZeusCameraSample, type ZeusEntityInfo, type ZeusFrameState } from "./zeus";
 
 /**
@@ -415,12 +415,17 @@ export class EventManager {
   /**
    * Resolve entity references on HitKilledEvent instances.
    * Populates names, sides at the event frame, and computes kill counts.
+   * `sideAt` supplies chunked state; missing per-frame sides retain the dense
+   * position/spawn-side fallback used by older recordings.
    *
    * Kill score formula (matching old frontend):
    *   killCount - (teamKillCount * 2)
    * Only "killed" events with a Unit victim (not Vehicle) increment counts.
    */
-  resolveReferences(entityManager: EntityManager): void {
+  resolveReferences(
+    entityManager: EntityManager,
+    sideAt?: (unitId: number, frame: number) => Side | undefined,
+  ): void {
     // First pass: resolve names/sides
     for (const event of this.events) {
       if (event instanceof HitKilledEvent) {
@@ -429,7 +434,7 @@ export class EventManager {
           event.victimName = victim.name;
           event.victimIsVehicle = victim instanceof Vehicle;
           if (victim instanceof Unit) {
-            event.victimSide = victim.sideAtFrame(event.frameNum);
+            event.victimSide = sideAt?.(victim.id, event.frameNum) ?? victim.sideAtFrame(event.frameNum);
           }
         }
 
@@ -437,7 +442,7 @@ export class EventManager {
         if (causer) {
           event.causerName = causer.name;
           if (causer instanceof Unit) {
-            event.causerSide = causer.sideAtFrame(event.frameNum);
+            event.causerSide = sideAt?.(causer.id, event.frameNum) ?? causer.sideAtFrame(event.frameNum);
           }
         }
       }
