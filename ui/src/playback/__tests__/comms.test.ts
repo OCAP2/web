@@ -346,6 +346,29 @@ describe("pairTransmissions", () => {
     expect(result).toHaveLength(2);
     expect(result[0].endFrame).toBe(20);
     expect(result[1].startFrame).toBe(20);
+    expect(transmissionsAtFrame(result, 21)).toEqual([result[1]]);
+  });
+
+  it("keeps the missing-Stop cap when the same net is keyed much later", () => {
+    const result = pairTransmissions([tx(0, {}), tx(3600, {})]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].endFrame).toBe(TRANSMISSION_MAX_FRAMES);
+    expect(result[0].openEnded).toBe(true);
+    expect(transmissionsAtFrame(result, TRANSMISSION_MAX_FRAMES)).toEqual([result[0]]);
+    expect(transmissionsAtFrame(result, TRANSMISSION_MAX_FRAMES + 1)).toEqual([]);
+    expect(transmissionsAtFrame(result, 1800)).toEqual([]);
+    expect(transmissionsAtFrame(result, 3600)).toEqual([result[1]]);
+    expect(result[1].endFrame).toBe(3600 + TRANSMISSION_MAX_FRAMES);
+  });
+
+  it("allows a recorded Stop to close a transmission beyond the missing-Stop cap", () => {
+    const result = pairTransmissions([tx(0, {}), tx(120, { action: "Stop" })]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].endFrame).toBe(120);
+    expect(result[0].openEnded).toBe(false);
+    expect(transmissionsAtFrame(result, 90)).toEqual(result);
   });
 
   it("keeps two speakers on one net apart", () => {

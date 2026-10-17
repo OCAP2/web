@@ -307,11 +307,11 @@ export function pairTransmissions(events: RawTransmission[]): Transmission[] {
       continue;
     }
 
-    // A second Start without a Stop closes the first at this frame: the player
-    // is demonstrably still talking, and leaving both open would double-count.
+    // A second Start closes the first no later than its missing-Stop cap:
+    // a later Start does not prove continuous activity during the gap.
     const previous = open.get(pairKey);
     if (previous) {
-      previous.endFrame = event.frameNum;
+      previous.endFrame = Math.min(previous.endFrame, event.frameNum);
       open.delete(pairKey);
       done.push(previous);
     }
