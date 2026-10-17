@@ -6,6 +6,9 @@ import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { AuthProvider } from "../../../hooks/useAuth";
 import { MockRenderer } from "../../../renderers/mockRenderer";
 import { ApiClient, setAuthToken } from "../../../data/apiClient";
+import { ChunkManager } from "../../../data/chunkManager";
+import { ProtobufDecoder } from "../../../data/decoders/protobufDecoder";
+import { Chunk as PbChunk, Manifest as PbManifest, EntityType as PbEntityType, Side as PbSide } from "../../../data/decoders/generated/ocap.pb";
 import type { LoadResult } from "../loadRecording";
 import { makeManifest } from "./testHelpers";
 
@@ -938,6 +941,100 @@ describe("RecordingPlayback", () => {
 
     await vi.waitFor(() => {
       expect(apiCalls.some(c => c.body.focusStart === null && c.body.focusEnd === null)).toBe(true);
+    });
+  });
+
+  describe("shared follow targets in unloaded protobuf chunks", () => {
+    let capturedEngine: PlaybackEngine;
+    let cache: ChunkManager;
+    let finishChunk: () => void;
+    let requests: number[];
+
+    beforeEach(() => {
+      requests = [];
+      vi.spyOn(ApiClient.prototype, "getRecording").mockResolvedValue({
+        id: "42", worldName: "Altis", missionName: "Op Alpha", missionDuration: 900,
+        filename: "test-42", date: "2024-01-15", storageFormat: "protobuf",
+      });
+      vi.spyOn(ApiClient.prototype, "getMarkerBlacklist").mockResolvedValue([]);
+      const buffer = (bytes: Uint8Array): ArrayBuffer => new Uint8Array(bytes).buffer;
+      const manifest = PbManifest.fromPartial({
+        version: 1, worldName: "Altis", missionName: "Op Alpha", endFrame: 899,
+        chunkSize: 300, chunkCount: 3, captureDelayMs: 1000,
+        entities: [{ id: 1, name: "Player", type: PbEntityType.ENTITY_TYPE_UNIT,
+          side: PbSide.SIDE_WEST, isPlayer: true, startFrame: 0, endFrame: 899 }],
+      });
+      const chunk = (index: number) => buffer(PbChunk.encode(PbChunk.fromPartial({
+        startFrame: index * 300, frameCount: 300,
+        frames: Array.from({ length: 300 }, (_, offset) => ({
+          frameNum: index * 300 + offset,
+          entities: [{ entityId: 1, posX: index === 2 ? 9000 : 1000, posY: index === 2 ? 8000 : 2000, alive: 1 }],
+        })),
+      })).finish());
+      const pending = new Promise<ArrayBuffer>((resolve) => { finishChunk = () => resolve(chunk(2)); });
+      const api = {
+        getManifest: async () => buffer(PbManifest.encode(manifest).finish()),
+        getChunk: async (_filename: string, index: number) => {
+          requests.push(index);
+          return index === 2 ? pending : chunk(index);
+        },
+      } as unknown as ApiClient;
+      mockLoadRecording.mockImplementation(async (_api, engine: PlaybackEngine) => {
+        capturedEngine = engine;
+        cache = new ChunkManager(new ProtobufDecoder(), api);
+        const decoded = await cache.loadManifest("test-42");
+        await cache.loadChunk(0);
+        engine.loadRecording(decoded, cache);
+        return {
+          worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+          missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        };
+      });
+    });
+
+    async function openLink() {
+      renderPlayback({ initialPath: "/recording/42/test-42?renderer=dom&t=650&u=1&tab=units" });
+      await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+      expect(capturedEngine.currentFrame()).toBe(650);
+      expect(capturedEngine.followTarget()).toBe(1);
+      expect(capturedEngine.entitySnapshots().has(1)).toBe(false);
+      expect(requests).toEqual([0, 2]);
+    }
+
+    it("centers the shared unit once its delayed chunk arrives while playback stays paused", async () => {
+      const pan = vi.spyOn(MockRenderer.prototype, "setView");
+      await openLink();
+      expect(pan).not.toHaveBeenCalled();
+      finishChunk();
+      await vi.waitFor(() => expect(pan).toHaveBeenCalledWith([9000, 8000, 0]));
+      expect(capturedEngine.entitySnapshots().get(1)?.position).toEqual([9000, 8000, 0]);
+      expect(capturedEngine.isPlaying()).toBe(false);
+      expect(capturedEngine.currentFrame()).toBe(650);
+    });
+
+    it("respects unfollowing before the shared unit's chunk arrives", async () => {
+      const pan = vi.spyOn(MockRenderer.prototype, "setView");
+      await openLink();
+      capturedEngine.unfollowEntity();
+      finishChunk();
+      await cache.loadChunk(2);
+      await Promise.resolve();
+      expect(capturedEngine.entitySnapshots().get(1)?.position).toEqual([9000, 8000, 0]);
+      expect(pan).not.toHaveBeenCalled();
+    });
+
+    it("does not recenter on a stale linked frame after the viewer seeks elsewhere", async () => {
+      const pan = vi.spyOn(MockRenderer.prototype, "setView");
+      await openLink();
+      capturedEngine.seekTo(50);
+      await vi.waitFor(() => expect(pan).toHaveBeenCalledWith([1000, 2000, 0]));
+      pan.mockClear();
+      finishChunk();
+      await cache.loadChunk(2);
+      await Promise.resolve();
+      expect(capturedEngine.currentFrame()).toBe(50);
+      expect(capturedEngine.entitySnapshots().get(1)?.position).toEqual([1000, 2000, 0]);
+      expect(pan).not.toHaveBeenCalled();
     });
   });
 

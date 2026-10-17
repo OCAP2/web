@@ -336,6 +336,9 @@ export class PlaybackEngine {
         if (this.chunkManager === chunks && this._currentFrame() === clamped) {
           this.computeSnapshots(clamped);
           this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
+            // A paused shared link may begin following before its chunk exists.
+            const target = this._followTarget();
+            if (target !== null) this.panToEntity(target);
         }
       }).catch((error) => {
         if (this.chunkManager === chunks) console.error(`Failed to load playback frame ${clamped}`, error);
