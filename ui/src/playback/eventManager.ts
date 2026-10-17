@@ -426,6 +426,13 @@ export class EventManager {
     entityManager: EntityManager,
     sideAt?: (unitId: number, frame: number) => Side | undefined,
   ): void {
+    // Resolution may run again as streamed faction data arrives. Rebuild scores
+    // from events instead of incrementing counters left by the previous pass.
+    for (const unit of entityManager.getUnits()) {
+      unit.killCount = 0;
+      unit.teamKillCount = 0;
+      unit.deathCount = 0;
+    }
     // First pass: resolve names/sides
     for (const event of this.events) {
       if (event instanceof HitKilledEvent) {

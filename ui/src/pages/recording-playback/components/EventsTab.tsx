@@ -149,6 +149,7 @@ export function EventsTab(): JSX.Element {
   };
 
   const filteredEvents = createMemo(() => {
+    engine.eventReferencesVersion();
     const all = engine.activeEvents();
     const text = filterText().toLowerCase();
     const f = filters();
@@ -241,6 +242,11 @@ export function EventsTab(): JSX.Element {
     return formatElapsedTime(frameNum, engine.captureDelayMs());
   };
 
+  const combatSide = (event: HitKilledEvent, who: "victim" | "causer"): string | undefined => {
+    engine.eventReferencesVersion();
+    return who === "victim" ? event.victimSide : event.causerSide;
+  };
+
   return (
     <>
       {/* Filter bar */}
@@ -277,7 +283,7 @@ export function EventsTab(): JSX.Element {
                     {event instanceof HitKilledEvent ? (
                       <>
                         <span class={styles.eventNames}>
-                          <span style={{ color: sideColor(event.victimSide) }}>
+                          <span style={{ color: sideColor(combatSide(event, "victim")) }}>
                             {event.victimName ?? "Unknown"}
                           </span>
                           {event.victimId === event.causedById ? (
@@ -292,7 +298,7 @@ export function EventsTab(): JSX.Element {
                                 {"\u2190"}
                               </span>
                               {" "}
-                              <span style={{ color: sideColor(event.causerSide) }}>
+                              <span style={{ color: sideColor(combatSide(event, "causer")) }}>
                                 {event.causerName ?? "Unknown"}
                               </span>
                             </>

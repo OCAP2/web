@@ -16,7 +16,7 @@ import type { GameEvent } from "./events/gameEvent";
 import type { CounterState } from "./events/counterEvent";
 import { EntityManager } from "./entityManager";
 import { EventManager } from "./eventManager";
-import type { CombatEventSides } from "./combatEventSides";
+import { CombatSideIndex } from "./combatEventSides";
 import { HitKilledEvent } from "./events/hitKilledEvent";
 import { ConnectEvent } from "./events/connectEvent";
 import { EndMissionEvent } from "./events/endMissionEvent";
@@ -134,6 +134,7 @@ export class PlaybackEngine {
   private renderer: MapRenderer;
   private chunkManager: ChunkManager | null = null;
   private manifest: Manifest | null = null;
+  private combatSides: CombatSideIndex | null = null;
   private _worldConfig: Accessor<WorldConfig | undefined>;
   private _setWorldConfig: (world: WorldConfig | undefined) => void;
 
@@ -166,6 +167,10 @@ export class PlaybackEngine {
   private _setCaptureDelayMs: (v: number) => void;
   private _playerSnapshotsVersion: Accessor<number>;
   private _setPlayerSnapshotsVersion: (v: (prev: number) => number) => void;
+  private _recordingVersion: Accessor<number>;
+  private _setRecordingVersion: (v: (prev: number) => number) => void;
+  private _eventReferencesVersion: Accessor<number>;
+  private _setEventReferencesVersion: (v: (prev: number) => number) => void;
   /** unitId -> in-flight or settled sidecar load, so a reopen does not refetch. */
   private playerSnapshotLoads = new Map<number, Promise<void>>();
 
@@ -226,6 +231,8 @@ export class PlaybackEngine {
     const [playerSnapshotsVersion, setPlayerSnapshotsVersion] = createSignal(0);
     this._playerSnapshotsVersion = playerSnapshotsVersion;
     this._setPlayerSnapshotsVersion = setPlayerSnapshotsVersion;
+    [this._recordingVersion, this._setRecordingVersion] = createSignal(0);
+    [this._eventReferencesVersion, this._setEventReferencesVersion] = createSignal(0);
   }
 
   // ─── Public signal accessors ───
@@ -261,6 +268,10 @@ export class PlaybackEngine {
   get playerSnapshotsVersion(): Accessor<number> {
     return this._playerSnapshotsVersion;
   }
+  /** Changes even when two recordings have the same duration. */
+  get recordingVersion(): Accessor<number> { return this._recordingVersion; }
+  /** Combat sides and scores can change when a previously unseen chunk arrives. */
+  get eventReferencesVersion(): Accessor<number> { return this._eventReferencesVersion; }
   get worldConfig(): WorldConfig | undefined {
     return this._worldConfig();
   }
@@ -319,12 +330,15 @@ export class PlaybackEngine {
     this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
 
     // If the needed chunk isn't loaded yet, load it then recompute
-    if (this.chunkManager) {
-      void this.chunkManager.ensureLoaded(clamped).then(() => {
-        if (this._currentFrame() === clamped) {
+    const chunks = this.chunkManager;
+    if (chunks) {
+      void chunks.ensureLoaded(clamped).then(() => {
+        if (this.chunkManager === chunks && this._currentFrame() === clamped) {
           this.computeSnapshots(clamped);
           this._setActiveEvents(this.eventManager.getActiveEvents(clamped));
         }
+      }).catch((error) => {
+        if (this.chunkManager === chunks) console.error(`Failed to load playback frame ${clamped}`, error);
       });
     }
   }
@@ -365,13 +379,12 @@ export class PlaybackEngine {
 
   /**
    * Populate entities and events from a manifest, and wire up the chunk manager.
-   * Converted recordings supply event-time sides sampled before publication,
-   * so combat classification does not depend on which chunks remain cached.
+   * Combat sides are sampled from already loaded chunks and retained as later
+   * chunks arrive. Initialization never requests the rest of the mission.
    */
   loadRecording(
     manifest: Manifest,
     chunkManager?: ChunkManager | null,
-    eventSides?: CombatEventSides,
   ): void {
     // Reset state
     this.clearTimer();
@@ -384,13 +397,18 @@ export class PlaybackEngine {
 
     this.manifest = manifest;
     this.chunkManager = chunkManager ?? null;
+    this.combatSides = this.chunkManager ? new CombatSideIndex(manifest) : null;
 
     // When a chunk finishes loading, recompute snapshots only if the loaded
     // chunk is the one needed for the current frame. This avoids redundant
     // recomputation when a prefetched future chunk arrives.
     if (this.chunkManager) {
-      this.chunkManager.setCallbacks({
+      const chunks = this.chunkManager;
+      chunks.setCallbacks({
         onChunkLoaded: (chunkIndex: number) => {
+          if (this.chunkManager !== chunks || this.manifest !== manifest) return;
+          const chunk = chunks.getChunkForFrame(chunkIndex * (manifest.chunkSize || 300));
+          if (chunk && this.combatSides?.sample(chunkIndex, chunk)) this.resolveCombatReferences();
           const frame = this._currentFrame();
           const chunkSize = this.manifest?.chunkSize || 300;
           const currentChunkIndex = Math.floor(frame / chunkSize);
@@ -441,9 +459,13 @@ export class PlaybackEngine {
     }
 
     // Resolve entity references on hit/killed events
-    this.eventManager.resolveReferences(this.entityManager, (id, frame) =>
-      eventSides?.get(frame)?.get(id) ?? this.getStateAt(id, frame)?.side,
-    );
+    if (this.combatSides && this.chunkManager) {
+      for (const index of this.combatSides.chunkIndices) {
+        const chunk = this.chunkManager.getChunkForFrame(index * (manifest.chunkSize || 300));
+        if (chunk) this.combatSides.sample(index, chunk);
+      }
+    }
+    this.resolveCombatReferences();
 
     // Build counter state from counter events
     this.buildCounterState(manifest.events);
@@ -455,6 +477,14 @@ export class PlaybackEngine {
     // Initial snapshot computation
     this.computeSnapshots(0);
     this._setActiveEvents(this.eventManager.getActiveEvents(0));
+    this._setRecordingVersion((version) => version + 1);
+  }
+
+  private resolveCombatReferences(): void {
+    this.eventManager.resolveReferences(this.entityManager, (id, frame) =>
+      this.combatSides?.sideAt(id, frame) ?? this.getStateAt(id, frame)?.side,
+    );
+    this._setEventReferencesVersion((version) => version + 1);
   }
 
   /**
@@ -472,6 +502,7 @@ export class PlaybackEngine {
     if (existing) return existing;
 
     const chunkManager = this.chunkManager;
+    const manifest = this.manifest;
     if (!chunkManager || !this.manifest?.snapshotUnitIds?.includes(unitId)) {
       const resolved = Promise.resolve();
       this.playerSnapshotLoads.set(unitId, resolved);
@@ -481,6 +512,7 @@ export class PlaybackEngine {
     const load = chunkManager
       .loadPlayerSnapshots(unitId)
       .then((defs) => {
+        if (this.chunkManager !== chunkManager || this.manifest !== manifest) return;
         for (const def of defs) {
           const event = createGameEvent(def);
           if (event) this.eventManager.addEvent(event);
@@ -489,6 +521,7 @@ export class PlaybackEngine {
         this._setPlayerSnapshotsVersion((v) => v + 1);
       })
       .catch((error) => {
+        if (this.chunkManager !== chunkManager || this.manifest !== manifest) return;
         // A missing or corrupt sidecar must not break playback; the card falls
         // back to whatever the manifest already carried for this unit.
         console.error(`Failed to load snapshots for unit ${unitId}`, error);
@@ -504,8 +537,8 @@ export class PlaybackEngine {
    *
    * The profile card reads one player at a time, which is why sidecars are
    * lazy. A comms rollup is the opposite shape: it needs every player's radios
-   * at once to know who shared a net, so it pays the whole fan-out up front,
-   * once. A recording that keeps its snapshots in the manifest resolves
+   * at once to know who shared a net, as does an active map transmission.
+   * A recording that keeps its snapshots in the manifest resolves
    * immediately without a single request.
    */
   ensureAllPlayerSnapshots(): Promise<void> {
@@ -616,9 +649,12 @@ export class PlaybackEngine {
     this._setIsPlaying(false);
     this.entityManager.clear();
     this.eventManager.clear();
+    this.playerSnapshotLoads.clear();
+    this.combatSides = null;
     this.chunkManager = null;
     this.manifest = null;
     this._setWorldConfig(undefined);
+    this._setRecordingVersion((version) => version + 1);
   }
 
   // ─── Playback loop ───
@@ -674,7 +710,10 @@ export class PlaybackEngine {
     // Ensure current chunk is loaded (async — the onChunkLoaded callback
     // will recompute snapshots if this triggers a new load).
     if (this.chunkManager) {
-      void this.chunkManager.ensureLoaded(nextFrame);
+      const chunks = this.chunkManager;
+      void chunks.ensureLoaded(nextFrame).catch((error) => {
+        if (this.chunkManager === chunks) console.error(`Failed to load playback frame ${nextFrame}`, error);
+      });
     }
 
     // Compute entity snapshots with whatever chunk data is in memory

@@ -123,9 +123,10 @@ export function StatsTab(): JSX.Element {
   });
 
   // Frame-aware kill/death counts
-  const killDeathCounts = createMemo(() =>
-    engine.eventManager.getKillDeathCounts(engine.currentFrame()),
-  );
+  const killDeathCounts = createMemo(() => {
+    engine.eventReferencesVersion();
+    return engine.eventManager.getKillDeathCounts(engine.currentFrame());
+  });
 
   const sideStats = createMemo((): SideStats[] => {
     const snaps = engine.entitySnapshots();

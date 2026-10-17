@@ -124,8 +124,8 @@ export class ChunkManager {
 
   /**
    * Load one player's snapshot sidecar. Snapshots are the bulk of a recording's
-   * event stream but are read one unit at a time, so they are fetched only when
-   * that player's profile is opened, and each unit is fetched at most once.
+   * event stream. Profiles load one unit at a time; the transmission overlay
+   * and Comms tab load all radio owners. Each unit is fetched at most once.
    *
    * Returns an empty list for a unit the manifest does not index — either the
    * player has no snapshots, or this is a recording whose snapshots are still

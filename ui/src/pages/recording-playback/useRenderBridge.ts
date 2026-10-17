@@ -467,16 +467,27 @@ export function useRenderBridge(
   // Pairing folds every Start/Stop in the recording into spans. That depends on
   // the recording, not on the playhead, so it is computed once per recording
   // rather than rebuilt on each of the sixty frames a second the effect below
-  // runs at. `endFrame` is the signal that settles when a recording finishes
-  // loading, which is what makes this recompute for the next one.
+  // runs at. The recording version also changes for missions of equal length.
   const pairedTransmissions = createMemo(() => {
-    engine.endFrame();
+    engine.recordingVersion();
     return pairTransmissions(
       engine.eventManager.getRadioTransmissions().map((event) => ({
         frameNum: event.frameNum,
         payload: event.payload,
       })),
     );
+  });
+
+  const liveTransmissions = createMemo(() =>
+    transmissionsAtFrame(pairedTransmissions(), engine.currentFrame()),
+  );
+  const hasLiveTransmission = createMemo(() => liveTransmissions().length > 0);
+  createEffect(() => {
+    engine.recordingVersion();
+    if (!hasLiveTransmission()) return;
+    // Receiver membership needs every player's radios. Share the engine's
+    // deduplicated sidecar loads with panels, without waiting for a panel visit.
+    void engine.ensureAllPlayerSnapshots();
   });
 
   createEffect(() => {
@@ -486,11 +497,12 @@ export function useRenderBridge(
     for (const handle of commsLines) renderer.removeLine(handle);
     commsLines = [];
 
-    const live = transmissionsAtFrame(pairedTransmissions(), frame);
+    const live = liveTransmissions();
     if (live.length === 0) return;
+    engine.playerSnapshotsVersion();
 
     // Radios for everyone with a snapshot at this frame, so net membership can
-    // be resolved without reaching for the sidecars the comms tab loads.
+    // be resolved again as the overlay's own sidecar requests finish.
     const radiosByUnit = new Map<number, RadioSnapshot>();
     for (const unitId of engine.eventManager.getPlayerSnapshotUnitIds()) {
       const snapshot = engine.eventManager.getPlayerSnapshots(unitId, frame).get("radioSnapshot");

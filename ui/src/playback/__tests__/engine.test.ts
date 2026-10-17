@@ -194,6 +194,42 @@ describe("PlaybackEngine", () => {
   // ─── Player snapshot sidecars ───
 
   describe("ensurePlayerSnapshots", () => {
+    it("does not mix a previous recording's late sidecar into the current recording", async () => {
+      const oldChunks = makeMockChunkManager();
+      let finishOld!: (defs: unknown[]) => void;
+      (oldChunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockReturnValue(
+        new Promise((resolve) => { finishOld = resolve; }),
+      );
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), oldChunks);
+      const oldLoad = engine.ensurePlayerSnapshots(7);
+      const currentChunks = makeMockChunkManager();
+      (currentChunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: { stamina: 90 } } },
+      ]);
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), currentChunks);
+      await engine.ensurePlayerSnapshots(7);
+      finishOld([{ frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: { stamina: 10 } } }]);
+      await oldLoad;
+      expect(engine.eventManager.getPlayerSnapshots(7, 0).get("staminaSnapshot")?.payload)
+        .toEqual({ unitId: 7, vanilla: { stamina: 90 } });
+      expect(engine.playerSnapshotsVersion()).toBe(1);
+    });
+
+    it("discards sidecars that finish after the engine is disposed", async () => {
+      const chunks = makeMockChunkManager();
+      let finish!: (defs: unknown[]) => void;
+      (chunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockReturnValue(
+        new Promise((resolve) => { finish = resolve; }),
+      );
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), chunks);
+      const load = engine.ensurePlayerSnapshots(7);
+      engine.dispose();
+      finish([{ frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: {} } }]);
+      await load;
+      expect(engine.eventManager.hasPlayerSnapshots(7)).toBe(false);
+      expect(engine.playerSnapshotsVersion()).toBe(0);
+    });
+
     it("loads a unit's sidecar into the event manager and folds its diffs", async () => {
       const cm = makeMockChunkManager();
       (cm.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockResolvedValue([

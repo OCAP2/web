@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createMemo, createRoot } from "solid-js";
 import type { ApiClient } from "../../../data/apiClient";
 import { ChunkManager } from "../../../data/chunkManager";
 import { ProtobufDecoder } from "../../../data/decoders/protobufDecoder";
@@ -87,9 +88,15 @@ describe("converted recording event-time factions", () => {
     expect(first.causerKillScore).toBe(1);
   });
 
-  it("resolves hits and kills outside the initial chunk before playback is ready", async () => {
+  it("opens with chunk zero and retains event-time factions as later chunks arrive", async () => {
     const { api, rec, engine, markerManager, getChunk } = fixture();
     await loadRecording(api, engine, markerManager, rec);
+    expect(getChunk.mock.calls.map((call) => call[1])).toEqual([0]);
+
+    for (const frame of [301, 901, 1201, 0]) {
+      engine.seekTo(frame);
+      await vi.waitFor(() => expect(engine.getStateAt(1, frame)).not.toBeNull());
+    }
 
     expect(engine.entityManager.getEntity(1)?.positions).toBeNull();
     const kills = combat(engine).filter((event) => event.type === "killed");
@@ -116,6 +123,10 @@ describe("converted recording event-time factions", () => {
     for (const recordSides of [true, false]) {
       const { api, rec, engine, markerManager, raw, state } = fixture(recordSides);
       await loadRecording(api, engine, markerManager, rec);
+      for (const frame of [301, 901, 1201]) {
+        engine.seekTo(frame);
+        await vi.waitFor(() => expect(engine.getStateAt(1, frame)).not.toBeNull());
+      }
       const manifest = new ProtobufDecoder().decodeManifest(buffer(PbManifest.encode(raw).finish()));
       manifest.chunkCount = 0;
       for (const entity of manifest.entities) {
@@ -130,15 +141,49 @@ describe("converted recording event-time factions", () => {
     }
   });
 
-  it("reports an unavailable event chunk instead of publishing spawn-side classifications", async () => {
+  it("opens early playback even when a distant combat chunk is unavailable", async () => {
     const { api, rec, engine, markerManager, getChunk } = fixture();
     const original = getChunk.getMockImplementation()!;
     getChunk.mockImplementation(async (filename, index) => {
       if (index === 3) throw new Error("event chunk unavailable");
       return original(filename, index);
     });
-    await expect(loadRecording(api, engine, markerManager, rec)).rejects.toThrow("event chunk unavailable");
-    expect(engine.eventManager.getAll()).toEqual([]);
+    await expect(loadRecording(api, engine, markerManager, rec)).resolves.toBeDefined();
+    expect(getChunk.mock.calls.map((call) => call[1])).toEqual([0]);
+    expect(engine.getStateAt(1, 0)).not.toBeNull();
+    expect(combat(engine)[0].isFriendlyFire()).toBe(false);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      engine.seekTo(901);
+      await vi.waitFor(() => expect(errors).toHaveBeenCalled());
+      engine.seekTo(0);
+      expect(engine.getStateAt(1, 0)).not.toBeNull();
+    } finally { errors.mockRestore(); }
+  });
+
+  it("refreshes classification and scores at a paused frame without counting a kill twice", async () => {
+    const { api, rec, engine, markerManager } = fixture();
+    await loadRecording(api, engine, markerManager, rec);
+    const dispose = createRoot((dispose) => {
+      const friendly = createMemo(() => {
+        engine.eventReferencesVersion();
+        return combat(engine).find((event) => event.frameNum === 301)!.isFriendlyFire();
+      });
+      return { dispose, friendly };
+    });
+    try {
+      engine.seekTo(301);
+      await vi.waitFor(() => expect(dispose.friendly()).toBe(false));
+      const shooter = engine.entityManager.getEntity(1) as Unit;
+      const counts = [shooter.killCount, shooter.teamKillCount, shooter.deathCount];
+      for (const frame of [601, 901, 1201, 0, 301]) {
+        engine.seekTo(frame);
+        await vi.waitFor(() => expect(engine.getStateAt(1, frame)).not.toBeNull());
+      }
+      expect(shooter.killCount).toBe(counts[0]);
+      expect(shooter.deathCount).toBe(counts[2]);
+      expect(shooter.teamKillCount).toBe(1);
+    } finally { dispose.dispose(); }
   });
 
   it("loads only the initial chunk when the recording has no combat events", async () => {
