@@ -615,6 +615,19 @@ describe("EntityManager", () => {
     });
   });
 
+  it("bypasses lifespan selection only for an explicit replacement", () => {
+    const placeholder = mgr.addEntity(placeholderDef({ endFrame: 200 }));
+    const other = mgr.addEntity(unitDef({ id: 1 }));
+    const definition = unitDef({ id: 0, type: "zeus", side: "VIRTUAL", startFrame: 1, endFrame: 200 });
+    expect(mgr.addEntity(definition)).toBe(placeholder);
+    const replacement = mgr.replaceEntity(definition);
+    expect(replacement).toBeInstanceOf(Unit);
+    expect(replacement.type).toBe("zeus");
+    expect(mgr.getEntity(0)).toBe(replacement);
+    expect(mgr.getEntity(1)).toBe(other);
+    expect(mgr.getAll()).toHaveLength(2);
+  });
+
   describe("getEntity", () => {
     it("returns entity by ID", () => {
       mgr.addEntity(unitDef({ id: 1 }));

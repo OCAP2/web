@@ -102,6 +102,21 @@ describe("inTfarRange", () => {
 });
 
 describe("marchCoverage", () => {
+  it.each([0.5, 2])("matches the reachability radius with a range multiplier of %s", (coefficient) => {
+    const dem = makeFlatDem(30000, 0, 100);
+    const origin: [number, number] = [15000, 15000];
+    const propagation = { ...TFAR_DEFAULT_PROPAGATION, globalRadioRangeCoef: coefficient };
+    const radius = 5000 * coefficient;
+    const verts = marchCoverage(dem, origin, { rangeMeters: 5000, propagation, bearings: 16 });
+    expect(verts).toHaveLength(16);
+    for (const [x, y] of verts) {
+      expect(Math.hypot(x - origin[0], y - origin[1])).toBeCloseTo(radius, -1);
+      expect(inTfarRange(dem, ...origin, 1.6, x, y, 1.6, 5000, propagation)).toBe(true);
+    }
+    expect(inTfarRange(dem, ...origin, 1.6, origin[0] + radius * 0.75, origin[1], 1.6, 5000, propagation)).toBe(true);
+    expect(inTfarRange(dem, ...origin, 1.6, origin[0] + radius + 10, origin[1], 1.6, 5000, propagation)).toBe(false);
+  });
+
   it("is a circle of rangeMeters on a flat DEM", () => {
     const dem = makeFlatDem(12000, 0, 50);
     const verts = marchCoverage(dem, [4000, 4000], {

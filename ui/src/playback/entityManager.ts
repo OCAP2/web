@@ -60,6 +60,12 @@ export class EntityManager {
     return entity;
   }
 
+  /** Explicit replacement, bypassing normal duplicate-ID lifetime selection. */
+  replaceEntity(def: EntityDef): Entity {
+    this.entities.delete(def.id);
+    return this.addEntity(def);
+  }
+
   /** Look up an entity by ID. */
   getEntity(id: number): Entity | null {
     return this.entities.get(id) ?? null;

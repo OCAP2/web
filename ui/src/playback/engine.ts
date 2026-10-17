@@ -444,8 +444,8 @@ export class PlaybackEngine {
       // export leaves a nameless hole at that index. Do not treat the hole as
       // a real unit — overwrite it so VIRTUAL playback can use the id.
       if (existing && existing.type === "zeus") continue;
-      if (existing && existing.name) continue;
-      this.entityManager.addEntity({
+      if (existing && (existing.name || existing.type !== "unknown")) continue;
+      this.entityManager.replaceEntity({
         id: zeus.curatorId,
         type: "zeus",
         name: zeus.name,

@@ -345,7 +345,7 @@ describe("PlaybackEngine Zeus synthesis", () => {
     expect(possessing?.fov).toBeUndefined();
   });
 
-  it("synthesizes VIRTUAL Zeus when curatorId 0 is an empty entity hole", () => {
+  it.each([0, 1])("synthesizes VIRTUAL Zeus starting at frame %s when curatorId 0 is an empty entity hole", (startFrame) => {
     engine.loadRecording(makeManifest({
       entities: [
         unitDef({
@@ -362,12 +362,12 @@ describe("PlaybackEngine Zeus synthesis", () => {
       ],
       events: [
         {
-          frameNum: 1,
+          frameNum: startFrame,
           type: "zeusEntity",
           payload: { curatorId: 0, name: "YetheSamartaka", playerUid: "7656", bodyUnitId: -1 },
         },
         {
-          frameNum: 1,
+          frameNum: startFrame,
           type: "zeusCamera",
           payload: { curatorId: 0, x: 8504, y: -902, dir: 0, fov: 1 },
         },
@@ -379,11 +379,27 @@ describe("PlaybackEngine Zeus synthesis", () => {
     expect(zeus?.type).toBe("zeus");
     expect((zeus as Unit).side).toBe("VIRTUAL");
     expect(zeus?.name).toBe("YetheSamartaka");
+    expect(zeus?.startFrame).toBe(startFrame);
+    expect(engine.entityManager.getEntity(1)?.name).toBe("Horacek");
     expect(engine.entityManager.getBySide("VIRTUAL")).toHaveLength(1);
 
     engine.seekTo(1);
     expect(engine.entitySnapshots().get(0)?.iconType).toBe("zeus");
     expect(engine.entitySnapshots().get(0)?.position).toEqual([8504, -902]);
+  });
+
+  it.each([
+    { type: "man" as const, name: "Real Player" },
+    { type: "car" as const, name: "" },
+  ])("preserves a real $type entity when a Zeus event reuses its ID", ({ type, name }) => {
+    engine.loadRecording(makeManifest({
+      entities: [unitDef({ id: 0, type, name })],
+      events: [{ frameNum: 1, type: "zeusEntity",
+        payload: { curatorId: 0, name: "Curator", playerUid: "7656", bodyUnitId: -1 } }],
+    }));
+    expect(engine.entityManager.getEntity(0)?.type).toBe(type);
+    expect(engine.entityManager.getEntity(0)?.name).toBe(name);
+    expect(engine.entityManager.getAll()).toHaveLength(1);
   });
 });
 

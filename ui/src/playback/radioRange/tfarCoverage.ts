@@ -129,6 +129,7 @@ export function marchCoverage(
   options: CoverageOptions,
 ): [number, number][] {
   const range = Math.max(0, options.rangeMeters);
+  const maxDistance = range * options.propagation.globalRadioRangeCoef;
   const eye = options.eyeHeightMeters ?? TFAR_EYE_HEIGHT_METERS;
   const canopy = options.canopyMeters ?? 0;
   const bearings = Math.max(8, options.bearings ?? DEFAULT_BEARINGS);
@@ -145,7 +146,7 @@ export function marchCoverage(
     const dx = Math.cos(angle);
     const dy = Math.sin(angle);
     let lo = 0;
-    let hi = range;
+    let hi = maxDistance;
     for (let step = 0; step < 12; step++) {
       const mid = (lo + hi) / 2;
       const rx = tx + dx * mid;
