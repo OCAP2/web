@@ -1332,28 +1332,29 @@ export class LeafletRenderer implements MapRenderer {
     return this._markerDisplayMode() === "all" && !this.hideMarkerPopups;
   }
 
-  /** Apply `briefingLabelsVisible()` to every briefing marker on the map. */
+  /** Refresh briefing and system labels; projectile labels have their own setting. */
   private refreshBriefingLabelVisibility(): void {
-    const group = this.layers.briefingMarkers;
-    if (!this.map.hasLayer(group)) return;
     const visible = this.briefingLabelsVisible();
 
-    group.eachLayer((layer) => {
-      if (!(layer instanceof L.Marker)) return;
-      // Text-label markers (e.g. sector names) — toggle element visibility
-      if (this.isTextLabelMarker(layer)) {
-        const el = layer.getElement?.();
-        if (el) el.style.display = visible ? "" : "none";
-        return;
-      }
-      // ICON markers with popups — toggle popup
-      if (!layer.getPopup()) return;
-      if (visible) {
-        layer.openPopup();
-      } else {
-        layer.closePopup();
-      }
-    });
+    for (const group of [this.layers.briefingMarkers, this.layers.systemMarkers]) {
+      if (!this.map.hasLayer(group)) continue;
+      group.eachLayer((layer) => {
+        if (!(layer instanceof L.Marker)) return;
+        // Text-label markers (e.g. sector names) — toggle element visibility
+        if (this.isTextLabelMarker(layer)) {
+          const el = layer.getElement?.();
+          if (el) el.style.display = visible ? "" : "none";
+          return;
+        }
+        // ICON markers with popups — toggle popup
+        if (!layer.getPopup()) return;
+        if (visible) {
+          layer.openPopup();
+        } else {
+          layer.closePopup();
+        }
+      });
+    }
   }
 
   /**
