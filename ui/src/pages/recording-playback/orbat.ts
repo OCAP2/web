@@ -75,11 +75,13 @@ export function buildOrbat(
 
   /**
    * One row per named slot, so a respawn or a reconnect does not list the same
-   * player twice. Both entities can be live at this frame — the recorder keeps
-   * writing the abandoned body — and the longer-lived one is the real slot.
+   * player twice. Prefer a living, currently controlled entity at this frame;
+   * the recorder may keep writing an abandoned body longer than its replacement.
    * Unnamed entities are never folded together; they are distinct bodies.
    */
-  const bySlot = new Map<string, { group: string; member: OrbatMember; span: number }>();
+  const bySlot = new Map<string, {
+    group: string; member: OrbatMember; priority: number; startFrame: number; span: number;
+  }>();
   const unnamed: Array<{ group: string; member: OrbatMember }> = [];
 
   for (const entity of engine.entityManager.getAll()) {
@@ -111,8 +113,13 @@ export function buildOrbat(
     }
     const key = `${groupName}\u0000${name}`;
     const span = entity.endFrame - entity.startFrame;
+    const priority = Number(member.alive) * 2 + Number(state.isPlayer ?? entity.isPlayer);
     const seen = bySlot.get(key);
-    if (!seen || span > seen.span) bySlot.set(key, { group: groupName, member, span });
+    if (!seen || priority > seen.priority || (priority === seen.priority && (
+      entity.startFrame > seen.startFrame || (entity.startFrame === seen.startFrame && span > seen.span)
+    ))) {
+      bySlot.set(key, { group: groupName, member, priority, startFrame: entity.startFrame, span });
+    }
   }
 
   for (const { group, member } of [...bySlot.values(), ...unnamed]) {

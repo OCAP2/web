@@ -194,8 +194,47 @@ describe("buildOrbat", () => {
 
     const group = buildOrbat(engine, "WEST", 1)[0];
     expect(group.members).toHaveLength(1);
-    // The longer-lived entity is the real slot.
+    // Without per-frame control flags or a later start, lifespan breaks the tie.
     expect(group.members[0].unitId).toBe(1);
+  });
+
+  it.each([false, true])("prefers the current player over their longer-recorded corpse (reversed: %s)", (reversed) => {
+    const corpse = unit(1, "Player", "WEST", "Alpha", Array.from({ length: 101 }, (_, frame) =>
+      state({ isPlayer: frame < 50, alive: frame < 50 ? 1 : 0 })));
+    const replacement = new Unit(2, "Player", "man", 50, 100, "WEST", true, "Alpha", "",
+      Array.from({ length: 51 }, () => state({ isPlayer: true })));
+    const entities = [corpse, replacement];
+    const engine = fakeEngine(reversed ? entities.reverse() : entities, 100);
+
+    expect(buildOrbat(engine, "WEST", 40)[0].members[0].unitId).toBe(1);
+    const group = buildOrbat(engine, "WEST", 60)[0];
+    expect(group.members).toHaveLength(1);
+    expect(group.members[0]).toMatchObject({ unitId: 2, isPlayer: true, alive: true });
+    expect(group.alive).toBe(1);
+  });
+
+  it("prefers a controlled replacement over an abandoned living body", () => {
+    const abandoned = unit(1, "Player", "WEST", "Alpha", [state({ isPlayer: false }), state({ isPlayer: false })]);
+    const controlled = unit(2, "Player", "WEST", "Alpha", [state({ isPlayer: true })]);
+    const group = buildOrbat(fakeEngine([abandoned, controlled], 1), "WEST", 0)[0];
+    expect(group.members[0].unitId).toBe(2);
+  });
+
+  it("prefers the living, later-started respawn when legacy states omit control flags", () => {
+    const corpse = unit(1, "Player", "WEST", "Alpha", Array.from({ length: 101 }, () => state({ alive: 0 })));
+    const replacement = new Unit(2, "Player", "man", 50, 100, "WEST", true, "Alpha", "",
+      Array.from({ length: 51 }, () => state()));
+    const group = buildOrbat(fakeEngine([corpse, replacement], 100), "WEST", 60)[0];
+    expect(group.members[0].unitId).toBe(2);
+    expect(group.alive).toBe(1);
+  });
+
+  it("uses the most recently spawned entity when legacy bodies both remain alive", () => {
+    const abandoned = unit(1, "Player", "WEST", "Alpha", Array.from({ length: 101 }, () => state()));
+    const replacement = new Unit(2, "Player", "man", 50, 100, "WEST", true, "Alpha", "",
+      Array.from({ length: 51 }, () => state()));
+    const group = buildOrbat(fakeEngine([abandoned, replacement], 100), "WEST", 60)[0];
+    expect(group.members[0].unitId).toBe(2);
   });
 
   it("comes back empty for a side that has only AI", () => {

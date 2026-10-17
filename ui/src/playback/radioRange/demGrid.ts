@@ -1,4 +1,5 @@
 import { basePath } from "../../data/basePath";
+import { METERS_PER_DEGREE } from "../../utils/coordinates";
 
 /**
  * In-memory heightmap in Arma metres. Row 0 is south, matching the map-tool DEM.
@@ -303,6 +304,7 @@ async function loadWorldDemUncached(opts: {
 }
 
 async function loadDemFromHeightmapPmtiles(url: string, worldSize: number): Promise<DemGrid | undefined> {
+  const tiles: { x: number; y: number; bitmap: ImageBitmap }[] = [];
   try {
     const { PMTiles } = await import("pmtiles");
     const archive = new PMTiles(url);
@@ -311,48 +313,58 @@ async function loadDemFromHeightmapPmtiles(url: string, worldSize: number): Prom
     const n = 2 ** z;
     const west = 0;
     const south = 0;
-    const east = worldSize / 111320;
-    const north = worldSize / 111320;
-    const minX = lngToTile(west, n);
-    const maxX = lngToTile(east, n);
-    const minY = latToTile(north, n);
-    const maxY = latToTile(south, n);
+    const east = worldSize / METERS_PER_DEGREE;
+    const north = worldSize / METERS_PER_DEGREE;
+    // Fetch only tiles whose interior intersects the world. In particular,
+    // the equator is a tile edge, not a reason to request the southern tile.
+    const minX = Math.floor(lngToTile(west, n));
+    const maxX = Math.ceil(lngToTile(east, n)) - 1;
+    const minY = Math.floor(latToTile(north, n));
+    const maxY = Math.ceil(latToTile(south, n)) - 1;
 
-    const tiles: { x: number; y: number; bitmap: ImageBitmap }[] = [];
     let tileSize = 0;
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         const tile = await archive.getZxy(z, x, y);
-        if (!tile?.data) continue;
+        // Incomplete terrain must fall back to distance-only coverage rather
+        // than inventing elevations from the canvas's transparent pixels.
+        if (!tile?.data) return undefined;
         const blob = new Blob([tile.data], { type: "image/png" });
-        const bitmap = await createImageBitmap(blob);
-        tileSize = bitmap.width;
+        const bitmap = await createImageBitmap(blob, { colorSpaceConversion: "none", premultiplyAlpha: "none" });
         tiles.push({ x, y, bitmap });
+        if (bitmap.width !== bitmap.height || (tileSize && bitmap.width !== tileSize)) return undefined;
+        tileSize = bitmap.width;
       }
     }
     if (!tiles.length || tileSize <= 0) return undefined;
 
-    const cols = (maxX - minX + 1) * tileSize;
-    const rows = (maxY - minY + 1) * tileSize;
-    const canvas = new OffscreenCanvas(cols, rows);
+    const width = (maxX - minX + 1) * tileSize;
+    const height = (maxY - minY + 1) * tileSize;
+    const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) return undefined;
     for (const tile of tiles) {
       ctx.drawImage(tile.bitmap, (tile.x - minX) * tileSize, (tile.y - minY) * tileSize);
     }
-    const image = ctx.getImageData(0, 0, cols, rows);
+    const image = ctx.getImageData(0, 0, width, height);
+    // A tile rectangle generally exceeds the world bounds. Resample at regular
+    // Arma-metre intervals using each point's actual Mercator pixel location,
+    // rather than stretching that rectangle onto the world. Pixels are centred
+    // half a pixel inside their tile; DemGrid samples include both world edges.
+    const steps = Math.max(1, Math.ceil((lngToTile(east, n) - lngToTile(west, n)) * tileSize));
+    const cols = steps + 1;
+    const rows = cols;
+    const cellSize = worldSize / steps;
     const data = new Float32Array(cols * rows);
-    for (let i = 0; i < cols * rows; i++) {
-      const o = i * 4;
-      const val = (image.data[o] << 16) | (image.data[o + 1] << 8) | image.data[o + 2];
-      data[i] = val / 10 - 10000;
-    }
-    // Canvas row 0 is north; DemGrid row 0 is south.
-    const flipped = new Float32Array(cols * rows);
     for (let r = 0; r < rows; r++) {
-      flipped.set(data.subarray((rows - 1 - r) * cols, (rows - r) * cols), r * cols);
+      const py = (latToTile(r * cellSize / METERS_PER_DEGREE, n) - minY) * tileSize - 0.5;
+      for (let c = 0; c < cols; c++) {
+        const px = (lngToTile(c * cellSize / METERS_PER_DEGREE, n) - minX) * tileSize - 0.5;
+        const elevation = sampleTerrainRgb(image.data, width, height, px, py);
+        if (elevation === undefined) return undefined;
+        data[r * cols + c] = elevation;
+      }
     }
-    const cellSize = worldSize / Math.max(cols - 1, 1);
     return {
       cols,
       rows,
@@ -360,19 +372,44 @@ async function loadDemFromHeightmapPmtiles(url: string, worldSize: number): Prom
       originY: 0,
       cellSize,
       worldSize,
-      data: flipped,
+      data,
     };
   } catch {
     return undefined;
+  } finally {
+    for (const { bitmap } of tiles) bitmap.close();
   }
 }
 
+/** Interpolate heights, not RGB channels, excluding transparent no-data padding. */
+function sampleTerrainRgb(pixels: Uint8ClampedArray, width: number, height: number, x: number, y: number): number | undefined {
+  const px = Math.max(0, Math.min(width - 1, x));
+  const py = Math.max(0, Math.min(height - 1, y));
+  const x0 = Math.floor(px);
+  const y0 = Math.floor(py);
+  const tx = px - x0;
+  const ty = py - y0;
+  let total = 0;
+  let weights = 0;
+  for (let dy = 0; dy <= 1; dy++) {
+    for (let dx = 0; dx <= 1; dx++) {
+      const weight = (dx ? tx : 1 - tx) * (dy ? ty : 1 - ty);
+      const offset = (Math.min(height - 1, y0 + dy) * width + Math.min(width - 1, x0 + dx)) * 4;
+      if (weight === 0 || pixels[offset + 3] !== 255) continue;
+      const value = (pixels[offset] << 16) | (pixels[offset + 1] << 8) | pixels[offset + 2];
+      total += (value / 10 - 10000) * weight;
+      weights += weight;
+    }
+  }
+  return weights > 0 ? total / weights : undefined;
+}
+
 function lngToTile(lng: number, n: number): number {
-  return Math.max(0, Math.min(n - 1, Math.floor(((lng + 180) / 360) * n)));
+  return Math.max(0, Math.min(n, ((lng + 180) / 360) * n));
 }
 
 function latToTile(lat: number, n: number): number {
   const rad = (lat * Math.PI) / 180;
-  const y = Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n);
-  return Math.max(0, Math.min(n - 1, y));
+  const y = ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n;
+  return Math.max(0, Math.min(n, y));
 }
