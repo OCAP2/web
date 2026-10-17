@@ -16,6 +16,7 @@ import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { MarkerManager } from "../../../playback/markerManager";
 import { MockRenderer } from "../../../renderers/mockRenderer";
 import { loadRecording } from "../loadRecording";
+import { eventInvolvedSides } from "../components/EventsTab";
 
 const engines: PlaybackEngine[] = [];
 afterEach(() => {
@@ -76,6 +77,37 @@ function combat(engine: PlaybackEngine): HitKilledEvent[] {
 }
 
 describe("converted recording event-time factions", () => {
+  it("retains transmission factions after the speaker departs and the event chunk is evicted", async () => {
+    const { api, rec, engine, markerManager, getChunk, raw } = fixture();
+    raw.events = PbManifest.fromPartial({ events: [{
+      frameNum: 901, type: "radioTransmission",
+      message: JSON.stringify({ unitId: 1, radio: "TFAR_anprc152", type: "SW", action: "Start",
+        channel: 1, additional: false, frequency: 100, code: "blue" }),
+    }] }).events;
+    raw.entities[0].endFrame = 1000;
+    await loadRecording(api, engine, markerManager, rec);
+    const transmission = engine.eventManager.getAll()[0];
+    expect(getChunk.mock.calls.map((call) => call[1])).toEqual([0]);
+    // An unavailable event-frame history uses the stable spawn side, not the
+    // speaker's EAST side at the playhead in chunk zero, and causes no fetch.
+    expect(engine.entitySnapshots().get(1)?.side).toBe("EAST");
+    expect(eventInvolvedSides(transmission, engine)).toEqual(["WEST"]);
+
+    const version = engine.eventReferencesVersion();
+    engine.seekTo(901);
+    await vi.waitFor(() => expect(engine.getStateAt(1, 901)).not.toBeNull());
+    expect(engine.eventReferencesVersion()).toBeGreaterThan(version);
+    expect(eventInvolvedSides(transmission, engine)).toEqual(["EAST"]);
+    for (const frame of [1201, 0, 301, 601]) {
+      engine.seekTo(frame);
+      await vi.waitFor(() => expect(engine.getStateAt(2, frame)).not.toBeNull());
+      expect(eventInvolvedSides(transmission, engine)).toEqual(["EAST"]);
+      if (frame === 1201) expect(engine.entitySnapshots().has(1)).toBe(false);
+    }
+    expect(engine.getStateAt(1, 901)).toBeNull();
+    expect(getChunk.mock.calls.map((call) => call[1])).toEqual([0, 3, 4, 1, 2]);
+  });
+
   it("uses an already-loaded chunk when resolving engine references directly", async () => {
     const { api, engine } = fixture();
     const chunks = new ChunkManager(new ProtobufDecoder(), api);

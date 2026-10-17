@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
-import { EventsTab } from "../components/EventsTab";
+import { EventsTab, eventInvolvedSides } from "../components/EventsTab";
 import type { EventDef } from "../../../data/types";
 import {
   createTestEngine,
@@ -53,6 +53,42 @@ afterEach(() => {
 });
 
 describe("EventsTab", () => {
+  it.each([true, false])("keeps transmission faction filters stable after a side switch and departure (recorded side: %s)", (recordSide) => {
+    const { engine, renderer } = createTestEngine();
+    const events: EventDef[] = [{
+      type: "radioTransmission", frameNum: 0,
+      payload: { unitId: 1, radio: "TFAR_anprc152", type: "SW", action: "Start", channel: 1,
+        additional: false, frequency: 100, code: "blue" },
+    }];
+    engine.loadRecording(makeManifest([unitDef({
+      side: recordSide ? "EAST" : "WEST",
+      endFrame: 1,
+      positions: [
+        { position: [100, 200], direction: 0, alive: 1, ...(recordSide ? { side: "WEST" as const } : {}) },
+        { position: [100, 200], direction: 0, alive: 1, side: "EAST" },
+      ],
+    })], events, 10));
+    const transmission = engine.eventManager.getAll()[0];
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}><EventsTab /></TestProviders>
+    ));
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Transmissions"));
+    expect(screen.getByTestId("event-row-0")).toBeTruthy();
+    fireEvent.click(screen.getByText("BLUFOR"));
+
+    for (const frame of [0, 1, 2]) {
+      engine.seekTo(frame);
+      if (frame === 1) expect(engine.entitySnapshots().get(1)?.side).toBe("EAST");
+      expect(eventInvolvedSides(transmission, engine)).toEqual(["WEST"]);
+      expect(screen.queryByTestId("event-row-0")).toBeNull();
+    }
+    expect(engine.entitySnapshots().has(1)).toBe(false);
+    fireEvent.click(screen.getByText("BLUFOR"));
+    expect(screen.getByTestId("event-row-0")).toBeTruthy();
+    engine.dispose();
+  });
+
   it("shows 'no events' placeholder when no events exist", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(makeManifest([unitDef()]));

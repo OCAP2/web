@@ -92,7 +92,7 @@ export function eventInvolvedSides(event: GameEvent, engine: PlaybackEngine): st
   if (event instanceof ServiceEvent) return event.payload.side ? [event.payload.side] : [];
   if (event instanceof StaticWeaponEvent) return event.payload.side ? [event.payload.side] : [];
   if (event instanceof RadioTransmissionEvent) {
-    const side = engine.entitySnapshots().get(event.unitId)?.side;
+    const side = engine.getEventSideAt(event.unitId, event.frameNum);
     return side ? [side] : [];
   }
   return [];

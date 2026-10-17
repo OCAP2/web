@@ -146,9 +146,16 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return nil
 	}
 
+	eventType := toString(evtArr[1])
+	frameNum := toFloat64(evtArr[0])
+	// Older recorders emitted an initial FPS sample before frame zero. Match
+	// JSON playback's normalization before converting to the unsigned schema.
+	if eventType == "serverFps" && frameNum < 0 {
+		frameNum = 0
+	}
 	event := &Event{
-		FrameNum: uint32(toFloat64(evtArr[0])),
-		Type:     toString(evtArr[1]),
+		FrameNum: uint32(frameNum),
+		Type:     eventType,
 	}
 
 	// Connect/disconnect events: [frameNum, "type", "playerName"]

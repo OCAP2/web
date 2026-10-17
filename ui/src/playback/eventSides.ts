@@ -1,8 +1,10 @@
 import type { ChunkData, EventDef, Manifest, Side } from "../data/types";
 
-/** Retain only combat-frame sides from chunks that normal playback or analysis has loaded. */
-export class CombatSideIndex {
-  private readonly byChunk = new Map<number, Array<EventDef & { type: "hit" | "killed" }>>();
+type FactionEvent = Extract<EventDef, { type: "hit" | "killed" | "radioTransmission" }>;
+
+/** Retain event-frame sides from chunks that normal playback or analysis has loaded. */
+export class EventSideIndex {
+  private readonly byChunk = new Map<number, FactionEvent[]>();
   private readonly sampled = new Set<number>();
   private readonly sides = new Map<number, Map<number, Side>>();
   private readonly entities: Map<number, Manifest["entities"][number]>;
@@ -12,7 +14,7 @@ export class CombatSideIndex {
     this.chunkSize = manifest.chunkSize || 300;
     this.entities = new Map(manifest.entities.map((entity) => [entity.id, entity]));
     for (const event of manifest.events) {
-      if (event.type !== "hit" && event.type !== "killed") continue;
+      if (event.type !== "hit" && event.type !== "killed" && event.type !== "radioTransmission") continue;
       const index = Math.floor(event.frameNum / this.chunkSize);
       if (index < 0 || index >= manifest.chunkCount) continue;
       const events = this.byChunk.get(index) ?? [];
@@ -31,7 +33,10 @@ export class CombatSideIndex {
     if (!events || this.sampled.has(index)) return false;
     for (const event of events) {
       const atFrame = this.sides.get(event.frameNum) ?? new Map<number, Side>();
-      for (const id of [event.victimId, event.causedById]) {
+      const ids = event.type === "radioTransmission"
+        ? [event.payload.unitId]
+        : [event.victimId, event.causedById];
+      for (const id of ids) {
         const entity = this.entities.get(id);
         if (!entity || event.frameNum < entity.startFrame || event.frameNum > entity.endFrame) continue;
         const side = chunk.entities.get(id)?.[event.frameNum - index * this.chunkSize]?.side;

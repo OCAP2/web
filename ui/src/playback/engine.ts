@@ -1,6 +1,6 @@
 import { createSignal, type Accessor } from "solid-js";
 
-import type { EntityState, Manifest, EventDef, WorldConfig } from "../data/types";
+import type { EntityState, Manifest, EventDef, Side, WorldConfig } from "../data/types";
 import type { ArmaCoord } from "../utils/coordinates";
 import {
   resolveAcrePropagation,
@@ -16,7 +16,7 @@ import type { GameEvent } from "./events/gameEvent";
 import type { CounterState } from "./events/counterEvent";
 import { EntityManager } from "./entityManager";
 import { EventManager } from "./eventManager";
-import { CombatSideIndex } from "./combatEventSides";
+import { EventSideIndex } from "./eventSides";
 import { HitKilledEvent } from "./events/hitKilledEvent";
 import { ConnectEvent } from "./events/connectEvent";
 import { EndMissionEvent } from "./events/endMissionEvent";
@@ -134,7 +134,7 @@ export class PlaybackEngine {
   private renderer: MapRenderer;
   private chunkManager: ChunkManager | null = null;
   private manifest: Manifest | null = null;
-  private combatSides: CombatSideIndex | null = null;
+  private eventSides: EventSideIndex | null = null;
   private _worldConfig: Accessor<WorldConfig | undefined>;
   private _setWorldConfig: (world: WorldConfig | undefined) => void;
 
@@ -270,7 +270,7 @@ export class PlaybackEngine {
   }
   /** Changes even when two recordings have the same duration. */
   get recordingVersion(): Accessor<number> { return this._recordingVersion; }
-  /** Combat sides and scores can change when a previously unseen chunk arrives. */
+  /** Event sides and combat scores can change when a previously unseen chunk arrives. */
   get eventReferencesVersion(): Accessor<number> { return this._eventReferencesVersion; }
   get worldConfig(): WorldConfig | undefined {
     return this._worldConfig();
@@ -397,7 +397,7 @@ export class PlaybackEngine {
 
     this.manifest = manifest;
     this.chunkManager = chunkManager ?? null;
-    this.combatSides = this.chunkManager ? new CombatSideIndex(manifest) : null;
+    this.eventSides = this.chunkManager ? new EventSideIndex(manifest) : null;
 
     // When a chunk finishes loading, recompute snapshots only if the loaded
     // chunk is the one needed for the current frame. This avoids redundant
@@ -408,7 +408,7 @@ export class PlaybackEngine {
         onChunkLoaded: (chunkIndex: number) => {
           if (this.chunkManager !== chunks || this.manifest !== manifest) return;
           const chunk = chunks.getChunkForFrame(chunkIndex * (manifest.chunkSize || 300));
-          if (chunk && this.combatSides?.sample(chunkIndex, chunk)) this.resolveCombatReferences();
+          if (chunk && this.eventSides?.sample(chunkIndex, chunk)) this.resolveCombatReferences();
           const frame = this._currentFrame();
           const chunkSize = this.manifest?.chunkSize || 300;
           const currentChunkIndex = Math.floor(frame / chunkSize);
@@ -458,11 +458,12 @@ export class PlaybackEngine {
       });
     }
 
-    // Resolve entity references on hit/killed events
-    if (this.combatSides && this.chunkManager) {
-      for (const index of this.combatSides.chunkIndices) {
+    // Retain event-time sides from chunks already in the cache; never fetch
+    // mission-wide history on the startup path.
+    if (this.eventSides && this.chunkManager) {
+      for (const index of this.eventSides.chunkIndices) {
         const chunk = this.chunkManager.getChunkForFrame(index * (manifest.chunkSize || 300));
-        if (chunk) this.combatSides.sample(index, chunk);
+        if (chunk) this.eventSides.sample(index, chunk);
       }
     }
     this.resolveCombatReferences();
@@ -482,7 +483,7 @@ export class PlaybackEngine {
 
   private resolveCombatReferences(): void {
     this.eventManager.resolveReferences(this.entityManager, (id, frame) =>
-      this.combatSides?.sideAt(id, frame) ?? this.getStateAt(id, frame)?.side,
+      this.getEventSideAt(id, frame),
     );
     this._setEventReferencesVersion((version) => version + 1);
   }
@@ -574,6 +575,16 @@ export class PlaybackEngine {
     return entity.positions?.[entity.getRelativeFrameIndex(frame)] ?? null;
   }
 
+  /** Historical event affiliation, independent of the playhead and chunk eviction. */
+  getEventSideAt(entityId: number, frame: number): Side | undefined {
+    const side = this.eventSides?.sideAt(entityId, frame) ?? this.getStateAt(entityId, frame)?.side;
+    if (side) return side;
+    // A recording without per-frame sides, or history not loaded yet, uses
+    // the stable spawn faction even after the unit leaves the current roster.
+    const entity = this.entityManager.getEntity(entityId);
+    return entity instanceof Unit ? entity.sideAtFrame(frame) : undefined;
+  }
+
   /** Position of one entity at an arbitrary frame, or null when not loaded. */
   getPositionAt(entityId: number, frame: number): ArmaCoord | null {
     return this.getStateAt(entityId, frame)?.position ?? null;
@@ -650,7 +661,7 @@ export class PlaybackEngine {
     this.entityManager.clear();
     this.eventManager.clear();
     this.playerSnapshotLoads.clear();
-    this.combatSides = null;
+    this.eventSides = null;
     this.chunkManager = null;
     this.manifest = null;
     this._setWorldConfig(undefined);
