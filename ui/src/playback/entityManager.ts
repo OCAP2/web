@@ -17,6 +17,15 @@ export class EntityManager {
    * Type 'man' or 'zeus' produces a Unit; everything else produces a Vehicle.
    */
   addEntity(def: EntityDef): Entity {
+    // Duplicate ID (e.g. empty placeholder entries): keep the entity with the most frames.
+    const existing = this.entities.get(def.id);
+    if (
+      existing &&
+      existing.endFrame - existing.startFrame >= def.endFrame - def.startFrame
+    ) {
+      return existing;
+    }
+
     let entity: Entity;
 
     if (def.type === "man" || def.type === "zeus") {

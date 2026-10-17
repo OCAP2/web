@@ -59,6 +59,21 @@ function vehicleDef(overrides: Partial<EntityDef> = {}): EntityDef {
   };
 }
 
+/** Build an empty placeholder EntityDef, as exported for IDs with no entity. */
+function placeholderDef(overrides: Partial<EntityDef> = {}): EntityDef {
+  return {
+    id: 0,
+    type: "unknown",
+    name: "",
+    side: "CIV",
+    groupName: "",
+    isPlayer: false,
+    startFrame: 0,
+    endFrame: 0,
+    ...overrides,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Entity (base class)
 // ---------------------------------------------------------------------------
@@ -583,6 +598,20 @@ describe("EntityManager", () => {
       expect(unit.isPlayer).toBe(false);
       expect(unit.groupName).toBe("Bravo");
       expect(unit.role).toBe("Medic");
+    });
+
+    it("keeps the existing entity when a placeholder reuses its ID", () => {
+      const unit = mgr.addEntity(unitDef({ id: 0 }));
+      expect(mgr.addEntity(placeholderDef())).toBe(unit);
+      expect(mgr.getEntity(0)).toBe(unit);
+      expect(mgr.getUnits()).toHaveLength(1);
+    });
+
+    it("replaces a placeholder with a longer-lived entity", () => {
+      mgr.addEntity(placeholderDef());
+      const unit = mgr.addEntity(unitDef({ id: 0 }));
+      expect(mgr.getEntity(0)).toBe(unit);
+      expect(mgr.getAll()).toHaveLength(1);
     });
   });
 
