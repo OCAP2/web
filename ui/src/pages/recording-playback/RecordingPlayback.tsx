@@ -186,7 +186,15 @@ export function RecordingPlayback(): JSX.Element {
         const link = readDeepLink();
         if (link.tab) setActivePanelTab(link.tab);
         if (link.side) setActiveSide(link.side);
-        if (link.frame !== undefined) engine.seekTo(link.frame);
+        if (link.frame !== undefined) {
+          const focus = focusRange();
+          if (focus && (link.frame < focus.inFrame || link.frame > focus.outFrame)) {
+            // A shared position outside the saved focus implies FULL mode.
+            // Restore that before seeking so the focus effect cannot move it.
+            setShowFullTimeline(true);
+          }
+          engine.seekTo(link.frame);
+        }
         if (link.unit !== undefined && engine.entityManager.getEntity(link.unit)) {
           engine.followEntity(link.unit);
         }

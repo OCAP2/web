@@ -5,8 +5,9 @@ import { I18nProvider } from "../../../hooks/useLocale";
 import { CustomizeProvider } from "../../../hooks/useCustomize";
 import { AuthProvider } from "../../../hooks/useAuth";
 import { MockRenderer } from "../../../renderers/mockRenderer";
-import { setAuthToken } from "../../../data/apiClient";
+import { ApiClient, setAuthToken } from "../../../data/apiClient";
 import type { LoadResult } from "../loadRecording";
+import { makeManifest } from "./testHelpers";
 
 // ─── Mocks (must be before imports that use them) ───
 
@@ -937,6 +938,52 @@ describe("RecordingPlayback", () => {
 
     await vi.waitFor(() => {
       expect(apiCalls.some(c => c.body.focusStart === null && c.body.focusEnd === null)).toBe(true);
+    });
+  });
+
+  describe("shared positions with a saved focus range", () => {
+    let capturedEngine: PlaybackEngine;
+
+    beforeEach(() => {
+      vi.spyOn(ApiClient.prototype, "getRecording").mockResolvedValue({
+        id: "42", worldName: "Altis", missionName: "Op Alpha", missionDuration: 100,
+        filename: "test-42", date: "2024-01-15", storageFormat: "json",
+        focusStart: 20, focusEnd: 80,
+      });
+      vi.spyOn(ApiClient.prototype, "getMarkerBlacklist").mockResolvedValue([]);
+      mockLoadRecording.mockImplementation(async (_api, engine: PlaybackEngine) => {
+        capturedEngine = engine;
+        engine.loadRecording(makeManifest([], [], 100));
+        return {
+          worldConfig: { worldName: "Altis", worldSize: 30720, maxZoom: 6, minZoom: 0 },
+          missionName: "Op Alpha", recordingId: "42", recordingFilename: "test-42",
+        };
+      });
+    });
+
+    it.each([
+      { search: "?t=0", frame: 0, mode: "FULL" },
+      { search: "?t=10", frame: 10, mode: "FULL" },
+      { search: "?t=90", frame: 90, mode: "FULL" },
+      { search: "?t=20", frame: 20, mode: "FOCUS" },
+      { search: "?t=50", frame: 50, mode: "FOCUS" },
+      { search: "?t=80", frame: 80, mode: "FOCUS" },
+      { search: "", frame: 20, mode: "FOCUS" },
+    ])("opens '$search' at frame $frame in $mode mode", async ({ search, frame, mode }) => {
+      renderPlayback({ initialPath: `/recording/42/test-42${search}` });
+      await vi.waitFor(() => expect(screen.getByTestId("loading-screen").style.opacity).toBe("0"));
+
+      expect(capturedEngine.currentFrame()).toBe(frame);
+      expect(screen.getByText(mode)).toBeTruthy();
+      await vi.waitFor(() => expect(new URLSearchParams(window.location.search).get("t")).toBe(String(frame)));
+
+      if (mode === "FULL") {
+        // Restoring FULL does not discard the saved range or disable the
+        // viewer's ability to constrain playback again.
+        fireEvent.click(screen.getByText("FULL"));
+        expect(screen.getByText("FOCUS")).toBeTruthy();
+        expect(capturedEngine.currentFrame()).toBe(Math.max(20, Math.min(80, frame)));
+      }
     });
   });
 
