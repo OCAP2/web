@@ -403,12 +403,14 @@ describe("EventManager", () => {
     it("rebuilds one unit's series when its snapshots arrive later", () => {
       mgr.addEvent(new PlayerSnapshotEvent(10, "medicalSnapshot", 1, {
         unitId: 3,
+        vanilla: {},
         ace: { heartRate: 70 },
       }));
       mgr.reconstructPlayerSnapshots();
 
       mgr.addEvent(new PlayerSnapshotEvent(10, "medicalSnapshot", 2, {
         unitId: 7,
+        vanilla: {},
         ace: { heartRate: 80, pain: 0 },
       }));
       mgr.addEvent(new PlayerSnapshotEvent(20, "medicalSnapshot", 3, {
@@ -421,10 +423,12 @@ describe("EventManager", () => {
 
       expect(mgr.getPlayerSnapshots(7, 20).get("medicalSnapshot")!.payload).toEqual({
         unitId: 7,
+        vanilla: {},
         ace: { heartRate: 130, pain: 0 },
       });
       expect(mgr.getPlayerSnapshots(3, 10).get("medicalSnapshot")!.payload).toEqual({
         unitId: 3,
+        vanilla: {},
         ace: { heartRate: 70 },
       });
     });

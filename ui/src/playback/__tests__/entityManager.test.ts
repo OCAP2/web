@@ -548,7 +548,7 @@ describe("EntityManager", () => {
       }));
       expect(entity).toBeInstanceOf(Unit);
       expect(entity.iconType).toBe("zeus");
-      expect(entity.side).toBe("VIRTUAL");
+      expect((entity as Unit).side).toBe("VIRTUAL");
     });
 
     it("creates a Vehicle for type 'car'", () => {

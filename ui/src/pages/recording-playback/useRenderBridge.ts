@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { Accessor } from "solid-js";
 import type {
   MarkerHandle,
@@ -30,6 +30,7 @@ import {
 } from "../../playback/explosions";
 import {
   binDeathSites,
+  buildDeathSites,
   busiestCell,
   deathBlobAlpha,
   deathBlobRadius,
@@ -665,41 +666,29 @@ export function useRenderBridge(
   // as more deaths land in its cell has to be recreated rather than updated.
   const deathBlobs = new Map<string, { handle: BriefingMarkerHandle; radius: number }>();
 
-  // A death's position is read from the chunk covering the frame it happened on,
-  // and playback keeps only the chunk under the playhead and its neighbour
-  // resident. Reading them straight therefore silently dropped every death
-  // outside that window, and blobs blinked in and out as the viewer scrubbed.
-  // The whole recording is pulled in once, the first time the overlay is turned
-  // on; a JSON recording already holds everything and resolves immediately, and
-  // anyone who leaves the overlay off never pays for it.
-  const [deathChunksReady, setDeathChunksReady] = createSignal(false);
+  // Resolve positions during traversal, then keep only the small site list.
+  const [deathSites, setDeathSites] = createSignal<DeathSite[]>([]);
+  let deathSitesLoad: Promise<DeathSite[]> | undefined;
+
+  createEffect(() => {
+    engine.endFrame();
+    deathSitesLoad = undefined;
+    setDeathSites([]);
+  });
 
   createEffect(() => {
     if (!deathHeatmapVisible()) return;
-    if (deathChunksReady()) return;
-    void engine.ensureAllChunks().then(() => setDeathChunksReady(true));
-  });
-
-  /**
-   * Every death in the recording with a resolved position, oldest first.
-   *
-   * Depends on the recording rather than the playhead, so it is resolved once
-   * instead of rescanning every event and re-reading every victim's position on
-   * each frame. Sorted so the binning below can stop at the playhead.
-   */
-  const deathSites = createMemo<DeathSite[]>(() => {
-    if (!deathHeatmapVisible() || !deathChunksReady()) return [];
     engine.endFrame();
-
-    const sites: DeathSite[] = [];
-    for (const event of engine.eventManager.getAll()) {
-      if (!(event instanceof HitKilledEvent) || event.type !== "killed") continue;
-      const position = engine.getPositionAt(event.victimId, event.frameNum);
-      if (!position) continue;
-      sites.push({ frameNum: event.frameNum, x: position[0], y: position[1] });
-    }
-    sites.sort((a, b) => a.frameNum - b.frameNum);
-    return sites;
+    let active = true;
+    onCleanup(() => { active = false; });
+    deathSitesLoad ??= buildDeathSites(engine).catch((error) => {
+      deathSitesLoad = undefined;
+      console.error("Failed to resolve death sites", error);
+      return [];
+    });
+    void deathSitesLoad.then((sites) => {
+      if (active) setDeathSites(sites);
+    });
   });
 
   createEffect(() => {

@@ -197,7 +197,7 @@ async function fetchDemCandidate(url: string): Promise<DemGrid | undefined> {
   try {
     const res = await fetch(url, { cache: "force-cache" });
     if (!res.ok) return undefined;
-    let bytes = new Uint8Array(await res.arrayBuffer());
+    let bytes: Uint8Array = new Uint8Array(await res.arrayBuffer());
     if (!looksDemBinary(bytes)) return undefined;
     if (looksGzip(bytes)) bytes = await inflateGzip(bytes);
     return decodeDemBinary(bytes);

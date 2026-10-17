@@ -17,9 +17,8 @@ function state(over: Partial<EntityState> = {}): EntityState {
 }
 
 /**
- * The two builders only ever touch `entityManager`, `getStateAt`, `endFrame` and
- * `captureDelayMs`, so a stub with those is enough and keeps the tests away from
- * chunk loading and the renderer.
+ * Dense JSON state for focused calculation tests. The real bounded chunk cache
+ * is covered separately by wholeMissionAnalysis.test.ts.
  */
 function fakeEngine(entities: Array<Unit | Vehicle>, endFrame: number, captureDelayMs = 1000) {
   const byId = new Map<number, Unit | Vehicle>(entities.map((e) => [e.id, e]));
@@ -32,6 +31,9 @@ function fakeEngine(entities: Array<Unit | Vehicle>, endFrame: number, captureDe
     entityManager: manager,
     endFrame: () => endFrame,
     captureDelayMs: () => captureDelayMs,
+    async visitAllFrames(this: PlaybackEngine, visit: Parameters<PlaybackEngine["visitAllFrames"]>[0]) {
+      visit(0, endFrame, (id, frame) => this.getStateAt(id, frame));
+    },
     getStateAt(entityId: number, frame: number): EntityState | null {
       const entity = manager.getEntity(entityId);
       if (!entity) return null;
@@ -262,31 +264,31 @@ describe("buildOrbat", () => {
 });
 
 describe("buildVehicleOccupancy", () => {
-  it("drops vehicles nobody ever boarded", () => {
+  it("drops vehicles nobody ever boarded", async () => {
     const parked = new Vehicle(9, "Parked", "car", 0, 3, "car", [
       state({ crewIds: [] }),
       state({ crewIds: [] }),
       state({ crewIds: [] }),
       state({ crewIds: [] }),
     ]);
-    expect(buildVehicleOccupancy(fakeEngine([parked], 3, 1000), 0, 4)).toEqual([]);
+    expect(await buildVehicleOccupancy(fakeEngine([parked], 3, 1000), 0, 4)).toEqual([]);
   });
 
-  it("records crew over time and the peak that sizes the strip", () => {
+  it("records crew over time and the peak that sizes the strip", async () => {
     const truck = new Vehicle(9, "Truck", "truck", 0, 3, "truck", [
       state({ crewIds: [] }),
       state({ crewIds: [1, 2] }),
       state({ crewIds: [1, 2, 3] }),
       state({ crewIds: [] }),
     ]);
-    const [occupancy] = buildVehicleOccupancy(fakeEngine([truck], 3, 1000), 0, 4);
+    const [occupancy] = await buildVehicleOccupancy(fakeEngine([truck], 3, 1000), 0, 4);
 
     expect(occupancy.name).toBe("Truck");
     expect(occupancy.peak).toBe(3);
     expect(occupancy.samples.map((s) => s.crewIds.length)).toEqual([0, 2, 3, 0]);
   });
 
-  it("keeps only what a player of that side crewed when asked", () => {
+  it("keeps only what a player of that side crewed when asked", async () => {
     const truck = new Vehicle(9, "Player Truck", "truck", 0, 1, "truck", [
       state({ crewIds: [1] }),
       state({ crewIds: [1] }),
@@ -304,14 +306,14 @@ describe("buildVehicleOccupancy", () => {
     const enemy = unit(3, "Enemy", "EAST", "Bravo", [state(), state()]);
     const engine = fakeEngine([truck, aiTruck, enemyTruck, driver, ai, enemy], 1);
 
-    const names = buildVehicleOccupancy(engine, 0, 2, {
+    const names = (await buildVehicleOccupancy(engine, 0, 2, {
       side: "WEST",
       playersOnly: true,
-    }).map((v) => v.name);
+    })).map((v) => v.name);
     expect(names).toEqual(["Player Truck"]);
   });
 
-  it("reports whether it is occupied at the playhead", () => {
+  it("reports whether it is occupied at the playhead", async () => {
     const truck = new Vehicle(9, "Truck", "truck", 0, 3, "truck", [
       state({ crewIds: [] }),
       state({ crewIds: [1] }),
@@ -320,19 +322,19 @@ describe("buildVehicleOccupancy", () => {
     ]);
     const engine = fakeEngine([truck], 3, 1000);
 
-    expect(buildVehicleOccupancy(engine, 1, 4)[0].occupiedNow).toBe(true);
-    expect(buildVehicleOccupancy(engine, 3, 4)[0].occupiedNow).toBe(false);
+    expect((await buildVehicleOccupancy(engine, 1, 4))[0].occupiedNow).toBe(true);
+    expect((await buildVehicleOccupancy(engine, 3, 4))[0].occupiedNow).toBe(false);
   });
 });
 
 describe("buildMovementStats", () => {
-  it("splits distance between on foot and mounted", () => {
+  it("splits distance between on foot and mounted", async () => {
     const walker = unit(1, "Walker", "WEST", "Alpha", [
       state({ position: [0, 0, 0] }),
       state({ position: [100, 0, 0] }),
       state({ position: [200, 0, 0], isInVehicle: true }),
     ]);
-    const [stats] = buildMovementStats(fakeEngine([walker], 2, 1000), { step: 1 });
+    const [stats] = await buildMovementStats(fakeEngine([walker], 2, 1000), { step: 1 });
 
     expect(Math.round(stats.onFoot)).toBe(100);
     expect(Math.round(stats.mounted)).toBe(100);
@@ -340,18 +342,18 @@ describe("buildMovementStats", () => {
     expect(stats.mountedFrames).toBe(1);
   });
 
-  it("ignores a teleport, which is Zeus or a respawn rather than travel", () => {
+  it("ignores a teleport, which is Zeus or a respawn rather than travel", async () => {
     const teleported = unit(1, "Zeus bait", "WEST", "Alpha", [
       state({ position: [0, 0, 0] }),
       state({ position: [5000, 0, 0] }),
       state({ position: [5050, 0, 0] }),
     ]);
-    const [stats] = buildMovementStats(fakeEngine([teleported], 2, 1000), { step: 1 });
+    const [stats] = await buildMovementStats(fakeEngine([teleported], 2, 1000), { step: 1 });
 
     expect(Math.round(stats.total)).toBe(50);
   });
 
-  it("breaks the chain over a gap instead of bridging it", () => {
+  it("breaks the chain over a gap instead of bridging it", async () => {
     // Frame 1 is missing, which is what an unloaded chunk looks like; bridging
     // it would invent the whole distance across the gap.
     const gapped = unit(1, "Gapped", "WEST", "Alpha", [
@@ -360,20 +362,20 @@ describe("buildMovementStats", () => {
       state({ position: [300, 0, 0] }),
       state({ position: [310, 0, 0] }),
     ]);
-    const [stats] = buildMovementStats(fakeEngine([gapped], 3, 1000), { step: 1 });
+    const [stats] = await buildMovementStats(fakeEngine([gapped], 3, 1000), { step: 1 });
 
     expect(Math.round(stats.total)).toBe(10);
   });
 
-  it("skips units that never moved", () => {
+  it("skips units that never moved", async () => {
     const still = unit(1, "Statue", "WEST", "Alpha", [
       state({ position: [0, 0, 0] }),
       state({ position: [0, 0, 0] }),
     ]);
-    expect(buildMovementStats(fakeEngine([still], 1, 1000), { step: 1 })).toEqual([]);
+    expect(await buildMovementStats(fakeEngine([still], 1, 1000), { step: 1 })).toEqual([]);
   });
 
-  it("ranks by total distance, furthest first", () => {
+  it("ranks by total distance, furthest first", async () => {
     const near = unit(1, "Near", "WEST", "Alpha", [
       state({ position: [0, 0, 0] }),
       state({ position: [50, 0, 0] }),
@@ -382,20 +384,20 @@ describe("buildMovementStats", () => {
       state({ position: [0, 0, 0] }),
       state({ position: [300, 0, 0] }),
     ]);
-    const ranked = buildMovementStats(fakeEngine([near, far], 1, 1000), { step: 1 });
+    const ranked = await buildMovementStats(fakeEngine([near, far], 1, 1000), { step: 1 });
 
     expect(ranked.map((s) => s.name)).toEqual(["Far", "Near"]);
   });
 
-  it("leaves AI out unless asked for", () => {
+  it("leaves AI out unless asked for", async () => {
     const ai = unit(1, "AI", "WEST", "Alpha", [
       state({ position: [0, 0, 0] }),
       state({ position: [200, 0, 0] }),
     ], { isPlayer: false });
     const engine = fakeEngine([ai], 1, 1000);
 
-    expect(buildMovementStats(engine, { step: 1 })).toEqual([]);
-    expect(buildMovementStats(engine, { step: 1, playersOnly: false })).toHaveLength(1);
+    expect(await buildMovementStats(engine, { step: 1 })).toEqual([]);
+    expect(await buildMovementStats(engine, { step: 1, playersOnly: false })).toHaveLength(1);
   });
 });
 

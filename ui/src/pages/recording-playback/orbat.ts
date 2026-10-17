@@ -186,47 +186,63 @@ function playerUnitIds(engine: PlaybackEngine, side?: Side): Set<number> {
  * story. The crew lists themselves stay whole — who a player rode with is
  * part of it.
  */
-export function buildVehicleOccupancy(
+export async function buildVehicleOccupancy(
   engine: PlaybackEngine,
   frame: number,
   sampleCount = 160,
   options: { side?: Side; playersOnly?: boolean } = {},
-): VehicleOccupancy[] {
+): Promise<VehicleOccupancy[]> {
   const endFrame = engine.endFrame();
   if (endFrame <= 0) return [];
 
-  const players = options.playersOnly ? playerUnitIds(engine, options.side) : null;
-
   const step = Math.max(1, Math.floor(endFrame / sampleCount));
-  const result: VehicleOccupancy[] = [];
+  const vehicles = engine.entityManager.getAll().filter(
+    (entity): entity is Vehicle => entity instanceof Vehicle,
+  );
+  if (vehicles.length === 0) return [];
+  const result: VehicleOccupancy[] = vehicles.map((entity) => ({
+    vehicleId: entity.id, name: entity.name, samples: [], peak: 0, occupiedNow: false,
+  }));
 
-  for (const entity of engine.entityManager.getAll()) {
-    if (!(entity instanceof Vehicle)) continue;
-
-    const samples: CrewSample[] = [];
-    let peak = 0;
-    let occupiedNow = false;
-    let carriedPlayer = false;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    for (let f = entity.startFrame; f <= Math.min(entity.endFrame, endFrame); f += step) {
-      const state = engine.getStateAt(entity.id, f);
-      const crewIds = state?.crewIds ?? [];
-      samples.push({ frame: f, crewIds });
-      if (crewIds.length > peak) peak = crewIds.length;
-      if (players && !carriedPlayer) carriedPlayer = crewIds.some((id) => players.has(id));
-
-      const distance = Math.abs(f - frame);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        occupiedNow = crewIds.length > 0;
+  await engine.visitAllFrames((firstFrame, lastFrame, stateAt) => {
+    for (let i = 0; i < vehicles.length; i++) {
+      const entity = vehicles[i];
+      const occupancy = result[i];
+      const offset = Math.max(0, Math.ceil((firstFrame - entity.startFrame) / step));
+      const first = entity.startFrame + offset * step;
+      const last = Math.min(entity.endFrame, endFrame, lastFrame);
+      for (let f = first; f <= last; f += step) {
+        const crewIds = [...(stateAt(entity.id, f)?.crewIds ?? [])];
+        occupancy.samples.push({ frame: f, crewIds });
+        occupancy.peak = Math.max(occupancy.peak, crewIds.length);
       }
     }
+  });
 
-    if (peak === 0) continue;
-    if (players && !carriedPlayer) continue;
-    result.push({ vehicleId: entity.id, name: entity.name, samples, peak, occupiedNow });
-  }
+  return selectVehicleOccupancy(engine, result, frame, options);
+}
 
-  return result.sort((a, b) => b.peak - a.peak || a.name.localeCompare(b.name));
+/** Filter durable crew samples and update the playhead indicator without loading chunks again. */
+export function selectVehicleOccupancy(
+  engine: PlaybackEngine,
+  history: readonly VehicleOccupancy[],
+  frame: number,
+  options: { side?: Side; playersOnly?: boolean } = {},
+): VehicleOccupancy[] {
+  const players = options.playersOnly ? playerUnitIds(engine, options.side) : null;
+  return history
+    .filter((vehicle) => {
+      if (vehicle.peak === 0) return false;
+      return !players || vehicle.samples.some((sample) => sample.crewIds.some((id) => players.has(id)));
+    })
+    .map((vehicle) => {
+      let nearest: CrewSample | undefined;
+      for (const sample of vehicle.samples) {
+        if (!nearest || Math.abs(sample.frame - frame) < Math.abs(nearest.frame - frame)) {
+          nearest = sample;
+        }
+      }
+      return { ...vehicle, occupiedNow: (nearest?.crewIds.length ?? 0) > 0 };
+    })
+    .sort((a, b) => b.peak - a.peak || a.name.localeCompare(b.name));
 }

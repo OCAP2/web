@@ -533,23 +533,6 @@ export class PlaybackEngine {
   }
 
   /**
-   * Every chunk of a chunked recording, loaded.
-   *
-   * Playback only ever needs the chunk under the playhead and its neighbour, so
-   * chunks are lazy. Whole-mission analysis is the opposite shape and has to pay
-   * for the lot once; a JSON recording already holds everything and resolves
-   * immediately.
-   */
-  ensureAllChunks(): Promise<void> {
-    const chunkManager = this.chunkManager;
-    const count = this.manifest?.chunkCount ?? 0;
-    if (!chunkManager || count <= 0) return Promise.resolve();
-    const loads: Promise<unknown>[] = [];
-    for (let i = 0; i < count; i++) loads.push(chunkManager.loadChunk(i));
-    return Promise.all(loads).then(() => {});
-  }
-
-  /**
    * Walk the whole recording once, handing `visit` each stretch of frames
    * together with a state reader that is valid for that stretch.
    *
@@ -575,22 +558,34 @@ export class PlaybackEngine {
     }
 
     const chunkSize = this.manifest?.chunkSize || 300;
-    for (let index = 0; index < count; index++) {
-      const firstFrame = index * chunkSize;
-      if (firstFrame > endFrame) break;
-      const chunk = await chunkManager.loadChunk(index);
-      // A different recording was loaded while this chunk was in flight.
-      if (this.chunkManager !== chunkManager) return;
-      const lastFrame = Math.min(firstFrame + chunkSize - 1, endFrame);
-      visit(firstFrame, lastFrame, (entityId, frame) => {
-        const entity = this.entityManager.getEntity(entityId);
-        if (!entity || frame < entity.startFrame || frame > entity.endFrame) return null;
-        return (
-          chunk.entities.get(entityId)?.[frame - firstFrame] ??
-          entity.positions?.[entity.getRelativeFrameIndex(frame)] ??
-          null
-        );
-      });
+    try {
+      for (let index = 0; index < count; index++) {
+        const firstFrame = index * chunkSize;
+        if (firstFrame > endFrame) break;
+        const chunk = await chunkManager.loadChunk(index);
+        // A different recording was loaded while this chunk was in flight.
+        if (this.chunkManager !== chunkManager) return;
+        const lastFrame = Math.min(firstFrame + chunkSize - 1, endFrame);
+        visit(firstFrame, lastFrame, (entityId, frame) => {
+          const entity = this.entityManager.getEntity(entityId);
+          if (!entity || frame < entity.startFrame || frame > entity.endFrame) return null;
+          return (
+            chunk.entities.get(entityId)?.[frame - firstFrame] ??
+            entity.positions?.[entity.getRelativeFrameIndex(frame)] ??
+            null
+          );
+        });
+      }
+    } finally {
+      // Analysis may evict the playhead's chunk. Restore it even when a later
+      // chunk fails, so a paused recording and its roster remain usable.
+      if (this.chunkManager === chunkManager) {
+        const frame = this._currentFrame();
+        await chunkManager.ensureLoaded(frame);
+        if (this.chunkManager === chunkManager && this._currentFrame() === frame) {
+          this.computeSnapshots(frame);
+        }
+      }
     }
   }
 

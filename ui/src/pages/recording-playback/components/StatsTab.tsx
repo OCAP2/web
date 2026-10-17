@@ -1,11 +1,11 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js";
 import type { Side } from "../../../data/types";
 import { SIDE_COLORS_UI, SIDE_BG_COLORS } from "../../../config/sideColors";
 import { useEngine } from "../../../hooks/useEngine";
 import { useCustomize } from "../../../hooks/useCustomize";
 import { useI18n } from "../../../hooks/useLocale";
-import { buildMovementStats, formatDistance } from "../movement";
+import { buildMovementStats, formatDistance, type MovementStats } from "../movement";
 import styles from "./SidePanel.module.css";
 import commsStyles from "./CommsTab.module.css";
 import movementStyles from "./MovementTable.module.css";
@@ -107,17 +107,19 @@ export function StatsTab(): JSX.Element {
     return metrics;
   });
 
-  // Distance covers the whole mission, so a chunked recording needs every chunk;
-  // a JSON one resolves immediately and this never blocks.
+  // Accumulate totals while each chunk is held; retain only the resulting rows.
+  const [movement, setMovement] = createSignal<MovementStats[]>([]);
   const [movementReady, setMovementReady] = createSignal(false);
   createEffect(() => {
-    void engine.ensureAllChunks().then(() => setMovementReady(true));
-  });
-
-  const movement = createMemo(() => {
-    movementReady();
     engine.endFrame();
-    return buildMovementStats(engine);
+    let active = true;
+    onCleanup(() => { active = false; });
+    setMovement([]);
+    setMovementReady(false);
+    void buildMovementStats(engine).then((stats) => {
+      if (active) setMovement(stats);
+    }).catch((error) => console.error("Failed to analyze movement", error))
+      .finally(() => { if (active) setMovementReady(true); });
   });
 
   // Frame-aware kill/death counts

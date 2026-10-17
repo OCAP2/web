@@ -326,7 +326,7 @@ describe("PlaybackEngine Zeus synthesis", () => {
 
     const zeus = engine.entityManager.getEntity(90);
     expect(zeus).toBeInstanceOf(Unit);
-    expect(zeus?.side).toBe("VIRTUAL");
+    expect((zeus as Unit).side).toBe("VIRTUAL");
     expect(engine.entityManager.getBySide("VIRTUAL")).toHaveLength(1);
 
     engine.seekTo(0);
@@ -377,7 +377,7 @@ describe("PlaybackEngine Zeus synthesis", () => {
     const zeus = engine.entityManager.getEntity(0);
     expect(zeus).toBeInstanceOf(Unit);
     expect(zeus?.type).toBe("zeus");
-    expect(zeus?.side).toBe("VIRTUAL");
+    expect((zeus as Unit).side).toBe("VIRTUAL");
     expect(zeus?.name).toBe("YetheSamartaka");
     expect(engine.entityManager.getBySide("VIRTUAL")).toHaveLength(1);
 

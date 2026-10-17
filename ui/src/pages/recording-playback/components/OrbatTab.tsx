@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js";
 
 import type { Side } from "../../../data/types";
@@ -11,7 +11,13 @@ import {
   SIDE_LABELS,
 } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { buildOrbat, buildVehicleOccupancy, isLeader } from "../orbat";
+import {
+  buildOrbat,
+  buildVehicleOccupancy,
+  isLeader,
+  selectVehicleOccupancy,
+  type VehicleOccupancy,
+} from "../orbat";
 import { activeSide, setActiveSide } from "../shortcuts";
 import styles from "./OrbatTab.module.css";
 import panel from "./SidePanel.module.css";
@@ -20,7 +26,8 @@ export function OrbatTab(): JSX.Element {
   const engine = useEngine();
   const { t } = useI18n();
 
-  const [chunksReady, setChunksReady] = createSignal(false);
+  const [vehicleHistory, setVehicleHistory] = createSignal<VehicleOccupancy[]>([]);
+  const [vehiclesReady, setVehiclesReady] = createSignal(false);
   const [search, setSearch] = createSignal("");
   const query = createMemo(() => search().trim().toLowerCase());
   /** Set once the faction was chosen here, which stops the auto-pick below. */
@@ -62,14 +69,24 @@ export function OrbatTab(): JSX.Element {
     }
   });
 
-  // The vehicle strips span the whole mission, so a chunked recording has to
-  // have every chunk in hand. Playback itself only ever loads the chunk under
-  // the playhead, which is why this is asked for explicitly rather than assumed.
+  // Crew samples survive chunk eviction and can be reused as the playhead moves.
   createEffect(() => {
-    void engine.ensureAllChunks().then(() => setChunksReady(true));
+    engine.endFrame();
+    let active = true;
+    onCleanup(() => { active = false; });
+    setVehicleHistory([]);
+    setVehiclesReady(false);
+    void buildVehicleOccupancy(engine, 0).then((history) => {
+      if (active) setVehicleHistory(history);
+    }).catch((error) => console.error("Failed to analyze vehicle occupancy", error))
+      .finally(() => { if (active) setVehiclesReady(true); });
   });
 
-  const allGroups = createMemo(() => buildOrbat(engine, activeSide(), engine.currentFrame()));
+  const allGroups = createMemo(() => {
+    // Re-read after a seek finishes loading the playhead's chunk.
+    engine.entitySnapshots();
+    return buildOrbat(engine, activeSide(), engine.currentFrame());
+  });
 
   /**
    * Groups narrowed by the search box. A hit on the group name keeps the whole
@@ -92,9 +109,7 @@ export function OrbatTab(): JSX.Element {
 
   /** Only what the players of this faction rode; the AI motor pool is noise here. */
   const allVehicles = createMemo(() => {
-    chunksReady();
-    engine.endFrame();
-    return buildVehicleOccupancy(engine, engine.currentFrame(), 160, {
+    return selectVehicleOccupancy(engine, vehicleHistory(), engine.currentFrame(), {
       side: activeSide(),
       playersOnly: true,
     });
@@ -129,6 +144,7 @@ export function OrbatTab(): JSX.Element {
 
   /** Crew aboard at the sample nearest the playhead. */
   const currentCrew = (vehicleId: number): number[] => {
+    engine.entitySnapshots();
     const state = engine.getStateAt(vehicleId, engine.currentFrame());
     return state?.crewIds ?? [];
   };
@@ -240,7 +256,7 @@ export function OrbatTab(): JSX.Element {
       <div class={styles.section}>{t("orbat_vehicles")}</div>
 
       <Show
-        when={chunksReady()}
+        when={vehiclesReady()}
         fallback={<div class={styles.note}>{t("orbat_loading_vehicles")}</div>}
       >
         <Show

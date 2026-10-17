@@ -11,7 +11,7 @@
  * Both files are large local artifacts, so the suite skips itself when they are
  * not present. Point it somewhere else with OCAP_TEST_RECORDING / _V2.
  */
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
@@ -133,8 +133,12 @@ function gearFingerprint(inventory: InventorySnapshot) {
 }
 
 describe.skipIf(!available)("a converted recording replays through the real UI path", () => {
-  const original = decode(ORIGINAL);
-  const converted = decode(CONVERTED);
+  let original: ReturnType<typeof decode>;
+  let converted: ReturnType<typeof decode>;
+  beforeAll(() => {
+    original = decode(ORIGINAL);
+    converted = decode(CONVERTED);
+  });
 
   it("decodes to the same mission, entities, markers and non-snapshot events", () => {
     expect(converted.missionName).toBe(original.missionName);

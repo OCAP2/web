@@ -7,6 +7,8 @@
  *   1 m collapses to "1 m" and never switches to centimetres.
  */
 
+import type { ArmaCoord } from "../../utils/coordinates";
+
 /** Leaflet's default scale-bar target width. */
 export const SCALE_MAX_WIDTH_PX = 100;
 
@@ -57,8 +59,8 @@ export function scaleBarWidthPx(
 
 /** Planar distance in Arma metres between two world positions. */
 export function armaMetersBetween(
-  a: [number, number],
-  b: [number, number],
+  a: ArmaCoord,
+  b: ArmaCoord,
 ): number {
   return Math.hypot(b[0] - a[0], b[1] - a[1]);
 }

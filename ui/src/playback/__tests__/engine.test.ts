@@ -191,31 +191,6 @@ describe("PlaybackEngine", () => {
     });
   });
 
-  describe("ensureAllChunks", () => {
-    it("loads every chunk of a chunked recording exactly once each", async () => {
-      const cm = makeMockChunkManager();
-      (cm.loadChunk as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-      engine.loadRecording(makeManifest({ chunkCount: 4 }), cm);
-
-      await engine.ensureAllChunks();
-
-      expect(cm.loadChunk).toHaveBeenCalledTimes(4);
-      expect((cm.loadChunk as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
-        0, 1, 2, 3,
-      ]);
-    });
-
-    it("resolves immediately for a JSON recording, fetching nothing", async () => {
-      engine.loadRecording(makeManifest({ chunkCount: 0 }));
-      await expect(engine.ensureAllChunks()).resolves.toBeUndefined();
-    });
-
-    it("resolves when a recording has no chunk manager even if the manifest claims chunks", async () => {
-      engine.loadRecording(makeManifest({ chunkCount: 5 }));
-      await expect(engine.ensureAllChunks()).resolves.toBeUndefined();
-    });
-  });
-
   // ─── Player snapshot sidecars ───
 
   describe("ensurePlayerSnapshots", () => {

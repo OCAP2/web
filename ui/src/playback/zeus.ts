@@ -193,7 +193,7 @@ export function groupZeusModules(events: ZeusModuleLike[]): ZeusModuleGroup[] {
     groups.push({
       key: `${curatorId}:${displayName}:${attached}:${event.frameNum}`,
       curatorId,
-      curatorName,
+      curatorName: curatorName ?? "",
       displayName,
       attachedName: attached,
       position: [x, y],

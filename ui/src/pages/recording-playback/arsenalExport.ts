@@ -5,7 +5,7 @@ type Weapon = InventorySnapshot["weapons"][number];
 type Magazine = InventorySnapshot["magazines"][number];
 
 const itemCount = (item: GearItem): number => Math.max(1, Math.floor(item.count ?? 1));
-const sqfString = (value: string): string => `"${value.replaceAll('"', '""')}"`;
+const sqfString = (value: string): string => `"${value.replace(/"/g, '""')}"`;
 
 /**
  * TFAR clones every handheld radio into a per-instance class that carries the

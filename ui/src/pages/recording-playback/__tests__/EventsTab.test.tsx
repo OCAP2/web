@@ -883,7 +883,7 @@ describe("EventsTab", () => {
       unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
       unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
     ];
-    const events = [
+    const events: EventDef[] = [
       killedEvent(0, 1, 2, "M4A1", 100),
       {
         frameNum: 1,
@@ -1011,7 +1011,7 @@ describe("EventsTab", () => {
   it("faction filter OPFOR keeps an explosion with side EAST", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [unitDef({ id: 1, name: "Rifleman", side: "WEST" })];
-    const events = [
+    const events: EventDef[] = [
       {
         frameNum: 0,
         type: "explosion",

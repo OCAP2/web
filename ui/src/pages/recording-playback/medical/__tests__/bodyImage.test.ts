@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MedicalBodyPart } from "../../../data/types";
+import type { MedicalBodyPart } from "../../../../data/types";
 import {
   BLOOD_LOSS_COLORS,
   DAMAGE_COLORS,

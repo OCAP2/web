@@ -34,10 +34,10 @@ export interface MovementStats {
  */
 const MAX_STEP_METRES = 400;
 
-export function buildMovementStats(
+export async function buildMovementStats(
   engine: PlaybackEngine,
   options: { step?: number; playersOnly?: boolean } = {},
-): MovementStats[] {
+): Promise<MovementStats[]> {
   const endFrame = engine.endFrame();
   if (endFrame <= 0) return [];
 
@@ -47,61 +47,63 @@ export function buildMovementStats(
   const secondsPerStep = (step * captureDelayMs) / 1000;
   const playersOnly = options.playersOnly ?? true;
 
-  const result: MovementStats[] = [];
+  const units = engine.entityManager.getAll().filter(
+    (entity): entity is Unit => entity instanceof Unit && (!playersOnly || entity.isPlayer),
+  );
+  if (units.length === 0) return [];
+  const totals = units.map((entity) => ({
+    unitId: entity.id,
+    name: entity.name,
+    side: entity.side,
+    onFoot: 0,
+    mounted: 0,
+    total: 0,
+    mountedFrames: 0,
+    trackedFrames: 0,
+    topSpeed: 0,
+  }));
+  const previous = new Map<number, { x: number; y: number }>();
 
-  for (const entity of engine.entityManager.getAll()) {
-    if (!(entity instanceof Unit)) continue;
-    if (playersOnly && !entity.isPlayer) continue;
-
-    let onFoot = 0;
-    let mounted = 0;
-    let mountedFrames = 0;
-    let trackedFrames = 0;
-    let topSpeed = 0;
-
-    let previous: { x: number; y: number } | null = null;
-    const last = Math.min(entity.endFrame, endFrame);
-
-    for (let frame = entity.startFrame; frame <= last; frame += step) {
-      const state = engine.getStateAt(entity.id, frame);
-      if (!state) {
-        // A gap in loaded data breaks the chain rather than bridging it, so an
-        // unloaded stretch cannot masquerade as a long march.
-        previous = null;
-        continue;
-      }
-
-      trackedFrames += 1;
-      if (state.isInVehicle) mountedFrames += 1;
-
-      const position = { x: state.position[0], y: state.position[1] };
-      if (previous) {
-        const distance = Math.hypot(position.x - previous.x, position.y - previous.y);
-        if (distance <= MAX_STEP_METRES) {
-          if (state.isInVehicle) mounted += distance;
-          else onFoot += distance;
-          topSpeed = Math.max(topSpeed, distance / secondsPerStep);
+  // Keep only totals and the previous sample across chunks. In particular, a
+  // sample on either side of a chunk boundary must still count as one step.
+  await engine.visitAllFrames((firstFrame, lastFrame, stateAt) => {
+    for (let i = 0; i < units.length; i++) {
+      const entity = units[i];
+      const stats = totals[i];
+      const offset = Math.max(0, Math.ceil((firstFrame - entity.startFrame) / step));
+      const first = entity.startFrame + offset * step;
+      const last = Math.min(entity.endFrame, endFrame, lastFrame);
+      for (let frame = first; frame <= last; frame += step) {
+        const state = stateAt(entity.id, frame);
+        if (!state) {
+          // A gap in loaded data breaks the chain rather than bridging it, so an
+          // unloaded stretch cannot masquerade as a long march.
+          previous.delete(entity.id);
+          continue;
         }
+
+        stats.trackedFrames += 1;
+        if (state.isInVehicle) stats.mountedFrames += 1;
+
+        const position = { x: state.position[0], y: state.position[1] };
+        const prior = previous.get(entity.id);
+        if (prior) {
+          const distance = Math.hypot(position.x - prior.x, position.y - prior.y);
+          if (distance <= MAX_STEP_METRES) {
+            if (state.isInVehicle) stats.mounted += distance;
+            else stats.onFoot += distance;
+            stats.topSpeed = Math.max(stats.topSpeed, distance / secondsPerStep);
+          }
+        }
+        previous.set(entity.id, position);
       }
-      previous = position;
     }
+  });
 
-    if (onFoot + mounted < 1) continue;
-
-    result.push({
-      unitId: entity.id,
-      name: entity.name,
-      side: entity.side,
-      onFoot,
-      mounted,
-      total: onFoot + mounted,
-      mountedFrames,
-      trackedFrames,
-      topSpeed,
-    });
-  }
-
-  return result.sort((a, b) => b.total - a.total);
+  return totals
+    .map((stats) => ({ ...stats, total: stats.onFoot + stats.mounted }))
+    .filter((stats) => stats.total >= 1)
+    .sort((a, b) => b.total - a.total);
 }
 
 /** Metres as a compact "1.2 km" / "840 m". */

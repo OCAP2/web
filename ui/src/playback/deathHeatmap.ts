@@ -12,11 +12,33 @@
  * frame.
  */
 
+import type { PlaybackEngine } from "./engine";
+import { HitKilledEvent } from "./events/hitKilledEvent";
+
 /** One death, already resolved to a map position. */
 export interface DeathSite {
   frameNum: number;
   x: number;
   y: number;
+}
+
+/** Resolve each victim while the chunk containing their death is still available. */
+export async function buildDeathSites(engine: PlaybackEngine): Promise<DeathSite[]> {
+  const deaths = engine.eventManager.getAll().filter(
+    (event): event is HitKilledEvent => event instanceof HitKilledEvent && event.type === "killed",
+  ).sort((a, b) => a.frameNum - b.frameNum);
+  if (deaths.length === 0) return [];
+  const sites: DeathSite[] = [];
+  let cursor = 0;
+  await engine.visitAllFrames((firstFrame, lastFrame, stateAt) => {
+    while (cursor < deaths.length && deaths[cursor].frameNum < firstFrame) cursor++;
+    for (; cursor < deaths.length && deaths[cursor].frameNum <= lastFrame; cursor++) {
+      const event = deaths[cursor];
+      const position = stateAt(event.victimId, event.frameNum)?.position;
+      if (position) sites.push({ frameNum: event.frameNum, x: position[0], y: position[1] });
+    }
+  });
+  return sites;
 }
 
 /** Deaths sharing one grid cell, collapsed to a single blob. */
