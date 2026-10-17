@@ -103,9 +103,9 @@ describe("buildOrbat", () => {
     const states = [state({ groupName: "Alpha" })];
     const engine = fakeEngine(
       [
-        unit(1, "Zulu", "WEST", "Alpha", states, { role: "Rifleman" }),
+        unit(1, "Mike", "WEST", "Alpha", states, { role: "Rifleman" }),
         unit(2, "Alpha AI", "WEST", "Alpha", states, { role: "Rifleman", isPlayer: false }),
-        unit(3, "Boss", "WEST", "Alpha", states, { role: "Squad Leader" }),
+        unit(3, "Zulu", "WEST", "Alpha", states, { role: "Squad Leader" }),
       ],
       0,
     );
@@ -113,7 +113,21 @@ describe("buildOrbat", () => {
     // playersOnly is off here so the player/AI tiebreaker is actually exercised;
     // the default roster would drop the AI before the sort ever saw it.
     const members = buildOrbat(engine, "WEST", 0, { playersOnly: false })[0].members;
-    expect(members.map((m) => m.name)).toEqual(["Boss", "Zulu", "Alpha AI"]);
+    expect(members.map((m) => m.name)).toEqual(["Zulu", "Mike", "Alpha AI"]);
+  });
+
+  it("uses per-frame roles for promotions and demotions ahead of recorded roles", () => {
+    const promoted = unit(1, "Aaron", "WEST", "Alpha", [
+      state({ role: "Rifleman" }), state({ role: "Squad Leader" }),
+    ], { role: "Rifleman" });
+    const demoted = unit(2, "Zulu", "WEST", "Alpha", [
+      state(), state({ role: "Rifleman" }),
+    ], { role: "Squad Leader" });
+    const engine = fakeEngine([promoted, demoted], 1);
+    expect(buildOrbat(engine, "WEST", 0)[0].members.map((member) => [member.name, member.role]))
+      .toEqual([["Zulu", "Squad Leader"], ["Aaron", "Rifleman"]]);
+    expect(buildOrbat(engine, "WEST", 1)[0].members.map((member) => [member.name, member.role]))
+      .toEqual([["Aaron", "Squad Leader"], ["Zulu", "Rifleman"]]);
   });
 
   // ── Players only ──

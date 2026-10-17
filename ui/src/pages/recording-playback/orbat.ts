@@ -100,7 +100,8 @@ export function buildOrbat(
     const member: OrbatMember = {
       unitId: entity.id,
       name,
-      role: state.role ?? "",
+      // Protobuf chunks omit roles; the manifest retains the recorded role.
+      role: state.role ?? entity.role,
       isPlayer,
       alive: !!state.alive,
       mounted: state.isInVehicle === true,
