@@ -1,7 +1,7 @@
 import type { RadioSnapshotEntry, RadioTransmissionPayload } from "../data/types";
 import type { TfarRadioPropagation, AcreRadioPropagation } from "../data/radioPropagation";
 import type { DemGrid } from "./radioRange/demGrid";
-import { inTfarRange } from "./radioRange/tfarCoverage";
+import { effectiveDistance, inTfarRange } from "./radioRange/tfarCoverage";
 import { inAcreRange } from "./radioRange/acreCoverage";
 
 /**
@@ -212,8 +212,8 @@ export interface ReachabilityInput {
  *
  * With a DEM loaded this is the same terrain-aware test the coverage overlay
  * draws with, so a ridge between two units puts them out of contact exactly
- * where the overlay says it does. Without one it degrades to straight-line
- * distance, which is what the "simple range" mode already shows.
+ * where the overlay says it does. Without one it uses straight-line distance
+ * while retaining TFAR's recorded range multiplier.
  *
  * What it cannot know: whether the receiver's radio was switched on, their
  * volume, or whether they were listening. This is reachability, not attention.
@@ -229,7 +229,8 @@ export function reachability(input: ReachabilityInput): ReachabilityResult[] {
 
       let inRange: boolean;
       if (!input.grid) {
-        inRange = distance <= input.rangeMeters;
+        const effective = isAcre ? distance : effectiveDistance(distance, 0, input.tfar);
+        inRange = effective <= input.rangeMeters;
       } else if (isAcre) {
         inRange = inAcreRange(
           input.grid, ox, oy, oz, px, py, pz,

@@ -226,6 +226,37 @@ describe("reachability", () => {
     expect(result[0].inRange).toBe(false);
   });
 
+  it.each([
+    { coefficient: 0.5, distances: [2500, 2501, 3000], expected: [true, false, false] },
+    { coefficient: 1, distances: [3000, 5000, 5001], expected: [true, true, false] },
+    { coefficient: 2, distances: [6000, 10000, 10001], expected: [true, true, false] },
+  ])("uses TFAR range coefficient $coefficient with or without flat terrain", ({ coefficient, distances, expected }) => {
+    const input = {
+      origin: [1000, 1000, 0] as [number, number, number],
+      peers: distances.map((distance, index) => ({
+        unitId: index + 2, name: `Receiver ${index}`, side: "WEST",
+        position: [1000 + distance, 1000, 0] as [number, number, number], monitoring: false,
+      })),
+      rangeMeters: 5000, mod: "TFAR",
+      tfar: { ...TFAR, globalRadioRangeCoef: coefficient }, acre: ACRE,
+    };
+    const withoutTerrain = reachability({ ...input, grid: null });
+    expect(withoutTerrain.map((peer) => peer.inRange)).toEqual(expected);
+    // Loading unobstructed terrain cannot change the recorded range settings.
+    expect(reachability({ ...input, grid: makeFlatDem(20000, 0, 100) })).toEqual(withoutTerrain);
+    expect(withoutTerrain.map((peer) => peer.distance)).toEqual(distances);
+  });
+
+  it("keeps ACRE's no-terrain range independent of TFAR settings", () => {
+    const result = reachability({
+      origin: [1000, 1000, 0],
+      peers: [{ ...peers[0], position: [4000, 1000, 0] }],
+      rangeMeters: 5000, mod: "ACRE", grid: null,
+      tfar: { ...TFAR, globalRadioRangeCoef: 0.5 }, acre: ACRE,
+    });
+    expect(result[0].inRange).toBe(true);
+  });
+
   it("agrees with the terrain model over flat ground", () => {
     const grid = makeFlatDem(10000, 0, 100);
     const result = reachability({
