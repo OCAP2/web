@@ -64,4 +64,31 @@ func TestStreamingConverter_RealFile(t *testing.T) {
 				len(chunk.Frames), len(chunk.Frames[0].Entities))
 		}
 	}
+
+	// Player snapshots must have left the manifest for their own sidecars —
+	// that is what keeps the up-front download small on a real recording.
+	for _, e := range manifest.Events {
+		require.False(t, IsPlayerSnapshotEvent(e.Type),
+			"player snapshot %s left in manifest", e.Type)
+	}
+
+	var sidecarBytes int64
+	for _, unitID := range manifest.SnapshotUnitIds {
+		path := filepath.Join(outputPath, SnapshotsDirName, fmt.Sprintf("%d.pb", unitID))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		sidecarBytes += info.Size()
+
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		var series pbv1.PlayerSnapshotSeries
+		require.NoError(t, proto.Unmarshal(data, &series))
+		require.Equal(t, unitID, series.UnitId)
+		require.NotEmpty(t, series.Events)
+	}
+
+	if len(manifest.SnapshotUnitIds) > 0 {
+		t.Logf("Manifest: %d KB up front; %d snapshot sidecars totalling %d KB, largest fetched on demand",
+			len(manifestData)/1024, len(manifest.SnapshotUnitIds), sidecarBytes/1024)
+	}
 }

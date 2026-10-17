@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,6 +56,17 @@ type ConversionTrigger interface {
 	TriggerConversion(id int64, filename string)
 }
 
+// StatsComputer derives the dashboard stats (player count, kills, force
+// composition) for one operation and stores them.
+//
+// Separate from ConversionTrigger because the two are independent: the stats
+// come out of the manifest and are just as computable for a recording that will
+// never be converted. Conversion writes them as part of its own manifest read,
+// so this is only wired up when conversion is disabled.
+type StatsComputer interface {
+	ComputeStatsFor(ctx context.Context, id int64, filename string) error
+}
+
 type Handler struct {
 	repoOperation     *RepoOperation
 	repoMarker        *RepoMarker
@@ -60,6 +74,7 @@ type Handler struct {
 	setting           Setting
 	jwt               *JWTManager
 	conversionTrigger ConversionTrigger   // optional, nil if conversion disabled
+	statsComputer     StatsComputer       // optional, set when conversion is disabled
 	staticFS          fs.FS               // optional, nil disables static file serving
 	maptoolMgr        *maptool.JobManager // optional, nil if maptool disabled
 	maptoolCfg        *maptoolConfig      // optional, nil if maptool disabled
@@ -80,6 +95,14 @@ type HandlerOption func(*Handler)
 func WithConversionTrigger(trigger ConversionTrigger) HandlerOption {
 	return func(h *Handler) {
 		h.conversionTrigger = trigger
+	}
+}
+
+// WithStatsComputer sets the stats computer used when conversion is disabled,
+// so an upload still gets its dashboard stats.
+func WithStatsComputer(computer StatsComputer) HandlerOption {
+	return func(h *Handler) {
+		h.statsComputer = computer
 	}
 }
 
@@ -204,10 +227,10 @@ func NewHandler(
 	}
 
 	if hdlr.staticFS != nil {
-		// Serve the SPA frontend with fallback to index.html for client-side routing
-		staticHandler := spaFileServer(hdlr.staticFS, prefixURL)
-		noCacheMiddleware := hdlr.cacheControl(0)
-		fuego.Handle(g, "/{path...}", noCacheMiddleware(staticHandler))
+		// Serve the SPA frontend with fallback to index.html for client-side
+		// routing. Cache headers are set per path inside the handler, because
+		// the hashed bundles and the HTML shell need opposite policies.
+		fuego.Handle(g, "/{path...}", spaFileServer(hdlr.staticFS, prefixURL))
 	}
 }
 
@@ -498,6 +521,19 @@ func (h *Handler) StoreOperation(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Conversion normally computes these while it has the manifest open.
+		// With it disabled nothing else would, and the recording would play back
+		// fine while the dashboard showed no force composition, no kills and a
+		// dash for the player count. Async so a large recording does not hold the
+		// upload response open; the row is already usable without it.
+		if h.statsComputer != nil {
+			id, filename := op.ID, op.Filename
+			go func() {
+				if err := h.statsComputer.ComputeStatsFor(context.Background(), id, filename); err != nil {
+					slog.Warn("failed to compute stats after upload", "operation_id", id, "error", err)
+				}
+			}()
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -539,6 +575,17 @@ func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(absolutePath); err != nil {
 		http.NotFound(w, r)
 		return
+	}
+
+	// Converted artifacts carry precompressed sidecars. Either branch varies on
+	// Accept-Encoding, so caches have to key on it whichever one answers.
+	w.Header().Add("Vary", "Accept-Encoding")
+	contentType := dataContentType(relativePath)
+	if servePrecompressed(w, r, absolutePath, contentType) {
+		return
+	}
+	if contentType != "" {
+		w.Header().Set("Content-Type", contentType)
 	}
 
 	http.ServeFile(w, r, absolutePath)
@@ -621,16 +668,67 @@ func (h *Handler) GetMapTile(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, absolutePath)
 }
 
+// hashedAssetPrefix is the directory the frontend build emits content-hashed
+// bundles into. A file there is named after a hash of its own contents, so any
+// change produces a new URL and the old one can never go stale.
+const hashedAssetPrefix = "assets/"
+
+// immutableCacheControl is the policy for content-hashed bundles: cache for a
+// year and never revalidate. Without it the browser refetches the whole bundle
+// on every page load, which is the single largest repeat-visit cost the player
+// has.
+const immutableCacheControl = "public, max-age=31536000, immutable"
+
+// staticCacheControl picks the caching policy for one embedded file. Only the
+// content-hashed bundles are safe to freeze; the HTML shell and anything else
+// keeps its name across deploys and so must be revalidated.
+func staticCacheControl(p string) string {
+	if strings.HasPrefix(p, hashedAssetPrefix) {
+		return immutableCacheControl
+	}
+	return "no-cache"
+}
+
+// buildETags hashes every embedded file once at startup.
+//
+// The frontend is served from an embed.FS, whose entries all report a zero
+// modification time — so Last-Modified carries no information and a revalidation
+// can never answer 304. A content ETag is what makes "no-cache" mean "check
+// first" instead of "download it all again".
+func buildETags(fsys fs.FS) map[string]string {
+	etags := make(map[string]string)
+	_ = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		data, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return nil
+		}
+		etags[p] = etagFor(data)
+		return nil
+	})
+	return etags
+}
+
+// etagFor returns a strong, quoted ETag for a body.
+func etagFor(data []byte) string {
+	sum := sha256.Sum256(data)
+	return `"` + hex.EncodeToString(sum[:16]) + `"`
+}
+
 // spaFileServer returns an http.Handler that serves static files from fsys,
 // falling back to index.html for paths that don't match a file (SPA routing).
 // The prefix is injected into index.html as window.__BASE_PATH__ so the
 // frontend SPA can discover its base URL at runtime.
 func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 	handler := http.StripPrefix(prefix, http.FileServer(http.FS(fsys)))
+	etags := buildETags(fsys)
 
 	// Pre-read index.html and inject the base path script tag once at startup.
 	var indexContent []byte
 	var indexModTime time.Time
+	var indexETag string
 	if f, err := fsys.Open("index.html"); err == nil {
 		defer f.Close()
 		if stat, err := f.Stat(); err == nil {
@@ -641,6 +739,8 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 			inject := fmt.Sprintf(`<base href=%q /><script>window.__BASE_PATH__=%q;</script>`, base, prefix)
 			// Inject right after <head> so <base> is parsed before any relative URLs
 			indexContent = bytes.Replace(raw, []byte("<head>"), []byte("<head>"+inject), 1)
+			// Hash the injected body, not the file: that is what is served.
+			indexETag = etagFor(indexContent)
 		}
 	}
 
@@ -652,6 +752,12 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 		// Serve existing files directly
 		if p != "" {
 			if _, err := fs.Stat(fsys, p); err == nil {
+				w.Header().Set("Cache-Control", staticCacheControl(p))
+				// http.ServeContent reads this back to answer If-None-Match,
+				// so setting it here is what turns a revalidation into a 304.
+				if tag, ok := etags[p]; ok {
+					w.Header().Set("Etag", tag)
+				}
 				handler.ServeHTTP(w, r)
 				return
 			}
@@ -661,6 +767,10 @@ func spaFileServer(fsys fs.FS, prefix string) http.Handler {
 		if indexContent == nil {
 			http.NotFound(w, r)
 			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+		if indexETag != "" {
+			w.Header().Set("Etag", indexETag)
 		}
 		http.ServeContent(w, r, "index.html", indexModTime, bytes.NewReader(indexContent))
 	})

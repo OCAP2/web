@@ -57,6 +57,45 @@ export class Unit extends Entity {
     return targets;
   }
 
+  /** Number of recorded shots at or before this absolute frame. */
+  firedCountThrough(frame: number): number {
+    if (!this._framesFired) return 0;
+    let count = 0;
+    for (const [f] of this._framesFired) {
+      if (f <= frame) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Combat side at an absolute playback frame.
+   * Prefers the per-frame position side (Zeus group-side switches, etc.)
+   * and falls back to the entity's spawn-time side so recordings without
+   * that field keep working.
+   */
+  sideAtFrame(absoluteFrame: number): Side {
+    const relative = this.getRelativeFrameIndex(absoluteFrame);
+    if (!this.isFrameOutOfBounds(relative)) {
+      const state = this.positions![relative];
+      if (state?.side) return state.side;
+    }
+    return this.side;
+  }
+
+  /**
+   * Unit type at an absolute playback frame.
+   * Prefers the per-frame getUnitType (Man, MG, AT, …) and falls back to
+   * the CREATE roleDescription so recordings without that field keep working.
+   */
+  roleAtFrame(absoluteFrame: number): string {
+    const relative = this.getRelativeFrameIndex(absoluteFrame);
+    if (!this.isFrameOutOfBounds(relative)) {
+      const state = this.positions![relative];
+      if (state?.role) return state.role;
+    }
+    return this.role;
+  }
+
   /** CSS class for the unit's side: WEST->'blufor', EAST->'opfor', etc. */
   get sideClass(): string {
     return SIDE_CLASS[this.side] ?? "unknown";

@@ -55,11 +55,12 @@ interface InternalMarkerHandle {
 
 interface InternalBriefingHandle {
   layer: L.Layer;
-  shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
+  shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE" | "POLYGON";
   layerKey: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
   size?: [number, number];
   patternId?: string;
   shapeOpts?: { stroke: boolean; fill: boolean; fillOpacity: number };
+  dashArray?: string;
 }
 
 interface ShapeResult {
@@ -215,7 +216,9 @@ export class LeafletRenderer implements MapRenderer {
     this.useMapLibreMode = Boolean(world.maplibre);
     console.debug(`[LeafletRenderer] init: mode=${this.useMapLibreMode ? "maplibre" : "legacy"}, maplibre=${world.maplibre}, maxZoom=${world.maxZoom}, tileBaseUrl=${world.tileBaseUrl}`);
 
-    const maxZoom = this.maxNativeZoom + 2;
+    // Allow zooming past the deepest tile level. Leaflet upscales the last
+    // native tile, so this only costs sharpness — +4 gives 16x over native.
+    const maxZoom = this.maxNativeZoom + 4;
 
     // Grid layer (created early for overlay control ordering; not added to map)
     this.gridLayer = createGridLayer({
@@ -231,8 +234,8 @@ export class LeafletRenderer implements MapRenderer {
       this.initLegacyMode(container, world, maxZoom);
     }
 
-    // Add standard controls
-    createScaleControl().addTo(this.map);
+    // Scale bar in Arma metres (Leaflet's own scale uses CRS units, not metres).
+    createScaleControl((ll) => this.latLngToArma(ll)).addTo(this.map);
 
     // SVG renderer for briefing marker shapes — avoids canvas bitmap scaling
     // during zoom animation (the old frontend does the same: window.svgRenderer = L.svg())
@@ -255,6 +258,7 @@ export class LeafletRenderer implements MapRenderer {
       const hideThreshold = this.useMapLibreMode ? 14 : 4;
       this.hideMarkerPopups = this.map.getZoom() <= hideThreshold;
       this.refreshPopupVisibility();
+      this.refreshBriefingLabelVisibility();
       this.fireEvent("zoom", this.map.getZoom());
     });
     this.map.on("dragstart", () => {
@@ -271,7 +275,9 @@ export class LeafletRenderer implements MapRenderer {
     this.map = L.map(container, {
       center: [worldSizeDeg / 2, worldSizeDeg / 2],
       zoom: 12,
-      maxZoom: 20,
+      // 22 is MapLibre GL's own max zoom; going past it would desync the
+      // vector basemap from the Leaflet overlay panes.
+      maxZoom: 22,
       minZoom: 10,
       zoomControl: false,
       keyboard: false,
@@ -890,11 +896,12 @@ export class LeafletRenderer implements MapRenderer {
         interactive: false,
         renderer: this.svgRenderer,
       } as any);
-    } else if (def.shape === "ELLIPSE" || def.shape === "RECTANGLE") {
+    } else if (def.shape === "ELLIPSE" || def.shape === "RECTANGLE" || def.shape === "POLYGON") {
       // Build polygon options from brush type; use SVG renderer to avoid
       // canvas bitmap scaling during zoom animation
       const result = this.buildShapeOptions(cssColor, def.brush);
       const polygonOpts: any = { ...result.opts, noClip: false, interactive: false, renderer: this.svgRenderer };
+      if (def.dashArray) polygonOpts.dashArray = def.dashArray;
 
       shapeOpts = {
         stroke: !!result.opts.stroke,
@@ -919,14 +926,16 @@ export class LeafletRenderer implements MapRenderer {
       if (patternId) {
         const layerKey = def.layer ?? "briefingMarkers";
         layer.addTo(this.layers[layerKey]);
-        return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, patternId, shapeOpts });
+        return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, patternId, shapeOpts, dashArray: def.dashArray });
       }
     } else if (def.type.includes("Empty") && def.text) {
       // Empty markers are text-only labels (e.g. sector names).
       // Offset to the right of the marker position, matching Arma 3 in-game rendering.
       layer = L.marker([0, 0], {
         icon: L.divIcon({
-          className: "marker-text-label",
+          className: def.textClass
+            ? `marker-text-label ${def.textClass}`
+            : "marker-text-label",
           html: `<span>${def.text}</span>`,
           iconSize: [0, 0],
           iconAnchor: [-30, 0],
@@ -978,14 +987,14 @@ export class LeafletRenderer implements MapRenderer {
       layer instanceof L.Marker &&
       (layerKey === "projectileMarkers"
         ? this._projectileLabels()
-        : this._markerDisplayMode() === "all");
+        : this.briefingLabelsVisible());
     if (showLabel) layer.openPopup();
-    // Hide text labels when in "noLabels" mode
-    if (def.type.includes("Empty") && def.text && this._markerDisplayMode() !== "all") {
+    // Hide text labels when in "noLabels" mode or below the label zoom
+    if (def.type.includes("Empty") && def.text && !this.briefingLabelsVisible()) {
       const el = (layer as L.Marker).getElement?.();
       if (el) el.style.display = "none";
     }
-    return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts });
+    return wrapBriefing({ layer, shape: def.shape, layerKey, size: def.size, shapeOpts, dashArray: def.dashArray });
   }
 
   updateBriefingMarker(
@@ -1050,6 +1059,10 @@ export class LeafletRenderer implements MapRenderer {
 
       polygon.setLatLngs(latlngs);
       this.applyPolygonOpacity(polygon, internal, state.alpha);
+    } else if (internal.shape === "POLYGON" && state.points) {
+      const polygon = layer as L.Polygon;
+      polygon.setLatLngs(state.points.map((p) => this.armaToLatLng(p)));
+      this.applyPolygonOpacity(polygon, internal, state.alpha);
     } else if (internal.shape === "POLYLINE" && state.points) {
       const polyline = layer as L.Polyline;
       const latlngs = state.points.map((p) => this.armaToLatLng(p));
@@ -1088,7 +1101,11 @@ export class LeafletRenderer implements MapRenderer {
       fillOpacity = 0;
     }
 
-    polygon.setStyle({ opacity: strokeOpacity, fillOpacity });
+    polygon.setStyle({
+      opacity: strokeOpacity,
+      fillOpacity,
+      ...(internal.dashArray ? { dashArray: internal.dashArray } : {}),
+    });
   }
 
   private buildShapeOptions(
@@ -1301,18 +1318,37 @@ export class LeafletRenderer implements MapRenderer {
       if (!this.map.hasLayer(group)) {
         group.addTo(this.map);
       }
-      // Toggle popups and text labels on briefing markers
+      this.refreshBriefingLabelVisibility();
+    }
+  }
+
+  /**
+   * Whether briefing-marker labels (trench captions, marker text, sector
+   * names) should be drawn right now. They follow markerDisplayMode and the
+   * same zoom threshold as entity name popups: zoomed out, a map full of
+   * captions hides the map itself, so labels only appear once player names do.
+   */
+  private briefingLabelsVisible(): boolean {
+    return this._markerDisplayMode() === "all" && !this.hideMarkerPopups;
+  }
+
+  /** Refresh briefing and system labels; projectile labels have their own setting. */
+  private refreshBriefingLabelVisibility(): void {
+    const visible = this.briefingLabelsVisible();
+
+    for (const group of [this.layers.briefingMarkers, this.layers.systemMarkers]) {
+      if (!this.map.hasLayer(group)) continue;
       group.eachLayer((layer) => {
         if (!(layer instanceof L.Marker)) return;
         // Text-label markers (e.g. sector names) — toggle element visibility
         if (this.isTextLabelMarker(layer)) {
           const el = layer.getElement?.();
-          if (el) el.style.display = mode === "all" ? "" : "none";
+          if (el) el.style.display = visible ? "" : "none";
           return;
         }
         // ICON markers with popups — toggle popup
         if (!layer.getPopup()) return;
-        if (mode === "all") {
+        if (visible) {
           layer.openPopup();
         } else {
           layer.closePopup();
@@ -1328,16 +1364,16 @@ export class LeafletRenderer implements MapRenderer {
    */
   private reopenBriefingMarkerPopups(group: L.LayerGroup): void {
     const isBriefing = group === this.layers.briefingMarkers;
-    const mode = this._markerDisplayMode();
+    const briefingVisible = this.briefingLabelsVisible();
     group.eachLayer((layer) => {
       if (!(layer instanceof L.Marker)) return;
       // Restore text label visibility when briefing group is re-added
       if (isBriefing && this.isTextLabelMarker(layer)) {
         const el = layer.getElement?.();
-        if (el) el.style.display = mode === "all" ? "" : "none";
+        if (el) el.style.display = briefingVisible ? "" : "none";
         return;
       }
-      if (isBriefing && mode !== "all") return;
+      if (isBriefing && !briefingVisible) return;
       if (layer.getPopup()) {
         layer.openPopup();
       }
@@ -1347,7 +1383,9 @@ export class LeafletRenderer implements MapRenderer {
   /** Check whether a marker is a text-only label (e.g. sector name). */
   private isTextLabelMarker(marker: L.Marker): boolean {
     const icon = marker.options.icon;
-    return icon instanceof L.DivIcon && icon.options.className === "marker-text-label";
+    if (!(icon instanceof L.DivIcon)) return false;
+    const className = icon.options.className ?? "";
+    return className.split(" ")[0] === "marker-text-label";
   }
 
   /**

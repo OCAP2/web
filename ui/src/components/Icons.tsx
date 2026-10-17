@@ -60,6 +60,13 @@ export const BarChartIcon = (p: IconProps): JSX.Element => (
   </svg>
 );
 
+export const GaugeIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width={s(p.size)} height={s(p.size)}>
+    <path d="M12 14l4-4" />
+    <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+  </svg>
+);
+
 export const MessageSquareIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width={s(p.size)} height={s(p.size)}>
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -573,5 +580,63 @@ export const ClipboardIcon = (p: IconProps): JSX.Element => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width={s(p.size)} height={s(p.size)}>
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+  </svg>
+);
+
+// ---------------------------------------------------------------------------
+// Support & construction event icons
+// ---------------------------------------------------------------------------
+
+/** A blast: a spiked burst, distinct from ZapIcon's single bolt. */
+export const ExplosionIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width={s(p.size) - 1} height={s(p.size) - 1}>
+    <polygon points="12 1 14.3 7.2 19.8 3.6 17.6 9.9 24 10.6 18.6 14 23.2 18.4 16.8 17.6 18 24 12.8 20.2 10.4 24 9.2 17.8 3.4 19.4 6.6 14.2 0.8 12.4 6.4 9.6 2.6 5.4 8.8 6.6" />
+  </svg>
+);
+
+/** A wrench: repair, refuel and rearm all file under servicing. */
+export const WrenchIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <path d="M14.7 6.3a4 4 0 0 0 5.1 5.1l-8.4 8.4a2.4 2.4 0 0 1-3.4-3.4l8.4-8.4a4 4 0 0 0-5.1-5.1l3 3-1.4 3.5-3.5 1.4-3-3" />
+  </svg>
+);
+
+/** A static weapon on its tripod. */
+export const StaticWeaponIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <path d="M3 7h11l6 3" />
+    <path d="M8 7v4" />
+    <path d="M8 11 4 21" />
+    <path d="M8 11l4 10" />
+    <path d="M8 11v10" />
+  </svg>
+);
+
+/** A radio set: body, antenna and signal arcs. */
+export const RadioIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <rect x="3" y="11" width="12" height="10" rx="2" />
+    <path d="M7 11 17 4" />
+    <path d="M18.5 6.5a5 5 0 0 1 0 7" />
+    <path d="M21 4a9 9 0 0 1 0 12" />
+    <circle cx="9" cy="16" r="2" />
+  </svg>
+);
+
+/** A bookmark ribbon. */
+export const BookmarkIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+/** An org chart: one box branching into two. */
+export const SitemapIcon = (p: IconProps): JSX.Element => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width={s(p.size) - 2} height={s(p.size) - 2}>
+    <rect x="9" y="2" width="6" height="5" rx="1" />
+    <rect x="2" y="16" width="6" height="5" rx="1" />
+    <rect x="16" y="16" width="6" height="5" rx="1" />
+    <path d="M12 7v5" />
+    <path d="M5 16v-4h14v4" />
   </svg>
 );

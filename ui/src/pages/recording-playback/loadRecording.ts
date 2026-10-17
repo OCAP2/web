@@ -28,6 +28,7 @@ export async function loadRecording(
   // Notify caller so the renderer can be initialized before
   // engine.loadRecording triggers snapshot effects.
   onWorldResolved?.(world);
+  engine.setWorldConfig(world);
 
   const filename = rec.filename ?? String(rec.id);
   let decoder: DecoderStrategy;

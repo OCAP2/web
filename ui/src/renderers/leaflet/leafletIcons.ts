@@ -31,6 +31,7 @@ const ICON_SIZES: Record<string, [number, number]> = {
   tank: [28, 28],
   staticMortar: [20, 20],
   staticWeapon: [20, 20],
+  zeus: [22, 22],
   unknown: [28, 28],
 };
 
@@ -48,6 +49,7 @@ const ICON_PATHS: Record<string, string> = {
   tank: `${base}images/markers/tank/`,
   staticMortar: `${base}images/markers/static-mortar/`,
   staticWeapon: `${base}images/markers/static-weapon/`,
+  zeus: `${base}images/markers/zeus/`,
   unknown: `${base}images/markers/unknown/`,
 };
 

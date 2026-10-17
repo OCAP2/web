@@ -14,7 +14,7 @@ export class EntityManager {
 
   /**
    * Create a Unit or Vehicle from an EntityDef and register it.
-   * Type 'man' produces a Unit; everything else produces a Vehicle.
+   * Type 'man' or 'zeus' produces a Unit; everything else produces a Vehicle.
    */
   addEntity(def: EntityDef): Entity {
     // Duplicate ID (e.g. empty placeholder entries): keep the entity with the most frames.
@@ -28,7 +28,7 @@ export class EntityManager {
 
     let entity: Entity;
 
-    if (def.type === "man") {
+    if (def.type === "man" || def.type === "zeus") {
       entity = new Unit(
         def.id,
         def.name,
@@ -40,7 +40,7 @@ export class EntityManager {
         def.groupName,
         def.role ?? "",
         def.positions ?? null,
-        "man",
+        def.type === "zeus" ? "zeus" : "man",
         def.framesFired ?? null,
       );
     } else {
@@ -58,6 +58,12 @@ export class EntityManager {
 
     this.entities.set(def.id, entity);
     return entity;
+  }
+
+  /** Explicit replacement, bypassing normal duplicate-ID lifetime selection. */
+  replaceEntity(def: EntityDef): Entity {
+    this.entities.delete(def.id);
+    return this.addEntity(def);
   }
 
   /** Look up an entity by ID. */

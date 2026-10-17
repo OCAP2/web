@@ -43,6 +43,7 @@ describe("CSS style files", () => {
       expect(css).toContain("--side-opfor: #ff0000");
       expect(css).toContain("--side-ind: #00cc00");
       expect(css).toContain("--side-civ: #c900ff");
+      expect(css).toContain("--side-virtual: #c9a227");
     });
 
     it("defines dark side color custom properties", () => {
@@ -50,6 +51,7 @@ describe("CSS style files", () => {
       expect(css).toContain("--side-opfor-dark: #800000");
       expect(css).toContain("--side-ind-dark: #007F00");
       expect(css).toContain("--side-civ-dark: #650080");
+      expect(css).toContain("--side-virtual-dark: #8A7018");
     });
 
     it("defines state color custom properties", () => {
@@ -84,6 +86,7 @@ describe("CSS style files", () => {
     it("contains side colour classes using custom properties", () => {
       expect(css).toContain(".blufor");
       expect(css).toMatch(/\.blufor\s*\{[^}]*var\(--side-blufor\)/);
+      expect(css).toMatch(/\.virtual\s*\{[^}]*var\(--side-virtual\)/);
 
       expect(css).toContain(".opfor");
       expect(css).toMatch(/\.opfor\s*\{[^}]*var\(--side-opfor\)/);
@@ -154,6 +157,21 @@ describe("CSS style files", () => {
         expect(content.length).toBeGreaterThan(0);
       });
     }
+
+    it("SidePanel side tabs wrap so VIRTUAL stays visible with 3+ factions", () => {
+      const css = readFileSync(resolve(componentsDir, "SidePanel.module.css"), "utf-8");
+      expect(css).toMatch(/\.sideTabs\s*\{[^}]*flex-wrap:\s*wrap/);
+    });
+  });
+
+  describe("RecordingSelector.module.css", () => {
+    const selectorDir = resolve(__dirname, "..", "..", "pages", "recording-selector");
+    const css = readFileSync(resolve(selectorDir, "RecordingSelector.module.css"), "utf-8");
+
+    it("lets the detail sidebar scroll so VIRTUAL is not clipped", () => {
+      expect(css).toMatch(/\.sidebarContent\s*\{[^}]*min-height:\s*0/);
+      expect(css).toMatch(/\.sidebarContent\s*\{[^}]*overflow-y:\s*auto/);
+    });
   });
 
   describe("entities.css", () => {
@@ -168,6 +186,7 @@ describe("CSS style files", () => {
       expect(css).toMatch(/\.side-opfor\s*\{[^}]*var\(--side-opfor-dark\)/);
       expect(css).toMatch(/\.side-ind\s*\{[^}]*var\(--side-ind-dark\)/);
       expect(css).toMatch(/\.side-civ\s*\{[^}]*var\(--side-civ-dark\)/);
+      expect(css).toMatch(/\.side-virtual\s*\{[^}]*var\(--side-virtual-dark\)/);
     });
 
     it("contains side background colour utilities", () => {
@@ -175,6 +194,7 @@ describe("CSS style files", () => {
       expect(css).toContain(".side-bg-opfor");
       expect(css).toContain(".side-bg-ind");
       expect(css).toContain(".side-bg-civ");
+      expect(css).toContain(".side-bg-virtual");
     });
 
     it("contains dead and hit state colours using custom properties", () => {

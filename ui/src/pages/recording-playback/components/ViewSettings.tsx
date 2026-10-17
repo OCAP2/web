@@ -8,6 +8,13 @@ import { useClickOutside } from "../../../hooks/useClickOutside";
 import type { TimeMode } from "../../../playback/time";
 import type { RenderLayer } from "../../../renderers/renderer.types";
 import type { WorldConfig } from "../../../data/types";
+import {
+  deathHeatmapVisible,
+  setDeathHeatmapVisible,
+  setTrailMode,
+  trailMode,
+  type TrailMode,
+} from "../viewOptions";
 import styles from "./ViewSettings.module.css";
 
 type NameMode = "all" | "players" | "none";
@@ -21,6 +28,14 @@ const TIME_MODE_KEYS: Record<TimeMode, string> = {
 };
 
 const NAME_MODES: NameMode[] = ["all", "players", "none"];
+
+const TRAIL_MODES: TrailMode[] = ["off", "followed", "players"];
+
+const TRAIL_MODE_KEYS: Record<TrailMode, string> = {
+  off: "trails_off",
+  followed: "trails_followed",
+  players: "trails_players",
+};
 const NAME_MODE_KEYS: Record<NameMode, string> = {
   all: "names_all",
   players: "names_players",
@@ -154,6 +169,71 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
               {t("layer_projectile_labels")}
             </span>
           </button>
+
+          {/* ── Analysis overlays ── */}
+          <div class={`${styles.sectionLabel} ${styles.sectionBorder}`}>
+            {t("section_overlays")}
+          </div>
+
+          <button
+            class={styles.checkItem}
+            onClick={() => setDeathHeatmapVisible(!deathHeatmapVisible())}
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: deathHeatmapVisible(),
+                [styles.checkboxInactive]: !deathHeatmapVisible(),
+              }}
+            >
+              <Show when={deathHeatmapVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: deathHeatmapVisible(),
+                [styles.itemTextInactive]: !deathHeatmapVisible(),
+              }}
+            >
+              {t("overlay_death_heatmap")}
+            </span>
+          </button>
+
+          <For each={TRAIL_MODES}>
+            {(mode) => {
+              const active = () => trailMode() === mode;
+              return (
+                <button
+                  class={styles.radioItem}
+                  classList={{ [styles.radioItemActive]: active() }}
+                  onClick={() => setTrailMode(mode)}
+                >
+                  <div
+                    class={styles.radio}
+                    classList={{
+                      [styles.radioActive]: active(),
+                      [styles.radioInactive]: !active(),
+                    }}
+                  >
+                    <Show when={active()}>
+                      <div class={styles.radioDot} />
+                    </Show>
+                  </div>
+                  <span
+                    class={styles.itemText}
+                    classList={{
+                      [styles.itemTextActive]: active(),
+                      [styles.itemTextInactive]: !active(),
+                    }}
+                  >
+                    {t(TRAIL_MODE_KEYS[mode])}
+                  </span>
+                </button>
+              );
+            }}
+          </For>
 
           {/* ── Time Format ── */}
           <div class={`${styles.sectionLabel} ${styles.sectionBorder}`}>

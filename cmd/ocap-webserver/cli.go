@@ -6,6 +6,7 @@ import (
 
 	"github.com/OCAP2/web/internal/convertcli"
 	"github.com/OCAP2/web/internal/maptoolcli"
+	"github.com/OCAP2/web/internal/precompresscli"
 	"github.com/OCAP2/web/internal/server"
 )
 
@@ -22,6 +23,8 @@ func runRoot(args []string, stdout, stderr io.Writer, serve func() int) int {
 		return convertcli.Run(args[1:])
 	case "maptool":
 		return maptoolcli.Run(args[1:])
+	case "precompress":
+		return precompresscli.Run(args[1:])
 	case "serve":
 		return serve()
 	case "-h", "--help", "help":
@@ -48,6 +51,7 @@ func printRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  serve      Start the web server")
 	fmt.Fprintln(w, "  convert    Convert mission JSON to protobuf storage")
 	fmt.Fprintln(w, "  maptool    Manage the map toolchain: 'maptool tools|doctor|install|render'")
+	fmt.Fprintln(w, "  precompress Backfill .zst/.gz sidecars for already-converted recordings")
 	fmt.Fprintln(w, "  help       Show this help")
 	fmt.Fprintln(w, "  version    Show build version")
 	fmt.Fprintln(w)

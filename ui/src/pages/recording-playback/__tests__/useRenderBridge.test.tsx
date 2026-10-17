@@ -7,6 +7,8 @@ import { useRenderBridge } from "../useRenderBridge";
 import { setLeftPanelVisible } from "../shortcuts";
 import { unitDef, vehicleDef, makeManifest, hitEvent } from "./testHelpers";
 import type { RendererEvent } from "../../../renderers/renderer.types";
+import type { EventDef, WorldConfig } from "../../../data/types";
+import * as dem from "../../../playback/radioRange/demGrid";
 
 /**
  * Extends MockRenderer with a fire() method to programmatically
@@ -38,6 +40,38 @@ function flush(): Promise<void> {
   return new Promise((resolve) => queueMicrotask(resolve));
 }
 
+const radioEvents = (): EventDef[] => [
+  ...[1, 2].map((unitId): EventDef => ({
+    frameNum: 0, type: "radioSnapshot", payload: {
+      unitId, radios: [{ class: "TFAR_anprc152", mod: "TFAR", type: "SW", channel: 1,
+        frequency: 100, code: "", rangeMeters: 1000, additional: false }],
+    },
+  })),
+  { frameNum: 0, type: "radioTransmission", payload: {
+    unitId: 1, radio: "TFAR_anprc152", type: "SW", action: "Start", channel: 1,
+    additional: false, frequency: 100, code: "",
+  } },
+];
+
+const radioWorld: WorldConfig = {
+  worldName: "altis", worldSize: 1000, hasDem: true, minZoom: 0, maxZoom: 6,
+};
+
+function ridge(): dem.DemGrid {
+  const grid = dem.makeFlatDem(1000);
+  for (let row = 0; row < grid.rows; row++) {
+    for (const col of [4, 5, 6]) grid.data[row * grid.cols + col] = 1000;
+  }
+  return grid;
+}
+
+function loadRadioRecording(engine: PlaybackEngine): void {
+  engine.loadRecording(makeManifest([
+    unitDef({ id: 1, positions: [{ position: [100, 100, 0], direction: 0, alive: 1 }] }),
+    unitDef({ id: 2, positions: [{ position: [900, 100, 0], direction: 0, alive: 1 }] }),
+  ], radioEvents(), 10));
+}
+
 describe("useRenderBridge", () => {
   beforeEach(() => {
     setLeftPanelVisible(true);
@@ -45,6 +79,64 @@ describe("useRenderBridge", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("loads terrain when asynchronous startup resolves the world and redraws blocked transmissions", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    let resolveGrid!: (grid: dem.DemGrid) => void;
+    const loadDem = vi.spyOn(dem, "loadWorldDem").mockReturnValue(new Promise((resolve) => { resolveGrid = resolve; }));
+    const lines = vi.spyOn(renderer, "addLine");
+    const dispose = createRoot((dispose) => {
+      useRenderBridge(engine, renderer, markerManager);
+      return dispose;
+    });
+    try {
+      await flush();
+      expect(loadDem).not.toHaveBeenCalled();
+      // The bridge already exists when the async recording loader publishes its world.
+      engine.setWorldConfig(radioWorld);
+      loadRadioRecording(engine);
+      await flush();
+      expect(loadDem).toHaveBeenCalledOnce();
+      expect(loadDem).toHaveBeenCalledWith(expect.objectContaining({ worldName: "altis", hasDem: true }));
+      expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#4ade80");
+      resolveGrid(ridge());
+      await flush();
+      await flush();
+      expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#f87171");
+    } finally { dispose(); engine.dispose(); }
+  });
+
+  it("ignores terrain from a previous world and clears terrain when the world is removed", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    let resolveOld!: (grid: dem.DemGrid) => void;
+    let resolveCurrent!: (grid: dem.DemGrid) => void;
+    vi.spyOn(dem, "loadWorldDem")
+      .mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveCurrent = resolve; }));
+    const lines = vi.spyOn(renderer, "addLine");
+    const dispose = createRoot((dispose) => {
+      useRenderBridge(engine, renderer, markerManager);
+      return dispose;
+    });
+    try {
+      engine.setWorldConfig(radioWorld);
+      loadRadioRecording(engine);
+      await flush();
+      engine.setWorldConfig({ ...radioWorld, worldName: "stratis" });
+      await flush();
+      resolveCurrent(ridge());
+      await flush();
+      await flush();
+      expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#f87171");
+      resolveOld(dem.makeFlatDem(1000));
+      await flush();
+      await flush();
+      expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#f87171");
+      engine.setWorldConfig(undefined);
+      await flush();
+      expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#4ade80");
+    } finally { dispose(); engine.dispose(); }
   });
 
   it("registers a dragstart listener on the renderer", () => {

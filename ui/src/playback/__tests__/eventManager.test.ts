@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { GameEvent } from "../events/gameEvent";
 import { HitKilledEvent } from "../events/hitKilledEvent";
 import { ConnectEvent } from "../events/connectEvent";
+import { PlayerSnapshotEvent } from "../events/playerSnapshotEvent";
 import {
   getCounterStateAtFrame,
   type CounterState,
 } from "../events/counterEvent";
+import { ExplosionEvent, RadioTransmissionEvent } from "../events/supportEvents";
 import { EventManager } from "../eventManager";
 import { EntityManager } from "../entityManager";
-import type { EntityDef } from "../../data/types";
+import { Unit } from "../entities/unit";
+import type { EntityDef, EntityState } from "../../data/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -364,6 +367,179 @@ describe("EventManager", () => {
     });
   });
 
+  describe("player snapshots", () => {
+    it("returns the latest snapshot at or before the playback frame", () => {
+      const first = new PlayerSnapshotEvent(10, "inventorySnapshot", 1, {
+        unitId: 7,
+        playerUid: "uid",
+        reason: "periodic",
+        massUnits: 120,
+        load: 0.2,
+        uniform: { class: "", items: [] },
+        vest: { class: "", items: [] },
+        backpack: { class: "", items: [] },
+        headgear: { class: "" },
+        goggles: { class: "" },
+        weapons: [],
+        magazines: [],
+        assignedItems: [],
+      });
+      const second = new PlayerSnapshotEvent(20, "inventorySnapshot", 2, {
+        ...first.payload,
+        massUnits: 180,
+      });
+
+      mgr.addEvent(first);
+      mgr.addEvent(second);
+
+      expect(mgr.getPlayerSnapshots(7, 9).size).toBe(0);
+      expect(mgr.getPlayerSnapshots(7, 10).get("inventorySnapshot")).toBe(first);
+      expect(mgr.getPlayerSnapshots(7, 99).get("inventorySnapshot")).toBe(second);
+      expect(mgr.getAll()).toEqual([]);
+    });
+
+    // Snapshots that arrive from a sidecar land after the initial load, so the
+    // fold has to be runnable for one unit without disturbing the others.
+    it("rebuilds one unit's series when its snapshots arrive later", () => {
+      mgr.addEvent(new PlayerSnapshotEvent(10, "medicalSnapshot", 1, {
+        unitId: 3,
+        vanilla: {},
+        ace: { heartRate: 70 },
+      }));
+      mgr.reconstructPlayerSnapshots();
+
+      mgr.addEvent(new PlayerSnapshotEvent(10, "medicalSnapshot", 2, {
+        unitId: 7,
+        vanilla: {},
+        ace: { heartRate: 80, pain: 0 },
+      }));
+      mgr.addEvent(new PlayerSnapshotEvent(20, "medicalSnapshot", 3, {
+        unitId: 7,
+        diffOf: 10,
+        set: { ace: { heartRate: 130 } },
+      }));
+
+      mgr.reconstructPlayerSnapshotsFor(7);
+
+      expect(mgr.getPlayerSnapshots(7, 20).get("medicalSnapshot")!.payload).toEqual({
+        unitId: 7,
+        vanilla: {},
+        ace: { heartRate: 130, pain: 0 },
+      });
+      expect(mgr.getPlayerSnapshots(3, 10).get("medicalSnapshot")!.payload).toEqual({
+        unitId: 3,
+        vanilla: {},
+        ace: { heartRate: 70 },
+      });
+    });
+
+    it("reports whether a unit has any snapshots", () => {
+      expect(mgr.hasPlayerSnapshots(7)).toBe(false);
+      mgr.addEvent(new PlayerSnapshotEvent(10, "radioSnapshot", 1, { unitId: 7, radios: [] }));
+      expect(mgr.hasPlayerSnapshots(7)).toBe(true);
+      expect(mgr.hasPlayerSnapshots(99)).toBe(false);
+    });
+
+    it("is a no-op for a unit with no snapshots", () => {
+      expect(() => mgr.reconstructPlayerSnapshotsFor(99)).not.toThrow();
+    });
+
+    it("reports the frame of the first snapshot of a type", () => {
+      mgr.addEvent(new PlayerSnapshotEvent(30, "radioSnapshot", 1, { unitId: 7, radios: [] }));
+      mgr.addEvent(new PlayerSnapshotEvent(10, "radioSnapshot", 2, { unitId: 7, radios: [] }));
+      mgr.reconstructPlayerSnapshots();
+
+      expect(mgr.getFirstPlayerSnapshotFrame(7, "radioSnapshot")).toBe(10);
+      expect(mgr.getFirstPlayerSnapshotFrame(7, "medicalSnapshot")).toBeUndefined();
+      expect(mgr.getFirstPlayerSnapshotFrame(99, "radioSnapshot")).toBeUndefined();
+    });
+
+    it("rebuilds diff-encoded snapshots into full ones", () => {
+      mgr.addEvent(new PlayerSnapshotEvent(10, "medicalSnapshot", 1, {
+        unitId: 7,
+        playerUid: "uid",
+        vanilla: { damage: 0 },
+        ace: { heartRate: 80, pain: 0 },
+      }));
+      mgr.addEvent(new PlayerSnapshotEvent(20, "medicalSnapshot", 2, {
+        unitId: 7,
+        diffOf: 10,
+        set: { ace: { heartRate: 130 } },
+      }));
+      mgr.addEvent(new PlayerSnapshotEvent(30, "medicalSnapshot", 3, {
+        unitId: 7,
+        diffOf: 20,
+        set: { ace: { pain: 0.5 } },
+        unset: ["vanilla.damage"],
+      }));
+
+      mgr.reconstructPlayerSnapshots();
+
+      const atTwenty = mgr.getPlayerSnapshots(7, 20).get("medicalSnapshot")!;
+      expect(atTwenty.isDiff).toBe(true);
+      expect(atTwenty.payload).toEqual({
+        unitId: 7,
+        playerUid: "uid",
+        vanilla: { damage: 0 },
+        ace: { heartRate: 130, pain: 0 },
+      });
+
+      const atThirty = mgr.getPlayerSnapshots(7, 30).get("medicalSnapshot")!;
+      expect(atThirty.payload).toEqual({
+        unitId: 7,
+        playerUid: "uid",
+        vanilla: {},
+        ace: { heartRate: 130, pain: 0.5 },
+      });
+    });
+
+    it("rebuilds diffs that arrived out of order", () => {
+      const diff = new PlayerSnapshotEvent(20, "staminaSnapshot", 2, {
+        unitId: 7,
+        diffOf: 10,
+        set: { vanilla: { load: 0.6 } },
+      });
+      const full = new PlayerSnapshotEvent(10, "staminaSnapshot", 1, {
+        unitId: 7,
+        vanilla: { load: 0.2, fatigue: 0 },
+      });
+
+      mgr.addEvent(diff);
+      mgr.addEvent(full);
+      mgr.reconstructPlayerSnapshots();
+
+      expect(diff.payload).toEqual({ unitId: 7, vanilla: { load: 0.6, fatigue: 0 } });
+    });
+
+    it("keeps a diff usable when its base snapshot is missing", () => {
+      const orphan = new PlayerSnapshotEvent(20, "radioSnapshot", 1, {
+        unitId: 7,
+        diffOf: 10,
+        set: { radios: [{ class: "TFAR_anprc152_1" }] },
+      });
+
+      mgr.addEvent(orphan);
+      mgr.reconstructPlayerSnapshots();
+
+      expect(orphan.payload).toEqual({
+        unitId: 7,
+        radios: [{ class: "TFAR_anprc152_1" }],
+      });
+    });
+
+    it("removes snapshot indexes on clear", () => {
+      mgr.addEvent(new PlayerSnapshotEvent(10, "radioSnapshot", 1, {
+        unitId: 7,
+        playerUid: "uid",
+        radios: [],
+      }));
+
+      mgr.clear();
+
+      expect(mgr.getPlayerSnapshots(7, 10).size).toBe(0);
+    });
+  });
+
   describe("getActiveEvents", () => {
     it("returns all events where frameNum <= given frame", () => {
       mgr.addEvent(new GameEvent(10, "hit", 1));
@@ -493,6 +669,76 @@ describe("EventManager", () => {
       expect(e1.causerName).toBe("Alpha");
       expect(e2.victimName).toBe("Charlie");
       expect(e2.causerName).toBe("Bravo");
+    });
+
+    it("uses per-frame side so a Zeus-switched unit is not friendly fire", () => {
+      const westThenEast: EntityState[] = [
+        { position: [0, 0], direction: 0, alive: 1, side: "WEST" },
+        { position: [1, 1], direction: 0, alive: 1, side: "EAST" },
+      ];
+      const entityMgr = new EntityManager();
+      entityMgr.addEntity(unitDef({ id: 1, name: "Blufor", side: "WEST" }));
+      entityMgr.addEntity(unitDef({
+        id: 2,
+        name: "Switched",
+        side: "WEST",
+        startFrame: 0,
+        endFrame: 1,
+        positions: westThenEast,
+      }));
+
+      const event = new HitKilledEvent(1, "killed", 1, 2, 1, 40, "MX");
+      mgr.addEvent(event);
+      mgr.resolveReferences(entityMgr);
+
+      expect(event.victimSide).toBe("EAST");
+      expect(event.causerSide).toBe("WEST");
+      expect(event.isFriendlyFire()).toBe(false);
+      expect((entityMgr.getEntity(1) as Unit).teamKillCount).toBe(0);
+      expect(mgr.getKillDeathCounts(1).teamKills.get(1)).toBeUndefined();
+    });
+
+    it("still treats same-side kills as friendly fire at the event frame", () => {
+      const stayWest: EntityState[] = [
+        { position: [0, 0], direction: 0, alive: 1, side: "WEST" },
+        { position: [1, 1], direction: 0, alive: 1, side: "WEST" },
+      ];
+      const entityMgr = new EntityManager();
+      entityMgr.addEntity(unitDef({ id: 1, name: "Blufor", side: "WEST" }));
+      entityMgr.addEntity(unitDef({
+        id: 2,
+        name: "Teammate",
+        side: "WEST",
+        startFrame: 0,
+        endFrame: 1,
+        positions: stayWest,
+      }));
+
+      const event = new HitKilledEvent(1, "killed", 1, 2, 1, 10, "MX");
+      mgr.addEvent(event);
+      mgr.resolveReferences(entityMgr);
+
+      expect(event.isFriendlyFire()).toBe(true);
+      expect((entityMgr.getEntity(1) as Unit).teamKillCount).toBe(1);
+      expect(mgr.getKillDeathCounts(1).teamKills.get(1)).toBe(1);
+    });
+
+    it("falls back to spawn-time side when positions have no per-frame side", () => {
+      const entityMgr = new EntityManager();
+      entityMgr.addEntity(unitDef({ id: 1, name: "Alpha", side: "WEST" }));
+      entityMgr.addEntity(unitDef({
+        id: 2,
+        name: "Bravo",
+        side: "WEST",
+        positions: [{ position: [0, 0], direction: 0, alive: 1 }],
+      }));
+
+      const event = new HitKilledEvent(0, "killed", 1, 2, 1, 5, "MX");
+      mgr.addEvent(event);
+      mgr.resolveReferences(entityMgr);
+
+      expect(event.victimSide).toBe("WEST");
+      expect(event.isFriendlyFire()).toBe(true);
     });
   });
 
@@ -633,6 +879,104 @@ describe("EventManager", () => {
       expect(mgr.getEventsAtFrame(50)).toEqual([newEvent]);
       // Old frame should still be empty
       expect(mgr.getEventsAtFrame(10)).toEqual([]);
+    });
+  });
+  // ── Explosions and transmissions ──
+  //
+  // Both are indexed into their own array as well as the main event log, and
+  // both are ordered lazily on read rather than sorted on every insert: a mortar
+  // mission writes one explosion per round and a talkative operation keys up
+  // thousands of times, so a full sort per arrival is quadratic. That makes the
+  // dirty-flag behaviour worth pinning down -- a read that leaves the flag set,
+  // or an insert that fails to clear it, is a silently mis-ordered overlay.
+
+  const blast = (frameNum: number): ExplosionEvent =>
+    new ExplosionEvent(frameNum, frameNum, {
+      x: 0, y: 0, ammo: "Sh_155mm_AMOS", name: "155mm HE",
+      radius: 20, power: 100, firerId: -1, vehicleId: -1,
+      side: "WEST", source: "projectile",
+    });
+
+  const keyUp = (frameNum: number): RadioTransmissionEvent =>
+    new RadioTransmissionEvent(frameNum, frameNum, {
+      unitId: 1, radio: "AN/PRC-152", type: "SW", action: "Start",
+      channel: 1, additional: false, frequency: 69.9, code: "",
+    });
+
+  describe("explosion and transmission ordering", () => {
+    it("returns explosions oldest first even when they arrive out of order", () => {
+      [blast(30), blast(10), blast(20)].forEach((e) => mgr.addEvent(e));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([10, 20, 30]);
+    });
+
+    it("returns transmissions oldest first even when they arrive out of order", () => {
+      [keyUp(30), keyUp(10), keyUp(20)].forEach((e) => mgr.addEvent(e));
+      expect(mgr.getRadioTransmissions().map((e) => e.frameNum)).toEqual([10, 20, 30]);
+    });
+
+    it("re-orders after an event arrives following an earlier read", () => {
+      // The regression a lazy sort invites: the first read marks the array
+      // clean, and a later out-of-order insert has to mark it dirty again.
+      mgr.addEvent(blast(20));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([20]);
+
+      mgr.addEvent(blast(5));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([5, 20]);
+
+      mgr.addEvent(keyUp(20));
+      expect(mgr.getRadioTransmissions().map((e) => e.frameNum)).toEqual([20]);
+      mgr.addEvent(keyUp(5));
+      expect(mgr.getRadioTransmissions().map((e) => e.frameNum)).toEqual([5, 20]);
+    });
+
+    it("stays ordered across repeated reads with no inserts between", () => {
+      [blast(30), blast(10)].forEach((e) => mgr.addEvent(e));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([10, 30]);
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([10, 30]);
+    });
+
+    it("keeps already-ordered arrivals in order", () => {
+      [blast(1), blast(2), blast(3)].forEach((e) => mgr.addEvent(e));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([1, 2, 3]);
+    });
+
+    it("still lists both kinds in the main event log", () => {
+      // Neither indexer returns early, because both belong in the event feed as
+      // well as their own overlay.
+      const e = blast(10);
+      const t = keyUp(11);
+      mgr.addEvent(e);
+      mgr.addEvent(t);
+      expect(mgr.getAll()).toEqual([e, t]);
+      expect(mgr.getEventsAtFrame(10)).toEqual([e]);
+    });
+
+    it("returns only blasts whose lifetime covers the frame, oldest first", () => {
+      [blast(30), blast(10), blast(20)].forEach((e) => mgr.addEvent(e));
+
+      // Lifetime 5: a blast is live for frames [f, f+5).
+      expect(mgr.getActiveExplosions(22, 5).map((e) => e.frameNum)).toEqual([20]);
+      expect(mgr.getActiveExplosions(10, 5).map((e) => e.frameNum)).toEqual([10]);
+      expect(mgr.getActiveExplosions(15, 5)).toEqual([]);
+      // A wide lifetime catches every blast already past, still ordered.
+      expect(mgr.getActiveExplosions(30, 100).map((e) => e.frameNum)).toEqual([10, 20, 30]);
+    });
+
+    it("does not treat a blast as live before it happens", () => {
+      mgr.addEvent(blast(20));
+      expect(mgr.getActiveExplosions(19, 10)).toEqual([]);
+    });
+
+    it("clear empties both indexes and leaves them ordered for the next recording", () => {
+      [blast(30), blast(10), keyUp(30), keyUp(10)].forEach((e) => mgr.addEvent(e));
+      mgr.clear();
+
+      expect(mgr.getExplosions()).toEqual([]);
+      expect(mgr.getRadioTransmissions()).toEqual([]);
+
+      mgr.addEvent(blast(7));
+      mgr.addEvent(blast(3));
+      expect(mgr.getExplosions().map((e) => e.frameNum)).toEqual([3, 7]);
     });
   });
 });

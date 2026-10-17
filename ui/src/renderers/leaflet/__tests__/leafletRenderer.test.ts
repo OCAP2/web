@@ -168,7 +168,7 @@ describe("setMarkerDisplayMode", () => {
     renderer._markerDisplayMode = mdm;
     renderer._setMarkerDisplayMode = setMdm;
     renderer.map = map;
-    renderer.layers = { briefingMarkers: group };
+    renderer.layers = { briefingMarkers: group, systemMarkers: L.layerGroup().addTo(map) };
   });
 
   afterEach(() => {

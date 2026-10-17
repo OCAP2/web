@@ -3,6 +3,7 @@ import type { ArmaCoord } from "../../utils/coordinates";
 import type { AliveState, Side } from "../../data/types";
 import type { EntityMarkerOpts, EntityMarkerState, CrewInfo } from "../renderer.types";
 import { closestEquivalentAngle, SKIP_ANIMATION_DISTANCE } from "../../utils/math";
+import { armaFovToDegrees } from "../../playback/zeus";
 import { CanvasIconCache, resolveVariant } from "./canvasIcons";
 import { getGridLevels, computeGridLines, formatCoordLabel } from "./gridUtils";
 
@@ -12,6 +13,7 @@ const SIDE_COLORS: Record<Side, string> = {
   EAST: "#ff0000",
   GUER: "#00cc00",
   CIV: "#c900ff",
+  VIRTUAL: "#c9a227",
 };
 
 /** Duration of the hit flash color tint in milliseconds. */
@@ -60,6 +62,9 @@ interface CanvasEntity {
   // Cached label measurement (invalidated on entity update or font size change)
   cachedLabelMaxW: number;
   cachedLabelFontSize: number;
+
+  fov?: number;
+  pitch?: number;
 }
 
 interface CanvasProjectile {
@@ -244,6 +249,8 @@ export class EntityCanvasLayer {
       hitStartTime: 0,
       cachedLabelMaxW: 0,
       cachedLabelFontSize: 0,
+      fov: opts.fov,
+      pitch: opts.pitch,
     });
   }
 
@@ -295,6 +302,8 @@ export class EntityCanvasLayer {
     e.isInVehicle = state.isInVehicle;
     e.alive = state.alive;
     e.cachedLabelFontSize = 0; // invalidate label measurement cache
+    e.fov = state.fov;
+    e.pitch = state.pitch;
   }
 
   removeEntity(id: number): void {
@@ -817,6 +826,40 @@ export class EntityCanvasLayer {
       // Frustum culling — skip if off-screen (with generous margin)
       if (px < -40 || px > w + 40 || py < -40 || py > h + 40) {
         continue;
+      }
+
+      if (e.fov && e.fov > 0 && e.iconType === "zeus") {
+        const t = e.interpProgress;
+        const armaX = e.prevX + (e.targetX - e.prevX) * t;
+        const armaY = e.prevY + (e.targetY - e.prevY) * t;
+        const armaDir = e.prevDir + (e.targetDir - e.prevDir) * t;
+        const fovDeg = armaFovToDegrees(e.fov);
+        const range = 250 * Math.max(0.2, 1 - Math.abs(e.pitch ?? 0));
+        const half = (fovDeg / 2) * (Math.PI / 180);
+        const heading = (armaDir * Math.PI) / 180;
+        const leftX = armaX + Math.sin(heading - half) * range;
+        const leftY = armaY + Math.cos(heading - half) * range;
+        const rightX = armaX + Math.sin(heading + half) * range;
+        const rightY = armaY + Math.cos(heading + half) * range;
+        const lpx = this.projAx * leftX + this.projBx * leftY + this.projCx;
+        const lpy = this.projAy * leftX + this.projBy * leftY + this.projCy;
+        const rpx = this.projAx * rightX + this.projBx * rightY + this.projCx;
+        const rpy = this.projAy * rightX + this.projBy * rightY + this.projCy;
+        const fill = e.side ? SIDE_COLORS[e.side] : "#c9a227";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(lpx, lpy);
+        ctx.lineTo(rpx, rpy);
+        ctx.closePath();
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = fill;
+        ctx.lineWidth = 1.25 * cs;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       }
 
       // Draw icon (rotated, counter-scaled during zoom)

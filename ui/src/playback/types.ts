@@ -14,4 +14,10 @@ export interface EntitySnapshot {
   isInVehicle: boolean;
   /** If the unit fired this frame, all projectile target positions. */
   firedTargets?: ArmaCoord[];
+  /** Arma getObjectFOV (tan of half-angle) when this is a flying Zeus camera. */
+  fov?: number;
+  /** Look-vector Z, used to shorten the FOV cone when looking down. */
+  pitch?: number;
+  /** Unit being remote-controlled by this Zeus entity, if any. */
+  controllingUnitId?: number;
 }

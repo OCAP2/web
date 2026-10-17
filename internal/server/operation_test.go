@@ -519,7 +519,7 @@ func TestMigrationRerun(t *testing.T) {
 	var version int
 	err = repo2.db.QueryRow("SELECT db FROM version ORDER BY db DESC LIMIT 1").Scan(&version)
 	assert.NoError(t, err)
-	assert.Equal(t, 13, version)
+	assert.Equal(t, 14, version)
 }
 
 func TestMigrationV10NormalizeWorldName(t *testing.T) {
@@ -627,7 +627,7 @@ func TestMigrationV11DecodeFilenames(t *testing.T) {
 	// Version recorded.
 	var version int
 	require.NoError(t, repo2.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version))
-	assert.Equal(t, 13, version)
+	assert.Equal(t, 14, version)
 }
 
 func TestDecodeFilename(t *testing.T) {
@@ -932,7 +932,7 @@ func TestMigrationV11_DBCollisionSkipped(t *testing.T) {
 	// Version still bumped.
 	var version int
 	require.NoError(t, repo2.db.QueryRow(`SELECT MAX(db) FROM version`).Scan(&version))
-	assert.Equal(t, 13, version)
+	assert.Equal(t, 14, version)
 }
 
 func TestMigrationV11_FilesystemCollisionSkipped(t *testing.T) {
@@ -1284,7 +1284,7 @@ func TestSelectStatsBackfill(t *testing.T) {
 
 	ctx := t.Context()
 
-	// completed, player_count=0 → should appear
+	// completed, stats_revision=0 → should appear
 	op1 := &Operation{
 		WorldName: "altis", MissionName: "NeedsBackfill",
 		Filename: "backfill1", Date: "2026-01-01",
@@ -1292,15 +1292,18 @@ func TestSelectStatsBackfill(t *testing.T) {
 	}
 	require.NoError(t, repo.Store(ctx, op1))
 
-	// completed, player_count>0 → should NOT appear
+	// completed with stats already written at the current revision → should NOT appear
 	op2 := &Operation{
 		WorldName: "altis", MissionName: "HasStats",
 		Filename: "has_stats", Date: "2026-01-02",
 		ConversionStatus: "completed", PlayerCount: 5,
 	}
 	require.NoError(t, repo.Store(ctx, op2))
+	require.NoError(t, repo.UpdateOperationStats(ctx, op2.ID, 5, 1, 0, SideComposition{
+		"WEST": {Players: 5, Units: 10},
+	}))
 
-	// pending, player_count=0 → should NOT appear (not completed)
+	// pending, stats_revision=0 → should NOT appear (not completed)
 	op3 := &Operation{
 		WorldName: "altis", MissionName: "StillPending",
 		Filename: "pending1", Date: "2026-01-03",
@@ -1312,6 +1315,19 @@ func TestSelectStatsBackfill(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, "NeedsBackfill", result[0].MissionName)
+}
+
+func TestMigrationV14StatsRevision(t *testing.T) {
+	dir := t.TempDir()
+	pathDB := filepath.Join(dir, "test.db")
+
+	repo, err := NewRepoOperation(pathDB)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, repo.db.Close()) }()
+
+	var revision int
+	err = repo.db.QueryRow("SELECT stats_revision FROM operations LIMIT 1").Scan(&revision)
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 }
 
 func TestMarshalSideComposition(t *testing.T) {

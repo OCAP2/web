@@ -248,7 +248,15 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 		}
 	}
 
-	// Phase 3: Write manifest
+	// Phase 3: Write the per-player snapshot sidecars, then the manifest.
+	// The snapshots are the bulk of the event stream and are read one unit at a
+	// time, so keeping them in the manifest would mean downloading all of them
+	// before the first frame renders.
+	manifestEvents, snapshotsByUnit := SplitPlayerSnapshots(events)
+	if err := WritePlayerSnapshots(outputPath, snapshotsByUnit); err != nil {
+		return err
+	}
+
 	manifest := &pbv1.Manifest{
 		Version:          uint32(SchemaVersionV1),
 		WorldName:        meta.WorldName,
@@ -260,16 +268,17 @@ func (sc *Converter) Convert(ctx context.Context, jsonPath, outputPath string) e
 		ExtensionVersion: meta.ExtensionVersion,
 		AddonVersion:     meta.AddonVersion,
 		Entities:         entities,
-		Events:           events,
+		Events:           manifestEvents,
 		Markers:          markers,
 		Times:            times,
+		SnapshotUnitIds:  SortedUnitIDs(snapshotsByUnit),
 	}
 
 	data, err := proto.Marshal(manifest)
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(outputPath, "manifest.pb"), data, 0644); err != nil {
+	if err := WriteArtifact(filepath.Join(outputPath, "manifest.pb"), data); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
@@ -322,7 +331,7 @@ func (sc *Converter) assembleChunk(bucket *ChunkBucket, chunksDir string, chunkI
 	}
 
 	path := filepath.Join(chunksDir, fmt.Sprintf("%04d.pb", chunkIdx))
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := WriteArtifact(path, data); err != nil {
 		return fmt.Errorf("write chunk: %w", err)
 	}
 

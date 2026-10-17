@@ -1,0 +1,17 @@
+ACE Medical and KAT Advanced Medical body-image artwork
+======================================================
+
+PNG layers in `body/` were converted from the upstream `.paa` textures:
+
+- ACE3 `addons/medical_gui/data/body_image/*.paa`
+  https://github.com/acemod/ACE3
+  GNU General Public License v2.0
+
+- KAT Medical (KAM) `addons/gui/data/body_image/*.paa`
+  https://github.com/Tomcat-SG/KAM
+  GNU General Public License v3.0
+
+These are the same stacked pictures ACE/KAT draw in the medical menu
+(background silhouette, per-part fills, tourniquet/bone overlays, and KAT
+treatment icons). Colouring is applied at runtime the way the games do:
+`colorText` on each layer.

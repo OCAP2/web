@@ -13,8 +13,15 @@ import {
 } from "../types";
 import type { DecoderStrategy } from "./decoder.interface";
 import {
+  extractRadioPropagation,
+  parseAcreSettingsPayload,
+  parseTfarSettingsPayload,
+} from "../radioPropagation";
+import { parseWeatherPayload } from "../weather";
+import {
   Manifest as PbManifest,
   Chunk as PbChunk,
+  PlayerSnapshotSeries as PbPlayerSnapshotSeries,
   EntityType as PbEntityType,
   Side as PbSide,
   type EntityDef as PbEntityDef,
@@ -63,6 +70,8 @@ function mapSideString(raw: string): Side {
     case "INDEPENDENT": return "GUER";
     case "CIV":
     case "CIVILIAN": return "CIV";
+    case "VIRTUAL":
+    case "LOGIC": return "VIRTUAL";
     default: return "CIV";
   }
 }
@@ -149,6 +158,112 @@ function convertEvent(pb: PbEvent): EventDef | null {
       };
     case "generalEvent":
       return { frameNum, type, message: pb.message ?? "" };
+    case "inventorySnapshot":
+    case "medicalSnapshot":
+    case "staminaSnapshot":
+    case "radioSnapshot": {
+      try {
+        // Either a full snapshot or a diff against an earlier frame; both are keyed by unitId.
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.unitId !== "number") return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
+    case "tfarSettings": {
+      try {
+        const payload = parseTfarSettingsPayload(JSON.parse(pb.message));
+        if (!payload) return null;
+        return { frameNum, type, payload };
+      } catch {
+        return null;
+      }
+    }
+    case "acreSettings": {
+      try {
+        const payload = parseAcreSettingsPayload(JSON.parse(pb.message));
+        if (!payload) return null;
+        return { frameNum, type, payload };
+      } catch {
+        return null;
+      }
+    }
+    case "serverFps": {
+      try {
+        const payload = JSON.parse(pb.message) as { fps?: unknown };
+        if (typeof payload?.fps !== "number" || !Number.isFinite(payload.fps) || payload.fps < 0) return null;
+        return { frameNum, type, fps: payload.fps };
+      } catch {
+        return null;
+      }
+    }
+    case "weather": {
+      try {
+        const payload = parseWeatherPayload(JSON.parse(pb.message));
+        if (!payload) return null;
+        return { frameNum, type, payload };
+      } catch {
+        return null;
+      }
+    }
+    case "explosion": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.radius !== "number" || !Number.isFinite(payload.radius) || payload.radius <= 0) return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
+    case "radioTransmission": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.frequency !== "number" || !Number.isFinite(payload.frequency)) return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
+    case "serviceEvent":
+    case "staticWeapon": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.unitId !== "number") return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
+    case "zeusEntity":
+    case "zeusRemoteControl":
+    case "zeusCamera":
+    case "zeusPing": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.curatorId !== "number") return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
+    case "zeusModule": {
+      try {
+        const payload = JSON.parse(pb.message);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+        if (typeof payload.curatorId !== "number") return null;
+        if (typeof payload.displayName !== "string" || !payload.displayName) return null;
+        if (typeof payload.x !== "number" || typeof payload.y !== "number") return null;
+        return { frameNum, type, payload } as EventDef;
+      } catch {
+        return null;
+      }
+    }
     case "capturedFlag":
       return {
         frameNum,
@@ -232,6 +347,9 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
 export class ProtobufDecoder implements DecoderStrategy {
   decodeManifest(buffer: ArrayBuffer): AppManifest {
     const pb = PbManifest.decode(new Uint8Array(buffer));
+    const extracted = extractRadioPropagation(
+      pb.events.map(convertEvent).filter((e): e is EventDef => e !== null),
+    );
 
     return {
       version: pb.version,
@@ -241,8 +359,10 @@ export class ProtobufDecoder implements DecoderStrategy {
       chunkSize: pb.chunkSize,
       captureDelayMs: pb.captureDelayMs,
       chunkCount: pb.chunkCount,
-      entities: pb.entities.map(convertEntityDef),
-      events: pb.events.map(convertEvent).filter((e): e is EventDef => e !== null),
+      entities: pb.entities
+        .filter((raw) => Boolean(raw.name) || raw.type !== PbEntityType.ENTITY_TYPE_UNKNOWN)
+        .map(convertEntityDef),
+      events: extracted.events,
       markers: pb.markers.map(convertMarkerDef),
       times: pb.times.map((t) => ({
         frameNum: t.frameNum,
@@ -252,7 +372,21 @@ export class ProtobufDecoder implements DecoderStrategy {
       })),
       extensionVersion: pb.extensionVersion || undefined,
       addonVersion: pb.addonVersion || undefined,
+      radioPropagation: extracted.radioPropagation,
+      acrePropagation: extracted.acrePropagation,
+      snapshotUnitIds: pb.snapshotUnitIds,
     };
+  }
+
+  /**
+   * Decode one player's snapshot sidecar (snapshots/<unitId>.pb). The events are
+   * the same shape the manifest carries, so they go through convertEvent
+   * unchanged and the diff chain rebuilds exactly as it does for a recording
+   * that still keeps its snapshots in the manifest.
+   */
+  decodePlayerSnapshots(buffer: ArrayBuffer): EventDef[] {
+    const pb = PbPlayerSnapshotSeries.decode(new Uint8Array(buffer));
+    return pb.events.map(convertEvent).filter((e): e is EventDef => e !== null);
   }
 
   decodeChunk(buffer: ArrayBuffer): ChunkData {

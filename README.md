@@ -309,6 +309,16 @@ Convert recordings manually using the CLI:
 ./ocap-webserver convert --set-format protobuf --id 1
 ```
 
+Add compressed sidecars to recordings converted by an older build (see [Compression](#compression)):
+
+```bash
+# Show what is missing, without writing anything
+./ocap-webserver precompress --dry-run
+
+# Write the missing sidecars
+./ocap-webserver precompress
+```
+
 ### File Structure After Conversion
 
 ```
@@ -316,8 +326,156 @@ data/
 ├── mission_name.gz              # Original JSON (preserved)
 └── mission_name/                # Chunked binary format
     ├── manifest.pb              # Metadata, entities, events
-    └── chunks/
-        ├── 0000.pb              # Frames 0-299
-        ├── 0001.pb              # Frames 300-599
+    ├── manifest.pb.zst          # Precompressed copies, served when the
+    ├── manifest.pb.gz           #   client accepts the encoding
+    ├── chunks/
+    │   ├── 0000.pb              # Frames 0-299
+    │   ├── 0000.pb.zst
+    │   ├── 0000.pb.gz
+    │   ├── 0001.pb              # Frames 300-599
+    │   └── ...
+    └── snapshots/               # Per-player detail, fetched on demand
+        ├── 7.pb                 # Every snapshot recorded for unit 7
+        ├── 7.pb.zst
         └── ...
 ```
+
+The `.zst` and `.gz` files are optional: the server falls back to the raw `.pb` whenever one is
+missing. See [Compression](#compression).
+
+### Compression
+
+A converted recording never changes, so its artifacts are compressed once during conversion rather
+than on every request. Each `.pb` gets `.zst` and `.gz` copies written beside it:
+
+| File | Size (3h45m mission, ~950 entities) |
+|------|------|
+| `manifest.pb` | 2.5 MB |
+| `manifest.pb.zst` | 378 KB |
+| `chunks/0000.pb` | 2.4 MB |
+| `chunks/0000.pb.zst` | 33 KB |
+| `chunks/0000.pb.gz` | 55 KB |
+
+The server picks the best sidecar the client accepts — `zstd` first, then `gzip` — and serves it
+with the matching `Content-Encoding`. A client that accepts neither, and any recording that has no
+sidecars, gets the raw `.pb`. Nothing depends on the sidecars existing.
+
+Compressing offline makes a much higher compression level affordable than a proxy can use on a live
+response (roughly 30% smaller chunks), and the server spends no CPU re-compressing bytes that never
+change.
+
+Sidecars are written only for artifacts over 1 KB, and only when the result is actually smaller than
+the original. Writes go through a temporary file and a rename, so a request either sees a complete
+sidecar or none at all.
+
+#### Reverse proxies
+
+If a proxy sits in front of the server, make sure it compresses **`application/x-protobuf`** — the
+type `.pb` files are served as. Most proxies only compress a default list of text types and skip
+protobuf, which leaves the largest responses on the page uncompressed for any recording without
+sidecars.
+
+**Caddy** — the type has to be added to `encode`, because naming `match` replaces the default list:
+
+```caddy
+encode {
+	zstd
+	gzip
+	match {
+		header Content-Type text/*
+		header Content-Type application/json*
+		header Content-Type application/javascript*
+		header Content-Type image/svg+xml*
+		header Content-Type application/x-protobuf*
+	}
+}
+```
+
+**nginx** — `gzip` is `off` by default, and when enabled `gzip_types` still covers only
+`text/html`, so protobuf has to be listed explicitly:
+
+```nginx
+server {
+    server_name ocap.example.com;
+
+    gzip on;
+    gzip_vary on;            # adds Vary: Accept-Encoding
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_proxied any;        # only needed if nginx itself sits behind another proxy or CDN
+                             # (nginx keys this off the request's Via header)
+    gzip_types
+        text/plain
+        text/css
+        application/json
+        application/javascript
+        image/svg+xml
+        application/x-protobuf;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Do **not** add `proxy_set_header Accept-Encoding "";`. It is a common recipe for making nginx do the
+compressing itself, but it hides the client's supported encodings from the server, so the
+precompressed sidecars are never used and every response is compressed from scratch instead.
+
+Stock nginx has no zstd support (it needs a third-party module), but that only limits what nginx can
+compress *itself*. Sidecars are passed straight through, so a client that accepts zstd still gets
+the `.zst` copy — which is a good reason to run `precompress` on an nginx deployment.
+
+Responses served from a sidecar already carry `Content-Encoding`, and both proxies skip those, so
+there is no double compression.
+
+Static frontend assets under `/assets/` are content-hashed and are sent with
+`Cache-Control: public, max-age=31536000, immutable` plus an `ETag`. Do not override that with
+`no-cache` in a proxy — the bundle is around 900 KB raw (~300 KB compressed) and would otherwise be
+re-downloaded on every page load.
+
+#### Backfilling existing recordings
+
+Precompression happens during conversion, so recordings converted by an older build have no
+sidecars. They still play — the server falls back to the raw file — but their transfers stay larger.
+`precompress` adds the sidecars without re-converting anything:
+
+```bash
+# Show what is missing, without writing
+./ocap-webserver precompress --dry-run
+
+# Write the missing sidecars
+./ocap-webserver precompress
+
+# Point at a specific data directory
+./ocap-webserver precompress --data /srv/ocap/data
+
+# Rebuild every sidecar, including up-to-date ones
+./ocap-webserver precompress --force
+```
+
+Notes:
+
+- It reads each `.pb` and writes sidecars beside it. **The artifacts themselves are never rewritten.**
+- `.json.gz` recordings are skipped. Their compression is inside the file already and the server
+  serves them with `Content-Encoding: gzip`, so there is nothing to add.
+- It is idempotent — a second run reports everything as current. A sidecar older than its artifact
+  is treated as stale and rebuilt.
+- Safe to run against a live server, and no restart is needed afterwards: the server looks for
+  sidecars per request.
+- It compresses every artifact at a high level, so it is CPU- and I/O-heavy on a large library.
+  Use `--dry-run` first to see the scale, and prefer off-peak.
+
+Run it once after upgrading. Recordings converted from then on get their sidecars automatically.
+
+### Player detail snapshots
+
+Per-player detail (inventory, medical, stamina, radio) is kept in `snapshots/<unitId>.pb` instead
+of the manifest, and fetched only when that player's profile is opened.
+
+JSON recordings are unaffected. Chunked recordings converted before this keep their snapshots in
+the manifest and still play; re-run `convert --input` to move them out.

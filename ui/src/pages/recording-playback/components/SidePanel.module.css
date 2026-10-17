@@ -16,8 +16,9 @@
   top: 56px;
   left: 8px;
   bottom: calc(var(--pb-bottom-height, 90px) + 8px);
-  transition: bottom 0.15s ease;
-  width: var(--pb-panel-width, 370px);
+  /* Width moves when the FPS tab widens the panel. */
+  transition: bottom 0.15s ease, width 0.2s ease;
+  width: var(--pb-panel-width, 420px);
   display: flex;
   flex-direction: column;
   background: var(--bg-panel);
@@ -38,13 +39,26 @@
   border-bottom: var(--border-subtle);
   padding: 0 4px;
   flex-shrink: 0;
+  /* The panel is 420px (wider only on the FPS tab) and the row has to hold
+     every tab inside it. 420px fits every English label in full; a longer
+     translation can still run out of room, and without this the row would
+     overflow and clip the last tab at the panel's rounded edge rather than
+     adapting to fit. */
+  overflow: hidden;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  justify-content: center;
+  gap: 5px;
+  /* Each tab starts at its own label's width and the spare room is shared
+     out, so a short label such as FPS does not hold space a longer one needs.
+     When a translation does not fit, `min-width: 0` lets the label ellipsis
+     instead of forcing the row wider than its container. */
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 6px;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -57,6 +71,12 @@
   position: relative;
 }
 
+/* The icon is the tab's only always-legible identifier, so it never gets
+   squeezed -- the label gives up room first. */
+.tab > svg {
+  flex-shrink: 0;
+}
+
 .tab:hover {
   color: var(--text-muted);
 }
@@ -64,10 +84,19 @@
 .tabActive {
   border-bottom-color: var(--accent-primary);
   color: var(--text-primary);
+  /* The tab you are on always reads in full; the others give up their share
+     first. This is what keeps a long label in German or Russian legible where
+     equal shares alone would truncate every tab including the current one. */
+  flex-shrink: 0;
 }
 
 .tabLabel {
   font-size: var(--font-size-md);
+  /* Truncate rather than push the row wider. The full text stays reachable
+     through the button's title tooltip. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabBadge {
@@ -90,8 +119,9 @@
 
 .sideTabs {
   display: flex;
-  gap: 4px;
-  padding: 8px 10px;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
 }
@@ -99,16 +129,19 @@
 .sideTab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 5px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   border: none;
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   transition: all 0.2s;
 }
 
@@ -577,6 +610,64 @@
   color: var(--text-dimmer);
   letter-spacing: 0.1em;
   font-weight: 600;
+  text-transform: uppercase;
+}
+
+
+.serverFpsTitle {
+  color: var(--text-on-accent);
+}
+
+
+
+
+.weatherHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.weatherSource {
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weatherCard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.weatherMetric {
+  padding: 7px 3px;
+  text-align: center;
+  border-radius: 5px;
+}
+
+.weatherValue {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-on-accent);
+}
+
+.weatherLabel {
+  margin-top: 4px;
+  color: var(--text-on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

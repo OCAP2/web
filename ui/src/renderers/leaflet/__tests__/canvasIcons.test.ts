@@ -241,16 +241,17 @@ describe("CanvasIconCache.preloadAll", () => {
       const cache = new CanvasIconCache();
       await cache.preloadAll();
 
-      // 12 types x 9 variants = 108 URLs attempted
+      // 13 types x 10 variants = 130 URLs attempted
       const expectedTypes = [
         "man", "ship", "parachute", "heli", "plane", "truck",
-        "car", "apc", "tank", "staticMortar", "staticWeapon", "unknown",
+        "car", "apc", "tank", "staticMortar", "staticWeapon", "zeus", "unknown",
       ];
       const expectedVariants = [
-        "blufor", "opfor", "ind", "civ", "logic",
+        "blufor", "opfor", "ind", "civ", "virtual", "logic",
         "unknown", "dead", "hit", "unconscious",
       ];
       expect(loadedUrls.length).toBe(expectedTypes.length * expectedVariants.length);
+      expect(loadedUrls.some((u) => u.includes("markers/zeus/virtual.svg"))).toBe(true);
 
       // Verify a sample of URLs contain expected path fragments
       expect(loadedUrls.some((u) => u.includes("markers/man/blufor.svg"))).toBe(true);

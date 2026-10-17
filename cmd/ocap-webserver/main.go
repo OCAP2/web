@@ -111,29 +111,40 @@ func app() error {
 
 	var handlerOpts []server.HandlerOption
 	handlerOpts = append(handlerOpts, server.WithStaticFS(staticFS))
+
+	interval, err := time.ParseDuration(setting.Conversion.Interval)
+	if err != nil {
+		log.Printf("Invalid conversion interval %q, using default 5m", setting.Conversion.Interval)
+		interval = 5 * time.Minute
+	}
+
+	// The worker is built either way. Conversion is only one of the things it
+	// does: the dashboard stats it derives (player count, kills, force
+	// composition) come out of the manifest and are just as computable for a
+	// recording that stays JSON forever.
+	worker := conversion.NewWorker(
+		operation,
+		conversion.Config{
+			DataDir:     setting.Data,
+			Interval:    interval,
+			BatchSize:   setting.Conversion.BatchSize,
+			ChunkSize:   setting.Conversion.ChunkSize,
+			RetryFailed: setting.Conversion.RetryFailed,
+		},
+	)
+
 	if setting.Conversion.Enabled {
-		interval, err := time.ParseDuration(setting.Conversion.Interval)
-		if err != nil {
-			log.Printf("Invalid conversion interval %q, using default 5m", setting.Conversion.Interval)
-			interval = 5 * time.Minute
-		}
-
-		worker := conversion.NewWorker(
-			operation,
-			conversion.Config{
-				DataDir:     setting.Data,
-				Interval:    interval,
-				BatchSize:   setting.Conversion.BatchSize,
-				ChunkSize:   setting.Conversion.ChunkSize,
-				RetryFailed: setting.Conversion.RetryFailed,
-			},
-		)
-
 		// Pass worker to handler for event-driven conversion on upload
 		handlerOpts = append(handlerOpts, server.WithConversionTrigger(worker))
 
-		// Start background worker for retries and batch processing
+		// Start background worker for retries and batch processing.
+		// Its startup sequence already runs the stats backfill.
 		go worker.Start(ctx)
+	} else {
+		// No conversion, so nothing else would ever fill in the stats: compute
+		// them on upload, and sweep the recordings already stored without them.
+		handlerOpts = append(handlerOpts, server.WithStatsComputer(worker))
+		go worker.BackfillStats(ctx)
 	}
 
 	// Auto-detect maptool: enable if all required tools are available.

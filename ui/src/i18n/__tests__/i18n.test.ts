@@ -123,6 +123,17 @@ describe("createI18n", () => {
     });
   });
 
+  it("t() interpolates named placeholders", () => {
+    createRoot((dispose) => {
+      const i18n = createI18n("en");
+      expect(i18n.t("profile_title", { name: "Rifleman" })).toBe("Rifleman profile");
+      expect(i18n.t("profile_first_at", { label: "gear snapshot", frame: 50 })).toBe(
+        "First gear snapshot is at frame 50. Scrub forward to see it.",
+      );
+      dispose();
+    });
+  });
+
   it("t() works with hyphenated keys", () => {
     createRoot((dispose) => {
       const i18n = createI18n("en");

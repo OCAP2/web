@@ -35,6 +35,20 @@ jobs:
           key: ${{ runner.os }}-gomod-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-gomod-
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Build embedded frontend
+        run: npm run build
+        working-directory: ui
+
       - name: Install maptool pipeline tools
         run: |
           sudo apt-get update -qq

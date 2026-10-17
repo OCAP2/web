@@ -11,13 +11,15 @@ import (
 
 // mapJSON is the structure written to map.json.
 type mapJSON struct {
-	Name       string `json:"name"`
-	WorldSize  int    `json:"worldSize"`
-	ImageSize  int    `json:"imageSize"`
-	Multiplier int    `json:"multiplier"`
-	MaxZoom    int    `json:"maxZoom"`
-	MinZoom    int    `json:"minZoom"`
-	Maplibre   bool   `json:"maplibre,omitempty"`
+	Name         string `json:"name"`
+	WorldSize    int    `json:"worldSize"`
+	ImageSize    int    `json:"imageSize"`
+	Multiplier   int    `json:"multiplier"`
+	MaxZoom      int    `json:"maxZoom"`
+	MinZoom      int    `json:"minZoom"`
+	Maplibre     bool   `json:"maplibre,omitempty"`
+	HasHeightmap bool   `json:"hasHeightmap,omitempty"`
+	HasDem       bool   `json:"hasDem,omitempty"`
 }
 
 // assetPath joins a URL prefix with a filename. If prefix is empty, returns filename as-is.
@@ -165,13 +167,15 @@ func NewGenerateGradMehMetadataStage() Stage {
 			}
 
 			doc := mapJSON{
-				Name:       worldName,
-				WorldSize:  job.WorldSize,
-				ImageSize:  job.ImageSize,
-				Multiplier: 1,
-				MaxZoom:    maxZoom,
-				MinZoom:    job.MinZoom,
-				Maplibre:   job.HasMaplibre,
+				Name:         worldName,
+				WorldSize:    job.WorldSize,
+				ImageSize:    job.ImageSize,
+				Multiplier:   1,
+				MaxZoom:      maxZoom,
+				MinZoom:      job.MinZoom,
+				Maplibre:     job.HasMaplibre,
+				HasHeightmap: job.HasHeightmap,
+				HasDem:       job.HasDem,
 			}
 			if err := writeJSON(filepath.Join(job.OutputDir, "map.json"), doc); err != nil {
 				return fmt.Errorf("write map.json: %w", err)

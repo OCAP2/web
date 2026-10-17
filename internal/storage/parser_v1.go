@@ -1,7 +1,10 @@
 // Package storage provides versioned parsers for JSON input formats.
 package storage
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 func init() {
 	RegisterParser(&ParserV1{})
@@ -143,9 +146,16 @@ func parseEventArray(evtArr []interface{}) *Event {
 		return nil
 	}
 
+	eventType := toString(evtArr[1])
+	frameNum := toFloat64(evtArr[0])
+	// Older recorders emitted an initial FPS sample before frame zero. Match
+	// JSON playback's normalization before converting to the unsigned schema.
+	if eventType == "serverFps" && frameNum < 0 {
+		frameNum = 0
+	}
 	event := &Event{
-		FrameNum: uint32(toFloat64(evtArr[0])),
-		Type:     toString(evtArr[1]),
+		FrameNum: uint32(frameNum),
+		Type:     eventType,
 	}
 
 	// Connect/disconnect events: [frameNum, "type", "playerName"]
@@ -160,6 +170,32 @@ func parseEventArray(evtArr []interface{}) *Event {
 	if event.Type == "generalEvent" {
 		if len(evtArr) > 2 {
 			event.Message = toString(evtArr[2])
+		}
+		return event
+	}
+
+	// Positional explosion events use the generic fields below; only object
+	// payloads carry the additive blast details in the message field.
+	isStructuredExplosion := false
+	if event.Type == "explosion" && len(evtArr) > 2 {
+		_, isStructuredExplosion = evtArr[2].(map[string]interface{})
+	}
+
+	// Additive player-detail, weather, and server FPS events keep their structured payload as JSON in
+	// the generic protobuf message field. Older readers safely ignore these
+	// unknown event names, while newer readers can reconstruct the object.
+	if event.Type == "inventorySnapshot" || event.Type == "medicalSnapshot" ||
+		event.Type == "staminaSnapshot" || event.Type == "radioSnapshot" ||
+		event.Type == "tfarSettings" || event.Type == "acreSettings" ||
+		event.Type == "serverFps" || event.Type == "weather" || event.Type == "zeusEntity" ||
+		event.Type == "zeusRemoteControl" || event.Type == "zeusCamera" ||
+		event.Type == "zeusPing" || event.Type == "zeusModule" || isStructuredExplosion ||
+		event.Type == "serviceEvent" || event.Type == "staticWeapon" ||
+		event.Type == "radioTransmission" {
+		if len(evtArr) > 2 {
+			if encoded, err := json.Marshal(evtArr[2]); err == nil {
+				event.Message = string(encoded)
+			}
 		}
 		return event
 	}

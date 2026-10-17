@@ -11,6 +11,12 @@ import type {
   Side,
 } from "../types";
 import type { DecoderStrategy } from "./decoder.interface";
+import {
+  extractRadioPropagation,
+  parseAcreSettingsPayload,
+  parseTfarSettingsPayload,
+} from "../radioPropagation";
+import { parseWeatherPayload } from "../weather";
 
 // ───────── Legacy JSON shape ─────────
 
@@ -115,6 +121,9 @@ function mapSide(rawSide: string): Side {
     case "CIV":
     case "CIVILIAN":
       return "CIV";
+    case "VIRTUAL":
+    case "LOGIC":
+      return "VIRTUAL";
     default:
       return "CIV";
   }
@@ -129,9 +138,10 @@ function convertUnitPosition(frame: unknown[]): EntityState {
   const isInVehicle = vehicleField !== 0;
   const name = typeof frame[4] === "string" ? frame[4] : undefined;
   const isPlayer = frame[5] === 1 || frame[5] === true;
-  // field[6] is currentRole (unused), field[7] is groupID, field[8] is side
+  // field[6] is currentRole, field[7] is groupID, field[8] is side
   const groupName = typeof frame[7] === "string" ? frame[7] : undefined;
   const rawSide = typeof frame[8] === "string" ? frame[8] : undefined;
+  const role = typeof frame[6] === "string" ? frame[6] : undefined;
   const state: EntityState = {
     position: toArmaCoord(pos),
     direction: dir,
@@ -141,6 +151,7 @@ function convertUnitPosition(frame: unknown[]): EntityState {
     name: name || undefined,
     isPlayer,
   };
+  if (role) state.role = role;
   if (groupName) state.groupName = groupName;
   if (rawSide) state.side = mapSide(rawSide);
   return state;
@@ -304,6 +315,78 @@ function convertEvent(raw: RawJsonEvent): EventDef | null {
         unitName: hackData?.[0] ?? "",
       };
     }
+    case "inventorySnapshot":
+    case "medicalSnapshot":
+    case "staminaSnapshot":
+    case "radioSnapshot": {
+      // Either a full snapshot or a diff against an earlier frame; both are keyed by unitId.
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      if (typeof (payload as { unitId?: unknown }).unitId !== "number") return null;
+      return { frameNum, type, payload } as EventDef;
+    }
+    case "tfarSettings": {
+      const payload = parseTfarSettingsPayload(raw[2]);
+      if (!payload) return null;
+      return { frameNum, type, payload };
+    }
+    case "acreSettings": {
+      const payload = parseAcreSettingsPayload(raw[2]);
+      if (!payload) return null;
+      return { frameNum, type, payload };
+    }
+    case "serverFps": {
+      const fps = (raw[2] as { fps?: unknown } | undefined)?.fps;
+      if (typeof fps !== "number" || !Number.isFinite(fps) || fps < 0) return null;
+      return { frameNum, type, fps };
+    }
+    case "weather": {
+      const payload = parseWeatherPayload(raw[2]);
+      if (!payload) return null;
+      return { frameNum, type, payload };
+    }
+    case "explosion": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      const radius = (payload as { radius?: unknown }).radius;
+      if (typeof radius !== "number" || !Number.isFinite(radius) || radius <= 0) return null;
+      return { frameNum, type, payload } as EventDef;
+    }
+    case "radioTransmission": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      const frequency = (payload as { frequency?: unknown }).frequency;
+      // A transmission with no frequency names no net, so it can neither be
+      // grouped nor resolved to receivers.
+      if (typeof frequency !== "number" || !Number.isFinite(frequency)) return null;
+      return { frameNum, type, payload } as EventDef;
+    }
+    case "serviceEvent":
+    case "staticWeapon": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      if (typeof (payload as { unitId?: unknown }).unitId !== "number") return null;
+      return { frameNum, type, payload } as EventDef;
+    }
+    case "zeusEntity":
+    case "zeusRemoteControl":
+    case "zeusCamera":
+    case "zeusPing": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      if (typeof (payload as { curatorId?: unknown }).curatorId !== "number") return null;
+      return { frameNum, type, payload } as EventDef;
+    }
+    case "zeusModule": {
+      const payload = raw[2];
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+      if (typeof (payload as { curatorId?: unknown }).curatorId !== "number") return null;
+      if (typeof (payload as { displayName?: unknown }).displayName !== "string") return null;
+      if (!(payload as { displayName: string }).displayName) return null;
+      if (typeof (payload as { x?: unknown }).x !== "number") return null;
+      if (typeof (payload as { y?: unknown }).y !== "number") return null;
+      return { frameNum, type, payload } as EventDef;
+    }
     default:
       // Unknown event types: skip
       return null;
@@ -368,10 +451,14 @@ export class JsonDecoder implements DecoderStrategy {
     const text = new TextDecoder().decode(buffer);
     const data: RawJsonOperation = JSON.parse(text);
 
-    const entities: EntityDef[] = (data.entities ?? []).map(convertEntity);
-    const events: EventDef[] = (data.events ?? [])
-      .map(convertEvent)
-      .filter((e): e is EventDef => e !== null);
+    const entities: EntityDef[] = (data.entities ?? [])
+      .filter((raw) => Boolean(raw?.type) || Boolean(raw?.name))
+      .map(convertEntity);
+    const extracted = extractRadioPropagation(
+      (data.events ?? [])
+        .map(convertEvent)
+        .filter((e): e is EventDef => e !== null),
+    );
     const markers: MarkerDef[] = (data.Markers ?? [])
       .map(convertMarker)
       .filter((m): m is MarkerDef => m !== null);
@@ -392,11 +479,13 @@ export class JsonDecoder implements DecoderStrategy {
       captureDelayMs: (data.captureDelay ?? 1) * 1000,
       chunkCount: 1,
       entities,
-      events,
+      events: extracted.events,
       markers,
       times,
       extensionVersion: data.extensionVersion,
       addonVersion: data.addonVersion,
+      radioPropagation: extracted.radioPropagation,
+      acrePropagation: extracted.acrePropagation,
     };
   }
 
@@ -405,5 +494,13 @@ export class JsonDecoder implements DecoderStrategy {
       "JSON decoder does not support chunked loading. " +
         "The entire operation is contained in the manifest.",
     );
+  }
+
+  /**
+   * A JSON recording carries its player snapshots inline with every other
+   * event, so there is no sidecar to read and nothing to add.
+   */
+  decodePlayerSnapshots(_buffer: ArrayBuffer): EventDef[] {
+    return [];
   }
 }

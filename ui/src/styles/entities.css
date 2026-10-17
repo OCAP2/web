@@ -8,11 +8,13 @@
 .side-opfor  { color: var(--side-opfor-dark); }
 .side-ind    { color: var(--side-ind-dark); }
 .side-civ    { color: var(--side-civ-dark); }
+.side-virtual { color: var(--side-virtual-dark); }
 
 .side-bg-blufor { background-color: var(--side-blufor-dark); }
 .side-bg-opfor  { background-color: var(--side-opfor-dark); }
 .side-bg-ind    { background-color: var(--side-ind-dark); }
 .side-bg-civ    { background-color: var(--side-civ-dark); }
+.side-bg-virtual { background-color: var(--side-virtual-dark); }
 
 /* Dead / hit state colours (for markers) */
 .side-dead { color: var(--color-dead); }

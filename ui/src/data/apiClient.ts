@@ -362,6 +362,18 @@ export class ApiClient {
     return this.fetchBuffer(url);
   }
 
+  /**
+   * Fetch one player's snapshot sidecar as raw bytes (static file).
+   * GET {baseUrl}/data/{filename}/snapshots/{unitId}.pb
+   */
+  async getPlayerSnapshots(
+    filename: string,
+    unitId: number,
+  ): Promise<ArrayBuffer> {
+    const url = `${this.baseUrl}/data/${encodeURIComponent(filename)}/snapshots/${unitId}.pb`;
+    return this.fetchBuffer(url);
+  }
+
   // ─── Auth methods ───
 
   getSteamLoginUrl(returnTo?: string): string {

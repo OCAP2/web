@@ -58,6 +58,21 @@
   transform: translateY(-50%);
 }
 
+/*
+ * Zeus ping labels: several lines sit next to one small icon, so they use a
+ * smaller type than sector names and a tight line height instead of the
+ * default block spacing.
+ */
+.marker-text-label.zeus-ping-label span {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.marker-text-label.zeus-module-label span {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .leaflet-popup-vehicle .leaflet-popup-content-wrapper {
   text-align: left;
   min-width: 200px;

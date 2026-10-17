@@ -17,6 +17,7 @@ export const PIPELINE_STAGES: PipelineStage[] = [
 export const OUTPUT_FILES = [
   { name: "satellite.pmtiles", label: "Satellite" },
   { name: "heightmap.pmtiles", label: "Heightmap" },
+  { name: "dem.bin.gz", label: "Playback DEM" },
   { name: "hillshade.pmtiles", label: "Hillshade" },
   { name: "color-relief.pmtiles", label: "Color Relief" },
   { name: "features.pmtiles", label: "Vector Features" },

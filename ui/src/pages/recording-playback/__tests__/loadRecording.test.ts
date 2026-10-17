@@ -99,6 +99,7 @@ function makeMockApi(worldConfig: WorldConfig, recordingData?: ArrayBuffer): Api
 function makeMockEngine(): PlaybackEngine {
   return {
     loadRecording: vi.fn(),
+    setWorldConfig: vi.fn(),
     entityManager: {
       getEntity: vi.fn().mockReturnValue(null),
     },

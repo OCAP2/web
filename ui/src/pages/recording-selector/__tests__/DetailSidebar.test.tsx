@@ -208,11 +208,12 @@ describe("DetailSidebar force composition", () => {
     expect(container.textContent).not.toContain("Force Composition");
   });
 
-  it("sorts sides in canonical order (EAST, WEST, GUER, CIV)", () => {
+  it("sorts sides in canonical order (EAST, WEST, GUER, CIV, VIRTUAL)", () => {
     // Pass sides in non-standard order — component should sort them
     const rec: Recording = {
       ...baseRec,
       sideComposition: {
+        VIRTUAL: { units: 2, dead: 0, kills: 0, players: 2 },
         CIV: { units: 1, dead: 0, kills: 0, players: 0 },
         WEST: { units: 2, dead: 0, kills: 0, players: 1 },
         EAST: { units: 3, dead: 0, kills: 0, players: 2 },
@@ -223,8 +224,23 @@ describe("DetailSidebar force composition", () => {
     const eastIdx = text.indexOf("EAST");
     const westIdx = text.indexOf("WEST");
     const civIdx = text.indexOf("CIV");
+    const virtualIdx = text.indexOf("VIRTUAL");
     expect(eastIdx).toBeLessThan(westIdx);
     expect(westIdx).toBeLessThan(civIdx);
+    expect(civIdx).toBeLessThan(virtualIdx);
+  });
+
+  it("hides sides with zero units so empty VIRTUAL is omitted", () => {
+    const rec: Recording = {
+      ...baseRec,
+      sideComposition: {
+        EAST: { units: 3, dead: 0, kills: 0, players: 2 },
+        VIRTUAL: { units: 0, dead: 0, kills: 0, players: 0 },
+      },
+    };
+    const { container } = renderSidebarWithAdmin(rec);
+    expect(container.textContent).toContain("EAST");
+    expect(container.textContent).not.toContain("VIRTUAL");
   });
 });
 

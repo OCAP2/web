@@ -1,0 +1,19 @@
+/* Distance columns for the movement leaderboard. Narrower than the kill columns
+   because the values are formatted ("1.2 km"), not raw counts. */
+.col {
+  width: 58px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  font-variant-numeric: tabular-nums;
+}
+
+.colTotal {
+  width: 62px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

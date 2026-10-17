@@ -70,6 +70,7 @@ func ScanMaps(mapsDir string) ([]MapInfo, error) {
 	// Additional files to report sizes for.
 	extraFiles := []fileCheck{
 		{"heightmap.pmtiles", "tiles"},
+		{"dem.bin.gz", "tiles"},
 		{"hillshade.pmtiles", "tiles"},
 		{"color-relief.pmtiles", "tiles"},
 	}

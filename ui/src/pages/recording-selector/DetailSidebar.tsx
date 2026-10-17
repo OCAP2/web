@@ -93,9 +93,10 @@ export function DetailSidebar(props: {
         {/* Force Composition — per-side stat cards */}
         <Show when={props.rec.sideComposition && Object.keys(props.rec.sideComposition).length > 0}>
           {(_) => {
-            const SIDE_ORDER: Record<string, number> = { EAST: 0, WEST: 1, GUER: 2, CIV: 3 };
+            const SIDE_ORDER: Record<string, number> = { EAST: 0, WEST: 1, GUER: 2, CIV: 3, VIRTUAL: 4 };
             const entries = () =>
               Object.entries(props.rec.sideComposition!)
+                .filter(([, count]) => count.units > 0)
                 .sort(([a], [b]) => (SIDE_ORDER[a] ?? 99) - (SIDE_ORDER[b] ?? 99));
             return (
               <div>

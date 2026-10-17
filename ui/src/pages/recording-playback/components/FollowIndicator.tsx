@@ -15,7 +15,7 @@ export function FollowIndicator(): JSX.Element {
     if (!entity) return null;
     const snap = engine.entitySnapshots().get(id);
     const side = snap?.side ?? null;
-    return { name: entity.name, side };
+    return { name: snap?.name || entity.name, side };
   };
 
   return (

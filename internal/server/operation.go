@@ -36,8 +36,13 @@ type SideCounts struct {
 	Kills   int `json:"kills"`
 }
 
-// SideComposition maps Arma side names (WEST, EAST, GUER, CIV) to player/unit counts.
+// SideComposition maps Arma side names (WEST, EAST, GUER, CIV, VIRTUAL) to player/unit counts.
 type SideComposition map[string]SideCounts
+
+// CurrentStatsRevision is stored on each operation when computeStats last ran.
+// Bump it when the derived stats shape changes so completed recordings are
+// recomputed once. Revision 1 adds VIRTUAL from zeusEntity events.
+const CurrentStatsRevision = 1
 
 type Operation struct {
 	ID               int64   `json:"id"`
@@ -270,6 +275,22 @@ func (r *RepoOperation) migration() (err error) {
 			`DELETE FROM marker_blacklist WHERE operation_id NOT IN (SELECT id FROM operations)`,
 			`CREATE UNIQUE INDEX IF NOT EXISTS idx_operations_filename ON operations(filename)`,
 		); err != nil {
+			return err
+		}
+	}
+
+	if version < 14 {
+		// Tests rewind the version table to re-run later migrations; ADD COLUMN
+		// is not idempotent, so skip it when the column already exists.
+		var n int
+		if err = r.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('operations') WHERE name = 'stats_revision'`).Scan(&n); err != nil {
+			return err
+		}
+		var stmts []string
+		if n == 0 {
+			stmts = append(stmts, `ALTER TABLE operations ADD COLUMN stats_revision INTEGER DEFAULT 0`)
+		}
+		if err = r.runMigration(14, stmts...); err != nil {
 			return err
 		}
 	}
@@ -767,8 +788,8 @@ func (r *RepoOperation) UpdateChunkCount(ctx context.Context, id int64, count in
 func (r *RepoOperation) UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition SideComposition) error {
 	sideJSON := marshalSideComposition(sideComposition)
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE operations SET player_count = ?, kill_count = ?, player_kill_count = ?, side_composition = ? WHERE id = ?`,
-		playerCount, killCount, playerKillCount, sideJSON, id)
+		`UPDATE operations SET player_count = ?, kill_count = ?, player_kill_count = ?, side_composition = ?, stats_revision = ? WHERE id = ?`,
+		playerCount, killCount, playerKillCount, sideJSON, CurrentStatsRevision, id)
 	return err
 }
 
@@ -805,13 +826,16 @@ func unmarshalSideComposition(raw string) SideComposition {
 	return sc
 }
 
-// SelectStatsBackfill returns completed protobuf operations that have no stats yet
+// SelectStatsBackfill returns completed operations whose derived stats are stale
+// or missing. stats_revision is bumped by UpdateOperationStats so each
+// computeStats change is applied once, including recordings that already have
+// a player_count (they would otherwise keep the pre-VIRTUAL composition forever).
 func (r *RepoOperation) SelectStatsBackfill(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT ` + operationColumns + `
 		 FROM operations
-		 WHERE conversion_status = 'completed' AND player_count = 0
-		 ORDER BY id ASC`)
+		 WHERE conversion_status = 'completed' AND stats_revision < ?
+		 ORDER BY id ASC`, CurrentStatsRevision)
 	if err != nil {
 		return nil, err
 	}

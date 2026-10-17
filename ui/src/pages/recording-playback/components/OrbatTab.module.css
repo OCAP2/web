@@ -1,0 +1,187 @@
+.section {
+  padding: 10px 12px 6px;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+}
+
+.note {
+  padding: 0 12px 10px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+}
+
+.group {
+  margin: 0 8px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.groupName {
+  color: var(--text-primary);
+}
+
+.groupStrength {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dimmer);
+}
+
+.strengthLow {
+  color: var(--accent-danger);
+}
+
+.strengthSlash {
+  opacity: 0.4;
+  margin: 0 2px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 10px 4px 14px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.member:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.memberDead {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.memberName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderBadge {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.regroupedBadge {
+  color: var(--accent-warning);
+  font-size: var(--font-size-xs);
+}
+
+.memberMeta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  white-space: nowrap;
+}
+
+.mounted {
+  color: var(--accent-primary);
+}
+
+.memberRole {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.vehicle {
+  margin: 0 8px 10px;
+}
+
+.vehicleHeader {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 3px 2px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.vehicleHeader:hover .vehicleName {
+  color: var(--accent-primary);
+}
+
+.vehicleName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.vehicleMeta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+}
+
+.crewCount {
+  color: var(--accent-success);
+}
+
+.strip {
+  display: flex;
+  gap: 1px;
+  height: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.stripCell {
+  flex: 1;
+  min-width: 0;
+  background: var(--accent-primary);
+  cursor: pointer;
+}
+
+.stripCellEmpty {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stripCell:hover {
+  background: var(--text-primary);
+}
+
+.crewList {
+  padding: 3px 2px 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

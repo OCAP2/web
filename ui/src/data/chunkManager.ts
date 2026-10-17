@@ -1,4 +1,4 @@
-import type { ChunkData, Manifest } from "./types";
+import type { ChunkData, EventDef, Manifest } from "./types";
 import type { DecoderStrategy } from "./decoders/decoder.interface";
 import type { ApiClient } from "./apiClient";
 
@@ -43,6 +43,9 @@ export class ChunkManager {
 
   /** Optional callbacks. */
   private callbacks: ChunkManagerCallbacks = {};
+
+  /** unitId -> in-flight or settled player-snapshot fetch (loaded at most once). */
+  private readonly playerSnapshots = new Map<number, Promise<EventDef[]>>();
 
   constructor(decoder: DecoderStrategy, api: ApiClient) {
     this.decoder = decoder;
@@ -120,12 +123,41 @@ export class ChunkManager {
   }
 
   /**
+   * Load one player's snapshot sidecar. Snapshots are the bulk of a recording's
+   * event stream. Profiles load one unit at a time; the transmission overlay
+   * and Comms tab load all radio owners. Each unit is fetched at most once.
+   *
+   * Returns an empty list for a unit the manifest does not index — either the
+   * player has no snapshots, or this is a recording whose snapshots are still
+   * in the manifest and therefore already loaded.
+   */
+  async loadPlayerSnapshots(unitId: number): Promise<EventDef[]> {
+    this.requireManifest();
+    if (!this.manifest!.snapshotUnitIds?.includes(unitId)) return [];
+
+    const inFlight = this.playerSnapshots.get(unitId);
+    if (inFlight) return inFlight;
+
+    const filename = this.filename!;
+    const loadPromise = this.api
+      .getPlayerSnapshots(filename, unitId)
+      .then((buffer) => this.decoder.decodePlayerSnapshots(buffer));
+
+    // Cache the promise, not the result, so concurrent opens share one request.
+    // A failed fetch is forgotten so reopening the card retries it.
+    this.playerSnapshots.set(unitId, loadPromise);
+    loadPromise.catch(() => this.playerSnapshots.delete(unitId));
+    return loadPromise;
+  }
+
+  /**
    * Clear all loaded chunks and reset state.
    */
   clear(): void {
     this.loadedChunks.clear();
     this.chunkAccessOrder = [];
     this.loadingChunks.clear();
+    this.playerSnapshots.clear();
     this.prefetchingChunk = null;
     this.manifest = null;
     this.filename = null;
