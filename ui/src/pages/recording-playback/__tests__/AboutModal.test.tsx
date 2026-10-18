@@ -62,10 +62,7 @@ describe("AboutModal", () => {
   it("close button calls onClose", () => {
     const { onClose } = renderAboutModal();
 
-    // The close button is in the header — find it by querying buttons within the modal
-    const modal = screen.getByTestId("about-modal");
-    const header = modal.querySelector("[class*='header']")!;
-    const closeBtn = header.querySelector("button")!;
+    const closeBtn = screen.getByRole("button", { name: "Close" });
     fireEvent.click(closeBtn);
 
     expect(onClose).toHaveBeenCalledOnce();
