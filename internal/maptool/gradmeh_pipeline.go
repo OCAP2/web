@@ -17,6 +17,7 @@ func BuildGradMehPipeline(tools ToolSet) *Pipeline {
 		ParallelStages("render",
 			NewGenerateSatellitePMTilesStage(tools),
 			NewGenerateHeightmapStage(tools),
+			NewWritePlaybackDEMStage(),
 			NewGenerateHillshadeStage(tools),
 			NewGenerateBathymetryStage(tools),
 			NewGenerateColorReliefStage(tools),

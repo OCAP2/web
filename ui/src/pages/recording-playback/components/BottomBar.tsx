@@ -23,6 +23,7 @@ import {
 import { TimelineScrubber } from "./TimelineScrubber";
 import type { FocusRange } from "./FocusToolbar";
 import { FocusToolbar } from "./FocusToolbar";
+import { BookmarkMenu } from "./BookmarkMenu";
 import styles from "./BottomBar.module.css";
 
 export interface BottomBarProps {
@@ -178,6 +179,8 @@ export function BottomBar(props: BottomBarProps): JSX.Element {
               <ScissorsIcon size={12} /> Focus
             </button>
           </Show>
+
+          <BookmarkMenu timeMode={props.timeMode} />
 
           <button
             class={styles.panelToggle}

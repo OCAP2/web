@@ -1,0 +1,188 @@
+.section {
+  padding: 10px 12px 4px;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+}
+
+.note {
+  padding: 0 12px 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  line-height: 1.5;
+}
+
+.card {
+  margin: 0 8px 8px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.cardHeader:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cardHeaderActive {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* The only standing cue that a net row opens at all. The header's hover and
+   active backgrounds read as selection rather than as "there is more inside", so
+   the caret is what makes a collapsed net look collapsed rather than empty. */
+.netCaret {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-dimmer);
+}
+
+.cardHeader:hover .netCaret {
+  color: var(--text-muted);
+}
+
+.netName {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.netMeta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+}
+
+.badge {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.memberList {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px 5px 14px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.member:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.memberName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberRadio {
+  color: var(--text-dimmer);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+}
+
+.memberStatus {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.inRange {
+  color: var(--accent-success);
+}
+
+.outOfRange {
+  color: var(--accent-danger);
+}
+
+.speaking {
+  color: var(--accent-warning);
+}
+
+.distance {
+  color: var(--text-dimmer);
+}
+
+.txRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.txRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.txRowLive {
+  border-left-color: var(--accent-warning);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.txMeta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-dimmer);
+  font-family: var(--font-mono);
+}
+
+.heard {
+  color: var(--accent-success);
+}
+
+.missed {
+  color: var(--accent-danger);
+}

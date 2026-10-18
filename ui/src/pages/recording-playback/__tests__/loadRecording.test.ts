@@ -7,6 +7,7 @@ import type { MarkerManager } from "../../../playback/markerManager";
 import { ChunkManager } from "../../../data/chunkManager";
 import { JsonDecoder } from "../../../data/decoders/jsonDecoder";
 import { ProtobufDecoder } from "../../../data/decoders/protobufDecoder";
+import { ProtobufDecoderV2 } from "../../../data/decoders/protobufDecoderV2";
 
 // ─── Mock modules ───
 
@@ -41,6 +42,14 @@ vi.mock("../../../data/decoders/jsonDecoder", () => {
 vi.mock("../../../data/decoders/protobufDecoder", () => {
   return {
     ProtobufDecoder: vi.fn().mockImplementation(function () {
+      return {};
+    }),
+  };
+});
+
+vi.mock("../../../data/decoders/protobufDecoderV2", () => {
+  return {
+    ProtobufDecoderV2: vi.fn().mockImplementation(function () {
       return {};
     }),
   };
@@ -99,6 +108,7 @@ function makeMockApi(worldConfig: WorldConfig, recordingData?: ArrayBuffer): Api
 function makeMockEngine(): PlaybackEngine {
   return {
     loadRecording: vi.fn(),
+    setWorldConfig: vi.fn(),
     entityManager: {
       getEntity: vi.fn().mockReturnValue(null),
     },
@@ -261,6 +271,25 @@ describe("loadRecording", () => {
   // ─── Protobuf path ───
 
   describe("protobuf storage format", () => {
+    it.each([undefined, 1, 2])("selects the decoder for schema version %s", async (schemaVersion) => {
+      const manifest = makeManifest({ version: schemaVersion ?? 1 });
+      mockChunkMgr.loadManifest.mockResolvedValue(manifest);
+      mockChunkMgr.loadChunk.mockResolvedValue(undefined);
+
+      await loadRecording(api, engine, markerManager, makeRecording({
+        storageFormat: "protobuf",
+        schemaVersion,
+      }));
+
+      const selected = schemaVersion === 2 ? ProtobufDecoderV2 : ProtobufDecoder;
+      const other = schemaVersion === 2 ? ProtobufDecoder : ProtobufDecoderV2;
+      expect(selected).toHaveBeenCalledOnce();
+      expect(other).not.toHaveBeenCalled();
+      expect(ChunkManager).toHaveBeenCalledWith(vi.mocked(selected).mock.results[0].value, api);
+      expect(mockChunkMgr.loadChunk).toHaveBeenCalledWith(0);
+      expect(engine.loadRecording).toHaveBeenCalledWith(manifest, mockChunkMgr);
+    });
+
     it("creates ProtobufDecoder and ChunkManager", async () => {
       const manifest = makeManifest();
       mockChunkMgr.loadManifest.mockResolvedValue(manifest);

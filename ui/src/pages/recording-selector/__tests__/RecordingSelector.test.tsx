@@ -313,6 +313,36 @@ describe("RecordingSelector", () => {
     });
   });
 
+  it("shows the map filter dropdown by default", async () => {
+    const { findByTestId, queryByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    expect(queryByTestId("map-filter-dropdown-trigger")).not.toBeNull();
+  });
+
+  it("hides the map filter dropdown when customize.hideMapFilters is set", async () => {
+    const recordingsFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/customize")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ enabled: true, hideMapFilters: true }),
+        } as Response);
+      }
+      return recordingsFetch(input);
+    });
+
+    const { findByTestId, queryByTestId } = renderPage();
+    await findByTestId("recording-1");
+
+    await vi.waitFor(() => {
+      expect(queryByTestId("map-filter-dropdown-trigger")).toBeNull();
+    });
+    // Other filters are unaffected
+    expect(queryByTestId("search-input")).not.toBeNull();
+  });
+
   // ── Clear filters ──
 
   it("shows clear button when filter is active and clears on click", async () => {
@@ -445,9 +475,8 @@ describe("RecordingSelector", () => {
       const list = getByTestId("recordings-list");
       const rows = list.querySelectorAll("[data-testid^='recording-']");
       const names = Array.from(rows).map((r) => r.textContent!);
-      // Descending by name: Op Echo, Op Delta, Op Charlie, Op Bravo, Op Alpha
-      expect(names[0]).toContain("Op Echo");
-      expect(names[4]).toContain("Op Alpha");
+      const expected = [...mockRecordings].sort((a, b) => b.missionName.localeCompare(a.missionName));
+      expected.forEach((recording, index) => expect(names[index]).toContain(recording.missionName));
     });
   });
 
@@ -482,9 +511,8 @@ describe("RecordingSelector", () => {
       const list = getByTestId("recordings-list");
       const rows = list.querySelectorAll("[data-testid^='recording-']");
       const names = Array.from(rows).map((r) => r.textContent!);
-      // Ascending by name: Op Alpha, Op Bravo, Op Charlie, Op Delta, Op Echo
-      expect(names[0]).toContain("Op Alpha");
-      expect(names[4]).toContain("Op Echo");
+      const expected = [...mockRecordings].sort((a, b) => a.missionName.localeCompare(b.missionName));
+      expected.forEach((recording, index) => expect(names[index]).toContain(recording.missionName));
     });
   });
 

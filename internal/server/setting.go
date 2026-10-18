@@ -23,6 +23,7 @@ type Setting struct {
 	Maps       string     `json:"maps" yaml:"maps"`
 	Data       string     `json:"data" yaml:"data"`
 	Static     string     `json:"static" yaml:"static"`
+	Tmp        string     `json:"tmp" yaml:"tmp"`
 	Logger     bool       `json:"logger" yaml:"logger"`
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
@@ -46,8 +47,10 @@ type Customize struct {
 	WebsiteLogo      string            `json:"websiteLogo" yaml:"websiteLogo"`
 	WebsiteLogoSize  string            `json:"websiteLogoSize" yaml:"websiteLogoSize"`
 	DisableKillCount bool              `json:"disableKillCount" yaml:"disableKillCount"`
+	HideMapFilters   bool              `json:"hideMapFilters" yaml:"hideMapFilters"`
 	HeaderTitle      string            `json:"headerTitle" yaml:"headerTitle"`
 	HeaderSubtitle   string            `json:"headerSubtitle" yaml:"headerSubtitle"`
+	PageTitle        string            `json:"pageTitle" yaml:"pageTitle"`
 	CSSOverrides     map[string]string `json:"cssOverrides,omitempty" yaml:"cssOverrides"`
 }
 
@@ -100,14 +103,17 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("maps", "maps")
 	viper.SetDefault("data", "data")
 	viper.SetDefault("static", "")
+	viper.SetDefault("tmp", "")
 	viper.SetDefault("logger", false)
 	viper.SetDefault("customize.enabled", false)
 	viper.SetDefault("customize.websiteURL", "")
 	viper.SetDefault("customize.websiteLogo", "")
 	viper.SetDefault("customize.websiteLogoSize", "32px")
 	viper.SetDefault("customize.disableKillCount", false)
+	viper.SetDefault("customize.hideMapFilters", false)
 	viper.SetDefault("customize.headerTitle", "")
 	viper.SetDefault("customize.headerSubtitle", "")
+	viper.SetDefault("customize.pageTitle", "")
 	viper.SetDefault("conversion.enabled", false)
 	viper.SetDefault("conversion.interval", "5m")
 	viper.SetDefault("conversion.batchSize", 1)
@@ -163,6 +169,22 @@ func NewSetting() (setting Setting, err error) {
 	}
 	if err = os.MkdirAll(setting.Maps, 0755); err != nil {
 		return setting, fmt.Errorf("create maps directory: %w", err)
+	}
+
+	// One redirect covers every maptool scratch site: Go temp (os.TempDir()
+	// re-reads TMPDIR per call) and gdal/tippecanoe subprocess scratch (they
+	// inherit the env; gdal also honors CPL_TMPDIR). Must be absolute —
+	// subprocesses run in a different cwd (runCmdDir), so a relative TMPDIR
+	// would resolve against the wrong dir.
+	if setting.Tmp != "" {
+		if setting.Tmp, err = filepath.Abs(setting.Tmp); err != nil {
+			return setting, fmt.Errorf("resolve tmp directory: %w", err)
+		}
+		if err = os.MkdirAll(setting.Tmp, 0755); err != nil {
+			return setting, fmt.Errorf("create tmp directory: %w", err)
+		}
+		os.Setenv("TMPDIR", setting.Tmp)
+		os.Setenv("CPL_TMPDIR", setting.Tmp)
 	}
 
 	if setting.Secret == "" || setting.Secret == "same-secret" {

@@ -35,4 +35,21 @@ export class HitKilledEvent extends GameEvent {
     this.distance = distance;
     this.weapon = weapon;
   }
+
+  /**
+   * True if this is a friendly-fire (team kill / team hit) event:
+   * causer and victim share a side at this event's frame, the event is
+   * not a suicide, and the victim is a unit (not a vehicle). Requires
+   * resolveReferences() to have populated victimSide, causerSide, and
+   * victimIsVehicle from per-frame state when available.
+   */
+  isFriendlyFire(): boolean {
+    return (
+      this.causerSide !== undefined &&
+      this.victimSide !== undefined &&
+      this.causerSide === this.victimSide &&
+      this.victimId !== this.causedById &&
+      !this.victimIsVehicle
+    );
+  }
 }

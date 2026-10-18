@@ -39,6 +39,54 @@ describe("UnitsTab", () => {
     expect(screen.queryByText("IND")).toBeNull();
     // CIV tab should NOT exist since there are no CIV units
     expect(screen.queryByText("CIV")).toBeNull();
+    expect(screen.queryByText("VIRTUAL")).toBeNull();
+  });
+
+  it("lists Zeus entities under VIRTUAL", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [unitDef({ id: 7, name: "Possessed", side: "EAST", groupName: "AI", role: "Rifleman" })],
+        [
+          { frameNum: 0, type: "zeusEntity", payload: { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 } },
+          { frameNum: 0, type: "zeusCamera", payload: { curatorId: 90, x: 100, y: 200, dir: 0, fov: 0.75 } },
+        ],
+      ),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("VIRTUAL")).toBeTruthy();
+    fireEvent.click(screen.getByText("VIRTUAL"));
+    expect(screen.getByText("Danny")).toBeTruthy();
+  });
+
+  it("shows Zeus occupancy as name controlling unit (type)", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [unitDef({ id: 7, name: "Bakunin", side: "EAST", groupName: "AI", role: "Man" })],
+        [
+          { frameNum: 0, type: "zeusEntity", payload: { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 } },
+          { frameNum: 0, type: "zeusCamera", payload: { curatorId: 90, x: 100, y: 200, dir: 0, fov: 0.75 } },
+          { frameNum: 0, type: "zeusRemoteControl", payload: { curatorId: 90, unitId: 7, active: true, playerName: "Danny" } },
+        ],
+      ),
+    );
+    engine.seekTo(0);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByText("VIRTUAL"));
+    expect(screen.getByText("Danny controlling Bakunin (Rifleman)")).toBeTruthy();
   });
 
   it("shows unit names in the list", () => {
@@ -108,9 +156,12 @@ describe("UnitsTab", () => {
 
     // Detail card should now show with Follow button and stats
     expect(screen.getByText("Follow")).toBeTruthy();
-    expect(screen.getByText("KILLS")).toBeTruthy();
-    expect(screen.getByText("DEATHS")).toBeTruthy();
-    expect(screen.getByText("MARKERS")).toBeTruthy();
+    expect(screen.getByText(/kills/i)).toBeTruthy();
+    expect(screen.getByText(/deaths/i)).toBeTruthy();
+    expect(screen.getByText(/markers/i)).toBeTruthy();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.queryByText(/weight/i)).toBeNull();
+    expect(screen.queryByText("Stamina")).toBeNull();
   });
 
   it("clicking Follow button in detail card follows the entity", () => {
@@ -227,7 +278,7 @@ describe("UnitsTab", () => {
     expect(twos.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("counts deleted units as dead and styles them", () => {
+  it("styles a despawned unit (no kill event) as inactive", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(
       makeManifest([
@@ -254,7 +305,6 @@ describe("UnitsTab", () => {
       ]),
     );
 
-    // Advance to frame 1 so snapshots are populated
     engine.seekTo(1);
 
     render(() => (
@@ -263,12 +313,155 @@ describe("UnitsTab", () => {
       </TestProviders>
     ));
 
-    // Deleted unit counts as dead: alive=1, total=2
-    expect(screen.getByText("1")).toBeTruthy(); // alive count in group header
-
-    // Deleted unit row must have the dead styling
+    // Unit despawned without a kill event → inactive styling, not dead
     const deletedRow = screen.getByText("Deleted Unit").closest("button");
-    expect(deletedRow?.className).toMatch(/unitRowDead/);
+    expect(deletedRow?.className).toMatch(/unitRowInactive/);
+    expect(deletedRow?.className).not.toMatch(/unitRowDead/);
+  });
+
+  it("styles a unit killed by a kill event as dead", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [
+          unitDef({
+            id: 1,
+            name: "Victim",
+            side: "WEST",
+            groupName: "Alpha",
+            role: "Trooper",
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 0 }, // dead at frame 1
+            ],
+          }),
+          unitDef({
+            id: 2,
+            name: "Killer",
+            side: "EAST",
+            groupName: "Bravo",
+            role: "Trooper",
+            positions: [
+              { position: [50, 50], direction: 0, alive: 1 },
+              { position: [50, 50], direction: 0, alive: 1 },
+            ],
+          }),
+        ],
+        [killedEvent(1, 1, 2)],
+      ),
+    );
+
+    setActiveSide("WEST");
+    engine.seekTo(1);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    const row = screen.getByText("Victim").closest("button");
+    expect(row?.className).toMatch(/unitRowDead/);
+    expect(row?.className).not.toMatch(/unitRowInactive/);
+  });
+
+  it("keeps dead styling for a killed unit even after body despawns", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [
+          unitDef({
+            id: 1,
+            name: "Victim",
+            side: "WEST",
+            groupName: "Alpha",
+            role: "Trooper",
+            endFrame: 3, // body despawns at frame 3
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 0 },
+              { position: [100, 200], direction: 0, alive: 0 },
+              { position: [100, 200], direction: 0, alive: 0 },
+            ],
+          }),
+          unitDef({
+            id: 2,
+            name: "Killer",
+            side: "EAST",
+            groupName: "Bravo",
+            role: "Trooper",
+            positions: [
+              { position: [50, 50], direction: 0, alive: 1 },
+              { position: [50, 50], direction: 0, alive: 1 },
+            ],
+          }),
+        ],
+        [killedEvent(1, 1, 2)],
+      ),
+    );
+
+    setActiveSide("WEST");
+    engine.seekTo(10); // well beyond endFrame=3, no snapshot for unit 1
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    // No snapshot but deaths=1 → still dead, not inactive
+    const row = screen.getByText("Victim").closest("button");
+    expect(row?.className).toMatch(/unitRowDead/);
+    expect(row?.className).not.toMatch(/unitRowInactive/);
+  });
+
+  it("styles a respawned unit as alive even when they have prior deaths", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [
+          unitDef({
+            id: 1,
+            name: "Respawner",
+            side: "WEST",
+            groupName: "Alpha",
+            role: "Trooper",
+            positions: [
+              { position: [100, 200], direction: 0, alive: 1 },
+              { position: [100, 200], direction: 0, alive: 0 }, // killed
+              { position: [200, 300], direction: 0, alive: 1 }, // respawned
+            ],
+          }),
+          unitDef({
+            id: 2,
+            name: "Killer",
+            side: "EAST",
+            groupName: "Bravo",
+            role: "Trooper",
+            positions: [
+              { position: [50, 50], direction: 0, alive: 1 },
+              { position: [50, 50], direction: 0, alive: 1 },
+              { position: [50, 50], direction: 0, alive: 1 },
+            ],
+          }),
+        ],
+        [killedEvent(1, 1, 2)],
+      ),
+    );
+
+    setActiveSide("WEST");
+    engine.seekTo(2); // respawned frame — alive=1 in snapshot, deaths=1 in events
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    const row = screen.getByText("Respawner").closest("button");
+    // Alive in snapshot takes priority — no dead or inactive class
+    expect(row?.className).not.toMatch(/unitRowDead/);
+    expect(row?.className).not.toMatch(/unitRowInactive/);
   });
 
   it("only renders populated side tabs when multiple sides have units", () => {
@@ -294,6 +487,36 @@ describe("UnitsTab", () => {
 
     // CIV should NOT be rendered (no CIV units)
     expect(screen.queryByText("CIV")).toBeNull();
+    expect(screen.queryByText("VIRTUAL")).toBeNull();
+  });
+
+  it("keeps VIRTUAL visible when three combat sides are populated", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest(
+        [
+          unitDef({ id: 1, name: "NATO Soldier", side: "WEST", groupName: "Alpha", role: "Trooper" }),
+          unitDef({ id: 2, name: "CSAT Soldier", side: "EAST", groupName: "Bravo", role: "Trooper" }),
+          unitDef({ id: 3, name: "Guerrilla", side: "GUER", groupName: "Charlie", role: "Fighter" }),
+          unitDef({ id: 4, name: "Civilian", side: "CIV", groupName: "Civilians", role: "Civilian" }),
+        ],
+        [
+          { frameNum: 0, type: "zeusEntity", payload: { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 } },
+        ],
+      ),
+    );
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <UnitsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("BLUFOR")).toBeTruthy();
+    expect(screen.getByText("OPFOR")).toBeTruthy();
+    expect(screen.getByText("IND")).toBeTruthy();
+    expect(screen.getByText("CIV")).toBeTruthy();
+    expect(screen.getByText("VIRTUAL")).toBeTruthy();
   });
 
   it("auto-selects first populated side when activeSide is not populated", () => {
@@ -403,7 +626,7 @@ describe("UnitsTab", () => {
     fireEvent.click(screen.getByText("Marker Player"));
 
     // Admin section should show with blacklist button
-    expect(screen.getByText("ADMIN ACTIONS")).toBeTruthy();
+    expect(screen.getByText(/admin actions/i)).toBeTruthy();
     expect(screen.getByText(/Blacklist 3 markers/)).toBeTruthy();
   });
 
@@ -468,7 +691,7 @@ describe("UnitsTab", () => {
 
     // Follow button should show but no admin section
     expect(screen.getByText("Follow")).toBeTruthy();
-    expect(screen.queryByText("ADMIN ACTIONS")).toBeNull();
+    expect(screen.queryByText(/admin actions/i)).toBeNull();
     expect(screen.queryByTitle("Toggle marker blacklist")).toBeNull();
   });
 
@@ -528,7 +751,7 @@ describe("UnitsTab", () => {
     fireEvent.click(screen.getByText("Spammer"));
 
     // Stats grid should show 0 visible markers (blacklisted)
-    const markersStat = screen.getByText("MARKERS").parentElement!;
+    const markersStat = screen.getByText(/^markers$/i).parentElement!;
     expect(markersStat.textContent).toContain("0");
 
     // But the restore button still shows the total
@@ -562,6 +785,6 @@ describe("UnitsTab", () => {
 
     // Follow should show, but no admin section (no markers)
     expect(screen.getByText("Follow")).toBeTruthy();
-    expect(screen.queryByText("ADMIN ACTIONS")).toBeNull();
+    expect(screen.queryByText(/admin actions/i)).toBeNull();
   });
 });

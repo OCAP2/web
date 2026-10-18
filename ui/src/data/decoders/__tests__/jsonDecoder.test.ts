@@ -10,6 +10,277 @@ function toBuffer(obj: unknown): ArrayBuffer {
 describe("JsonDecoder.decodeManifest", () => {
   const decoder = new JsonDecoder();
 
+  it("decodes additive player snapshot events", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [[10, "inventorySnapshot", { unitId: 7, weightKg: 31.5, weapons: [] }]],
+    }));
+
+    expect(manifest.events).toEqual([{
+      frameNum: 10,
+      type: "inventorySnapshot",
+      payload: { unitId: 7, weightKg: 31.5, weapons: [] },
+    }]);
+  });
+
+  it("decodes additive server FPS events and rejects malformed samples", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "FPS",
+      endFrame: 180,
+      captureDelay: 1,
+      events: [
+        [0, "serverFps", { fps: 47.25 }],
+        [60, "serverFps", { fps: "bad" }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([{ frameNum: 0, type: "serverFps", fps: 47.25 }]);
+  });
+
+  it("decodes additive weather events and rejects samples without overcast", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Weather",
+      endFrame: 180,
+      captureDelay: 1,
+      events: [
+        [0, "weather", {
+          overcast: 0.42,
+          rain: 0.1,
+          fog: 0.2,
+          windSpeed: 3.4,
+          windDir: 247,
+          humidity: 0.68,
+          moonPhase: 0.81,
+          temperature: 16.3,
+          ace: true,
+        }],
+        [60, "weather", { rain: 0.5 }],
+        [120, "weather", { overcast: "bad" }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([{
+      frameNum: 0,
+      type: "weather",
+      payload: {
+        overcast: 0.42,
+        rain: 0.1,
+        fog: 0.2,
+        windSpeed: 3.4,
+        windDir: 247,
+        humidity: 0.68,
+        moonPhase: 0.81,
+        temperature: 16.3,
+        ace: true,
+      },
+    }]);
+  });
+
+  it("decodes additive Zeus events and skips malformed payloads", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Zeus",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [2, "zeusEntity", { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 }],
+        [4, "zeusCamera", { curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 }],
+        [8, "zeusRemoteControl", { curatorId: 90, unitId: 7, active: true }],
+        [9, "zeusCamera", { x: 1, y: 2 }],
+        [12, "zeusPing", { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 }],
+        [13, "zeusPing", { unitId: 7, x: 1, y: 2 }],
+        [16, "zeusModule", { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", category: "ACE", source: "zen", x: 3411, y: 9002, attachedUnitId: 7, attachedName: "Allen" }],
+        [17, "zeusModule", { curatorId: 90, displayName: "Heal" }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([
+      { frameNum: 2, type: "zeusEntity", payload: { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 } },
+      { frameNum: 4, type: "zeusCamera", payload: { curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 } },
+      { frameNum: 8, type: "zeusRemoteControl", payload: { curatorId: 90, unitId: 7, active: true } },
+      { frameNum: 12, type: "zeusPing", payload: { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 } },
+      { frameNum: 16, type: "zeusModule", payload: { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", category: "ACE", source: "zen", x: 3411, y: 9002, attachedUnitId: 7, attachedName: "Allen" } },
+    ]);
+  });
+
+  it("decodes support events and skips malformed payloads", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Support",
+      endFrame: 600,
+      captureDelay: 1,
+      events: [
+        [10, "explosion", { x: 3411, y: 9002, ammo: "Sh_155mm_AMOS", name: "155mm HE", radius: 28, power: 180, firerId: 17, vehicleId: 4, side: "WEST", source: "projectile" }],
+        // A blast with no radius cannot be drawn and says nothing a hit event does not.
+        [11, "explosion", { x: 1, y: 2, ammo: "B_556x45_Ball", name: "5.56", radius: 0 }],
+        [20, "serviceEvent", { kind: "refuel", vehicleId: 9, vehicleName: "Hunter", unitId: 3, unitName: "Danny", side: "WEST", x: 1, y: 2, from: 0.12, to: 0.98 }],
+        [21, "serviceEvent", { kind: "refuel", vehicleId: 9 }],
+        [30, "staticWeapon", { action: "assembled", unitId: 3, unitName: "Danny", side: "WEST", vehicleId: 88, class: "B_HMG_01_high_F", name: "M2 (High)", x: 1, y: 2 }],
+        [31, "staticWeapon", { action: "assembled" }],
+        [40, "radioTransmission", { unitId: 3, radio: "AN/PRC-152", type: "SW", action: "Start", channel: 1, additional: false, frequency: 69.9, code: "" }],
+        // A transmission with no frequency names no net, so it cannot be placed.
+        [41, "radioTransmission", { unitId: 3, radio: "AN/PRC-152", type: "SW", action: "Start" }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([
+      { frameNum: 10, type: "explosion", payload: { x: 3411, y: 9002, ammo: "Sh_155mm_AMOS", name: "155mm HE", radius: 28, power: 180, firerId: 17, vehicleId: 4, side: "WEST", source: "projectile" } },
+      { frameNum: 20, type: "serviceEvent", payload: { kind: "refuel", vehicleId: 9, vehicleName: "Hunter", unitId: 3, unitName: "Danny", side: "WEST", x: 1, y: 2, from: 0.12, to: 0.98 } },
+      { frameNum: 30, type: "staticWeapon", payload: { action: "assembled", unitId: 3, unitName: "Danny", side: "WEST", vehicleId: 88, class: "B_HMG_01_high_F", name: "M2 (High)", x: 1, y: 2 } },
+      { frameNum: 40, type: "radioTransmission", payload: { unitId: 3, radio: "AN/PRC-152", type: "SW", action: "Start", channel: 1, additional: false, frequency: 69.9, code: "" } },
+    ]);
+  });
+
+  // The recorder writes the blast radius to one decimal rather than rounding to
+  // a whole metre, because rounding turned any sub-metre blast into radius 0 and
+  // the guard below then discarded the event. Recordings written before that
+  // carry plain integers, so both have to read back.
+  it("keeps both a legacy integer radius and a fractional one", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Radius",
+      endFrame: 600,
+      captureDelay: 1,
+      events: [
+        [10, "explosion", { x: 1, y: 2, ammo: "Sh_155mm_AMOS", name: "155mm", radius: 28 }],
+        [11, "explosion", { x: 1, y: 2, ammo: "HandGrenade", name: "Grenade", radius: 5.4 }],
+        [12, "explosion", { x: 1, y: 2, ammo: "Tiny", name: "Tiny", radius: 0.4 }],
+      ],
+    }));
+
+    expect(manifest.events.map((e) => (e as { payload: { radius: number } }).payload.radius))
+      .toEqual([28, 5.4, 0.4]);
+  });
+
+  it("still drops a blast with no drawable radius", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Radius",
+      endFrame: 600,
+      captureDelay: 1,
+      events: [
+        [10, "explosion", { x: 1, y: 2, radius: 0 }],
+        [11, "explosion", { x: 1, y: 2, radius: -3 }],
+        [12, "explosion", { x: 1, y: 2 }],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([]);
+  });
+
+  it("skips empty dense-array entity holes", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Zeus",
+      endFrame: 100,
+      captureDelay: 1,
+      entities: [
+        { id: 0, name: "", side: "", isPlayer: 0, type: "", startFrameNum: 0, positions: null },
+        {
+          id: 1,
+          type: "unit",
+          name: "Horacek",
+          side: "WEST",
+          isPlayer: 0,
+          startFrameNum: 0,
+          positions: [[[100, 200], 0, 1, 0, "Horacek", 0]],
+        },
+      ],
+    }));
+
+    expect(manifest.entities).toHaveLength(1);
+    expect(manifest.entities[0].id).toBe(1);
+    expect(manifest.entities[0].name).toBe("Horacek");
+  });
+
+  it("passes diff-encoded snapshots through untouched", () => {
+    const diff = { unitId: 7, diffOf: 10, set: { ace: { heartRate: 133 } }, unset: ["kat.spo2"] };
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [[40, "medicalSnapshot", diff]],
+    }));
+
+    expect(manifest.events).toEqual([{ frameNum: 40, type: "medicalSnapshot", payload: diff }]);
+  });
+
+  it("skips snapshots that carry no unit id to index them by", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [10, "radioSnapshot", { radios: [] }],
+        [20, "radioSnapshot", "not an object"],
+      ],
+    }));
+
+    expect(manifest.events).toEqual([]);
+  });
+
+  it("stamps tfarSettings onto the manifest and keeps them out of the event feed", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [1, "tfarSettings", { terrainInterceptionCoefficient: 12, globalRadioRangeCoef: 0.5, tfarLoaded: true, source: "cba" }],
+        [10, "radioSnapshot", { unitId: 7, radios: [] }],
+      ],
+    }));
+
+    expect(manifest.radioPropagation).toMatchObject({
+      terrainInterceptionCoefficient: 12,
+      globalRadioRangeCoef: 0.5,
+      tfarLoaded: true,
+      source: "cba",
+    });
+    expect(manifest.events).toEqual([{
+      frameNum: 10,
+      type: "radioSnapshot",
+      payload: { unitId: 7, radios: [] },
+    }]);
+  });
+
+  it("stamps acreSettings onto the manifest without mixing them into TFAR settings", () => {
+    const manifest = decoder.decodeManifest(toBuffer({
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      captureDelay: 1,
+      events: [
+        [1, "tfarSettings", { terrainInterceptionCoefficient: 12, globalRadioRangeCoef: 0.5, tfarLoaded: true, source: "cba" }],
+        [1, "acreSettings", { terrainLoss: 0.4, signalModel: 1, acreLoaded: true, source: "cba" }],
+        [10, "radioSnapshot", { unitId: 7, radios: [] }],
+      ],
+    }));
+
+    expect(manifest.radioPropagation).toMatchObject({
+      terrainInterceptionCoefficient: 12,
+      globalRadioRangeCoef: 0.5,
+    });
+    expect(manifest.acrePropagation).toMatchObject({
+      terrainLoss: 0.4,
+      signalModel: 1,
+      acreLoaded: true,
+      source: "cba",
+    });
+    expect(manifest.events).toEqual([{
+      frameNum: 10,
+      type: "radioSnapshot",
+      payload: { unitId: 7, radios: [] },
+    }]);
+  });
+
   it("decodes a minimal operation", () => {
     const data = {
       worldName: "Altis",
@@ -849,6 +1120,7 @@ describe("JsonDecoder.decodeManifest", () => {
 
     expect(positions[0].groupName).toBe("Alpha 1");
     expect(positions[0].side).toBe("WEST");
+    expect(positions[0].role).toBe("rifleman");
 
     expect(positions[1].groupName).toBe("Bravo 1");
     expect(positions[1].side).toBe("EAST");

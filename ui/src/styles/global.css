@@ -21,6 +21,10 @@
   color: var(--side-civ);
 }
 
+.virtual {
+  color: var(--side-virtual);
+}
+
 /* ---------- Text weights ---------- */
 
 .bold {

@@ -5,6 +5,7 @@
 	"db": "data.db",
 	"data": "data",
 	"static": "",
+	"tmp": "",
 	"markers": "assets/markers",
 	"ammo": "assets/ammo",
 	"fonts": "assets/fonts",
@@ -13,8 +14,10 @@
 	"customize": {
 		"disableKillCount": false,
 		"enabled": false,
+		"hideMapFilters": false,
 		"headerSubtitle": "",
 		"headerTitle": "",
+		"pageTitle": "",
 		"websiteLogo": "",
 		"websiteLogoSize": "32px",
 		"websiteURL": "",

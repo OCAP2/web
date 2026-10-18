@@ -36,8 +36,13 @@ type SideCounts struct {
 	Kills   int `json:"kills"`
 }
 
-// SideComposition maps Arma side names (WEST, EAST, GUER, CIV) to player/unit counts.
+// SideComposition maps Arma side names (WEST, EAST, GUER, CIV, VIRTUAL) to player/unit counts.
 type SideComposition map[string]SideCounts
+
+// CurrentStatsRevision is stored on each operation when computeStats last ran.
+// Bump it when the derived stats shape changes so completed recordings are
+// recomputed once. Revision 1 adds VIRTUAL from zeusEntity events.
+const CurrentStatsRevision = 1
 
 type Operation struct {
 	ID               int64   `json:"id"`
@@ -260,7 +265,48 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 13 {
+		// filename is the on-disk storage key but was never unique; duplicate
+		// rows shared and corrupted each other's files. Keep the newest row per
+		// filename (duplicates point at the same files, so nothing is lost), drop
+		// orphaned blacklist rows, then enforce uniqueness from here on.
+		if err = r.runMigration(13,
+			`DELETE FROM operations WHERE id NOT IN (SELECT MAX(id) FROM operations GROUP BY filename)`,
+			`DELETE FROM marker_blacklist WHERE operation_id NOT IN (SELECT id FROM operations)`,
+			`CREATE UNIQUE INDEX IF NOT EXISTS idx_operations_filename ON operations(filename)`,
+		); err != nil {
+			return err
+		}
+	}
+
+	if version < 14 {
+		// Tests rewind the version table to re-run later migrations; ADD COLUMN
+		// is not idempotent, so skip it when the column already exists.
+		var n int
+		if err = r.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('operations') WHERE name = 'stats_revision'`).Scan(&n); err != nil {
+			return err
+		}
+		var stmts []string
+		if n == 0 {
+			stmts = append(stmts, `ALTER TABLE operations ADD COLUMN stats_revision INTEGER DEFAULT 0`)
+		}
+		if err = r.runMigration(14, stmts...); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// isInvalidStorageName reports whether name is unsafe to use as a recording's
+// on-disk storage key. Names like "", ".", ".." or any containing a path
+// separator make filepath.Join(dataDir, name) resolve to the data directory
+// itself or its parent — catastrophic for os.RemoveAll. Such names must be
+// rejected before any file operation keyed on the filename.
+func isInvalidStorageName(name string) bool {
+	return strings.TrimSpace(name) == "" ||
+		name == "." || name == ".." ||
+		strings.ContainsAny(name, `/\`)
 }
 
 // decodeFilename returns the URL-decoded form of name if it contains percent
@@ -418,7 +464,15 @@ func (r *RepoOperation) GetTypes(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
+// execer is satisfied by both *sql.DB and *sql.Tx, letting insertOperation run
+// either standalone or inside a transaction.
+type execer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// insertOperation inserts a single operation row using the given executor and
+// sets operation.ID to the new auto-generated ID.
+func (r *RepoOperation) insertOperation(ctx context.Context, ex execer, operation *Operation) error {
 	operation.WorldName = strings.ToLower(operation.WorldName)
 	storageFormat := operation.StorageFormat
 	if storageFormat == "" {
@@ -441,7 +495,7 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`
-	result, err := r.db.ExecContext(
+	result, err := ex.ExecContext(
 		ctx,
 		query,
 		operation.WorldName,
@@ -465,7 +519,6 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 		return err
 	}
 
-	// Set the auto-generated ID on the operation
 	id, err := result.LastInsertId()
 	if err != nil {
 		return err
@@ -473,6 +526,39 @@ func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
 	operation.ID = id
 
 	return nil
+}
+
+func (r *RepoOperation) Store(ctx context.Context, operation *Operation) error {
+	return r.insertOperation(ctx, r.db, operation)
+}
+
+// StoreReplacingByFilename inserts the operation, atomically removing any
+// existing row with the same filename first. This implements upload "replace"
+// semantics (filename is the unique on-disk storage key) without a window in
+// which a failed insert could leave the previous recording deleted: if the
+// insert fails, the transaction rolls back and the old row is preserved. On
+// success operation.ID is set to the new row's ID.
+func (r *RepoOperation) StoreReplacingByFilename(ctx context.Context, operation *Operation) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Drop the replaced recording's marker blacklist entries too — they are keyed
+	// by operation_id with no cascade, so they would otherwise orphan.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM marker_blacklist WHERE operation_id IN (SELECT id FROM operations WHERE filename = ?)`,
+		operation.Filename); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM operations WHERE filename = ?`, operation.Filename); err != nil {
+		return err
+	}
+	if err := r.insertOperation(ctx, tx, operation); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *RepoOperation) Select(ctx context.Context, filter Filter) ([]Operation, error) {
@@ -710,8 +796,8 @@ func (r *RepoOperation) UpdateChunkCount(ctx context.Context, id int64, count in
 func (r *RepoOperation) UpdateOperationStats(ctx context.Context, id int64, playerCount, killCount, playerKillCount int, sideComposition SideComposition) error {
 	sideJSON := marshalSideComposition(sideComposition)
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE operations SET player_count = ?, kill_count = ?, player_kill_count = ?, side_composition = ? WHERE id = ?`,
-		playerCount, killCount, playerKillCount, sideJSON, id)
+		`UPDATE operations SET player_count = ?, kill_count = ?, player_kill_count = ?, side_composition = ?, stats_revision = ? WHERE id = ?`,
+		playerCount, killCount, playerKillCount, sideJSON, CurrentStatsRevision, id)
 	return err
 }
 
@@ -764,13 +850,16 @@ func (r *RepoOperation) Update(ctx context.Context, op *Operation) error {
 	return err
 }
 
-// SelectStatsBackfill returns completed protobuf operations that have no stats yet
+// SelectStatsBackfill returns completed operations whose derived stats are stale
+// or missing. stats_revision is bumped by UpdateOperationStats so each
+// computeStats change is applied once, including recordings that already have
+// a player_count (they would otherwise keep the pre-VIRTUAL composition forever).
 func (r *RepoOperation) SelectStatsBackfill(ctx context.Context) ([]Operation, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT ` + operationColumns + `
 		 FROM operations
-		 WHERE conversion_status = 'completed' AND player_count = 0
-		 ORDER BY id ASC`)
+		 WHERE conversion_status = 'completed' AND stats_revision < ?
+		 ORDER BY id ASC`, CurrentStatsRevision)
 	if err != nil {
 		return nil, err
 	}

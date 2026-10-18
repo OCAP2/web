@@ -30,10 +30,12 @@ export function detectLocale(): Locale {
   return "en";
 }
 
+export type TranslationVars = Record<string, string | number>;
+
 export interface I18n {
   locale: Accessor<Locale>;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: TranslationVars) => string;
 }
 
 /**
@@ -52,12 +54,15 @@ export function createI18n(initialLocale?: Locale): I18n {
     }
   }
 
-  function t(key: string): string {
+  function t(key: string, vars?: TranslationVars): string {
     const entry = translations[key];
-    if (!entry) {
-      return key;
+    let text = entry ? (entry[locale()] ?? entry["en"] ?? key) : key;
+    if (vars) {
+      text = text.replace(/\{(\w+)\}/g, (_, name: string) =>
+        Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : `{${name}}`,
+      );
     }
-    return entry[locale()] ?? entry["en"] ?? key;
+    return text;
   }
 
   return { locale, setLocale, t };

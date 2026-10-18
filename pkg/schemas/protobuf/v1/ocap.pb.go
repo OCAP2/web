@@ -146,8 +146,12 @@ type Manifest struct {
 	Markers          []*MarkerDef           `protobuf:"bytes,11,rep,name=markers,proto3" json:"markers,omitempty"`
 	ExtensionVersion string                 `protobuf:"bytes,12,opt,name=extension_version,json=extensionVersion,proto3" json:"extension_version,omitempty"`
 	AddonVersion     string                 `protobuf:"bytes,13,opt,name=addon_version,json=addonVersion,proto3" json:"addon_version,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Units that have per-player detail snapshots in snapshots/<unit_id>.pb.
+	// Empty for recordings converted before those sidecars existed — their
+	// snapshots are still in `events` and are read from there.
+	SnapshotUnitIds []uint32 `protobuf:"varint,14,rep,packed,name=snapshot_unit_ids,json=snapshotUnitIds,proto3" json:"snapshot_unit_ids,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Manifest) Reset() {
@@ -271,6 +275,71 @@ func (x *Manifest) GetAddonVersion() string {
 	return ""
 }
 
+func (x *Manifest) GetSnapshotUnitIds() []uint32 {
+	if x != nil {
+		return x.SnapshotUnitIds
+	}
+	return nil
+}
+
+// PlayerSnapshotSeries - every inventory/medical/stamina/radio snapshot for one
+// player, held in snapshots/<unit_id>.pb and fetched only when the profile card
+// for that player is opened. Keeping them out of the manifest is what makes
+// them affordable: they are the bulk of the event stream but are needed for one
+// unit at a time. The events are the same Event message the manifest carries,
+// in recorded frame order, so a diff chain rebuilds exactly as it always did.
+type PlayerSnapshotSeries struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UnitId        uint32                 `protobuf:"varint,1,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	Events        []*Event               `protobuf:"bytes,2,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlayerSnapshotSeries) Reset() {
+	*x = PlayerSnapshotSeries{}
+	mi := &file_ocap_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlayerSnapshotSeries) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlayerSnapshotSeries) ProtoMessage() {}
+
+func (x *PlayerSnapshotSeries) ProtoReflect() protoreflect.Message {
+	mi := &file_ocap_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlayerSnapshotSeries.ProtoReflect.Descriptor instead.
+func (*PlayerSnapshotSeries) Descriptor() ([]byte, []int) {
+	return file_ocap_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PlayerSnapshotSeries) GetUnitId() uint32 {
+	if x != nil {
+		return x.UnitId
+	}
+	return 0
+}
+
+func (x *PlayerSnapshotSeries) GetEvents() []*Event {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
 type EntityDef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -290,7 +359,7 @@ type EntityDef struct {
 
 func (x *EntityDef) Reset() {
 	*x = EntityDef{}
-	mi := &file_ocap_proto_msgTypes[1]
+	mi := &file_ocap_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -302,7 +371,7 @@ func (x *EntityDef) String() string {
 func (*EntityDef) ProtoMessage() {}
 
 func (x *EntityDef) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[1]
+	mi := &file_ocap_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -315,7 +384,7 @@ func (x *EntityDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityDef.ProtoReflect.Descriptor instead.
 func (*EntityDef) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{1}
+	return file_ocap_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *EntityDef) GetId() uint32 {
@@ -408,7 +477,7 @@ type FiredFrame struct {
 
 func (x *FiredFrame) Reset() {
 	*x = FiredFrame{}
-	mi := &file_ocap_proto_msgTypes[2]
+	mi := &file_ocap_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +489,7 @@ func (x *FiredFrame) String() string {
 func (*FiredFrame) ProtoMessage() {}
 
 func (x *FiredFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[2]
+	mi := &file_ocap_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +502,7 @@ func (x *FiredFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FiredFrame.ProtoReflect.Descriptor instead.
 func (*FiredFrame) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{2}
+	return file_ocap_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FiredFrame) GetFrameNum() uint32 {
@@ -477,7 +546,7 @@ type TimeSample struct {
 
 func (x *TimeSample) Reset() {
 	*x = TimeSample{}
-	mi := &file_ocap_proto_msgTypes[3]
+	mi := &file_ocap_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +558,7 @@ func (x *TimeSample) String() string {
 func (*TimeSample) ProtoMessage() {}
 
 func (x *TimeSample) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[3]
+	mi := &file_ocap_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +571,7 @@ func (x *TimeSample) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimeSample.ProtoReflect.Descriptor instead.
 func (*TimeSample) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{3}
+	return file_ocap_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TimeSample) GetFrameNum() uint32 {
@@ -553,7 +622,7 @@ type Chunk struct {
 
 func (x *Chunk) Reset() {
 	*x = Chunk{}
-	mi := &file_ocap_proto_msgTypes[4]
+	mi := &file_ocap_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -565,7 +634,7 @@ func (x *Chunk) String() string {
 func (*Chunk) ProtoMessage() {}
 
 func (x *Chunk) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[4]
+	mi := &file_ocap_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -578,7 +647,7 @@ func (x *Chunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chunk.ProtoReflect.Descriptor instead.
 func (*Chunk) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{4}
+	return file_ocap_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Chunk) GetIndex() uint32 {
@@ -619,7 +688,7 @@ type Frame struct {
 
 func (x *Frame) Reset() {
 	*x = Frame{}
-	mi := &file_ocap_proto_msgTypes[5]
+	mi := &file_ocap_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +700,7 @@ func (x *Frame) String() string {
 func (*Frame) ProtoMessage() {}
 
 func (x *Frame) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[5]
+	mi := &file_ocap_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +713,7 @@ func (x *Frame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Frame.ProtoReflect.Descriptor instead.
 func (*Frame) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{5}
+	return file_ocap_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Frame) GetFrameNum() uint32 {
@@ -683,7 +752,7 @@ type EntityState struct {
 
 func (x *EntityState) Reset() {
 	*x = EntityState{}
-	mi := &file_ocap_proto_msgTypes[6]
+	mi := &file_ocap_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -695,7 +764,7 @@ func (x *EntityState) String() string {
 func (*EntityState) ProtoMessage() {}
 
 func (x *EntityState) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[6]
+	mi := &file_ocap_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +777,7 @@ func (x *EntityState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityState.ProtoReflect.Descriptor instead.
 func (*EntityState) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{6}
+	return file_ocap_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *EntityState) GetEntityId() uint32 {
@@ -829,7 +898,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_ocap_proto_msgTypes[7]
+	mi := &file_ocap_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +910,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[7]
+	mi := &file_ocap_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -854,7 +923,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{7}
+	return file_ocap_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Event) GetFrameNum() uint32 {
@@ -960,7 +1029,7 @@ type MarkerDef struct {
 
 func (x *MarkerDef) Reset() {
 	*x = MarkerDef{}
-	mi := &file_ocap_proto_msgTypes[8]
+	mi := &file_ocap_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -972,7 +1041,7 @@ func (x *MarkerDef) String() string {
 func (*MarkerDef) ProtoMessage() {}
 
 func (x *MarkerDef) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[8]
+	mi := &file_ocap_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -985,7 +1054,7 @@ func (x *MarkerDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerDef.ProtoReflect.Descriptor instead.
 func (*MarkerDef) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{8}
+	return file_ocap_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MarkerDef) GetType() string {
@@ -1086,7 +1155,7 @@ type MarkerPosition struct {
 
 func (x *MarkerPosition) Reset() {
 	*x = MarkerPosition{}
-	mi := &file_ocap_proto_msgTypes[9]
+	mi := &file_ocap_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +1167,7 @@ func (x *MarkerPosition) String() string {
 func (*MarkerPosition) ProtoMessage() {}
 
 func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_ocap_proto_msgTypes[9]
+	mi := &file_ocap_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +1180,7 @@ func (x *MarkerPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkerPosition.ProtoReflect.Descriptor instead.
 func (*MarkerPosition) Descriptor() ([]byte, []int) {
-	return file_ocap_proto_rawDescGZIP(), []int{9}
+	return file_ocap_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MarkerPosition) GetFrameNum() uint32 {
@@ -1203,7 +1272,7 @@ var File_ocap_proto protoreflect.FileDescriptor
 const file_ocap_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"ocap.proto\x12\aocap.v1\"\xf0\x03\n" +
+	"ocap.proto\x12\aocap.v1\"\x9c\x04\n" +
 	"\bManifest\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x1d\n" +
 	"\n" +
@@ -1221,7 +1290,11 @@ const file_ocap_proto_rawDesc = "" +
 	" \x03(\v2\x0e.ocap.v1.EventR\x06events\x12,\n" +
 	"\amarkers\x18\v \x03(\v2\x12.ocap.v1.MarkerDefR\amarkers\x12+\n" +
 	"\x11extension_version\x18\f \x01(\tR\x10extensionVersion\x12#\n" +
-	"\raddon_version\x18\r \x01(\tR\faddonVersion\"\xe6\x02\n" +
+	"\raddon_version\x18\r \x01(\tR\faddonVersion\x12*\n" +
+	"\x11snapshot_unit_ids\x18\x0e \x03(\rR\x0fsnapshotUnitIds\"W\n" +
+	"\x14PlayerSnapshotSeries\x12\x17\n" +
+	"\aunit_id\x18\x01 \x01(\rR\x06unitId\x12&\n" +
+	"\x06events\x18\x02 \x03(\v2\x0e.ocap.v1.EventR\x06events\"\xe6\x02\n" +
 	"\tEntityDef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\rR\x02id\x12'\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x13.ocap.v1.EntityTypeR\x04type\x12\x12\n" +
@@ -1348,38 +1421,40 @@ func file_ocap_proto_rawDescGZIP() []byte {
 }
 
 var file_ocap_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_ocap_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_ocap_proto_goTypes = []any{
-	(EntityType)(0),        // 0: ocap.v1.EntityType
-	(Side)(0),              // 1: ocap.v1.Side
-	(*Manifest)(nil),       // 2: ocap.v1.Manifest
-	(*EntityDef)(nil),      // 3: ocap.v1.EntityDef
-	(*FiredFrame)(nil),     // 4: ocap.v1.FiredFrame
-	(*TimeSample)(nil),     // 5: ocap.v1.TimeSample
-	(*Chunk)(nil),          // 6: ocap.v1.Chunk
-	(*Frame)(nil),          // 7: ocap.v1.Frame
-	(*EntityState)(nil),    // 8: ocap.v1.EntityState
-	(*Event)(nil),          // 9: ocap.v1.Event
-	(*MarkerDef)(nil),      // 10: ocap.v1.MarkerDef
-	(*MarkerPosition)(nil), // 11: ocap.v1.MarkerPosition
+	(EntityType)(0),              // 0: ocap.v1.EntityType
+	(Side)(0),                    // 1: ocap.v1.Side
+	(*Manifest)(nil),             // 2: ocap.v1.Manifest
+	(*PlayerSnapshotSeries)(nil), // 3: ocap.v1.PlayerSnapshotSeries
+	(*EntityDef)(nil),            // 4: ocap.v1.EntityDef
+	(*FiredFrame)(nil),           // 5: ocap.v1.FiredFrame
+	(*TimeSample)(nil),           // 6: ocap.v1.TimeSample
+	(*Chunk)(nil),                // 7: ocap.v1.Chunk
+	(*Frame)(nil),                // 8: ocap.v1.Frame
+	(*EntityState)(nil),          // 9: ocap.v1.EntityState
+	(*Event)(nil),                // 10: ocap.v1.Event
+	(*MarkerDef)(nil),            // 11: ocap.v1.MarkerDef
+	(*MarkerPosition)(nil),       // 12: ocap.v1.MarkerPosition
 }
 var file_ocap_proto_depIdxs = []int32{
-	3,  // 0: ocap.v1.Manifest.entities:type_name -> ocap.v1.EntityDef
-	5,  // 1: ocap.v1.Manifest.times:type_name -> ocap.v1.TimeSample
-	9,  // 2: ocap.v1.Manifest.events:type_name -> ocap.v1.Event
-	10, // 3: ocap.v1.Manifest.markers:type_name -> ocap.v1.MarkerDef
-	0,  // 4: ocap.v1.EntityDef.type:type_name -> ocap.v1.EntityType
-	1,  // 5: ocap.v1.EntityDef.side:type_name -> ocap.v1.Side
-	4,  // 6: ocap.v1.EntityDef.frames_fired:type_name -> ocap.v1.FiredFrame
-	7,  // 7: ocap.v1.Chunk.frames:type_name -> ocap.v1.Frame
-	8,  // 8: ocap.v1.Frame.entities:type_name -> ocap.v1.EntityState
-	1,  // 9: ocap.v1.MarkerDef.side:type_name -> ocap.v1.Side
-	11, // 10: ocap.v1.MarkerDef.positions:type_name -> ocap.v1.MarkerPosition
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	4,  // 0: ocap.v1.Manifest.entities:type_name -> ocap.v1.EntityDef
+	6,  // 1: ocap.v1.Manifest.times:type_name -> ocap.v1.TimeSample
+	10, // 2: ocap.v1.Manifest.events:type_name -> ocap.v1.Event
+	11, // 3: ocap.v1.Manifest.markers:type_name -> ocap.v1.MarkerDef
+	10, // 4: ocap.v1.PlayerSnapshotSeries.events:type_name -> ocap.v1.Event
+	0,  // 5: ocap.v1.EntityDef.type:type_name -> ocap.v1.EntityType
+	1,  // 6: ocap.v1.EntityDef.side:type_name -> ocap.v1.Side
+	5,  // 7: ocap.v1.EntityDef.frames_fired:type_name -> ocap.v1.FiredFrame
+	8,  // 8: ocap.v1.Chunk.frames:type_name -> ocap.v1.Frame
+	9,  // 9: ocap.v1.Frame.entities:type_name -> ocap.v1.EntityState
+	1,  // 10: ocap.v1.MarkerDef.side:type_name -> ocap.v1.Side
+	12, // 11: ocap.v1.MarkerDef.positions:type_name -> ocap.v1.MarkerPosition
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_ocap_proto_init() }
@@ -1393,7 +1468,7 @@ func file_ocap_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ocap_proto_rawDesc), len(file_ocap_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -50,8 +50,10 @@
   /* ── Side colors: map markers ── */
   --side-blufor: #00a8ff;  --side-opfor: #ff0000;
   --side-ind: #00cc00;     --side-civ: #c900ff;
+  --side-virtual: #c9a227;
   --side-blufor-dark: #004D99;  --side-opfor-dark: #800000;
   --side-ind-dark: #007F00;     --side-civ-dark: #650080;
+  --side-virtual-dark: #8A7018;
   --color-dead: #333333;  --color-hit: #FF8800;
 
   /* ── Spacing scale ── */
@@ -80,5 +82,5 @@
   /* ── Playback layout ── */
   --pb-top-height: 48px;
   --pb-bottom-height: 94px;
-  --pb-panel-width: 370px;
+  --pb-panel-width: 420px;
 }

@@ -142,6 +142,52 @@ func TestConverter_Convert(t *testing.T) {
 	assert.Equal(t, uint32(5), chunk1.FrameCount)
 }
 
+// TestConverter_CleansStaleOutput verifies that converting into a directory
+// that already contains output from a previous conversion does not leave stale
+// files behind. Without this, re-converting (e.g. a re-uploaded recording that
+// reuses a filename) merges new chunks into an old directory, leaving orphaned
+// high-index chunks that corrupt playback.
+func TestConverter_CleansStaleOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "test.json")
+	outputPath := filepath.Join(tmpDir, "output")
+
+	testData := map[string]interface{}{
+		"worldName":    "Altis",
+		"missionName":  "Stale Test",
+		"endFrame":     2,
+		"captureDelay": 1.0,
+		"entities": []interface{}{
+			map[string]interface{}{
+				"id": 0, "type": "unit", "name": "P", "side": "WEST",
+				"startFrameNum": 0, "isPlayer": 1.0,
+				"positions": []interface{}{
+					[]interface{}{[]interface{}{100.0, 200.0, 0.0}, 0.0, 1.0, 1.0, "P", 1.0},
+					[]interface{}{[]interface{}{101.0, 201.0, 0.0}, 0.0, 1.0, 1.0, "P", 1.0},
+					[]interface{}{[]interface{}{102.0, 202.0, 0.0}, 0.0, 1.0, 1.0, "P", 1.0},
+				},
+			},
+		},
+		"events":  []interface{}{},
+		"Markers": []interface{}{},
+		"times":   []interface{}{},
+	}
+	jsonData, err := json.Marshal(testData)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(inputPath, jsonData, 0644))
+
+	// Pre-seed the output directory with a stale chunk from a "previous" run.
+	require.NoError(t, os.MkdirAll(filepath.Join(outputPath, "chunks"), 0755))
+	staleChunk := filepath.Join(outputPath, "chunks", "0099.pb")
+	require.NoError(t, os.WriteFile(staleChunk, []byte("stale"), 0644))
+
+	converter := NewConverter(10)
+	require.NoError(t, converter.Convert(context.Background(), inputPath, outputPath))
+
+	_, err = os.Stat(staleChunk)
+	assert.True(t, os.IsNotExist(err), "stale chunk from previous conversion must be removed")
+}
+
 func TestConverter_VehicleCrew(t *testing.T) {
 	tmpDir := t.TempDir()
 	inputPath := filepath.Join(tmpDir, "test.json")

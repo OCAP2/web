@@ -3,6 +3,8 @@ import type { JSX, Accessor } from "solid-js";
 import { useEngine } from "../../../hooks/useEngine";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
+import { ExplosionEvent, RadioTransmissionEvent } from "../../../playback/events/supportEvents";
+import { bookmarks } from "../bookmarks";
 import { ConnectEvent } from "../../../playback/events/connectEvent";
 import { EndMissionEvent } from "../../../playback/events/endMissionEvent";
 import { GeneralMissionEvent } from "../../../playback/events/generalEvent";
@@ -20,6 +22,10 @@ interface HeatmapBucket {
   frameEnd: number;
   kills: number;
   hits: number;
+  /** Detonations: the loudest thing on the map that is not a hit. */
+  explosions: number;
+  /** Radio key-downs, so a busy net reads as activity in its own right. */
+  comms: number;
   other: number;
 }
 
@@ -109,6 +115,8 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
       frameEnd: start + ((i + 1) / BUCKET_COUNT) * span,
       kills: 0,
       hits: 0,
+      explosions: 0,
+      comms: 0,
       other: 0,
     }));
 
@@ -118,12 +126,21 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
       if (ev instanceof HitKilledEvent) {
         if (ev.type === "killed") buckets[idx].kills++;
         else buckets[idx].hits++;
+      } else if (ev instanceof ExplosionEvent) {
+        buckets[idx].explosions++;
+      } else if (ev instanceof RadioTransmissionEvent) {
+        // Only the key-down: counting the release too would double every
+        // transmission and make a chatty net look twice as busy as it was.
+        if (ev.isStart) buckets[idx].comms++;
       } else {
         buckets[idx].other++;
       }
     }
 
-    const maxVal = Math.max(1, ...buckets.map(b => b.kills + b.hits + b.other));
+    const maxVal = Math.max(
+      1,
+      ...buckets.map((b) => b.kills + b.hits + b.explosions + b.comms + b.other),
+    );
     return { buckets, maxVal };
   });
 
@@ -254,12 +271,15 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
         <div class={styles.heatmapContainer}>
           <For each={heatmapData().buckets}>
             {(bucket) => {
-              const total = bucket.kills + bucket.hits + bucket.other;
+              const total =
+                bucket.kills + bucket.hits + bucket.explosions + bucket.comms + bucket.other;
               if (total === 0) return <div class={styles.heatmapBucketEmpty} />;
               const h = Math.max(2, (total / heatmapData().maxVal) * HEATMAP_HEIGHT);
               const killH = (bucket.kills / total) * h;
               const hitH = (bucket.hits / total) * h;
-              const otherH = h - killH - hitH;
+              const explosionH = (bucket.explosions / total) * h;
+              const commsH = (bucket.comms / total) * h;
+              const otherH = h - killH - hitH - explosionH - commsH;
               const isPast = () => bucket.frameEnd <= engine.currentFrame();
               const isOutsideFocus = () => {
                 if (constrained()) return false; // everything visible IS the focus
@@ -277,6 +297,12 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
                 >
                   <Show when={bucket.other > 0}>
                     <div class={styles.heatmapOther} style={{ height: `${otherH}px` }} />
+                  </Show>
+                  <Show when={bucket.comms > 0}>
+                    <div class={styles.heatmapComms} style={{ height: `${commsH}px` }} />
+                  </Show>
+                  <Show when={bucket.explosions > 0}>
+                    <div class={styles.heatmapExplosion} style={{ height: `${explosionH}px` }} />
                   </Show>
                   <Show when={bucket.hits > 0}>
                     <div class={styles.heatmapHit} style={{ height: `${hitH}px` }} />
@@ -314,6 +340,30 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
                 data-testid="event-marker"
                 class={styles.eventMarker}
                 style={{ left: `${pct()}%` }}
+              />
+            );
+          }}
+        </For>
+
+        {/* Bookmark ticks — the viewer's own marks, above the kill ticks */}
+        <For each={bookmarks()}>
+          {(bookmark) => {
+            if (constrained()) {
+              const f = props.focusRange();
+              if (f && (bookmark.frame < f.inFrame || bookmark.frame > f.outFrame)) return null;
+            }
+            return (
+              <div
+                data-testid="bookmark-marker"
+                class={styles.bookmarkMarker}
+                style={{ left: `${frameToPct(bookmark.frame)}%` }}
+                title={bookmark.label}
+                onClick={(e) => {
+                  // The track behind this seeks on click; without stopping here
+                  // a bookmark click would both jump and re-scrub to the cursor.
+                  e.stopPropagation();
+                  engine.seekTo(bookmark.frame);
+                }}
               />
             );
           }}

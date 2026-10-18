@@ -39,6 +39,8 @@ export interface EntityMarkerOpts {
   name: string;
   isPlayer: boolean;
   crew?: CrewInfo;
+  fov?: number;
+  pitch?: number;
 }
 
 export interface EntityMarkerState {
@@ -53,20 +55,31 @@ export interface EntityMarkerState {
   /** When true, show the "hit" flash icon instead of the normal side icon. */
   hit?: boolean;
   crew?: CrewInfo;
+  /** Arma getObjectFOV when drawing a Zeus camera cone. */
+  fov?: number;
+  pitch?: number;
 }
 
 // --------------- Briefing markers ---------------
 
 export interface BriefingMarkerDef {
-  shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE";
+  shape: "ICON" | "ELLIPSE" | "RECTANGLE" | "POLYLINE" | "POLYGON";
   type: string;
   color: string;
   text?: string;
   side: string;
   size?: [number, number];
   brush?: string;
+  /** Leaflet dashArray, used for the simple-range ring under approximate coverage. */
+  dashArray?: string;
   /** Which layer group to add this marker to. Defaults to "briefingMarkers". */
   layer?: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
+  /**
+   * Extra CSS class for a text-only ("Empty") label, appended to
+   * `marker-text-label`. Lets one kind of label restyle itself (size, spacing)
+   * without touching sector names.
+   */
+  textClass?: string;
 }
 
 export interface BriefingMarkerState {

@@ -87,6 +87,57 @@ describe("briefing marker SVG renderer", () => {
     expect(polyline.options.renderer).toBe(svgRenderer);
   });
 
+  it("creates POLYGON with the SVG renderer", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "POLYGON",
+      type: "ocap_radio_coverage",
+      color: "00AAFF",
+      side: "WEST",
+      brush: "SolidBorder",
+    });
+
+    const polygon = getInternalLayer(handle) as any;
+    expect(polygon.options.renderer).toBe((renderer as any).svgRenderer);
+  });
+
+  it("updateBriefingMarker sets POLYGON vertices from state.points", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "POLYGON",
+      type: "ocap_radio_coverage",
+      color: "00AAFF",
+      side: "WEST",
+      brush: "SolidBorder",
+    });
+    const polygon = getInternalLayer(handle) as L.Polygon;
+    const setLatLngs = vi.spyOn(polygon, "setLatLngs");
+
+    renderer.updateBriefingMarker(handle, {
+      position: [1000, 1000],
+      direction: 0,
+      alpha: 0.25,
+      points: [[0, 0], [100, 0], [100, 100]],
+    });
+
+    expect(setLatLngs).toHaveBeenCalled();
+    const latlngs = setLatLngs.mock.calls[0][0] as L.LatLng[];
+    expect(latlngs).toHaveLength(3);
+  });
+
+  it("stores dashArray on ELLIPSE rings", () => {
+    const handle = renderer.createBriefingMarker({
+      shape: "ELLIPSE",
+      type: "ocap_radio_range",
+      color: "FF0000",
+      side: "WEST",
+      size: [100, 100],
+      brush: "Border",
+      dashArray: "8 8",
+    });
+    const polygon = getInternalLayer(handle) as any;
+    expect(polygon.options.dashArray).toBe("8 8");
+    expect(getInternal(handle).dashArray).toBe("8 8");
+  });
+
   it("ICON markers use default renderer (not SVG)", () => {
     const handle = renderer.createBriefingMarker({
       shape: "ICON",

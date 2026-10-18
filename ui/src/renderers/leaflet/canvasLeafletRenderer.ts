@@ -84,6 +84,7 @@ export class CanvasLeafletRenderer extends LeafletRenderer {
       nameDisplayMode: () => this.nameDisplayMode(),
       layerVisible: () => this.layerVisibility().entities ?? true,
       projectileLayerVisible: () => this.layerVisibility().projectileMarkers ?? true,
+      projectileLabelsVisible: () => this.projectileLabelsVisible(),
       worldSize: world.worldSize,
       latLngToArma: (ll) => this.latLngToArma(ll),
     });

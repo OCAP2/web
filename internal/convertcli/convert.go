@@ -1,9 +1,10 @@
-package main
+package convertcli
 
 import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,8 +14,32 @@ import (
 	"github.com/OCAP2/web/internal/storage"
 )
 
-func runConvert(args []string) error {
-	fs := flag.NewFlagSet("convert", flag.ExitOnError)
+// Run is the entry point for `ocap-webserver convert ...`. Returns the process exit code.
+func Run(args []string) int {
+	return run(args, defaultDeps())
+}
+
+// deps bundles injectable dependencies for the convert CLI.
+type deps struct {
+	loadSettings func() (server.Setting, error)
+	newRepo      func(dbPath string) (*server.RepoOperation, error)
+	stdout       io.Writer
+	stderr       io.Writer
+}
+
+func defaultDeps() deps {
+	return deps{
+		loadSettings: server.NewSetting,
+		newRepo:      server.NewRepoOperation,
+		stdout:       os.Stdout,
+		stderr:       os.Stderr,
+	}
+}
+
+func run(args []string, d deps) int {
+	fs := flag.NewFlagSet("convert", flag.ContinueOnError)
+	fs.SetOutput(d.stderr)
+
 	inputFile := fs.String("input", "", "Convert a single JSON file")
 	all := fs.Bool("all", false, "Convert all pending operations")
 	status := fs.Bool("status", false, "Show conversion status of all operations")
@@ -23,73 +48,99 @@ func runConvert(args []string) error {
 	chunkSize := fs.Uint("chunk-size", 300, "Frames per chunk (default: 300)")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s convert [options]\n\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "Options:\n")
+		fmt.Fprintf(d.stderr, "Usage: convert [options]\n\n")
+		fmt.Fprintf(d.stderr, "Options:\n")
 		fs.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s convert --input mission.json.gz       Convert to protobuf\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --all                         Convert all pending\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --status                      Show conversion status\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s convert --set-format protobuf --id 1  Set format for operation\n", os.Args[0])
+		fmt.Fprintf(d.stderr, "\nExamples:\n")
+		fmt.Fprintf(d.stderr, "  convert --input mission.json.gz       Convert to protobuf\n")
+		fmt.Fprintf(d.stderr, "  convert --all                         Convert all pending\n")
+		fmt.Fprintf(d.stderr, "  convert --status                      Show conversion status\n")
+		fmt.Fprintf(d.stderr, "  convert --set-format protobuf --id 1  Set format for operation\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		// ContinueOnError already wrote the error to d.stderr via fs.SetOutput
+		return 2
 	}
 
-	setting, err := server.NewSetting()
+	setting, err := d.loadSettings()
 	if err != nil {
-		return fmt.Errorf("setting: %w", err)
+		fmt.Fprintf(d.stderr, "error loading settings: %v\n", err)
+		return 2
 	}
 
-	repo, err := server.NewRepoOperation(setting.DB)
+	repo, err := d.newRepo(setting.DB)
 	if err != nil {
-		return fmt.Errorf("operation: %w", err)
+		fmt.Fprintf(d.stderr, "error creating operation repo: %v\n", err)
+		return 2
 	}
 
 	ctx := context.Background()
 
 	switch {
 	case *status:
-		return showConversionStatus(ctx, repo)
+		if err := showConversionStatus(ctx, repo, d.stdout); err != nil {
+			fmt.Fprintf(d.stderr, "error: %v\n", err)
+			return 1
+		}
+		return 0
 
 	case *setFormat != "":
 		if *opID == 0 {
-			return fmt.Errorf("--id is required when using --set-format")
+			fmt.Fprintf(d.stderr, "error: --id is required when using --set-format\n")
+			return 1
 		}
 		if err := repo.UpdateStorageFormat(ctx, *opID, *setFormat); err != nil {
-			return fmt.Errorf("update format: %w", err)
+			fmt.Fprintf(d.stderr, "error: update format: %v\n", err)
+			return 1
 		}
 		log.Printf("Updated operation %d to format: %s", *opID, *setFormat)
-		return showConversionStatus(ctx, repo)
+		if err := showConversionStatus(ctx, repo, d.stdout); err != nil {
+			fmt.Fprintf(d.stderr, "error: %v\n", err)
+			return 1
+		}
+		return 0
 
 	case *inputFile != "":
-		return convertSingleFile(ctx, repo, *inputFile, setting.Data, uint32(*chunkSize))
+		if err := convertSingleFile(ctx, repo, *inputFile, setting.Data, uint32(*chunkSize)); err != nil {
+			fmt.Fprintf(d.stderr, "error: %v\n", err)
+			return 1
+		}
+		return 0
 
 	case *all:
-		return convertAll(ctx, repo, setting, uint32(*chunkSize))
+		if err := convertAll(ctx, repo, setting, uint32(*chunkSize)); err != nil {
+			fmt.Fprintf(d.stderr, "error: %v\n", err)
+			return 1
+		}
+		fmt.Fprintln(d.stdout)
+		if err := showConversionStatus(ctx, repo, d.stdout); err != nil {
+			fmt.Fprintf(d.stderr, "error: %v\n", err)
+			return 1
+		}
+		return 0
 
 	default:
 		fs.Usage()
-		return nil
+		return 0
 	}
 }
 
-func showConversionStatus(ctx context.Context, repo *server.RepoOperation) error {
+func showConversionStatus(ctx context.Context, repo *server.RepoOperation, w io.Writer) error {
 	ops, err := repo.Select(ctx, server.Filter{})
 	if err != nil {
 		return fmt.Errorf("select operations: %w", err)
 	}
 
-	fmt.Printf("%-6s %-30s %-10s %-12s\n", "ID", "Mission Name", "Format", "Status")
-	fmt.Println(string(make([]byte, 62)))
+	fmt.Fprintf(w, "%-6s %-30s %-10s %-12s\n", "ID", "Mission Name", "Format", "Status")
+	fmt.Fprintln(w, string(make([]byte, 62)))
 
 	for _, op := range ops {
 		name := op.MissionName
 		if len(name) > 28 {
 			name = name[:28] + ".."
 		}
-		fmt.Printf("%-6d %-30s %-10s %-12s\n",
+		fmt.Fprintf(w, "%-6d %-30s %-10s %-12s\n",
 			op.ID, name, op.StorageFormat, op.ConversionStatus)
 	}
 
@@ -168,8 +219,5 @@ func convertAll(ctx context.Context, repo *server.RepoOperation, setting server.
 		}
 	}
 
-	// Show final status
-	fmt.Println()
-	return showConversionStatus(ctx, repo)
+	return nil
 }
-

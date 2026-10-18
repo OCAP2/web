@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OCAP2/web/internal/storage"
 	"github.com/go-fuego/fuego"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -344,21 +345,34 @@ func TestHandleStream_FullLifecycle(t *testing.T) {
 
 	// Verify a .json.gz file was written
 	files, _ := filepath.Glob(filepath.Join(dir, "*.json.gz"))
-	assert.NotEmpty(t, files, "expected a .json.gz file to be written")
+	require.Len(t, files, 1, "expected a legacy JSON backup to be written")
+	backupName := strings.TrimSuffix(filepath.Base(files[0]), ".json.gz")
+	legacy, err := storage.NewJSONEngine(dir).GetManifest(context.Background(), backupName)
+	require.NoError(t, err)
+	assert.Equal(t, "Lifecycle Test", legacy.MissionName)
+	// Legacy JSON uses entity IDs as array indexes, including empty slots.
+	require.Len(t, legacy.Entities, 2)
+	assert.Equal(t, uint32(1), legacy.Entities[1].ID)
+	assert.Equal(t, "TestPlayer", legacy.Entities[1].Name)
 
 	// Verify operation was stored in DB
 	ops, err := hdlr.repoOperation.Select(context.Background(), Filter{})
 	require.NoError(t, err)
-	found := false
-	for _, op := range ops {
-		if op.MissionName == "Lifecycle Test" {
-			found = true
-			assert.Equal(t, "altis", op.WorldName)
-			assert.Equal(t, ConversionStatusCompleted, op.ConversionStatus)
-			break
-		}
-	}
-	assert.True(t, found, "expected finalized operation in DB")
+	require.Len(t, ops, 1, "finalization must update the streaming row")
+	op := ops[0]
+	assert.Equal(t, "Lifecycle Test", op.MissionName)
+	assert.Equal(t, "altis", op.WorldName)
+	assert.Equal(t, ConversionStatusCompleted, op.ConversionStatus)
+	assert.Equal(t, "protobuf", op.StorageFormat)
+	assert.Equal(t, uint32(storage.SchemaVersionV2), op.SchemaVersion)
+	assert.Equal(t, 1, op.PlayerCount)
+	assert.Equal(t, 1, op.SideComposition["WEST"].Players)
+	assert.FileExists(t, filepath.Join(dir, op.Filename, "manifest.pb"))
+
+	// Upstream's revision-based backfill must not replace freshly finalized stats.
+	backfill, err := hdlr.repoOperation.SelectStatsBackfill(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, backfill)
 }
 
 func TestHandleStream_CrashDisconnectFinalizes(t *testing.T) {

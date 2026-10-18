@@ -16,6 +16,120 @@ afterEach(() => {
 });
 
 describe("StatsTab", () => {
+  // Server FPS moved to its own tab with the graph; Stats must not show a
+  // second, partial copy of it.
+  it("leaves server FPS to the FPS tab even when samples exist", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest(
+      [unitDef({ id: 1, side: "WEST" })],
+      [
+        { frameNum: 0, type: "serverFps", fps: 40 },
+        { frameNum: 60, type: "serverFps", fps: 20 },
+      ],
+      60,
+    ));
+    engine.seekTo(60);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.queryByText("Server FPS")).toBeNull();
+    expect(screen.queryByText("Median")).toBeNull();
+    expect(screen.getByText("Force Summary")).toBeTruthy();
+  });
+
+  it("shows playhead-scoped weather after the leaderboard when samples exist", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest(
+      [unitDef({ id: 1, name: "Alpha", side: "WEST", isPlayer: true })],
+      [
+        killedEvent(10, 1, 1),
+        {
+          frameNum: 0,
+          type: "weather",
+          payload: {
+            overcast: 0.1,
+            rain: 0,
+            fog: 0,
+            moonPhase: 0,
+            ace: false,
+          },
+        },
+        {
+          frameNum: 60,
+          type: "weather",
+          payload: {
+            overcast: 0.42,
+            rain: 0.1,
+            fog: 0.2,
+            windSpeed: 3.4,
+            windDir: 247,
+            humidity: 0.68,
+            moonPhase: 0.81,
+            temperature: 16.3,
+            ace: true,
+          },
+        },
+        {
+          frameNum: 120,
+          type: "weather",
+          payload: {
+            overcast: 0.9,
+            rain: 1,
+            humidity: 1,
+            moonPhase: 1,
+            ace: true,
+          },
+        },
+      ],
+      180,
+    ));
+    engine.seekTo(60);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("Weather")).toBeTruthy();
+    expect(screen.getByText("ACE")).toBeTruthy();
+    expect(screen.getByText("42%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
+    expect(screen.getByText("20%")).toBeTruthy();
+    expect(screen.getByText("3.4 m/s")).toBeTruthy();
+    expect(screen.getByText("Wind SW 247°")).toBeTruthy();
+    expect(screen.getByText("68%")).toBeTruthy();
+    expect(screen.getByText("16.3 °C")).toBeTruthy();
+    expect(screen.getByText("Gibbous")).toBeTruthy();
+    expect(screen.queryByText("Full Moon")).toBeNull();
+    expect(screen.queryByText("90%")).toBeNull();
+
+    const forceHeading = screen.getByText("Force Summary");
+    const leaderboardHeading = screen.getByText("Leaderboard");
+    const weatherHeading = screen.getByText("Weather");
+    expect(forceHeading.compareDocumentPosition(leaderboardHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(leaderboardHeading.compareDocumentPosition(weatherHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("hides weather for backwards-compatible recordings without samples", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest([unitDef({ id: 1, side: "WEST" })]));
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.queryByText("Weather")).toBeNull();
+    expect(screen.queryByText("Overcast")).toBeNull();
+    expect(screen.getByText("Force Summary")).toBeTruthy();
+  });
+
   it("shows force cards only for sides with units", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(

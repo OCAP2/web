@@ -715,7 +715,11 @@ func TestParserV1_parseEvent_EdgeCases(t *testing.T) {
 			50.5, // distance as float
 		})
 		require.NotNil(t, evt)
+		assert.Equal(t, "explosion", evt.Type)
+		assert.Equal(t, uint32(5), evt.SourceID)
+		assert.Equal(t, uint32(10), evt.TargetID)
 		assert.Equal(t, float32(50.5), evt.Distance)
+		assert.Empty(t, evt.Message)
 	})
 
 	t.Run("event with only source (no target)", func(t *testing.T) {

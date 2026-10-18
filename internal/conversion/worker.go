@@ -3,6 +3,7 @@ package conversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -123,7 +124,7 @@ func (w *Worker) Start(ctx context.Context) {
 	w.cleanupInterrupted(ctx)
 
 	// Backfill stats for existing completed operations
-	w.backfillStats(ctx)
+	w.BackfillStats(ctx)
 
 	// Run immediately on start
 	w.processOnce(ctx)
@@ -268,7 +269,35 @@ func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKil
 		}
 	}
 
+	// Zeus operators are not unit entities — they arrive as zeusEntity events
+	// and play back on the VIRTUAL side. Count unique curatorIds so the
+	// recording-selector dashboard can show that faction.
+	seenZeus := make(map[uint32]struct{})
 	for _, evt := range manifest.Events {
+		if evt.Type == "zeusEntity" {
+			var payload struct {
+				CuratorID uint32 `json:"curatorId"`
+				Name      string `json:"name"`
+			}
+			if err := json.Unmarshal([]byte(evt.Message), &payload); err != nil {
+				continue
+			}
+			if _, dup := seenZeus[payload.CuratorID]; dup {
+				continue
+			}
+			seenZeus[payload.CuratorID] = struct{}{}
+			sc := sides["VIRTUAL"]
+			sc.Units++
+			sc.Players++
+			sides["VIRTUAL"] = sc
+			if payload.Name == "" || !seenPlayerName[payload.Name] {
+				if payload.Name != "" {
+					seenPlayerName[payload.Name] = true
+				}
+				playerCount++
+			}
+			continue
+		}
 		if evt.Type == "killed" {
 			killCount++
 			if entityIsPlayer[evt.SourceID] {
@@ -291,8 +320,36 @@ func computeStats(manifest *storage.Manifest) (playerCount, killCount, playerKil
 	return
 }
 
-// backfillStats populates stats for completed operations that don't have them yet.
-func (w *Worker) backfillStats(ctx context.Context) {
+// ComputeStatsFor derives and stores the dashboard stats for one operation
+// without converting it.
+//
+// The stats are read out of the manifest and have nothing to do with the
+// protobuf format, so this deliberately works on an unconverted recording too:
+// the protobuf engine is tried first and a plain `.json.gz` falls back to the
+// JSON engine. That is what lets a deployment with conversion switched off still
+// show force composition and kill counts.
+func (w *Worker) ComputeStatsFor(ctx context.Context, id int64, filename string) error {
+	manifest, err := w.engine.GetManifest(ctx, filename)
+	if err != nil {
+		jsonEngine := storage.NewJSONEngine(w.dataDir)
+		manifest, err = jsonEngine.GetManifest(ctx, filename)
+		if err != nil {
+			return fmt.Errorf("read manifest for stats: %w", err)
+		}
+	}
+
+	playerCount, killCount, playerKillCount, sides := computeStats(manifest)
+	if err := w.repo.UpdateOperationStats(ctx, id, playerCount, killCount, playerKillCount, sides); err != nil {
+		return fmt.Errorf("store stats: %w", err)
+	}
+	return nil
+}
+
+// BackfillStats populates stats for completed operations that don't have them
+// yet. Exported because it has to run whether or not conversion is enabled --
+// with conversion off it is the only thing that ever fills in stats for
+// recordings uploaded before the fix that added the upload-time path.
+func (w *Worker) BackfillStats(ctx context.Context) {
 	ops, err := w.repo.SelectStatsBackfill(ctx)
 	if err != nil {
 		slog.Error("failed to select operations for stats backfill", "error", err)
@@ -305,22 +362,14 @@ func (w *Worker) backfillStats(ctx context.Context) {
 	slog.Info("backfilling operation stats", "count", len(ops))
 	filled := 0
 	for _, op := range ops {
-		// Try protobuf engine first, fall back to JSON
-		manifest, err := w.engine.GetManifest(ctx, op.Filename)
-		if err != nil {
-			jsonEngine := storage.NewJSONEngine(w.dataDir)
-			manifest, err = jsonEngine.GetManifest(ctx, op.Filename)
-			if err != nil {
-				slog.Debug("skipping stats backfill", "operation_id", op.ID, "error", err)
-				continue
-			}
+		select {
+		case <-ctx.Done():
+			return
+		default:
 		}
-		playerCount, killCount, playerKillCount, sides := computeStats(manifest)
-		if playerCount == 0 && killCount == 0 {
-			continue
-		}
-		if err := w.repo.UpdateOperationStats(ctx, op.ID, playerCount, killCount, playerKillCount, sides); err != nil {
-			slog.Warn("failed to backfill stats", "operation_id", op.ID, "error", err)
+
+		if err := w.ComputeStatsFor(ctx, op.ID, op.Filename); err != nil {
+			slog.Debug("skipping stats backfill", "operation_id", op.ID, "error", err)
 			continue
 		}
 		filled++

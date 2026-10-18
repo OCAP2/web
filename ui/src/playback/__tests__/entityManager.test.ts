@@ -4,7 +4,7 @@ import { Unit } from "../entities/unit";
 import { Vehicle } from "../entities/vehicle";
 import { Group } from "../entities/group";
 import { EntityManager } from "../entityManager";
-import type { EntityDef, EntityState } from "../../data/types";
+import type { EntityDef, EntityState, Side } from "../../data/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,12 +17,14 @@ function makeState(
   dir: number,
   alive: 0 | 1 | 2 = 1,
   isInVehicle = false,
+  side?: Side,
 ): EntityState {
   return {
     position: [x, y],
     direction: dir,
     alive,
     isInVehicle,
+    ...(side ? { side } : {}),
   };
 }
 
@@ -53,6 +55,21 @@ function vehicleDef(overrides: Partial<EntityDef> = {}): EntityDef {
     isPlayer: false,
     startFrame: 0,
     endFrame: 200,
+    ...overrides,
+  };
+}
+
+/** Build an empty placeholder EntityDef, as exported for IDs with no entity. */
+function placeholderDef(overrides: Partial<EntityDef> = {}): EntityDef {
+  return {
+    id: 0,
+    type: "unknown",
+    name: "",
+    side: "CIV",
+    groupName: "",
+    isPlayer: false,
+    startFrame: 0,
+    endFrame: 0,
     ...overrides,
   };
 }
@@ -187,6 +204,11 @@ describe("Unit", () => {
       const u = new Unit(1, "Test", "man", 0, 10, "CIV", true, "G1");
       expect(u.sideClass).toBe("civ");
     });
+
+    it("VIRTUAL -> virtual", () => {
+      const u = new Unit(1, "Zeus", "zeus", 0, 10, "VIRTUAL", true, "Zeus");
+      expect(u.sideClass).toBe("virtual");
+    });
   });
 
   describe("sideColour", () => {
@@ -239,6 +261,60 @@ describe("Unit", () => {
     it("initializes isInVehicle to false", () => {
       const u = new Unit(1, "Test", "man", 0, 10, "WEST", false, "G1");
       expect(u.isInVehicle).toBe(false);
+    });
+  });
+
+  describe("sideAtFrame", () => {
+    it("returns the spawn-time side when positions are missing", () => {
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1");
+      expect(u.sideAtFrame(0)).toBe("WEST");
+      expect(u.sideAtFrame(5)).toBe("WEST");
+    });
+
+    it("returns the spawn-time side when the frame has no per-frame side", () => {
+      const positions: EntityState[] = [makeState(100, 200, 90, 1)];
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1", "", positions);
+      expect(u.sideAtFrame(0)).toBe("WEST");
+    });
+
+    it("returns the per-frame side when it differs from spawn-time side", () => {
+      const positions: EntityState[] = [
+        makeState(100, 200, 90, 1, false, "WEST"),
+        makeState(110, 210, 95, 1, false, "EAST"),
+      ];
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1", "", positions);
+      expect(u.sideAtFrame(0)).toBe("WEST");
+      expect(u.sideAtFrame(1)).toBe("EAST");
+    });
+
+    it("falls back to spawn-time side for frames outside the positions array", () => {
+      const positions: EntityState[] = [makeState(100, 200, 90, 1, false, "EAST")];
+      const u = new Unit(1, "Test", "man", 10, 20, "WEST", true, "G1", "", positions);
+      expect(u.sideAtFrame(0)).toBe("WEST");
+      expect(u.sideAtFrame(10)).toBe("EAST");
+    });
+  });
+
+  describe("roleAtFrame", () => {
+    it("returns the CREATE role when positions are missing", () => {
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1", "Medic");
+      expect(u.roleAtFrame(0)).toBe("Medic");
+    });
+
+    it("prefers the per-frame getUnitType over CREATE roleDescription", () => {
+      const positions: EntityState[] = [
+        { ...makeState(100, 200, 90, 1), role: "MG" },
+        { ...makeState(110, 210, 95, 1), role: "AT" },
+      ];
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1", "Spotter", positions);
+      expect(u.roleAtFrame(0)).toBe("MG");
+      expect(u.roleAtFrame(1)).toBe("AT");
+    });
+
+    it("falls back to CREATE role when the frame has no per-frame role", () => {
+      const positions: EntityState[] = [makeState(100, 200, 90, 1)];
+      const u = new Unit(1, "Test", "man", 0, 10, "WEST", true, "G1", "Leader", positions);
+      expect(u.roleAtFrame(0)).toBe("Leader");
     });
   });
 
@@ -298,6 +374,25 @@ describe("Unit", () => {
       const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
       expect(u.firedOnFrame(5)).toEqual([[500, 600], [510, 620], [520, 640]]);
       expect(u.firedOnFrame(10)).toEqual([[700, 800]]);
+    });
+  });
+
+  describe("firedCountThrough", () => {
+    it("counts shots at or before the given frame", () => {
+      const framesFired: Array<[number, [number, number]]> = [
+        [5, [500, 600]],
+        [5, [510, 620]],
+        [12, [700, 800]],
+      ];
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", framesFired);
+      expect(u.firedCountThrough(4)).toBe(0);
+      expect(u.firedCountThrough(5)).toBe(2);
+      expect(u.firedCountThrough(12)).toBe(3);
+    });
+
+    it("returns 0 when the unit has no fire log", () => {
+      const u = new Unit(1, "Test", "man", 0, 20, "WEST", true, "G1", "", null, "man", null);
+      expect(u.firedCountThrough(10)).toBe(0);
     });
   });
 });
@@ -457,6 +552,20 @@ describe("EntityManager", () => {
       expect(entity.name).toBe("Rifleman");
     });
 
+    it("creates a Unit for type 'zeus'", () => {
+      const entity = mgr.addEntity(unitDef({
+        id: 90,
+        type: "zeus",
+        name: "Danny",
+        side: "VIRTUAL",
+        groupName: "Zeus",
+        role: "Zeus",
+      }));
+      expect(entity).toBeInstanceOf(Unit);
+      expect(entity.iconType).toBe("zeus");
+      expect((entity as Unit).side).toBe("VIRTUAL");
+    });
+
     it("creates a Vehicle for type 'car'", () => {
       const entity = mgr.addEntity(vehicleDef({ id: 10, type: "car" }));
       expect(entity).toBeInstanceOf(Vehicle);
@@ -490,6 +599,33 @@ describe("EntityManager", () => {
       expect(unit.groupName).toBe("Bravo");
       expect(unit.role).toBe("Medic");
     });
+
+    it("keeps the existing entity when a placeholder reuses its ID", () => {
+      const unit = mgr.addEntity(unitDef({ id: 0 }));
+      expect(mgr.addEntity(placeholderDef())).toBe(unit);
+      expect(mgr.getEntity(0)).toBe(unit);
+      expect(mgr.getUnits()).toHaveLength(1);
+    });
+
+    it("replaces a placeholder with a longer-lived entity", () => {
+      mgr.addEntity(placeholderDef());
+      const unit = mgr.addEntity(unitDef({ id: 0 }));
+      expect(mgr.getEntity(0)).toBe(unit);
+      expect(mgr.getAll()).toHaveLength(1);
+    });
+  });
+
+  it("bypasses lifespan selection only for an explicit replacement", () => {
+    const placeholder = mgr.addEntity(placeholderDef({ endFrame: 200 }));
+    const other = mgr.addEntity(unitDef({ id: 1 }));
+    const definition = unitDef({ id: 0, type: "zeus", side: "VIRTUAL", startFrame: 1, endFrame: 200 });
+    expect(mgr.addEntity(definition)).toBe(placeholder);
+    const replacement = mgr.replaceEntity(definition);
+    expect(replacement).toBeInstanceOf(Unit);
+    expect(replacement.type).toBe("zeus");
+    expect(mgr.getEntity(0)).toBe(replacement);
+    expect(mgr.getEntity(1)).toBe(other);
+    expect(mgr.getAll()).toHaveLength(2);
   });
 
   describe("getEntity", () => {

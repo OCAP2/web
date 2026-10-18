@@ -49,6 +49,9 @@ export function RecordingSelector(): JSX.Element {
 
   const worldDisplayName = (systemName: string) => worldNames().get(systemName) ?? systemName;
 
+  // Map filters are shown unless the instance opts out via customize.hideMapFilters
+  const showMapFilters = (): boolean => !customize().hideMapFilters;
+
   let searchRef: HTMLInputElement | undefined;
   let scrollRef: HTMLDivElement | undefined;
 
@@ -440,7 +443,7 @@ export function RecordingSelector(): JSX.Element {
             </div>
 
             {/* Map filter dropdown */}
-            <Show when={uniqueMaps().length > 1}>
+            <Show when={showMapFilters() && uniqueMaps().length > 1}>
               <MapFilterDropdown
                 uniqueMaps={uniqueMaps()}
                 mapFilter={mapFilter()}

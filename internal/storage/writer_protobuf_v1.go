@@ -24,10 +24,20 @@ func (w *ProtobufWriterV1) Version() SchemaVersion { return SchemaVersionV1 }
 // Format returns the format name
 func (w *ProtobufWriterV1) Format() string { return "protobuf" }
 
-// WriteManifest writes the manifest to a protobuf file
+// WriteManifest writes the manifest to a protobuf file, and the per-player
+// snapshot sidecars alongside it. The two are written together because the
+// manifest's snapshot_unit_ids index has to name exactly the files on disk.
 func (w *ProtobufWriterV1) WriteManifest(ctx context.Context, outputPath string, result *ParseResult) error {
 	// Convert ParseResult to pbv1.Manifest
 	manifest := w.toProtoManifest(result)
+
+	// Move per-player snapshots out of the manifest into snapshots/<unitId>.pb
+	manifestEvents, byUnit := SplitPlayerSnapshots(manifest.Events)
+	manifest.Events = manifestEvents
+	manifest.SnapshotUnitIds = SortedUnitIDs(byUnit)
+	if err := WritePlayerSnapshots(outputPath, byUnit); err != nil {
+		return err
+	}
 
 	// Marshal protobuf data
 	data, err := proto.Marshal(manifest)
@@ -36,7 +46,7 @@ func (w *ProtobufWriterV1) WriteManifest(ctx context.Context, outputPath string,
 	}
 
 	// Write file
-	if err := os.WriteFile(filepath.Join(outputPath, "manifest.pb"), data, 0644); err != nil {
+	if err := WriteArtifact(filepath.Join(outputPath, "manifest.pb"), data); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
@@ -281,7 +291,7 @@ func (w *ProtobufWriterV1) writeChunk(chunksDir string, index uint32, chunk *pbv
 		return fmt.Errorf("marshal chunk: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := WriteArtifact(path, data); err != nil {
 		return fmt.Errorf("write chunk: %w", err)
 	}
 

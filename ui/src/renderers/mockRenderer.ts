@@ -36,6 +36,8 @@ export class MockRenderer implements MapRenderer {
   private readonly _setNameDisplayMode: Setter<"players" | "all" | "none">;
   private readonly _markerDisplayMode: Accessor<"all" | "noLabels" | "none">;
   private readonly _setMarkerDisplayMode: Setter<"all" | "noLabels" | "none">;
+  private readonly _projectileLabels: Accessor<boolean>;
+  private readonly _setProjectileLabels: Setter<boolean>;
   private readonly _mapStyles: Accessor<MapStyleInfo[]>;
   private readonly _setMapStyles: Setter<MapStyleInfo[]>;
   private readonly _activeStyleIndex: Accessor<number>;
@@ -51,6 +53,10 @@ export class MockRenderer implements MapRenderer {
     const [mdm, setMdm] = createSignal<"all" | "noLabels" | "none">("all");
     this._markerDisplayMode = mdm;
     this._setMarkerDisplayMode = setMdm;
+
+    const [pl, setPl] = createSignal<boolean>(true);
+    this._projectileLabels = pl;
+    this._setProjectileLabels = setPl;
 
     const [ms, setMs] = createSignal<MapStyleInfo[]>([]);
     this._mapStyles = ms;
@@ -71,6 +77,8 @@ export class MockRenderer implements MapRenderer {
     this._layerVisibility = lv;
     this._setLayerVisibility = setLv;
   }
+
+  get projectileLabelsVisible() { return this._projectileLabels; }
 
   init(_container: HTMLElement, _world: WorldConfig): void {
     // no-op
@@ -164,6 +172,10 @@ export class MockRenderer implements MapRenderer {
 
   setNameDisplayMode(mode: "players" | "all" | "none"): void {
     this._setNameDisplayMode(mode);
+  }
+
+  setProjectileLabelsVisible(visible: boolean): void {
+    this._setProjectileLabels(visible);
   }
 
   on(event: RendererEvent, cb: (...args: any[]) => void): void {

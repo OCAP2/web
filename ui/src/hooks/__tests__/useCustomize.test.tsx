@@ -149,6 +149,126 @@ describe("useCustomize", () => {
     expect(parsed.websiteURL).toBeUndefined();
   });
 
+  it("honors hideMapFilters even when customize is not enabled", async () => {
+    mockGetCustomize.mockResolvedValue({
+      enabled: false,
+      hideMapFilters: true,
+      websiteURL: "https://should-not-appear.com",
+    });
+
+    const { getByTestId } = render(() => (
+      <CustomizeProvider>
+        <TestConsumer onConfig={() => {}} />
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+      expect(parsed.hideMapFilters).toBe(true);
+    });
+    const parsed = JSON.parse(getByTestId("config").textContent || "{}") as CustomizeConfig;
+    expect(parsed.websiteURL).toBeUndefined();
+  });
+
+  it("applies pageTitle to document.title and restores on unmount", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    mockGetCustomize.mockResolvedValue({
+      enabled: true,
+      pageTitle: "Custom Server Title",
+    });
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    await vi.waitFor(() => {
+      expect(document.title).toBe("Custom Server Title");
+    });
+
+    unmount();
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
+  it("does not override document.title when pageTitle is empty", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    mockGetCustomize.mockResolvedValue({
+      enabled: true,
+      pageTitle: "",
+    });
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.title).toBe("OCAP2");
+
+    unmount();
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
+  it("does not mutate document.title if unmounted before API resolves", async () => {
+    const originalTitle = document.title;
+    document.title = "OCAP2";
+
+    let resolveCustomize: (value: CustomizeConfig) => void = () => {};
+    mockGetCustomize.mockReturnValue(
+      new Promise<CustomizeConfig>((resolve) => {
+        resolveCustomize = resolve;
+      }),
+    );
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    unmount();
+    resolveCustomize({ enabled: true, pageTitle: "Should Not Apply" });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.title).toBe("OCAP2");
+
+    document.title = originalTitle;
+  });
+
+  it("does not apply cssOverrides if unmounted before API resolves", async () => {
+    let resolveCustomize: (value: CustomizeConfig) => void = () => {};
+    mockGetCustomize.mockReturnValue(
+      new Promise<CustomizeConfig>((resolve) => {
+        resolveCustomize = resolve;
+      }),
+    );
+
+    const { unmount } = render(() => (
+      <CustomizeProvider>
+        <div>test</div>
+      </CustomizeProvider>
+    ));
+
+    unmount();
+    resolveCustomize({
+      enabled: true,
+      cssOverrides: { "--accent-primary": "#ff0000" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(document.documentElement.style.getPropertyValue("--accent-primary")).toBe("");
+  });
+
   it("cleans up applied properties on unmount", async () => {
     mockGetCustomize.mockResolvedValue({
       enabled: true,

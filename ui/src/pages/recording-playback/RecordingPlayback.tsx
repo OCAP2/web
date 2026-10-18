@@ -37,7 +37,16 @@ import {
   setLeftPanelVisible,
   setEditingFocusForShortcuts,
   setFocusShortcutCallbacks,
+  activeSide,
+  setActiveSide,
 } from "./shortcuts";
+import { loadBookmarks } from "./bookmarks";
+import {
+  asDeepLinkTab,
+  cancelThrottledDeepLink,
+  readDeepLink,
+  writeDeepLinkThrottled,
+} from "./deepLink";
 import { loadRecording } from "./loadRecording";
 import { useRenderBridge } from "./useRenderBridge";
 
@@ -112,7 +121,7 @@ export function RecordingPlayback(): JSX.Element {
     }
   };
 
-  useRenderBridge(engine, renderer, markerManager);
+  useRenderBridge(engine, renderer, markerManager, timeMode);
 
   // ─── Focus editing callbacks (defined before onMount so shortcuts can reference them) ───
 
@@ -165,6 +174,31 @@ export function RecordingPlayback(): JSX.Element {
           engine.seekTo(rec.focusStart);
         }
 
+        // Bookmarks are keyed on the recording file, so they follow the
+        // recording rather than the URL it was opened from.
+        loadBookmarks(result.recordingFilename ?? params.name ?? null);
+
+        // A shared link is restored after the recording is in place, and after
+        // any focus range has already seeked, so the link wins over the default
+        // start position rather than racing it.
+        // readDeepLink has already dropped anything that is not a real tab or
+        // side, so nothing here needs a cast.
+        const link = readDeepLink();
+        if (link.tab) setActivePanelTab(link.tab);
+        if (link.side) setActiveSide(link.side);
+        if (link.frame !== undefined) {
+          const focus = focusRange();
+          if (focus && (link.frame < focus.inFrame || link.frame > focus.outFrame)) {
+            // A shared position outside the saved focus implies FULL mode.
+            // Restore that before seeking so the focus effect cannot move it.
+            setShowFullTimeline(true);
+          }
+          engine.seekTo(link.frame);
+        }
+        if (link.unit !== undefined && engine.entityManager.getEntity(link.unit)) {
+          engine.followEntity(link.unit);
+        }
+
         // Fetch marker blacklist (non-fatal)
         try {
           const ids = await api.getMarkerBlacklist(result.recordingId);
@@ -184,8 +218,28 @@ export function RecordingPlayback(): JSX.Element {
     })();
   });
 
+  // Keep the URL describing what is on screen, so a copied address is a working
+  // link without anyone pressing anything. replaceState, so scrubbing does not
+  // fill the back button, and throttled, because the playhead is a
+  // requestAnimationFrame signal and browsers rate limit replaceState hard
+  // enough to throw.
+  createEffect(() => {
+    if (loading()) return;
+    const followed = engine.followTarget();
+    writeDeepLinkThrottled({
+      frame: engine.currentFrame(),
+      unit: followed === null ? undefined : followed,
+      tab: asDeepLinkTab(activePanelTab()),
+      side: activeSide(),
+    });
+  });
+
   onCleanup(() => {
     unregisterShortcuts();
+    // Stop the throttle before the page goes: a queued write firing after
+    // navigation would rewrite the URL of wherever the viewer landed next.
+    cancelThrottledDeepLink();
+    loadBookmarks(null);
     markerManager.clear();
     engine.dispose();
     renderer.dispose();

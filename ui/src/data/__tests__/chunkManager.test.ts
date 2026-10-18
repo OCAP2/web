@@ -34,12 +34,14 @@ function makeDecoder(manifest?: Manifest): DecoderStrategy {
   return {
     decodeManifest: vi.fn().mockReturnValue(manifest ?? makeManifest()),
     decodeChunk: vi.fn().mockImplementation(() => makeChunkData()),
+    decodePlayerSnapshots: vi.fn().mockReturnValue([]),
   };
 }
 
 function makeApi(): ApiClient & {
   getManifest: ReturnType<typeof vi.fn>;
   getChunk: ReturnType<typeof vi.fn>;
+  getPlayerSnapshots: ReturnType<typeof vi.fn>;
 } {
   return {
     getManifest: vi
@@ -47,6 +49,9 @@ function makeApi(): ApiClient & {
       .mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
     getChunk: vi.fn().mockImplementation(
       async (_id: string, _idx: number) => new Uint8Array([10, 20]).buffer,
+    ),
+    getPlayerSnapshots: vi.fn().mockImplementation(
+      async (_id: string, _unitId: number) => new Uint8Array([30, 40]).buffer,
     ),
     // Other methods not used by ChunkManager
     getRecordings: vi.fn(),
@@ -289,6 +294,56 @@ describe("ChunkManager", () => {
       const chunk = cm.getChunkForFrame(100); // frame 100 -> chunk 0 (chunkSize=300)
       expect(chunk).not.toBeNull();
       expect(chunk!.entities).toBeInstanceOf(Map);
+    });
+  });
+
+  // ─── Player snapshots ───
+
+  describe("loadPlayerSnapshots", () => {
+    it("fetches and decodes the sidecar for an indexed unit", async () => {
+      decoder = makeDecoder(makeManifest({ snapshotUnitIds: [7] }));
+      (decoder.decodePlayerSnapshots as ReturnType<typeof vi.fn>).mockReturnValue([
+        { frameNum: 10, type: "inventorySnapshot", payload: { unitId: 7 } },
+      ]);
+      cm = new ChunkManager(decoder, api);
+      await cm.loadManifest("op_mission");
+
+      const events = await cm.loadPlayerSnapshots(7);
+
+      expect(api.getPlayerSnapshots).toHaveBeenCalledWith("op_mission", 7);
+      expect(events).toHaveLength(1);
+    });
+
+    it("fetches each unit at most once", async () => {
+      decoder = makeDecoder(makeManifest({ snapshotUnitIds: [7] }));
+      cm = new ChunkManager(decoder, api);
+      await cm.loadManifest("op_mission");
+
+      await Promise.all([cm.loadPlayerSnapshots(7), cm.loadPlayerSnapshots(7)]);
+      await cm.loadPlayerSnapshots(7);
+
+      expect(api.getPlayerSnapshots).toHaveBeenCalledTimes(1);
+    });
+
+    // A recording whose snapshots are still in the manifest indexes no units,
+    // so the card must not go looking for a file that does not exist.
+    it("does not fetch for a unit the manifest does not index", async () => {
+      await cm.loadManifest("op_mission");
+
+      expect(await cm.loadPlayerSnapshots(7)).toEqual([]);
+      expect(api.getPlayerSnapshots).not.toHaveBeenCalled();
+    });
+
+    it("forgets a failed fetch so reopening the card retries", async () => {
+      decoder = makeDecoder(makeManifest({ snapshotUnitIds: [7] }));
+      cm = new ChunkManager(decoder, api);
+      await cm.loadManifest("op_mission");
+      api.getPlayerSnapshots.mockRejectedValueOnce(new Error("network"));
+
+      await expect(cm.loadPlayerSnapshots(7)).rejects.toThrow("network");
+      await cm.loadPlayerSnapshots(7);
+
+      expect(api.getPlayerSnapshots).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -124,6 +124,28 @@ describe("ViewSettings - map layers", () => {
   });
 });
 
+describe("ViewSettings - projectile labels", () => {
+  it("shows the projectile labels checkbox (checked by default)", () => {
+    const { renderer } = renderViewSettings();
+    openPanel();
+
+    expect(screen.getByText("Projectile labels")).toBeTruthy();
+    expect(renderer.projectileLabelsVisible()).toBe(true);
+  });
+
+  it("toggles projectile labels via renderer.setProjectileLabelsVisible", () => {
+    const { renderer } = renderViewSettings();
+    const spy = vi.spyOn(renderer, "setProjectileLabelsVisible");
+    openPanel();
+
+    fireEvent.click(screen.getByText("Projectile labels"));
+    expect(spy).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByText("Projectile labels"));
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+});
+
 describe("ViewSettings - time format", () => {
   it("selects a time mode and calls onTimeMode", () => {
     const manifest = makeManifest([], [], 200);

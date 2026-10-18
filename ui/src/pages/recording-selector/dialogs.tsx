@@ -102,6 +102,7 @@ const [date, setDate] = createSignal(isoToLocalInput(props.rec.date));
               <label class={styles.editLabel}>{t("date")}</label>
               <input
                 type="datetime-local"
+                step="1"
                 value={date()}
                 onInput={(e) => setDate(e.currentTarget.value)}
                 class={ui.input}
@@ -276,6 +277,7 @@ export function UploadDialog(props: {
             <label class={styles.editLabel}>{t("date")}</label>
             <input
               type="datetime-local"
+              step="1"
               value={date()}
               onInput={(e) => setDate(e.currentTarget.value)}
               class={ui.input}

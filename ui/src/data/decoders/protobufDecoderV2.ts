@@ -283,6 +283,11 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
 // ───────── Public decoder ─────────
 
 export class ProtobufDecoderV2 implements DecoderStrategy {
+  // v2 keeps its events in the manifest and has no player snapshot sidecars.
+  decodePlayerSnapshots(_buffer: ArrayBuffer): EventDef[] {
+    return [];
+  }
+
   decodeManifest(buffer: ArrayBuffer): AppManifest {
     const pb = PbManifest.decode(new Uint8Array(buffer));
 

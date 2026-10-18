@@ -57,6 +57,7 @@ function makeMockChunkManager(chunkData: ChunkData | null = null): ChunkManager 
     clear: vi.fn(),
     getManifest: vi.fn().mockReturnValue(null),
     setCallbacks: vi.fn(),
+    loadPlayerSnapshots: vi.fn().mockResolvedValue([]),
   } as unknown as ChunkManager;
 }
 
@@ -87,6 +88,214 @@ describe("PlaybackEngine", () => {
     engine.dispose();
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  // ─── Historical reads (trails, ORBAT, vehicle strips, distance) ───
+  //
+  // These two are the seam every whole-mission feature sits on, and the failure
+  // they guard against is silent: code written against `entity.positions` works
+  // on a JSON recording and returns nothing on a chunked one, which reads as
+  // "this player never moved" rather than as an error.
+
+  describe("getStateAt", () => {
+    it("reads per-frame state out of the chunk covering the frame", () => {
+      const cm = makeMockChunkManager(
+        makeChunkData(
+          new Map([
+            [
+              1,
+              [
+                { position: [10, 10], direction: 0, alive: 1, groupName: "Alpha", role: "Leader" },
+                { position: [20, 20], direction: 90, alive: 1, groupName: "Bravo", role: "Leader" },
+              ] as never,
+            ],
+          ]),
+        ),
+      );
+      engine.loadRecording(
+        makeManifest({ entities: [makeEntityDef({ id: 1 })] }),
+        cm,
+      );
+
+      // Fields EntitySnapshot drops are exactly why this method exists.
+      expect(engine.getStateAt(1, 0)?.groupName).toBe("Alpha");
+      expect(engine.getStateAt(1, 1)?.groupName).toBe("Bravo");
+      expect(engine.getStateAt(1, 1)?.position).toEqual([20, 20]);
+    });
+
+    it("falls back to the entity's own positions for a JSON recording", () => {
+      // No chunk manager at all: everything came down in one file.
+      engine.loadRecording(
+        makeManifest({
+          entities: [
+            makeEntityDef({
+              id: 1,
+              positions: [
+                { position: [5, 5], direction: 0, alive: 1, groupName: "Alpha" },
+                { position: [6, 6], direction: 0, alive: 1, groupName: "Alpha" },
+              ],
+            } as Partial<EntityDef>),
+          ],
+        }),
+      );
+
+      expect(engine.getStateAt(1, 1)?.position).toEqual([6, 6]);
+      expect(engine.getStateAt(1, 1)?.groupName).toBe("Alpha");
+    });
+
+    it("returns null outside the entity's lifespan rather than clamping", () => {
+      engine.loadRecording(
+        makeManifest({
+          entities: [
+            makeEntityDef({
+              id: 1,
+              startFrame: 10,
+              endFrame: 20,
+              positions: [{ position: [5, 5], direction: 0, alive: 1 }],
+            } as Partial<EntityDef>),
+          ],
+        }),
+      );
+
+      expect(engine.getStateAt(1, 5)).toBeNull();
+      expect(engine.getStateAt(1, 25)).toBeNull();
+    });
+
+    it("returns null for an unknown entity", () => {
+      engine.loadRecording(makeManifest());
+      expect(engine.getStateAt(999, 0)).toBeNull();
+    });
+
+    it("returns null for a frame whose chunk is not loaded, so callers see a gap", () => {
+      // getChunkForFrame returning null is what an unloaded chunk looks like.
+      const cm = makeMockChunkManager(null);
+      engine.loadRecording(makeManifest({ entities: [makeEntityDef({ id: 1 })] }), cm);
+
+      expect(engine.getStateAt(1, 50)).toBeNull();
+    });
+
+    it("getPositionAt is the same lookup narrowed to the position", () => {
+      engine.loadRecording(
+        makeManifest({
+          entities: [
+            makeEntityDef({
+              id: 1,
+              positions: [{ position: [7, 8], direction: 0, alive: 1 }],
+            } as Partial<EntityDef>),
+          ],
+        }),
+      );
+
+      expect(engine.getPositionAt(1, 0)).toEqual([7, 8]);
+      expect(engine.getPositionAt(1, 999)).toBeNull();
+    });
+  });
+
+  // ─── Player snapshot sidecars ───
+
+  describe("ensurePlayerSnapshots", () => {
+    it("does not mix a previous recording's late sidecar into the current recording", async () => {
+      const oldChunks = makeMockChunkManager();
+      let finishOld!: (defs: unknown[]) => void;
+      (oldChunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockReturnValue(
+        new Promise((resolve) => { finishOld = resolve; }),
+      );
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), oldChunks);
+      const oldLoad = engine.ensurePlayerSnapshots(7);
+      const currentChunks = makeMockChunkManager();
+      (currentChunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: { stamina: 90 } } },
+      ]);
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), currentChunks);
+      await engine.ensurePlayerSnapshots(7);
+      finishOld([{ frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: { stamina: 10 } } }]);
+      await oldLoad;
+      expect(engine.eventManager.getPlayerSnapshots(7, 0).get("staminaSnapshot")?.payload)
+        .toEqual({ unitId: 7, vanilla: { stamina: 90 } });
+      expect(engine.playerSnapshotsVersion()).toBe(1);
+    });
+
+    it("discards sidecars that finish after the engine is disposed", async () => {
+      const chunks = makeMockChunkManager();
+      let finish!: (defs: unknown[]) => void;
+      (chunks.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockReturnValue(
+        new Promise((resolve) => { finish = resolve; }),
+      );
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), chunks);
+      const load = engine.ensurePlayerSnapshots(7);
+      engine.dispose();
+      finish([{ frameNum: 0, type: "staminaSnapshot", payload: { unitId: 7, vanilla: {} } }]);
+      await load;
+      expect(engine.eventManager.hasPlayerSnapshots(7)).toBe(false);
+      expect(engine.playerSnapshotsVersion()).toBe(0);
+    });
+
+    it("loads a unit's sidecar into the event manager and folds its diffs", async () => {
+      const cm = makeMockChunkManager();
+      (cm.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { frameNum: 10, type: "medicalSnapshot", payload: { unitId: 7, ace: { heartRate: 80 } } },
+        {
+          frameNum: 20,
+          type: "medicalSnapshot",
+          payload: { unitId: 7, diffOf: 10, set: { ace: { heartRate: 130 } } },
+        },
+      ]);
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), cm);
+
+      expect(engine.eventManager.hasPlayerSnapshots(7)).toBe(false);
+      await engine.ensurePlayerSnapshots(7);
+
+      expect(cm.loadPlayerSnapshots).toHaveBeenCalledWith(7);
+      expect(engine.eventManager.getPlayerSnapshots(7, 20).get("medicalSnapshot")!.payload)
+        .toEqual({ unitId: 7, ace: { heartRate: 130 } });
+      expect(engine.playerSnapshotsVersion()).toBe(1);
+    });
+
+    it("fetches a unit at most once", async () => {
+      const cm = makeMockChunkManager();
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), cm);
+
+      await Promise.all([engine.ensurePlayerSnapshots(7), engine.ensurePlayerSnapshots(7)]);
+      await engine.ensurePlayerSnapshots(7);
+
+      expect(cm.loadPlayerSnapshots).toHaveBeenCalledTimes(1);
+    });
+
+    // A JSON recording, and a chunked one converted before the sidecars existed,
+    // both keep their snapshots in the manifest — already loaded, nothing to fetch.
+    it("does not fetch when the snapshots are already in the manifest", async () => {
+      const cm = makeMockChunkManager();
+      engine.loadRecording(
+        makeManifest({
+          events: [
+            { frameNum: 10, type: "medicalSnapshot", payload: { unitId: 7, ace: { heartRate: 80 } } },
+          ] as any,
+        }),
+        cm,
+      );
+
+      await engine.ensurePlayerSnapshots(7);
+
+      expect(cm.loadPlayerSnapshots).not.toHaveBeenCalled();
+      expect(engine.eventManager.hasPlayerSnapshots(7)).toBe(true);
+      expect(engine.hasPlayerSnapshots(7)).toBe(true);
+    });
+
+    it("resolves without a chunk manager at all", async () => {
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }));
+      await expect(engine.ensurePlayerSnapshots(7)).resolves.toBeUndefined();
+    });
+
+    // A missing or corrupt sidecar must not break playback.
+    it("survives a failed sidecar fetch", async () => {
+      const cm = makeMockChunkManager();
+      (cm.loadPlayerSnapshots as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("404"));
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      engine.loadRecording(makeManifest({ snapshotUnitIds: [7] }), cm);
+
+      await expect(engine.ensurePlayerSnapshots(7)).resolves.toBeUndefined();
+      expect(engine.eventManager.hasPlayerSnapshots(7)).toBe(false);
+    });
   });
 
   // ─── loadRecording ───
@@ -122,6 +331,72 @@ describe("PlaybackEngine", () => {
       engine.loadRecording(manifest, cm);
 
       expect(engine.eventManager.getAll()).toHaveLength(2);
+    });
+
+    it("uses stamped TFAR settings and skips tfarSettings as a timeline event", () => {
+      const manifest = makeManifest({
+        radioPropagation: {
+          terrainInterceptionCoefficient: 12,
+          globalRadioRangeCoef: 0.5,
+          source: "cba",
+        },
+        events: [
+          {
+            frameNum: 1,
+            type: "tfarSettings",
+            payload: {
+              terrainInterceptionCoefficient: 12,
+              globalRadioRangeCoef: 0.5,
+              source: "cba",
+            },
+          },
+        ],
+      });
+      const cm = makeMockChunkManager();
+      engine.loadRecording(manifest, cm);
+
+      expect(engine.radioPropagation.terrainInterceptionCoefficient).toBe(12);
+      expect(engine.radioPropagation.globalRadioRangeCoef).toBe(0.5);
+      expect(engine.eventManager.getAll()).toHaveLength(0);
+    });
+
+    it("falls back to TFAR defaults when a recording has no settings event", () => {
+      engine.loadRecording(makeManifest(), makeMockChunkManager());
+      expect(engine.radioPropagation.terrainInterceptionCoefficient).toBe(7);
+      expect(engine.radioPropagation.globalRadioRangeCoef).toBe(1);
+    });
+
+    it("uses stamped ACRE settings and skips acreSettings as a timeline event", () => {
+      const manifest = makeManifest({
+        acrePropagation: {
+          terrainLoss: 0.4,
+          signalModel: 1,
+          source: "cba",
+        },
+        events: [
+          {
+            frameNum: 1,
+            type: "acreSettings",
+            payload: {
+              terrainLoss: 0.4,
+              signalModel: 1,
+              source: "cba",
+            },
+          },
+        ],
+      });
+      const cm = makeMockChunkManager();
+      engine.loadRecording(manifest, cm);
+
+      expect(engine.acrePropagation.terrainLoss).toBe(0.4);
+      expect(engine.acrePropagation.signalModel).toBe(1);
+      expect(engine.eventManager.getAll()).toHaveLength(0);
+    });
+
+    it("falls back to ACRE defaults when a recording has no acreSettings event", () => {
+      engine.loadRecording(makeManifest(), makeMockChunkManager());
+      expect(engine.acrePropagation.terrainLoss).toBe(1);
+      expect(engine.acrePropagation.signalModel).toBe(2);
     });
 
     it("sets endFrame from manifest endFrame", () => {

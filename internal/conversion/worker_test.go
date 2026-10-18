@@ -793,6 +793,65 @@ func TestComputeStats_IgnoresNonPlayerSides(t *testing.T) {
 	assert.False(t, hasUnknown)
 }
 
+func TestComputeStats_CountsVirtualZeus(t *testing.T) {
+	manifest := &storage.Manifest{
+		Entities: []storage.EntityDef{
+			{ID: 10, Type: "unit", Name: "Rifleman", Side: "EAST", IsPlayer: true},
+		},
+		Events: []storage.Event{
+			{Type: "zeusEntity", Message: `{"curatorId":53,"name":"Bořek","playerUid":"7656","bodyUnitId":-1}`},
+			{Type: "zeusEntity", Message: `{"curatorId":90,"name":"dominik2253","playerUid":"7657","bodyUnitId":-1}`},
+			// Duplicate curator must not inflate the VIRTUAL card.
+			{Type: "zeusEntity", Message: `{"curatorId":53,"name":"Bořek","playerUid":"7656","bodyUnitId":-1}`},
+			{Type: "killed", SourceID: 10, TargetID: 99},
+		},
+	}
+
+	playerCount, killCount, _, sides := computeStats(manifest)
+
+	assert.Equal(t, 3, playerCount, "EAST player plus two unique Zeus operators")
+	assert.Equal(t, 1, killCount)
+	assert.Equal(t, 1, sides["EAST"].Players)
+	assert.Equal(t, 1, sides["EAST"].Units)
+	assert.Equal(t, 2, sides["VIRTUAL"].Units)
+	assert.Equal(t, 2, sides["VIRTUAL"].Players)
+	assert.Equal(t, 0, sides["VIRTUAL"].Dead)
+	assert.Equal(t, 0, sides["VIRTUAL"].Kills)
+}
+
+func TestComputeStats_ZeusNameAlreadyCounted(t *testing.T) {
+	manifest := &storage.Manifest{
+		Entities: []storage.EntityDef{
+			{ID: 10, Type: "unit", Name: "Danny", Side: "WEST", IsPlayer: true},
+		},
+		Events: []storage.Event{
+			{Type: "zeusEntity", Message: `{"curatorId":0,"name":"Danny","bodyUnitId":-1}`},
+		},
+	}
+
+	playerCount, _, _, sides := computeStats(manifest)
+
+	assert.Equal(t, 1, playerCount, "same name must not inflate the global player count")
+	assert.Equal(t, 1, sides["WEST"].Players)
+	assert.Equal(t, 1, sides["VIRTUAL"].Players)
+	assert.Equal(t, 1, sides["VIRTUAL"].Units)
+}
+
+func TestComputeStats_IgnoresMalformedZeus(t *testing.T) {
+	manifest := &storage.Manifest{
+		Events: []storage.Event{
+			{Type: "zeusEntity", Message: `not json`},
+			{Type: "zeusEntity", Message: ""},
+		},
+	}
+
+	playerCount, _, _, sides := computeStats(manifest)
+
+	assert.Equal(t, 0, playerCount)
+	_, hasVirtual := sides["VIRTUAL"]
+	assert.False(t, hasVirtual)
+}
+
 func TestWorker_CleanupInterrupted(t *testing.T) {
 	dir := t.TempDir()
 
@@ -970,7 +1029,7 @@ func TestBackfillStats(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	worker.backfillStats(ctx)
+	worker.BackfillStats(ctx)
 
 	// Verify UpdateOperationStats was called (stored in base mockRepo)
 	stats, ok := base.stats[10]
@@ -979,7 +1038,7 @@ func TestBackfillStats(t *testing.T) {
 	assert.Equal(t, "1", stats[1], "killCount should be 1")
 }
 
-func TestBackfillStats_SkipsZeroStats(t *testing.T) {
+func TestBackfillStats_WritesZeroStats(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a gzipped JSON file with no players and no events
@@ -1015,11 +1074,14 @@ func TestBackfillStats_SkipsZeroStats(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	worker.backfillStats(ctx)
+	worker.BackfillStats(ctx)
 
-	// Stats should NOT be set (skipped because playerCount=0 and killCount=0)
-	_, ok := base.stats[20]
-	assert.False(t, ok, "stats should not be set for zero-stats operation")
+	// Empty recordings still get a stats write so stats_revision advances
+	// and the worker does not re-parse them on every startup.
+	stats, ok := base.stats[20]
+	assert.True(t, ok, "stats should be written even when counts are zero")
+	assert.Equal(t, "0", stats[0], "playerCount should be 0")
+	assert.Equal(t, "0", stats[1], "killCount should be 0")
 }
 
 func TestBackfillStats_MissingFile(t *testing.T) {
@@ -1039,7 +1101,7 @@ func TestBackfillStats_MissingFile(t *testing.T) {
 
 	ctx := context.Background()
 	// Should not panic, just skip the operation
-	worker.backfillStats(ctx)
+	worker.BackfillStats(ctx)
 
 	_, ok := base.stats[30]
 	assert.False(t, ok, "stats should not be set for missing file")
@@ -1064,7 +1126,7 @@ func TestBackfillStats_SelectError(t *testing.T) {
 
 	ctx := context.Background()
 	// Should not panic, just log the error and return
-	worker.backfillStats(ctx)
+	worker.BackfillStats(ctx)
 
 	// No stats should be set
 	assert.Empty(t, base.stats)
@@ -1130,7 +1192,7 @@ func TestBackfillStats_UpdateStatsError(t *testing.T) {
 
 	ctx := context.Background()
 	// Should not panic, just log the error and continue
-	worker.backfillStats(ctx)
+	worker.BackfillStats(ctx)
 
 	// Stats should NOT be set (update failed)
 	_, ok := base.stats[50]
@@ -1154,4 +1216,68 @@ func TestWorker_CleanupInterrupted_ResetFailedError(t *testing.T) {
 	ctx := context.Background()
 	// Should not panic, just log the error
 	worker.cleanupInterrupted(ctx)
+}
+
+// ComputeStatsFor is the path an upload takes when conversion is switched off.
+//
+// The regression it guards: with conversion disabled the upload handler marked a
+// recording "completed" and nothing ever derived its stats, so the recording
+// played back perfectly while the dashboard showed no force composition, no kill
+// counts and a dash for the player count. Nothing here converts anything -- the
+// recording stays a plain .json.gz throughout.
+func TestComputeStatsFor_UnconvertedJSONRecording(t *testing.T) {
+	dir := t.TempDir()
+
+	testData := `{
+		"worldName": "altis",
+		"missionName": "No Conversion",
+		"captureDelay": 1,
+		"endFrame": 100,
+		"entities": [
+			{"id": 1, "type": "unit", "name": "Player1", "side": "WEST", "isPlayer": 1, "startFrameNum": 0, "positions": [], "framesFired": []},
+			{"id": 2, "type": "unit", "name": "Player2", "side": "EAST", "isPlayer": 1, "startFrameNum": 0, "positions": [], "framesFired": []},
+			{"id": 3, "type": "unit", "name": "AI1", "side": "WEST", "isPlayer": 0, "startFrameNum": 0, "positions": [], "framesFired": []}
+		],
+		"events": [
+			[10, "killed", 3, 1, "rifle", 50]
+		],
+		"times": []
+	}`
+
+	jsonPath := filepath.Join(dir, "unconverted.json.gz")
+	f, err := os.Create(jsonPath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	_, err = gw.Write([]byte(testData))
+	assert.NoError(t, err)
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	repo := newMockRepo()
+	worker := NewWorker(repo, Config{DataDir: dir})
+
+	// No protobuf directory exists, so this only passes via the JSON fallback.
+	assert.NoError(t, worker.ComputeStatsFor(context.Background(), 42, "unconverted"))
+
+	stats, ok := repo.stats[42]
+	assert.True(t, ok, "stats should be stored for an unconverted recording")
+	assert.Equal(t, "2", stats[0], "playerCount")
+	assert.Equal(t, "1", stats[1], "killCount")
+	// Force composition is the part the dashboard renders as the side cards.
+	assert.Contains(t, stats[2], "WEST")
+	assert.Contains(t, stats[2], "EAST")
+}
+
+// A missing recording is reported rather than silently storing zeroes, which
+// would mark the operation as "stats computed" and hide it from the backfill
+// forever.
+func TestComputeStatsFor_MissingFileReturnsError(t *testing.T) {
+	repo := newMockRepo()
+	worker := NewWorker(repo, Config{DataDir: t.TempDir()})
+
+	err := worker.ComputeStatsFor(context.Background(), 7, "does_not_exist")
+
+	assert.Error(t, err)
+	_, ok := repo.stats[7]
+	assert.False(t, ok, "no stats should be stored when the manifest cannot be read")
 }

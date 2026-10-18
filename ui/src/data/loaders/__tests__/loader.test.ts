@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DecoderStrategy } from "../../decoders/decoder.interface";
-import type { ChunkData, Manifest } from "../../types";
+import type { ChunkData, EventDef, Manifest } from "../../types";
 import { Loader } from "../loader";
 
 // ─── Helper ───
@@ -36,6 +36,9 @@ function makeCapturingDecoder(): DecoderStrategy & {
     decodeChunk(buffer: ArrayBuffer): ChunkData {
       stub.lastChunkBuffer = buffer;
       return { entities: new Map() };
+    },
+    decodePlayerSnapshots(): EventDef[] {
+      return [];
     },
   };
   return stub;

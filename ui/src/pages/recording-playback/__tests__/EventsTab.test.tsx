@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@solidjs/testing-library";
-import { EventsTab } from "../components/EventsTab";
+import { EventsTab, eventInvolvedSides } from "../components/EventsTab";
 import type { EventDef } from "../../../data/types";
 import {
   createTestEngine,
@@ -53,6 +53,42 @@ afterEach(() => {
 });
 
 describe("EventsTab", () => {
+  it.each([true, false])("keeps transmission faction filters stable after a side switch and departure (recorded side: %s)", (recordSide) => {
+    const { engine, renderer } = createTestEngine();
+    const events: EventDef[] = [{
+      type: "radioTransmission", frameNum: 0,
+      payload: { unitId: 1, radio: "TFAR_anprc152", type: "SW", action: "Start", channel: 1,
+        additional: false, frequency: 100, code: "blue" },
+    }];
+    engine.loadRecording(makeManifest([unitDef({
+      side: recordSide ? "EAST" : "WEST",
+      endFrame: 1,
+      positions: [
+        { position: [100, 200], direction: 0, alive: 1, ...(recordSide ? { side: "WEST" as const } : {}) },
+        { position: [100, 200], direction: 0, alive: 1, side: "EAST" },
+      ],
+    })], events, 10));
+    const transmission = engine.eventManager.getAll()[0];
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}><EventsTab /></TestProviders>
+    ));
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Transmissions"));
+    expect(screen.getByTestId("event-row-0")).toBeTruthy();
+    fireEvent.click(screen.getByText("BLUFOR"));
+
+    for (const frame of [0, 1, 2]) {
+      engine.seekTo(frame);
+      if (frame === 1) expect(engine.entitySnapshots().get(1)?.side).toBe("EAST");
+      expect(eventInvolvedSides(transmission, engine)).toEqual(["WEST"]);
+      expect(screen.queryByTestId("event-row-0")).toBeNull();
+    }
+    expect(engine.entitySnapshots().has(1)).toBe(false);
+    fireEvent.click(screen.getByText("BLUFOR"));
+    expect(screen.getByTestId("event-row-0")).toBeTruthy();
+    engine.dispose();
+  });
+
   it("shows 'no events' placeholder when no events exist", () => {
     const { engine, renderer } = createTestEngine();
     engine.loadRecording(makeManifest([unitDef()]));
@@ -159,7 +195,8 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    // Toggle hits on
+    // Open the event filters panel and toggle hits on
+    fireEvent.click(screen.getByLabelText("Event filters"));
     fireEvent.click(screen.getByText("Hits"));
 
     // Now the hit event should be visible
@@ -196,8 +233,9 @@ describe("EventsTab", () => {
       </TestProviders>
     ));
 
-    // Toggle connections on
-    fireEvent.click(screen.getByText("Conn"));
+    // Open the event filters panel and toggle connections on
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
 
     // Now the connect event should be visible
     expect(screen.getByText(/JoinedPlayer/)).toBeTruthy();
@@ -587,12 +625,464 @@ describe("EventsTab", () => {
     ));
 
     // Enable connection events
-    fireEvent.click(screen.getByText("Conn"));
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
 
     const input = screen.getByPlaceholderText("Search events...");
     fireEvent.input(input, { target: { value: "AlphaPlayer" } });
 
     expect(screen.getByText(/AlphaPlayer/)).toBeTruthy();
     expect(screen.queryByText(/BravoPlayer/)).toBeNull();
+  });
+
+  it("side filter 'Friendly fire only' restricts to same-side kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "CrossVictim", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100), // WEST kills WEST → friendly fire
+      killedEvent(1, 3, 2, "M4A1", 100), // WEST kills EAST → cross-side
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Both kills visible by default.
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.getByText("CrossVictim")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Friendly fire only"));
+
+    // Only the friendly-fire kill remains; the cross-side kill is gone.
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.queryByText("CrossVictim")).toBeNull();
+  });
+
+  it("side filter 'Hide friendly fire' excludes same-side kills", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "EnemyVictim", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100), // WEST kills WEST → friendly fire
+      killedEvent(1, 3, 2, "M4A1", 100), // WEST kills EAST → normal
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Hide friendly fire"));
+
+    // Only the cross-side kill remains.
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText("EnemyVictim")).toBeTruthy();
+  });
+
+  it("unchecking 'Kills' hides killed events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Victim", side: "WEST" }),
+      unitDef({ id: 2, name: "Killer", side: "EAST" }),
+    ];
+    const events = [killedEvent(0, 1, 2, "M4A1", 100)];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("Victim")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Kills"));
+
+    expect(screen.queryByText("Victim")).toBeNull();
+    expect(screen.getByText("No events to display")).toBeTruthy();
+  });
+
+  it("unchecking 'Captures' hides captured events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Capturer", side: "WEST" })];
+    const events = [capturedEvent(0, "CapturerName", "sector")];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/CapturerName/)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Captures"));
+
+    expect(screen.queryByText(/CapturerName/)).toBeNull();
+  });
+
+  it("unchecking 'Mission events' hides EndMission and General events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Alpha", side: "WEST" })];
+    const events = [
+      endMissionEvent(0, "WEST", "BLUFOR wins"),
+      generalEvent(1, "Objective completed"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+    expect(screen.getByText("Objective completed")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Mission events"));
+
+    expect(screen.queryByText("BLUFOR wins")).toBeNull();
+    expect(screen.queryByText("Objective completed")).toBeNull();
+  });
+
+  it("side filter does not affect non-HitKilled events (connections pass through)", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Joiner", side: "WEST" }),
+      unitDef({ id: 2, name: "FFVictim", side: "WEST" }),
+      unitDef({ id: 3, name: "FFKiller", side: "WEST" }),
+    ];
+    const events = [
+      connectEvent(0, "connected", "Joiner"),
+      killedEvent(1, 2, 3, "M4A1", 100), // friendly fire
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Connections off by default; enable them, and select Friendly fire only.
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Connections"));
+    fireEvent.click(screen.getByText("Friendly fire only"));
+
+    // The FF kill remains, AND the connection event passes through the side filter.
+    expect(screen.getByText("FFVictim")).toBeTruthy();
+    expect(screen.getByText(/Joiner/)).toBeTruthy();
+  });
+
+  it("side filter does not affect captures or mission events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "Capper", side: "WEST" }),
+      unitDef({ id: 2, name: "Victim", side: "WEST" }),
+      unitDef({ id: 3, name: "Killer", side: "EAST" }),
+    ];
+    const events = [
+      capturedEvent(0, "Capper", "sector"),
+      endMissionEvent(1, "WEST", "BLUFOR wins"),
+      killedEvent(2, 2, 3, "AK-47", 100), // cross-side kill
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Hide friendly fire"));
+
+    // Capture and end-mission survive the side filter; cross-side kill also visible.
+    expect(screen.getByText(/Capper/)).toBeTruthy();
+    expect(screen.getByText("BLUFOR wins")).toBeTruthy();
+    expect(screen.getByText("Victim")).toBeTruthy();
+  });
+
+  it("unchecking 'Terminal hacks' hides terminal hack events", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Hacker", side: "WEST" })];
+    const events = [terminalHackEvent(0, "terminalHackStarted", "Hacker")];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText(/started hacking/)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Terminal hacks"));
+
+    expect(screen.queryByText(/started hacking/)).toBeNull();
+  });
+
+  it("faction filter hides kills that do not involve the enabled sides", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "RedVictim", side: "EAST" }),
+      unitDef({ id: 4, name: "RedKiller", side: "EAST" }),
+      unitDef({ id: 5, name: "GreenVictim", side: "GUER" }),
+      unitDef({ id: 6, name: "GreenKiller", side: "GUER" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100),
+      killedEvent(1, 3, 4, "AK-47", 100),
+      killedEvent(2, 5, 6, "AK-74", 100),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.getByText("RedVictim")).toBeTruthy();
+    expect(screen.getByText("GreenVictim")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Independent"));
+    fireEvent.click(screen.getByText("Civilian"));
+    fireEvent.click(screen.getByText("Virtual"));
+
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+    expect(screen.queryByText("RedVictim")).toBeNull();
+    expect(screen.queryByText("GreenVictim")).toBeNull();
+  });
+
+  it("faction filter keeps a cross-side kill if either side is enabled", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "RedKiller", side: "EAST" }),
+    ];
+    const events = [killedEvent(0, 1, 2, "AK-47", 100)];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Independent"));
+    fireEvent.click(screen.getByText("Civilian"));
+    fireEvent.click(screen.getByText("Virtual"));
+
+    // Victim is WEST; BLUFOR is still enabled.
+    expect(screen.getByText("BlueVictim")).toBeTruthy();
+  });
+
+  it("faction filter Virtual keeps Zeus modules and hides other sides", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+    ];
+    const events: EventDef[] = [
+      killedEvent(0, 1, 2, "M4A1", 100),
+      {
+        frameNum: 1,
+        type: "zeusModule",
+        payload: {
+          curatorId: 90,
+          curatorName: "Danny",
+          displayName: "Heal",
+          x: 100,
+          y: 200,
+        },
+      },
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("BLUFOR"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Independent"));
+    fireEvent.click(screen.getByText("Civilian"));
+
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText(/Heal/)).toBeTruthy();
+  });
+
+  it("faction filter composes with hide-friendly-fire", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 3, name: "RedVictim", side: "EAST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100), // WEST TK
+      killedEvent(1, 3, 2, "M4A1", 100), // WEST kills EAST
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Hide friendly fire"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Independent"));
+    fireEvent.click(screen.getByText("Civilian"));
+    fireEvent.click(screen.getByText("Virtual"));
+
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText("RedVictim")).toBeTruthy();
+  });
+
+  it("faction filter Independent keeps GUER kills only", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+      unitDef({ id: 5, name: "GreenVictim", side: "GUER" }),
+      unitDef({ id: 6, name: "GreenKiller", side: "GUER" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100),
+      killedEvent(1, 5, 6, "AK-74", 100),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("BLUFOR"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Civilian"));
+    fireEvent.click(screen.getByText("Virtual"));
+
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText("GreenVictim")).toBeTruthy();
+  });
+
+  it("faction filter leaves unsided mission events visible", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [
+      unitDef({ id: 1, name: "BlueVictim", side: "WEST" }),
+      unitDef({ id: 2, name: "BlueKiller", side: "WEST" }),
+    ];
+    const events = [
+      killedEvent(0, 1, 2, "M4A1", 100),
+      generalEvent(1, "Objective completed"),
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("BLUFOR"));
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("Independent"));
+    fireEvent.click(screen.getByText("Civilian"));
+    fireEvent.click(screen.getByText("Virtual"));
+
+    expect(screen.queryByText("BlueVictim")).toBeNull();
+    expect(screen.getByText("Objective completed")).toBeTruthy();
+  });
+
+  it("faction filter OPFOR keeps an explosion with side EAST", () => {
+    const { engine, renderer } = createTestEngine();
+    const entities = [unitDef({ id: 1, name: "Rifleman", side: "WEST" })];
+    const events: EventDef[] = [
+      {
+        frameNum: 0,
+        type: "explosion",
+        payload: {
+          x: 100,
+          y: 200,
+          ammo: "SatchelCharge_Remote_Ammo",
+          name: "Satchel Charge",
+          radius: 10,
+          power: 50,
+          firerId: 2,
+          vehicleId: -1,
+          side: "EAST",
+          source: "explosive",
+        },
+      },
+    ];
+    engine.loadRecording(makeManifest(entities, events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Explosions"));
+    expect(screen.getByText(/Satchel Charge/)).toBeTruthy();
+
+    fireEvent.click(screen.getByText("OPFOR"));
+    expect(screen.queryByText(/Satchel Charge/)).toBeNull();
+
+    fireEvent.click(screen.getByText("OPFOR"));
+    fireEvent.click(screen.getByText("BLUFOR"));
+    expect(screen.getByText(/Satchel Charge/)).toBeTruthy();
   });
 });

@@ -18,6 +18,21 @@ message Manifest {
   repeated MarkerDef markers = 11;
   string extension_version = 12;
   string addon_version = 13;
+  // Units that have per-player detail snapshots in snapshots/<unit_id>.pb.
+  // Empty for recordings converted before those sidecars existed — their
+  // snapshots are still in `events` and are read from there.
+  repeated uint32 snapshot_unit_ids = 14;
+}
+
+// PlayerSnapshotSeries - every inventory/medical/stamina/radio snapshot for one
+// player, held in snapshots/<unit_id>.pb and fetched only when the profile card
+// for that player is opened. Keeping them out of the manifest is what makes
+// them affordable: they are the bulk of the event stream but are needed for one
+// unit at a time. The events are the same Event message the manifest carries,
+// in recorded frame order, so a diff chain rebuilds exactly as it always did.
+message PlayerSnapshotSeries {
+  uint32 unit_id = 1;
+  repeated Event events = 2;
 }
 
 message EntityDef {

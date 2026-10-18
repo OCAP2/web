@@ -5,6 +5,7 @@ import {
   Manifest as PbManifest,
   Chunk as PbChunk,
   EntityType as PbEntityType,
+  PlayerSnapshotSeries as PbPlayerSnapshotSeries,
   Side as PbSide,
 } from "../generated/ocap.pb";
 
@@ -15,10 +16,360 @@ function encodePb<T>(msg: { encode: (m: T) => { finish: () => Uint8Array }; from
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
+// ─── Player snapshot sidecar tests ───
+
+describe("ProtobufDecoder.decodeManifest snapshot index", () => {
+  const decoder = new ProtobufDecoder();
+
+  const base = {
+    version: 1,
+    worldName: "Altis",
+    missionName: "Snapshots",
+    endFrame: 100,
+    chunkSize: 300,
+    captureDelayMs: 1000,
+    chunkCount: 1,
+  };
+
+  it("exposes the units whose snapshots live in a sidecar", () => {
+    const manifest = decoder.decodeManifest(
+      encodePb(PbManifest, { ...base, snapshotUnitIds: [7, 12] }),
+    );
+    expect(manifest.snapshotUnitIds).toEqual([7, 12]);
+  });
+
+  it("reports no sidecars for a recording that predates them", () => {
+    const manifest = decoder.decodeManifest(encodePb(PbManifest, base));
+    expect(manifest.snapshotUnitIds).toEqual([]);
+  });
+});
+
+
+describe("ProtobufDecoder.decodePlayerSnapshots", () => {
+  const decoder = new ProtobufDecoder();
+
+  it("decodes a unit's snapshot series, keeping recorded order", () => {
+    const buffer = encodePb(PbPlayerSnapshotSeries, {
+      unitId: 7,
+      events: [
+        {
+          frameNum: 10,
+          type: "inventorySnapshot",
+          message: JSON.stringify({ unitId: 7, massUnits: 695 }),
+        },
+        {
+          frameNum: 40,
+          type: "inventorySnapshot",
+          message: JSON.stringify({ unitId: 7, diffOf: 10, set: { massUnits: 700 } }),
+        },
+      ],
+    });
+
+    expect(decoder.decodePlayerSnapshots(buffer)).toEqual([
+      { frameNum: 10, type: "inventorySnapshot", payload: { unitId: 7, massUnits: 695 } },
+      {
+        frameNum: 40,
+        type: "inventorySnapshot",
+        payload: { unitId: 7, diffOf: 10, set: { massUnits: 700 } },
+      },
+    ]);
+  });
+
+  it("drops entries whose payload cannot be read", () => {
+    const buffer = encodePb(PbPlayerSnapshotSeries, {
+      unitId: 7,
+      events: [
+        { frameNum: 10, type: "medicalSnapshot", message: "not json" },
+        { frameNum: 20, type: "medicalSnapshot", message: JSON.stringify({ unitId: 7 }) },
+      ],
+    });
+
+    const decoded = decoder.decodePlayerSnapshots(buffer);
+    expect(decoded).toHaveLength(1);
+    expect(decoded[0].frameNum).toBe(20);
+  });
+
+  it("returns an empty list for an empty series", () => {
+    expect(decoder.decodePlayerSnapshots(encodePb(PbPlayerSnapshotSeries, { unitId: 7 })))
+      .toEqual([]);
+  });
+});
+
 // ─── Manifest decoding tests ───
 
 describe("ProtobufDecoder.decodeManifest", () => {
   const decoder = new ProtobufDecoder();
+
+  it("decodes additive player snapshot payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [{
+        frameNum: 10,
+        type: "radioSnapshot",
+        message: JSON.stringify({ unitId: 7, radios: [{ frequency: 52, rangeMeters: 5000 }] }),
+      }],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([{
+      frameNum: 10,
+      type: "radioSnapshot",
+      payload: { unitId: 7, radios: [{ frequency: 52, rangeMeters: 5000 }] },
+    }]);
+  });
+
+  it("decodes additive server FPS payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "FPS",
+      endFrame: 180,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [{ frameNum: 60, type: "serverFps", message: JSON.stringify({ fps: 42.5 }) }],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([
+      { frameNum: 60, type: "serverFps", fps: 42.5 },
+    ]);
+  });
+
+  it("decodes additive weather payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Weather",
+      endFrame: 180,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        {
+          frameNum: 60,
+          type: "weather",
+          message: JSON.stringify({
+            overcast: 0.42,
+            rain: 0.1,
+            moonPhase: 0.81,
+            temperature: 16.3,
+            ace: true,
+          }),
+        },
+        { frameNum: 120, type: "weather", message: JSON.stringify({ rain: 0.5 }) },
+      ],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([
+      {
+        frameNum: 60,
+        type: "weather",
+        payload: {
+          overcast: 0.42,
+          rain: 0.1,
+          moonPhase: 0.81,
+          temperature: 16.3,
+          ace: true,
+        },
+      },
+    ]);
+  });
+
+  it("decodes additive Zeus payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Zeus",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 2, type: "zeusEntity", message: JSON.stringify({ curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 }) },
+        { frameNum: 4, type: "zeusCamera", message: JSON.stringify({ curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 }) },
+        { frameNum: 8, type: "zeusRemoteControl", message: JSON.stringify({ curatorId: 90, unitId: 7, active: true }) },
+        { frameNum: 12, type: "zeusPing", message: JSON.stringify({ curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 }) },
+        { frameNum: 16, type: "zeusModule", message: JSON.stringify({ curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", x: 3411, y: 9002 }) },
+      ],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([
+      { frameNum: 2, type: "zeusEntity", payload: { curatorId: 90, name: "Danny", playerUid: "7656", bodyUnitId: -1 } },
+      { frameNum: 4, type: "zeusCamera", payload: { curatorId: 90, x: 1, y: 2, dir: 90, fov: 0.75 } },
+      { frameNum: 8, type: "zeusRemoteControl", payload: { curatorId: 90, unitId: 7, active: true } },
+      { frameNum: 12, type: "zeusPing", payload: { curatorId: 90, unitId: 7, name: "Danny", side: "WEST", x: 3411, y: 9002 } },
+      { frameNum: 16, type: "zeusModule", payload: { curatorId: 90, curatorName: "Danny", className: "zen_modules_moduleHeal", displayName: "Heal", x: 3411, y: 9002 } },
+    ]);
+  });
+
+  it("decodes support payloads from the generic event message", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Support",
+      endFrame: 600,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 10, type: "explosion", message: JSON.stringify({ x: 3411, y: 9002, ammo: "Sh_155mm_AMOS", name: "155mm HE", radius: 28, power: 180, firerId: 17, vehicleId: 4, side: "WEST", source: "projectile" }) },
+        // A blast with no radius cannot be drawn and says nothing a hit event does not.
+        { frameNum: 11, type: "explosion", message: JSON.stringify({ x: 1, y: 2, radius: 0 }) },
+        { frameNum: 20, type: "serviceEvent", message: JSON.stringify({ kind: "rearm", vehicleId: 9, vehicleName: "Hunter", unitId: 3, unitName: "Danny", side: "WEST", x: 1, y: 2, from: 0, to: 0, magazine: "500Rnd_127x99_mag_Tracer_Red", magazineName: "12.7 mm", count: 2, rounds: 500 }) },
+        { frameNum: 30, type: "staticWeapon", message: JSON.stringify({ action: "disassembled", unitId: 3, unitName: "Danny", side: "WEST", vehicleId: 88, class: "B_HMG_01_high_F", name: "M2 (High)", x: 1, y: 2 }) },
+        { frameNum: 31, type: "staticWeapon", message: "not json" },
+        { frameNum: 40, type: "radioTransmission", message: JSON.stringify({ unitId: 3, radio: "AN/PRC-152", type: "SW", action: "Stop", channel: 1, additional: false, frequency: 69.9, code: "0451" }) },
+      ],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([
+      { frameNum: 10, type: "explosion", payload: { x: 3411, y: 9002, ammo: "Sh_155mm_AMOS", name: "155mm HE", radius: 28, power: 180, firerId: 17, vehicleId: 4, side: "WEST", source: "projectile" } },
+      { frameNum: 20, type: "serviceEvent", payload: { kind: "rearm", vehicleId: 9, vehicleName: "Hunter", unitId: 3, unitName: "Danny", side: "WEST", x: 1, y: 2, from: 0, to: 0, magazine: "500Rnd_127x99_mag_Tracer_Red", magazineName: "12.7 mm", count: 2, rounds: 500 } },
+      { frameNum: 30, type: "staticWeapon", payload: { action: "disassembled", unitId: 3, unitName: "Danny", side: "WEST", vehicleId: 88, class: "B_HMG_01_high_F", name: "M2 (High)", x: 1, y: 2 } },
+      { frameNum: 40, type: "radioTransmission", payload: { unitId: 3, radio: "AN/PRC-152", type: "SW", action: "Stop", channel: 1, additional: false, frequency: 69.9, code: "0451" } },
+    ]);
+  });
+
+  it("passes diff-encoded snapshots through untouched", () => {
+    const diff = { unitId: 7, diffOf: 10, set: { vanilla: { load: 0.61 } } };
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [{ frameNum: 40, type: "staminaSnapshot", message: JSON.stringify(diff) }],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([{
+      frameNum: 40,
+      type: "staminaSnapshot",
+      payload: diff,
+    }]);
+  });
+
+  it("skips snapshots that carry no unit id to index them by", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        { frameNum: 10, type: "medicalSnapshot", message: JSON.stringify({ vanilla: {} }) },
+        { frameNum: 20, type: "medicalSnapshot", message: "not json" },
+      ],
+    });
+
+    expect(decoder.decodeManifest(buffer).events).toEqual([]);
+  });
+
+  it("stamps tfarSettings onto the manifest and keeps them out of the event feed", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        {
+          frameNum: 1,
+          type: "tfarSettings",
+          message: JSON.stringify({
+            terrainInterceptionCoefficient: 12,
+            globalRadioRangeCoef: 0.5,
+            tfarLoaded: true,
+            source: "cba",
+          }),
+        },
+        {
+          frameNum: 10,
+          type: "radioSnapshot",
+          message: JSON.stringify({ unitId: 7, radios: [] }),
+        },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.radioPropagation).toMatchObject({
+      terrainInterceptionCoefficient: 12,
+      globalRadioRangeCoef: 0.5,
+      tfarLoaded: true,
+      source: "cba",
+    });
+    expect(manifest.events).toEqual([{
+      frameNum: 10,
+      type: "radioSnapshot",
+      payload: { unitId: 7, radios: [] },
+    }]);
+  });
+
+  it("stamps acreSettings onto the manifest without mixing them into TFAR settings", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 1,
+      worldName: "Altis",
+      missionName: "Snapshots",
+      endFrame: 100,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      events: [
+        {
+          frameNum: 1,
+          type: "tfarSettings",
+          message: JSON.stringify({
+            terrainInterceptionCoefficient: 12,
+            globalRadioRangeCoef: 0.5,
+            tfarLoaded: true,
+            source: "cba",
+          }),
+        },
+        {
+          frameNum: 1,
+          type: "acreSettings",
+          message: JSON.stringify({
+            terrainLoss: 0.4,
+            signalModel: 1,
+            acreLoaded: true,
+            source: "cba",
+          }),
+        },
+        {
+          frameNum: 10,
+          type: "radioSnapshot",
+          message: JSON.stringify({ unitId: 7, radios: [] }),
+        },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.radioPropagation).toMatchObject({
+      terrainInterceptionCoefficient: 12,
+      globalRadioRangeCoef: 0.5,
+    });
+    expect(manifest.acrePropagation).toMatchObject({
+      terrainLoss: 0.4,
+      signalModel: 1,
+      acreLoaded: true,
+      source: "cba",
+    });
+    expect(manifest.events).toEqual([{
+      frameNum: 10,
+      type: "radioSnapshot",
+      payload: { unitId: 7, radios: [] },
+    }]);
+  });
 
   it("decodes a minimal manifest", () => {
     const buffer = encodePb(PbManifest, {

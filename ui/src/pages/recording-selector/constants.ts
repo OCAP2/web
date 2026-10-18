@@ -25,6 +25,7 @@ export const SIDE_COLORS: Record<string, string> = {
   OPFOR:  "var(--side-opfor)",  EAST: "var(--side-opfor)",
   IND:    "var(--side-ind)",    GUER: "var(--side-ind)",
   CIV:    "var(--side-civ)",
+  VIRTUAL: "var(--side-virtual)",
 };
 
 /** Raw hex side colors for inline style interpolation (hex alpha, rgba). */
@@ -33,6 +34,7 @@ export const SIDE_HEX: Record<string, string> = {
   OPFOR:  "#FF4A4A", EAST: "#FF4A4A",
   IND:    "#2DD4A0", GUER: "#2DD4A0",
   CIV:    "#A78BFA",
+  VIRTUAL: "#C9A227",
 };
 
 
