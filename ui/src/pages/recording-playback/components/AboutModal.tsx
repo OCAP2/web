@@ -46,7 +46,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
           {/* Header */}
           <div class={ui.dialogHeader}>
             <span class={ui.dialogTitle}>{t("info")}</span>
-            <button class={ui.dialogCloseBtn} onClick={() => props.onClose()}>
+            <button class={ui.dialogCloseBtn} aria-label={t("close")} onClick={() => props.onClose()}>
               <XIcon size={14} />
             </button>
           </div>
