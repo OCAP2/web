@@ -203,6 +203,22 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 			if session != nil && session.Mission() != nil {
 				tag = session.Mission().Tag
 			}
+			// The extension may carry a save-time tag override in the envelope
+			// payload. Prefer it over the mission-start tag when non-empty so
+			// the operation row and the v2 manifest both reflect it.
+			if len(envelope.Payload) > 0 && string(envelope.Payload) != "null" {
+				var endPayload struct {
+					Tag string `json:"tag"`
+				}
+				if err := json.Unmarshal(envelope.Payload, &endPayload); err != nil {
+					slog.Warn("stream: invalid end_mission payload", "error", err)
+				} else if endPayload.Tag != "" {
+					tag = endPayload.Tag
+					if session != nil && session.Mission() != nil {
+						session.Mission().Tag = endPayload.Tag
+					}
+				}
+			}
 			slog.Info("stream: mission ended", "counts", counts)
 			if err := finalize(tag); err != nil {
 				fail("mission could not be saved")

@@ -14,10 +14,12 @@ import (
 
 	"github.com/OCAP2/extension/v5/pkg/streaming"
 	"github.com/OCAP2/web/internal/storage"
+	pbv2 "github.com/OCAP2/web/pkg/schemas/protobuf/v2"
 	"github.com/go-fuego/fuego"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestStreamingSettingDefaults(t *testing.T) {
@@ -251,6 +253,62 @@ func TestHandleStream_EndMissionAckAndClose(t *testing.T) {
 	// Connection should be closed by server — next read should fail
 	_, _, err = conn.ReadMessage()
 	assert.Error(t, err)
+}
+
+func TestHandleStream_EndMissionTagOverride(t *testing.T) {
+	cases := []struct {
+		name     string
+		startTag string
+		endTag   string // "" sends a null payload (no override)
+		wantTag  string
+	}{
+		{"save-time override wins", "coop", "override", "override"},
+		{"null payload keeps mission-start tag", "coop", "", "coop"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h, mux, dir := newTestStreamHandlerWithRepo(t)
+			srv := httptest.NewServer(mux)
+			defer srv.Close()
+
+			wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/stream?secret=test-secret"
+			conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+			require.NoError(t, err)
+			defer conn.Close()
+
+			startPayload, _ := json.Marshal(map[string]any{
+				"mission": map[string]any{"MissionName": "TagOp", "CaptureDelay": 1.0, "Tag": tc.startTag},
+				"world":   map[string]any{"WorldName": "altis"},
+			})
+			require.NoError(t, conn.WriteJSON(map[string]any{"type": "start_mission", "payload": json.RawMessage(startPayload)}))
+			var ack map[string]string
+			require.NoError(t, conn.ReadJSON(&ack))
+			require.Equal(t, "start_mission", ack["for"])
+
+			var endPayload json.RawMessage
+			if tc.endTag != "" {
+				endPayload = json.RawMessage(`{"tag":"` + tc.endTag + `"}`)
+			} else {
+				endPayload = json.RawMessage(`null`)
+			}
+			require.NoError(t, conn.WriteJSON(map[string]any{"type": "end_mission", "payload": endPayload}))
+			require.NoError(t, conn.ReadJSON(&ack))
+			require.Equal(t, "end_mission", ack["for"])
+
+			ops, err := h.repoOperation.Select(context.Background(), Filter{})
+			require.NoError(t, err)
+			require.Len(t, ops, 1)
+			assert.Equal(t, tc.wantTag, ops[0].Tag)
+
+			// The v2 manifest must carry the same tag as the operation row.
+			data, err := os.ReadFile(filepath.Join(dir, ops[0].Filename, "manifest.pb"))
+			require.NoError(t, err)
+			var m pbv2.Manifest
+			require.NoError(t, proto.Unmarshal(data, &m))
+			require.NotNil(t, m.Mission)
+			assert.Equal(t, tc.wantTag, m.Mission.Tag)
+		})
+	}
 }
 
 func TestHandleStream_UnknownTypesAccepted(t *testing.T) {
