@@ -281,6 +281,46 @@ describe("ProtobufDecoderV2.decodeManifest", () => {
     expect(manifest.times).toHaveLength(1);
     expect(manifest.times[0].systemTimeUtc).toBe("2025-01-15T12:00:00Z");
   });
+
+  it("does not duplicate fps/weather when native general events exist", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 2,
+      world: { worldName: "Altis" },
+      mission: { missionName: "Op" },
+      frameCount: 500,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 2,
+      events: [
+        { frameNum: 10, general: { name: "serverFps", message: JSON.stringify({ fps: 45 }) } },
+        { frameNum: 60, general: { name: "weather", message: JSON.stringify({ overcast: 0.4, windSpeed: 5.1 }) } },
+        { frameNum: 20, telemetry: { fpsAverage: 50, weather: { fog: 0.1, overcast: 0.5, rain: 0.2 } } },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events.filter((e) => e.type === "serverFps")).toHaveLength(1);
+    expect(manifest.events.filter((e) => e.type === "weather")).toHaveLength(1);
+  });
+
+  it("synthesizes fps/weather from telemetry when no native events exist", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 2,
+      world: { worldName: "Altis" },
+      mission: { missionName: "Op" },
+      frameCount: 500,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 2,
+      events: [
+        { frameNum: 20, telemetry: { fpsAverage: 50, weather: { fog: 0.1, overcast: 0.5, rain: 0.2 } } },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events.filter((e) => e.type === "serverFps")).toHaveLength(1);
+    expect(manifest.events.filter((e) => e.type === "weather")).toHaveLength(1);
+  });
 });
 
 // ─── Chunk decoding tests ───

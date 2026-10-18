@@ -324,11 +324,17 @@ export class ProtobufDecoderV2 implements DecoderStrategy {
     manifest.events=extracted.events;
     manifest.radioPropagation=extracted.radioPropagation;
     manifest.acrePropagation=extracted.acrePropagation;
+    // When the addon records native serverFps/weather general events, they are
+    // the single source; telemetry-derived samples would duplicate them.
+    const nativeFps = pb.events.some((e) => e.general?.name === "serverFps");
+    const nativeWeather = pb.events.some((e) => e.general?.name === "weather");
     for (const event of pb.events) {
       if (event.telemetry) {
         const t=event.telemetry;
-        manifest.events.push({frameNum:event.frameNum,type:"serverFps",fps:t.fpsAverage});
-        if (t.weather) {
+        if (!nativeFps) {
+          manifest.events.push({frameNum:event.frameNum,type:"serverFps",fps:t.fpsAverage});
+        }
+        if (!nativeWeather && t.weather) {
           const weather=convertV1Event(V1Event.fromPartial({frameNum:event.frameNum,type:"weather",message:JSON.stringify(t.weather)}));
           if (weather) manifest.events.push(weather);
         }

@@ -521,6 +521,43 @@ func TestSession_Accessors(t *testing.T) {
 	assert.Equal(t, "altis", s.World().WorldName)
 }
 
+func countV1EventTypes(t *testing.T, events []any) map[string]int {
+	t.Helper()
+	counts := make(map[string]int)
+	for _, ev := range events {
+		entry, ok := ev.([]any)
+		require.True(t, ok, "event must be an array, got %T", ev)
+		require.GreaterOrEqual(t, len(entry), 2)
+		counts[entry[1].(string)]++
+	}
+	return counts
+}
+
+func TestSession_V1NativeFpsWeatherSuppressTelemetryDerived(t *testing.T) {
+	// Native general events are the single source; telemetry-derived samples
+	// must not duplicate them in the v1 JSON backup.
+	s := NewSession()
+	s.HandleGeneralEvent(core.GeneralEvent{CaptureFrame: 10, Name: "serverFps", Message: `{"fps":45}`})
+	s.HandleGeneralEvent(core.GeneralEvent{CaptureFrame: 60, Name: "weather", Message: `{"overcast":0.4,"rain":0.1,"fog":0.2,"windSpeed":5.1,"windDir":247}`})
+	s.HandleTelemetry(core.TelemetryEvent{CaptureFrame: 20, FpsAverage: 50, Weather: core.WeatherData{Overcast: 0.5, WindStr: 6}})
+	s.HandleTelemetry(core.TelemetryEvent{CaptureFrame: 30, FpsAverage: 48, Weather: core.WeatherData{Overcast: 0.6, WindStr: 7}})
+
+	counts := countV1EventTypes(t, s.ToV1JSON()["events"].([]any))
+	assert.Equal(t, 1, counts["serverFps"])
+	assert.Equal(t, 1, counts["weather"])
+}
+
+func TestSession_V1NoNativeFpsWeatherKeepsTelemetryDerived(t *testing.T) {
+	// Fallback: without native events, telemetry-derived samples are kept so
+	// older streams still report server FPS and weather.
+	s := NewSession()
+	s.HandleTelemetry(core.TelemetryEvent{CaptureFrame: 20, FpsAverage: 50, Weather: core.WeatherData{Overcast: 0.5, WindStr: 6}})
+
+	counts := countV1EventTypes(t, s.ToV1JSON()["events"].([]any))
+	assert.Equal(t, 1, counts["serverFps"])
+	assert.Equal(t, 1, counts["weather"])
+}
+
 func ptrUint(v uint) *uint {
 	return &v
 }
