@@ -25,14 +25,32 @@ func radioPayload(e core.RadioEvent) map[string]any {
 	return p
 }
 
+func (s *Session) hasGeneralEvent(name string) bool {
+	for _, e := range s.events {
+		if e.eventType == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Session) appendExtraV1Events(events []any) []any {
+	// The addon emits native serverFps/weather general events when its tracking
+	// is on. Telemetry-derived samples are only a fallback for when they are
+	// absent, otherwise the v1 backup reports each reading twice.
+	hasNativeFps := s.hasGeneralEvent("serverFps")
+	hasNativeWeather := s.hasGeneralEvent("weather")
 	for _, e := range s.radio {
 		events = append(events, []any{e.CaptureFrame, "radioTransmission", radioPayload(e)})
 	}
 	for _, e := range s.telemetry {
-		events = append(events, []any{e.CaptureFrame, "serverFps", map[string]any{"fps": e.FpsAverage}})
+		if !hasNativeFps {
+			events = append(events, []any{e.CaptureFrame, "serverFps", map[string]any{"fps": e.FpsAverage}})
+		}
 		w := e.Weather
-		events = append(events, []any{e.CaptureFrame, "weather", map[string]any{"fog": w.Fog, "overcast": w.Overcast, "rain": w.Rain, "windDir": w.WindDir, "windStr": w.WindStr, "gusts": w.Gusts, "waves": w.Waves, "lightnings": w.Lightnings, "humidity": w.Humidity, "moonIntensity": w.MoonIntensity, "moonPhase": w.MoonPhase, "sunOrMoon": w.SunOrMoon}})
+		if !hasNativeWeather {
+			events = append(events, []any{e.CaptureFrame, "weather", map[string]any{"fog": w.Fog, "overcast": w.Overcast, "rain": w.Rain, "windDir": w.WindDir, "windStr": w.WindStr, "gusts": w.Gusts, "waves": w.Waves, "lightnings": w.Lightnings, "humidity": w.Humidity, "moonIntensity": w.MoonIntensity, "moonPhase": w.MoonPhase, "sunOrMoon": w.SunOrMoon}})
+		}
 	}
 	for _, e := range s.aceDeaths {
 		events = append(events, []any{e.CaptureFrame, "ace3Death", e})
