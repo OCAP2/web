@@ -20,7 +20,9 @@ export function parseWeatherPayload(raw: unknown): WeatherPayload | null {
   if (rain !== undefined) payload.rain = rain;
   const fog = finiteNumber(source.fog);
   if (fog !== undefined) payload.fog = fog;
-  const windSpeed = finiteNumber(source.windSpeed);
+  // The v2 telemetry snapshot emits wind_str (Arma's wind strength), while the
+  // addon's general weather event emits windSpeed. Accept both spellings.
+  const windSpeed = finiteNumber(source.windSpeed) ?? finiteNumber(source.windStr);
   if (windSpeed !== undefined) payload.windSpeed = windSpeed;
   const windDir = finiteNumber(source.windDir);
   if (windDir !== undefined) payload.windDir = windDir;

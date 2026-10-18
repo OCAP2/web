@@ -48,6 +48,29 @@ describe("parseWeatherPayload", () => {
       ace: false,
     });
   });
+
+  it("reads wind strength from the v2 telemetry spelling (windStr)", () => {
+    expect(parseWeatherPayload({
+      overcast: 0.42,
+      rain: 0.1,
+      fog: 0.2,
+      windStr: 5.1,
+      windDir: 247,
+    })).toEqual({
+      overcast: 0.42,
+      rain: 0.1,
+      fog: 0.2,
+      windSpeed: 5.1,
+      windDir: 247,
+    });
+  });
+
+  it("prefers windSpeed when both spellings are present", () => {
+    expect(parseWeatherPayload({ overcast: 0.3, windSpeed: 2.0, windStr: 9.9 })).toEqual({
+      overcast: 0.3,
+      windSpeed: 2.0,
+    });
+  });
 });
 
 describe("weather display helpers", () => {
