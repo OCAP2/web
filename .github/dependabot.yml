@@ -13,6 +13,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 8
     groups:
       go-minor-patch:
         patterns:
@@ -30,6 +31,19 @@ updates:
     directory: "/ui"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 8
+    ignore:
+      # Major upgrades kept on hold until each has its own migration PR.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/coverage-v8"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "maplibre-gl"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@solidjs/router"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-production:
         dependency-type: "production"
@@ -45,11 +59,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      npm-major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
+      # No umbrella major group: each breaking major bump opens its own PR.
 
   - package-ecosystem: "docker"
     directory: "/"
