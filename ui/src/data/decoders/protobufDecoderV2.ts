@@ -13,6 +13,9 @@ import type {
   TelemetrySample,
 } from "../types";
 import type { DecoderStrategy } from "./decoder.interface";
+import { ProtobufDecoder, convertEvent as convertV1Event } from "./protobufDecoder";
+import { Event as V1Event } from "./generated/ocap.pb";
+import { extractRadioPropagation } from "../radioPropagation";
 import {
   Manifest as PbManifest,
   Chunk as PbChunk,
@@ -116,6 +119,11 @@ function convertSoldierState(pb: PbSoldierState): AppEntityState {
     position: posToArma(pb.position),
     direction: pb.bearing,
     alive: (pb.lifestate & 0x3) as AliveState,
+    isPlayer: pb.isPlayer,
+    isInVehicle: pb.inVehicle,
+    vehicleId: pb.inVehicle ? pb.vehicleId : undefined,
+    hasStableVitals: pb.hasStableVitals,
+    isDraggedCarried: pb.isDraggedCarried,
   };
   if (pb.name) state.name = pb.name;
   if (pb.vehicleId) state.vehicleId = pb.vehicleId;
@@ -123,6 +131,7 @@ function convertSoldierState(pb: PbSoldierState): AppEntityState {
   if (pb.isPlayer) state.isPlayer = pb.isPlayer;
   if (pb.groupName) state.groupName = pb.groupName;
   if (pb.side) state.side = mapSideString(pb.side);
+  if (pb.role) state.role = pb.role;
   // v2 extensions
   if (pb.vehicleRole) state.vehicleRole = pb.vehicleRole;
   if (pb.stance) state.stance = pb.stance;
@@ -146,6 +155,9 @@ function convertVehicleState(pb: PbVehicleState): AppEntityState {
     position: posToArma(pb.position),
     direction: pb.bearing,
     alive: (pb.alive ? 1 : 0) as AliveState,
+    crewIds: [...pb.crewIds],
+    fuel:pb.fuel, damage:pb.damage, locked:pb.locked, engineOn:pb.engineOn,
+    turretAzimuth:pb.turretAzimuth,turretElevation:pb.turretElevation,
   };
   if (pb.crewIds.length > 0) state.crewIds = [...pb.crewIds];
   if (pb.side) state.side = mapSideString(pb.side);
@@ -206,30 +218,16 @@ function convertEvent(pb: PbEvent): EventDef | null {
     // Extracted separately into manifest.telemetry for metrics display.
     return null;
   }
+  if (pb.radio) {
+    const r=pb.radio;
+    return convertV1Event(V1Event.fromPartial({frameNum,type:"radioTransmission",message:JSON.stringify({unitId:r.soldierId,radio:r.radio,type:r.radioType,action:r.startEnd,channel:r.channel,additional:r.isAdditional,frequency:r.frequency,code:r.code})}));
+  }
   if (pb.general) {
-    const name = pb.general.name;
-    if (name === "captured" || name === "contested") {
-      return {
-        frameNum,
-        type: name,
-        objectType: pb.general.objectType || "",
-        unitName: pb.general.unitName || "",
-        side: pb.general.side || undefined,
-      };
-    }
-    if (name === "capturedFlag") {
-      return {
-        frameNum,
-        type: "capturedFlag",
-        objectType: pb.general.objectType || "flag",
-        unitName: pb.general.unitName || "",
-      };
-    }
-    return {
-      frameNum,
-      type: "generalEvent",
-      message: pb.general.message,
-    };
+    const g=pb.general;
+    let extra: Record<string, any>={};
+    if(g.extraDataJson.length) { try { extra=JSON.parse(new TextDecoder().decode(g.extraDataJson)); } catch { /* Older files need no extra data. */ } }
+    const position=extra?.position;
+    return convertV1Event(V1Event.fromPartial({frameNum,type:g.name,message:g.message,objectType:g.objectType,unitName:g.unitName,side:g.side || extra?.side,posX:Array.isArray(position)?position[0]:0,posY:Array.isArray(position)?position[1]:0}));
   }
   if (pb.chat) {
     return {
@@ -244,17 +242,19 @@ function convertEvent(pb: PbEvent): EventDef | null {
 // ───────── Marker conversions ─────────
 
 function convertMarkerPosition(pb: PbMarkerPosition): [number, ...any] {
+  const style = pb.hasStyle ? [pb.text,pb.color,pb.size.length>=2 ? [pb.size[0],pb.size[1]] : undefined,pb.type,pb.brush,pb.shape] : [];
   if (pb.lineCoords.length > 0) {
-    return [pb.frameNum, pb.lineCoords, pb.direction, pb.alpha];
+    const points: number[][] = [];
+    for (let i=0;i<pb.lineCoords.length-1;i+=2) points.push([pb.lineCoords[i],pb.lineCoords[i+1]]);
+    return [pb.frameNum, points, pb.direction, pb.alpha,...style];
   }
   const pos = pb.position;
   return [
     pb.frameNum,
-    pos ? pos.x : 0,
-    pos ? pos.y : 0,
-    pos ? pos.z : 0,
+    pos ? [pos.x,pos.y,pos.z] : [0,0,0],
     pb.direction,
     pb.alpha,
+    ...style,
   ];
 }
 
@@ -272,7 +272,7 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
     player: pb.playerId,
     alpha,
     startFrame: pb.startFrame,
-    endFrame: pb.endFrame || -1, // 0 (proto default) means "show forever"
+    endFrame: pb.deletedFrame ?? (pb.endFrame || -1),
   };
   if (pb.text) marker.text = pb.text;
   if (pb.size.length >= 2) marker.size = [pb.size[0], pb.size[1]];
@@ -283,9 +283,8 @@ function convertMarkerDef(pb: PbMarkerDef): AppMarkerDef {
 // ───────── Public decoder ─────────
 
 export class ProtobufDecoderV2 implements DecoderStrategy {
-  // v2 keeps its events in the manifest and has no player snapshot sidecars.
-  decodePlayerSnapshots(_buffer: ArrayBuffer): EventDef[] {
-    return [];
+  decodePlayerSnapshots(buffer: ArrayBuffer): EventDef[] {
+    return new ProtobufDecoder().decodePlayerSnapshots(buffer);
   }
 
   decodeManifest(buffer: ArrayBuffer): AppManifest {
@@ -301,7 +300,7 @@ export class ProtobufDecoderV2 implements DecoderStrategy {
       version: pb.version,
       worldName: pb.world?.worldName ?? "",
       missionName: pb.mission?.missionName ?? "",
-      endFrame: pb.frameCount,
+      endFrame: Math.max(0,pb.frameCount-1),
       chunkSize: pb.chunkSize,
       captureDelayMs: pb.captureDelayMs,
       chunkCount: pb.chunkCount,
@@ -316,7 +315,23 @@ export class ProtobufDecoderV2 implements DecoderStrategy {
       })),
       extensionVersion: pb.mission?.extensionVersion || undefined,
       addonVersion: pb.mission?.addonVersion || undefined,
+      snapshotUnitIds: pb.snapshotUnitIds,
     };
+
+    const extracted=extractRadioPropagation(manifest.events);
+    manifest.events=extracted.events;
+    manifest.radioPropagation=extracted.radioPropagation;
+    manifest.acrePropagation=extracted.acrePropagation;
+    for (const event of pb.events) {
+      if (event.telemetry) {
+        const t=event.telemetry;
+        manifest.events.push({frameNum:event.frameNum,type:"serverFps",fps:t.fpsAverage});
+        if (t.weather) {
+          const weather=convertV1Event(V1Event.fromPartial({frameNum:event.frameNum,type:"weather",message:JSON.stringify(t.weather)}));
+          if (weather) manifest.events.push(weather);
+        }
+      }
+    }
 
     // Extract telemetry data (separate from gameplay events).
     const telemetrySamples: TelemetrySample[] = [];
@@ -395,6 +410,7 @@ export class ProtobufDecoderV2 implements DecoderStrategy {
       manifest.missionAuthor = pb.mission.author;
     }
 
+    manifest.events.sort((a,b)=>a.frameNum-b.frameNum);
     return manifest;
   }
 
@@ -426,6 +442,12 @@ export class ProtobufDecoderV2 implements DecoderStrategy {
       }
     }
 
+    // v2 stores changes and a seed at each chunk boundary. Expand within this
+    // chunk for the existing playback engine, keeping the on-disk format sparse.
+    for (const states of entities.values()) {
+      let previous: AppEntityState | undefined;
+      for (let i=0;i<states.length;i++) { if(states[i]) previous=states[i];else if(previous) states[i]=previous; }
+    }
     return { entities };
   }
 }

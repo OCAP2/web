@@ -35,7 +35,7 @@ describe("ProtobufDecoderV2.decodeManifest", () => {
     expect(manifest.version).toBe(2);
     expect(manifest.worldName).toBe("Altis");
     expect(manifest.missionName).toBe("Test Op");
-    expect(manifest.endFrame).toBe(1000);
+    expect(manifest.endFrame).toBe(999);
     expect(manifest.chunkSize).toBe(300);
     expect(manifest.captureDelayMs).toBe(1000);
     expect(manifest.chunkCount).toBe(4);
@@ -348,7 +348,7 @@ describe("ProtobufDecoderV2.decodeChunk", () => {
     expect(vehicleStates![0].alive).toBe(1);
     expect(vehicleStates![0].crewIds).toEqual([1]);
     expect(vehicleStates![0].fuel).toBeCloseTo(0.75);
-    expect(vehicleStates![1]).toBeUndefined(); // vehicle absent from frame 1
+    expect(vehicleStates![1]).toEqual(vehicleStates![0]); // unchanged state carries forward
   });
 
   it("decodes v2 soldier extensions", () => {

@@ -23,13 +23,13 @@ func TestSession_AddSoldierAndStates(t *testing.T) {
 	s.HandleSoldierState(core.SoldierState{
 		SoldierID: 1, CaptureFrame: 0,
 		Position: core.Position3D{X: 100, Y: 200, Z: 10},
-		Bearing: 90, Lifestate: 0, IsPlayer: true,
+		Bearing:  90, Lifestate: 0, IsPlayer: true,
 		UnitName: "Player1", GroupID: "Alpha", Side: "WEST",
 	})
 	s.HandleSoldierState(core.SoldierState{
 		SoldierID: 1, CaptureFrame: 1,
 		Position: core.Position3D{X: 101, Y: 201, Z: 10},
-		Bearing: 95, Lifestate: 0, IsPlayer: true,
+		Bearing:  95, Lifestate: 0, IsPlayer: true,
 		UnitName: "Player1", GroupID: "Alpha", Side: "WEST",
 	})
 
@@ -37,7 +37,7 @@ func TestSession_AddSoldierAndStates(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "Player1", rec.Soldier.DisplayName)
 	assert.Len(t, rec.States, 2)
-	assert.Equal(t, uint(1), rec.States[1].CaptureFrame)
+	assert.Equal(t, core.Frame(1), rec.States[1].CaptureFrame)
 }
 
 func TestSession_SoldierStatePlaceholder(t *testing.T) {
@@ -66,7 +66,7 @@ func TestSession_AddVehicleAndStates(t *testing.T) {
 	s.HandleVehicleState(core.VehicleState{
 		VehicleID: 100, CaptureFrame: 5,
 		Position: core.Position3D{X: 500, Y: 600, Z: 0},
-		Bearing: 180, IsAlive: true, Crew: "[1,2]",
+		Bearing:  180, IsAlive: true, Crew: "[1,2]",
 	})
 
 	rec, ok := s.vehicles[100]
@@ -140,7 +140,7 @@ func TestSession_Markers(t *testing.T) {
 	s := NewSession()
 
 	s.HandleAddMarker(core.Marker{
-		ID: 1, MarkerName: "marker1", CaptureFrame: 10, EndFrame: -1,
+		ID: 1, MarkerName: "marker1", CaptureFrame: 10, EndFrame: 0,
 		MarkerType: "hd_dot", Text: "HQ", Color: "ColorBlue",
 		Side: "WEST", Position: core.Position3D{X: 300, Y: 400, Z: 0},
 		Shape: "ICON", Alpha: 1.0, Brush: "Solid",
@@ -148,7 +148,7 @@ func TestSession_Markers(t *testing.T) {
 
 	s.HandleMarkerState(core.MarkerState{
 		MarkerID: 1, CaptureFrame: 20,
-		Position: core.Position3D{X: 310, Y: 410, Z: 0},
+		Position:  core.Position3D{X: 310, Y: 410, Z: 0},
 		Direction: 45, Alpha: 0.8,
 	})
 
@@ -162,13 +162,13 @@ func TestSession_DeleteMarker(t *testing.T) {
 	s := NewSession()
 
 	s.HandleAddMarker(core.Marker{
-		ID: 1, MarkerName: "m1", CaptureFrame: 0, EndFrame: -1,
+		ID: 1, MarkerName: "m1", CaptureFrame: 0, EndFrame: 0,
 	})
 
 	s.HandleDeleteMarker("m1", 50)
 
 	rec := s.markers["m1"]
-	assert.Equal(t, 50, rec.Marker.EndFrame)
+	assert.Equal(t, core.Frame(50), rec.Marker.EndFrame)
 	assert.True(t, rec.Marker.IsDeleted)
 }
 
@@ -189,10 +189,13 @@ func TestSession_FiredEvents(t *testing.T) {
 func TestSession_FiredEvent_UnknownSoldier(t *testing.T) {
 	s := NewSession()
 
-	// Fired event for unknown soldier should be silently dropped
+	// Independent workers may deliver fire before the soldier definition.
 	s.HandleFiredEvent(core.FiredEvent{SoldierID: 99, CaptureFrame: 0})
 
-	assert.Empty(t, s.soldiers)
+	require.Len(t, s.soldiers[99].FiredEvents, 1)
+	s.HandleAddSoldier(core.Soldier{ID: 99, UnitName: "Late definition"})
+	require.Equal(t, "Late definition", s.soldiers[99].Soldier.UnitName)
+	require.Len(t, s.soldiers[99].FiredEvents, 1)
 }
 
 func TestSession_TimeStates(t *testing.T) {
@@ -220,7 +223,7 @@ func TestSession_FrameCount(t *testing.T) {
 	s.HandleAddVehicle(core.Vehicle{ID: 100})
 	s.HandleVehicleState(core.VehicleState{VehicleID: 100, CaptureFrame: 5})
 
-	assert.Equal(t, uint(6), s.frameCount) // max(2,5) + 1 = 6
+	assert.Equal(t, core.Frame(6), s.frameCount) // max(2,5) + 1 = 6
 }
 
 func TestSession_Telemetry(t *testing.T) {
@@ -244,7 +247,7 @@ func TestSession_Telemetry(t *testing.T) {
 	assert.Equal(t, uint(8), s.telemetry[0].GlobalCounts.PlayersConnected)
 	assert.Len(t, s.telemetry[0].Players, 1)
 	assert.Equal(t, "Player1", s.telemetry[0].Players[0].Name)
-	assert.Equal(t, uint(11), s.frameCount) // frame 10 + 1
+	assert.Equal(t, core.Frame(11), s.frameCount) // frame 10 + 1
 }
 
 func TestSession_Finalize(t *testing.T) {
@@ -260,11 +263,11 @@ func TestSession_Finalize(t *testing.T) {
 		ID: 1, JoinFrame: 0, UnitName: "Player1", Side: "WEST",
 		GroupID: "Alpha", IsPlayer: true, OcapType: "unit", RoleDescription: "Rifleman",
 	})
-	for i := uint(0); i < 3; i++ {
+	for i := core.Frame(0); i < 3; i++ {
 		s.HandleSoldierState(core.SoldierState{
 			SoldierID: 1, CaptureFrame: i,
 			Position: core.Position3D{X: float64(100 + i), Y: 200, Z: 10},
-			Bearing: 90, Lifestate: 0, IsPlayer: true,
+			Bearing:  90, Lifestate: 0, IsPlayer: true,
 			UnitName: "Player1", GroupID: "Alpha", Side: "WEST",
 		})
 	}
@@ -277,7 +280,7 @@ func TestSession_Finalize(t *testing.T) {
 	s.HandleVehicleState(core.VehicleState{
 		VehicleID: 100, CaptureFrame: 0,
 		Position: core.Position3D{X: 500, Y: 600, Z: 0},
-		Bearing: 180, IsAlive: true, Crew: "[1]",
+		Bearing:  180, IsAlive: true, Crew: "[1]",
 	})
 
 	// Add a kill event
@@ -305,7 +308,7 @@ func TestSession_Finalize(t *testing.T) {
 	// Verify top-level fields
 	assert.Equal(t, "altis", data["worldName"])
 	assert.Equal(t, "Test Mission", data["missionName"])
-	assert.Equal(t, uint(3), data["endFrame"])
+	assert.Equal(t, core.Frame(2), data["endFrame"])
 	assert.Equal(t, float32(1.0), data["captureDelay"])
 	assert.Equal(t, "1.0.0", data["extensionVersion"])
 	assert.Equal(t, "2.0.0", data["addonVersion"])
@@ -335,13 +338,13 @@ func TestSession_Finalize(t *testing.T) {
 
 	// Verify kill event uses old extension format: [frame, "killed", victimId, [killerId, weapon], distance]
 	killEvt := events[0].([]any)
-	assert.Equal(t, uint(2), killEvt[0])
+	assert.Equal(t, core.Frame(2), killEvt[0])
 	assert.Equal(t, "killed", killEvt[1])
-	assert.Equal(t, uint(2), killEvt[2])                   // victimId
+	assert.Equal(t, uint(2), killEvt[2]) // victimId
 	killerArr := killEvt[3].([]any)
-	assert.Equal(t, uint(1), killerArr[0])                  // killerId
-	assert.Equal(t, "arifle_MX_F", killerArr[1])            // weapon
-	assert.Equal(t, float32(100.5), killEvt[4])             // distance
+	assert.Equal(t, uint(1), killerArr[0])       // killerId
+	assert.Equal(t, "arifle_MX_F", killerArr[1]) // weapon
+	assert.Equal(t, float32(100.5), killEvt[4])  // distance
 
 	// Verify markers
 	markers, ok := data["Markers"].([]any)
@@ -400,17 +403,17 @@ func TestSession_RoundTrip_ParserV1(t *testing.T) {
 	s.HandleAddSoldier(core.Soldier{ID: 2, JoinFrame: 0, OcapType: "unit",
 		UnitName: "Alpha2", Side: "WEST", GroupID: "Alpha"})
 
-	for i := uint(0); i < 5; i++ {
+	for i := core.Frame(0); i < 5; i++ {
 		s.HandleSoldierState(core.SoldierState{
 			SoldierID: 1, CaptureFrame: i,
 			Position: core.Position3D{X: float64(100 + i), Y: 200, Z: 10},
-			Bearing: 90, Side: "WEST", GroupID: "Alpha",
+			Bearing:  90, Side: "WEST", GroupID: "Alpha",
 			UnitName: "Alpha1", IsPlayer: true,
 		})
 		s.HandleSoldierState(core.SoldierState{
 			SoldierID: 2, CaptureFrame: i,
 			Position: core.Position3D{X: float64(110 + i), Y: 210, Z: 10},
-			Bearing: 180, Side: "WEST", GroupID: "Alpha",
+			Bearing:  180, Side: "WEST", GroupID: "Alpha",
 			UnitName: "Alpha2",
 		})
 	}
@@ -428,7 +431,7 @@ func TestSession_RoundTrip_ParserV1(t *testing.T) {
 		EventText: "arifle_MX_F", Distance: 50})
 
 	s.HandleAddMarker(core.Marker{ID: 1, MarkerName: "m1", CaptureFrame: 0,
-		EndFrame: -1, MarkerType: "hd_dot", Text: "HQ",
+		EndFrame: 0, MarkerType: "hd_dot", Text: "HQ",
 		Color: "ColorBlue", Side: "WEST", Shape: "ICON", Alpha: 1.0,
 		Position: core.Position3D{X: 300, Y: 400, Z: 0}})
 
@@ -467,7 +470,7 @@ func TestSession_RoundTrip_ParserV1(t *testing.T) {
 
 	// Each position: [[x,y,z], bearing, lifestate, inVehicleID, name, isPlayer, role]
 	pos := positions[0].([]interface{})
-	assert.Len(t, pos, 7)
+	assert.Len(t, pos, 9)
 
 	// Events
 	events := parsed["events"].([]interface{})
@@ -501,7 +504,7 @@ func TestSession_EmptySession(t *testing.T) {
 
 	assert.Equal(t, "", data["worldName"])
 	assert.Equal(t, "", data["missionName"])
-	assert.Equal(t, uint(0), data["endFrame"])
+	assert.Equal(t, core.Frame(0), data["endFrame"])
 
 	entities := data["entities"].([]any)
 	assert.Empty(t, entities)
@@ -511,7 +514,7 @@ func TestSession_Accessors(t *testing.T) {
 	s := NewSession()
 	assert.Nil(t, s.Mission())
 	assert.Nil(t, s.World())
-	assert.Equal(t, uint(0), s.FrameCount())
+	assert.Equal(t, core.Frame(0), s.FrameCount())
 
 	s.SetMission(&core.Mission{MissionName: "Test"}, &core.World{WorldName: "altis"})
 	assert.Equal(t, "Test", s.Mission().MissionName)

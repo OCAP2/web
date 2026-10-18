@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 // soldierRecord tracks a soldier and their accumulated states/events.
 type soldierRecord struct {
+	deleted     bool
 	Soldier     core.Soldier
 	States      []core.SoldierState
 	FiredEvents []core.FiredEvent
@@ -27,6 +29,7 @@ type soldierRecord struct {
 
 // vehicleRecord tracks a vehicle and their accumulated states.
 type vehicleRecord struct {
+	deleted bool
 	Vehicle core.Vehicle
 	States  []core.VehicleState
 }
@@ -40,7 +43,7 @@ type markerRecord struct {
 // eventRecord stores a generic event with its type for serialization.
 type eventRecord struct {
 	eventType string
-	frame     uint
+	frame     core.Frame
 	kill      *core.KillEvent
 	hit       *core.HitEvent
 	general   *core.GeneralEvent
@@ -50,8 +53,9 @@ type eventRecord struct {
 // Session accumulates streaming mission data in memory.
 // All methods are called sequentially from a single goroutine (the WebSocket read loop).
 type Session struct {
-	mission *core.Mission
-	world   *core.World
+	frameBase uint8
+	mission   *core.Mission
+	world     *core.World
 
 	soldiers    map[uint16]*soldierRecord
 	vehicles    map[uint16]*vehicleRecord
@@ -63,22 +67,32 @@ type Session struct {
 	telemetry   []core.TelemetryEvent
 	times       []core.TimeState
 
-	frameCount uint // highest CaptureFrame seen + 1
+	frameCount core.Frame // highest CaptureFrame seen + 1
 
 	projectileMarkerSeq uint // counter for unique projectile marker names
 	projectilesDerived  bool // guard against double-derivation
 
 	// v2 chunk flusher (optional, nil for v1-only sessions).
-	chunkFlusher *ChunkFlusher
+	chunkFlusher   *ChunkFlusher
+	chunkErr       error
+	radio          []core.RadioEvent
+	aceDeaths      []core.Ace3DeathEvent
+	aceUnconscious []core.Ace3UnconsciousEvent
+	placed         map[uint16]core.PlacedObject
+	placedEvents   []core.PlacedObjectEvent
+	focusStart     *core.Frame
+	focusRanges    []core.FocusRange
 }
 
 // NewSession creates an empty ingestion session.
 func NewSession() *Session {
 	return &Session{
+		frameBase:   1,
 		soldiers:    make(map[uint16]*soldierRecord),
 		vehicles:    make(map[uint16]*vehicleRecord),
 		markers:     make(map[string]*markerRecord),
 		markersByID: make(map[uint]*markerRecord),
+		placed:      make(map[uint16]core.PlacedObject),
 	}
 }
 
@@ -89,12 +103,20 @@ func (s *Session) Mission() *core.Mission { return s.mission }
 func (s *Session) World() *core.World { return s.world }
 
 // FrameCount returns the number of frames accumulated.
-func (s *Session) FrameCount() uint { return s.frameCount }
+func (s *Session) FrameCount() core.Frame { return s.frameCount }
+
+func (s *Session) LivePlayerCount() int {
+	if len(s.telemetry) == 0 {
+		return 0
+	}
+	return int(s.telemetry[len(s.telemetry)-1].GlobalCounts.PlayersConnected)
+}
 
 type SideStats struct {
 	Players int
 	Units   int
 	Dead    int
+	Kills   int
 }
 
 type SessionStats struct {
@@ -111,7 +133,6 @@ func (s *Session) Stats() SessionStats {
 
 	seenPlayer := make(map[string]bool)
 	seenPlayerSide := make(map[string]map[string]bool)
-	playerIDs := make(map[uint16]bool)
 	idIsPlayer := make(map[uint16]bool)
 
 	for id, rec := range s.soldiers {
@@ -123,7 +144,6 @@ func (s *Session) Stats() SessionStats {
 				seenPlayer[name] = true
 				stats.PlayerCount++
 			}
-			playerIDs[id] = true
 		}
 		if side != "" && side != "UNKNOWN" && side != "GLOBAL" {
 			sc := stats.Sides[side]
@@ -146,15 +166,41 @@ func (s *Session) Stats() SessionStats {
 		}
 	}
 
+	seenZeus := make(map[uint32]bool)
 	for _, evt := range s.events {
+		if evt.general != nil && evt.eventType == "zeusEntity" {
+			var p struct {
+				CuratorID uint32 `json:"curatorId"`
+				Name      string `json:"name"`
+			}
+			if json.Unmarshal([]byte(evt.general.Message), &p) == nil && !seenZeus[p.CuratorID] {
+				seenZeus[p.CuratorID] = true
+				sc := stats.Sides["VIRTUAL"]
+				sc.Units++
+				sc.Players++
+				stats.Sides["VIRTUAL"] = sc
+				if p.Name == "" || !seenPlayer[p.Name] {
+					seenPlayer[p.Name] = true
+					stats.PlayerCount++
+				}
+			}
+		}
 		if evt.kill == nil {
 			continue
 		}
 		stats.KillCount++
-		if evt.kill.KillerSoldierID != nil && idIsPlayer[uint16(*evt.kill.KillerSoldierID)] {
+		if evt.kill.KillerVehicleID == nil && evt.kill.KillerSoldierID != nil && idIsPlayer[uint16(*evt.kill.KillerSoldierID)] {
 			stats.PlayerKillCount++
 		}
-		if evt.kill.VictimSoldierID != nil {
+		if evt.kill.KillerVehicleID == nil && evt.kill.KillerSoldierID != nil {
+			if rec := s.soldiers[uint16(*evt.kill.KillerSoldierID)]; rec != nil {
+				side := normalizeSide(rec.Soldier.Side)
+				sc := stats.Sides[side]
+				sc.Kills++
+				stats.Sides[side] = sc
+			}
+		}
+		if evt.kill.VictimVehicleID == nil && evt.kill.VictimSoldierID != nil {
 			vid := uint16(*evt.kill.VictimSoldierID)
 			if rec, ok := s.soldiers[vid]; ok {
 				side := normalizeSide(rec.Soldier.Side)
@@ -234,52 +280,88 @@ func (s *Session) ChunkFlusher() *ChunkFlusher {
 // Finalize flushes remaining chunks and writes the v2 manifest.
 // outputDir is the directory where chunks/ and manifest files are written.
 func (s *Session) Finalize(outputDir string) error {
+	if s.chunkErr != nil {
+		return s.chunkErr
+	}
 	if s.chunkFlusher == nil {
 		return nil
 	}
-	if err := s.chunkFlusher.Flush(); err != nil {
+	if err := s.chunkFlusher.FlushThrough(uint32(s.frameCount)); err != nil {
 		return fmt.Errorf("flush final chunk: %w", err)
+	}
+	if err := s.seedChunkBoundaries(); err != nil {
+		return err
 	}
 	return WriteV2Manifest(s, outputDir, s.chunkFlusher.ChunkCount())
 }
 
 // HandleAddSoldier registers a new soldier entity.
 func (s *Session) HandleAddSoldier(sol core.Soldier) {
-	s.soldiers[sol.ID] = &soldierRecord{Soldier: sol}
+	if rec := s.soldiers[sol.ID]; rec != nil {
+		if rec.Soldier.IsPlayer {
+			sol.IsPlayer = true
+			if rec.Soldier.UnitName != "" {
+				sol.UnitName = rec.Soldier.UnitName
+			}
+		}
+		rec.Soldier = sol
+	} else {
+		s.soldiers[sol.ID] = &soldierRecord{Soldier: sol}
+	}
+	s.trackFrame(sol.JoinFrame)
 }
 
 // HandleSoldierState appends a state snapshot for a soldier.
 func (s *Session) HandleSoldierState(state core.SoldierState) {
 	rec, ok := s.soldiers[state.SoldierID]
 	if !ok {
-		rec = &soldierRecord{Soldier: core.Soldier{ID: state.SoldierID}}
+		rec = &soldierRecord{Soldier: core.Soldier{ID: state.SoldierID, JoinFrame: state.CaptureFrame}}
 		s.soldiers[state.SoldierID] = rec
 	}
 	rec.States = append(rec.States, state)
+	if rec.Soldier.Side == "" {
+		rec.Soldier.Side = state.Side
+	}
+	if rec.Soldier.GroupID == "" {
+		rec.Soldier.GroupID = state.GroupID
+	}
+	if rec.Soldier.UnitName == "" || state.IsPlayer {
+		if state.UnitName != "" {
+			rec.Soldier.UnitName = state.UnitName
+		}
+	}
+	if state.IsPlayer {
+		rec.Soldier.IsPlayer = true
+	}
 	s.trackFrame(state.CaptureFrame)
 
 	if s.chunkFlusher != nil {
-		s.chunkFlusher.AddSoldierState(uint32(state.CaptureFrame), SoldierStateToProto(state))
+		s.recordChunkError(s.chunkFlusher.AddSoldierState(uint32(state.CaptureFrame), SoldierStateToProto(state)))
 	}
 }
 
 // HandleAddVehicle registers a new vehicle entity.
 func (s *Session) HandleAddVehicle(veh core.Vehicle) {
-	s.vehicles[veh.ID] = &vehicleRecord{Vehicle: veh}
+	if rec := s.vehicles[veh.ID]; rec != nil {
+		rec.Vehicle = veh
+	} else {
+		s.vehicles[veh.ID] = &vehicleRecord{Vehicle: veh}
+	}
+	s.trackFrame(veh.JoinFrame)
 }
 
 // HandleVehicleState appends a state snapshot for a vehicle.
 func (s *Session) HandleVehicleState(state core.VehicleState) {
 	rec, ok := s.vehicles[state.VehicleID]
 	if !ok {
-		rec = &vehicleRecord{Vehicle: core.Vehicle{ID: state.VehicleID}}
+		rec = &vehicleRecord{Vehicle: core.Vehicle{ID: state.VehicleID, JoinFrame: state.CaptureFrame}}
 		s.vehicles[state.VehicleID] = rec
 	}
 	rec.States = append(rec.States, state)
 	s.trackFrame(state.CaptureFrame)
 
 	if s.chunkFlusher != nil {
-		s.chunkFlusher.AddVehicleState(uint32(state.CaptureFrame), VehicleStateToProto(state))
+		s.recordChunkError(s.chunkFlusher.AddVehicleState(uint32(state.CaptureFrame), VehicleStateToProto(state)))
 	}
 }
 
@@ -288,10 +370,12 @@ func (s *Session) HandleAddMarker(marker core.Marker) {
 	rec := &markerRecord{Marker: marker}
 	s.markers[marker.MarkerName] = rec
 	s.markersByID[marker.ID] = rec
+	s.trackFrame(marker.CaptureFrame)
 }
 
 // HandleMarkerState appends a state snapshot for a marker, routed by MarkerID.
 func (s *Session) HandleMarkerState(state core.MarkerState) {
+	s.trackFrame(state.CaptureFrame)
 	rec, ok := s.markersByID[state.MarkerID]
 	if !ok {
 		return
@@ -300,12 +384,13 @@ func (s *Session) HandleMarkerState(state core.MarkerState) {
 }
 
 // HandleDeleteMarker sets the end frame for a marker.
-func (s *Session) HandleDeleteMarker(name string, endFrame uint) {
+func (s *Session) HandleDeleteMarker(name string, endFrame core.Frame) {
+	s.trackFrame(endFrame)
 	rec, ok := s.markers[name]
 	if !ok {
 		return
 	}
-	rec.Marker.EndFrame = int(endFrame)
+	rec.Marker.EndFrame = endFrame
 	rec.Marker.IsDeleted = true
 }
 
@@ -313,7 +398,8 @@ func (s *Session) HandleDeleteMarker(name string, endFrame uint) {
 func (s *Session) HandleFiredEvent(fe core.FiredEvent) {
 	rec, ok := s.soldiers[fe.SoldierID]
 	if !ok {
-		return
+		rec = &soldierRecord{Soldier: core.Soldier{ID: fe.SoldierID}}
+		s.soldiers[fe.SoldierID] = rec
 	}
 	rec.FiredEvents = append(rec.FiredEvents, fe)
 	s.trackFrame(fe.CaptureFrame)
@@ -334,6 +420,12 @@ func (s *Session) HandleKillEvent(evt core.KillEvent) {
 func (s *Session) HandleProjectileEvent(evt core.ProjectileEvent) {
 	s.projectiles = append(s.projectiles, evt)
 	s.trackFrame(evt.CaptureFrame)
+	for _, p := range evt.Trajectory {
+		s.trackFrame(p.FrameNum)
+	}
+	for _, h := range evt.Hits {
+		s.trackFrame(h.CaptureFrame)
+	}
 }
 
 // HandleHitEvent stores a hit event.
@@ -385,6 +477,7 @@ func (s *Session) deriveProjectileData() {
 		return
 	}
 	s.projectilesDerived = true
+	s.derivePlacedObjects()
 
 	for _, evt := range s.projectiles {
 		if !isProjectileMarker(evt.SimulationType) {
@@ -440,7 +533,7 @@ func (s *Session) addProjectileMarker(evt core.ProjectileEvent) {
 	}
 
 	// EndFrame is the last trajectory point's frame.
-	endFrame := int(evt.Trajectory[len(evt.Trajectory)-1].Frame)
+	endFrame := evt.Trajectory[len(evt.Trajectory)-1].FrameNum
 
 	// Generate unique marker name.
 	s.projectileMarkerSeq++
@@ -448,7 +541,7 @@ func (s *Session) addProjectileMarker(evt core.ProjectileEvent) {
 
 	firstTP := evt.Trajectory[0]
 	marker := core.Marker{
-		CaptureFrame: firstTP.Frame,
+		CaptureFrame: firstTP.FrameNum,
 		EndFrame:     endFrame,
 		MarkerName:   name,
 		MarkerType:   markerType,
@@ -466,7 +559,7 @@ func (s *Session) addProjectileMarker(evt core.ProjectileEvent) {
 	for i := 1; i < len(evt.Trajectory); i++ {
 		tp := evt.Trajectory[i]
 		rec.States = append(rec.States, core.MarkerState{
-			CaptureFrame: tp.Frame,
+			CaptureFrame: tp.FrameNum,
 			Position:     tp.Position,
 			Alpha:        1.0,
 		})
@@ -566,7 +659,7 @@ func formatWeaponText(weapon, magazine string) string {
 }
 
 // trackFrame updates frameCount to be max(current, frame+1).
-func (s *Session) trackFrame(frame uint) {
+func (s *Session) trackFrame(frame core.Frame) {
 	if frame+1 > s.frameCount {
 		s.frameCount = frame + 1
 	}
@@ -584,7 +677,7 @@ func (s *Session) ToV1JSON() map[string]any {
 	result := map[string]any{
 		"worldName":    "",
 		"missionName":  "",
-		"endFrame":     s.frameCount,
+		"endFrame":     lastFrame(s.frameCount),
 		"captureDelay": float32(0),
 		"entities":     s.entitiesToV1(),
 		"events":       s.eventsToV1(),
@@ -614,6 +707,9 @@ func (s *Session) ToV1JSON() map[string]any {
 			result["tags"] = s.mission.Tag
 		}
 	}
+	if ranges := s.FocusRanges(); len(ranges) > 0 {
+		result["focusRanges"] = ranges
+	}
 
 	return result
 }
@@ -638,7 +734,7 @@ func (s *Session) entitiesToV1() []any {
 		return []any{}
 	}
 
-	entities := make([]any, maxID+1)
+	entities := make([]any, int(maxID)+1)
 	// Fill with placeholder maps for empty slots
 	for i := range entities {
 		entities[i] = map[string]any{
@@ -657,7 +753,11 @@ func (s *Session) entitiesToV1() []any {
 		sol := rec.Soldier
 
 		positions := make([][]any, 0, len(rec.States))
-		for _, st := range rec.States {
+		sort.SliceStable(rec.States, func(i, j int) bool { return rec.States[i].CaptureFrame < rec.States[j].CaptureFrame })
+		for i, st := range rec.States {
+			if i+1 < len(rec.States) && rec.States[i+1].CaptureFrame <= st.CaptureFrame {
+				continue
+			}
 			var inVehicleID any = 0
 			if st.InVehicleObjectID != nil {
 				inVehicleID = *st.InVehicleObjectID
@@ -671,8 +771,19 @@ func (s *Session) entitiesToV1() []any {
 				st.UnitName,
 				boolToInt(st.IsPlayer),
 				st.CurrentRole,
+				st.GroupID,
+				st.Side,
 			}
-			positions = append(positions, pos)
+			end := lastFrame(s.frameCount)
+			if rec.deleted || sol.DeleteFrame > 0 {
+				end = sol.DeleteFrame
+			}
+			if i+1 < len(rec.States) {
+				end = rec.States[i+1].CaptureFrame - 1
+			}
+			for f := st.CaptureFrame; f <= end; f++ {
+				positions = append(positions, pos)
+			}
 		}
 
 		firedFrames := make([][]any, 0, len(rec.FiredEvents)+len(rec.bulletFireLines))
@@ -702,6 +813,12 @@ func (s *Session) entitiesToV1() []any {
 			"positions":     positions,
 			"framesFired":   firedFrames,
 		}
+		if rec.deleted || sol.DeleteFrame > 0 {
+			entity["endFrameNum"] = sol.DeleteFrame
+		}
+		if len(rec.States) > 0 {
+			entity["startFrameNum"] = rec.States[0].CaptureFrame
+		}
 		entities[sol.ID] = entity
 	}
 
@@ -709,7 +826,11 @@ func (s *Session) entitiesToV1() []any {
 		veh := rec.Vehicle
 
 		positions := make([][]any, 0, len(rec.States))
-		for _, st := range rec.States {
+		sort.SliceStable(rec.States, func(i, j int) bool { return rec.States[i].CaptureFrame < rec.States[j].CaptureFrame })
+		for i, st := range rec.States {
+			if i+1 < len(rec.States) && rec.States[i+1].CaptureFrame <= st.CaptureFrame {
+				continue
+			}
 			// Parse crew JSON string into actual JSON array
 			var crew any
 			if st.Crew != "" {
@@ -720,12 +841,19 @@ func (s *Session) entitiesToV1() []any {
 				crew = []any{}
 			}
 
+			end := lastFrame(s.frameCount)
+			if rec.deleted || veh.DeleteFrame > 0 {
+				end = veh.DeleteFrame
+			}
+			if i+1 < len(rec.States) {
+				end = rec.States[i+1].CaptureFrame - 1
+			}
 			pos := []any{
 				[]float64{st.Position.X, st.Position.Y, st.Position.Z},
 				st.Bearing,
 				boolToInt(st.IsAlive),
 				crew,
-				[]uint{st.CaptureFrame, st.CaptureFrame},
+				[]core.Frame{st.CaptureFrame, end},
 			}
 			positions = append(positions, pos)
 		}
@@ -742,6 +870,9 @@ func (s *Session) entitiesToV1() []any {
 			"framesFired":   []any{},
 		}
 		entities[veh.ID] = entity
+		if len(rec.States) > 0 {
+			entity["startFrameNum"] = rec.States[0].CaptureFrame
+		}
 	}
 
 	return entities
@@ -799,6 +930,8 @@ func (s *Session) eventsToV1() []any {
 		default:
 			if e.general != nil {
 				switch e.eventType {
+				case "endMission":
+					events = append(events, []any{e.frame, "endMission", []any{stringFromExtra(e.general.ExtraData, "side"), e.general.Message}})
 				case "captured", "contested":
 					events = append(events, []any{
 						e.general.CaptureFrame, e.eventType,
@@ -810,8 +943,12 @@ func (s *Session) eventsToV1() []any {
 						capturedFlagDataArray(e.general),
 					})
 				default:
+					var payload any = e.general.Message
+					if json.Valid([]byte(e.general.Message)) {
+						json.Unmarshal([]byte(e.general.Message), &payload)
+					}
 					events = append(events, []any{
-						e.general.CaptureFrame, e.eventType, e.general.Message,
+						e.general.CaptureFrame, e.eventType, payload,
 					})
 				}
 			} else if e.chat != nil {
@@ -822,7 +959,7 @@ func (s *Session) eventsToV1() []any {
 		}
 	}
 
-	return events
+	return s.appendExtraV1Events(events)
 }
 
 // markersToV1 converts markers to v1 format.
@@ -862,8 +999,8 @@ func (s *Session) markersToV1() []any {
 		// Strip "#" prefix from hex colors for URL compatibility
 		markerColor := strings.TrimPrefix(m.Color, "#")
 
-		endFrame := m.EndFrame
-		if endFrame == 0 {
+		endFrame := int(m.EndFrame)
+		if endFrame == 0 && !m.IsDeleted {
 			endFrame = -1
 		}
 
@@ -924,32 +1061,35 @@ func (s *Session) WriteJSONGz(dataDir string) (string, error) {
 		missionName = s.mission.MissionName
 	}
 
-	filename := sanitizeFilename(missionName) + "_" + time.Now().Format("20060102_150405")
+	filename := MakeFilename(missionName)
+	return filename, s.WriteJSONGzNamed(dataDir, filename)
+}
 
-	data := s.ToV1JSON()
-
+// WriteJSONGzNamed uses the same storage key as the v2 recording and DB row.
+func (s *Session) WriteJSONGzNamed(dataDir, filename string) error {
 	outPath := filepath.Join(dataDir, filename+".json.gz")
-	f, err := os.Create(outPath)
+	f, err := os.CreateTemp(dataDir, ".stream-json-*")
 	if err != nil {
-		return "", fmt.Errorf("create file: %w", err)
+		return fmt.Errorf("create file: %w", err)
 	}
+	defer os.Remove(f.Name())
 
 	gw := gzip.NewWriter(f)
-	encodeErr := json.NewEncoder(gw).Encode(data)
+	encodeErr := json.NewEncoder(gw).Encode(s.ToV1JSON())
 	gzipErr := gw.Close()
 	fileErr := f.Close()
 
 	if encodeErr != nil {
-		return "", fmt.Errorf("encode JSON: %w", encodeErr)
+		return fmt.Errorf("encode JSON: %w", encodeErr)
 	}
 	if gzipErr != nil {
-		return "", fmt.Errorf("close gzip: %w", gzipErr)
+		return fmt.Errorf("close gzip: %w", gzipErr)
 	}
 	if fileErr != nil {
-		return "", fmt.Errorf("close file: %w", fileErr)
+		return fmt.Errorf("close file: %w", fileErr)
 	}
 
-	return filename, nil
+	return os.Rename(f.Name(), outPath)
 }
 
 func boolToInt(b bool) int {

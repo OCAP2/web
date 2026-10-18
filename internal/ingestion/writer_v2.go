@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -19,13 +20,16 @@ const defaultChunkSize = 300
 // Chunks are expected to have been written already by the ChunkFlusher.
 func WriteV2Manifest(session *Session, outputDir string, chunkCount uint32) error {
 	manifest := buildManifest(session, chunkCount)
+	if err := writePlayerSnapshots(outputDir, manifest); err != nil {
+		return err
+	}
 
 	// Write protobuf manifest.
 	data, err := proto.Marshal(manifest)
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(outputDir, "manifest.pb"), data, 0644); err != nil {
+	if err := writeAtomic(filepath.Join(outputDir, "manifest.pb"), data); err != nil {
 		return fmt.Errorf("write manifest.pb: %w", err)
 	}
 
@@ -46,6 +50,9 @@ func buildManifest(session *Session, chunkCount uint32) *pbv2.Manifest {
 	session.deriveProjectileData()
 
 	chunkSize := uint32(defaultChunkSize)
+	if session.chunkFlusher != nil {
+		chunkSize = session.chunkFlusher.ChunkSize()
+	}
 
 	manifest := &pbv2.Manifest{
 		Version:        2,
@@ -53,6 +60,38 @@ func buildManifest(session *Session, chunkCount uint32) *pbv2.Manifest {
 		ChunkSize:      chunkSize,
 		CaptureDelayMs: captureDelayMs(session),
 		ChunkCount:     chunkCount,
+	}
+	manifest.MetadataJson, _ = json.Marshal(struct {
+		Mission *core.Mission
+		World   *core.World
+	}{session.mission, session.world})
+	for _, r := range session.FocusRanges() {
+		manifest.FocusRanges = append(manifest.FocusRanges, &pbv2.FocusRange{Start: uint32(r.Start), End: uint32(r.End)})
+	}
+	for _, p := range session.placed {
+		manifest.PlacedObjects = append(manifest.PlacedObjects, &pbv2.PlacedObject{Id: uint32(p.ID), StartFrame: uint32(p.JoinFrame), ClassName: p.ClassName, DisplayName: p.DisplayName, Position: pos3DToProto(p.Position), OwnerId: uint32(p.OwnerID), Side: p.Side, Weapon: p.Weapon, MagazineIcon: p.MagazineIcon, Direction: p.Direction, MarkerIcon: p.MarkerIcon})
+	}
+	for _, p := range session.placedEvents {
+		e := &pbv2.PlacedObjectEvent{FrameNum: uint32(p.CaptureFrame), PlacedId: uint32(p.PlacedID), EventType: p.EventType, Position: pos3DToProto(p.Position)}
+		if p.HitEntityID != nil {
+			id := uint32(*p.HitEntityID)
+			e.HitEntityId = &id
+		}
+		manifest.PlacedEvents = append(manifest.PlacedEvents, e)
+	}
+	for _, r := range session.radio {
+		manifest.Events = append(manifest.Events, radioToProto(r))
+	}
+	for _, a := range session.aceDeaths {
+		e := &pbv2.Ace3DeathEvent{SoldierId: uint32(a.SoldierID), Reason: a.Reason}
+		if a.LastDamageSourceID != nil {
+			e.LastDamageSourceId = uint32(*a.LastDamageSourceID)
+			e.HasDamageSource = true
+		}
+		manifest.Events = append(manifest.Events, &pbv2.Event{FrameNum: uint32(a.CaptureFrame), Event: &pbv2.Event_Ace3Death{Ace3Death: e}})
+	}
+	for _, a := range session.aceUnconscious {
+		manifest.Events = append(manifest.Events, &pbv2.Event{FrameNum: uint32(a.CaptureFrame), Event: &pbv2.Event_Ace3Unconscious{Ace3Unconscious: &pbv2.Ace3UnconsciousEvent{SoldierId: uint32(a.SoldierID), IsUnconscious: a.IsUnconscious}}})
 	}
 
 	// World metadata.
@@ -101,12 +140,20 @@ func buildManifest(session *Session, chunkCount uint32) *pbv2.Manifest {
 
 	// Soldier definitions.
 	for _, rec := range session.soldiers {
-		manifest.Soldiers = append(manifest.Soldiers, soldierDefToProto(rec))
+		def := soldierDefToProto(rec)
+		if !rec.deleted && rec.Soldier.DeleteFrame == 0 {
+			def.EndFrame = uint32(lastFrame(session.frameCount))
+		}
+		manifest.Soldiers = append(manifest.Soldiers, def)
 	}
 
 	// Vehicle definitions.
 	for _, rec := range session.vehicles {
-		manifest.Vehicles = append(manifest.Vehicles, vehicleDefToProto(rec))
+		def := vehicleDefToProto(rec)
+		if !rec.deleted && rec.Vehicle.DeleteFrame == 0 {
+			def.EndFrame = uint32(lastFrame(session.frameCount))
+		}
+		manifest.Vehicles = append(manifest.Vehicles, def)
 	}
 
 	// Events.
@@ -135,6 +182,9 @@ func buildManifest(session *Session, chunkCount uint32) *pbv2.Manifest {
 	for _, ts := range session.times {
 		manifest.Times = append(manifest.Times, timeToProto(ts))
 	}
+	sort.Slice(manifest.Soldiers, func(i, j int) bool { return manifest.Soldiers[i].Id < manifest.Soldiers[j].Id })
+	sort.Slice(manifest.Vehicles, func(i, j int) bool { return manifest.Vehicles[i].Id < manifest.Vehicles[j].Id })
+	sort.SliceStable(manifest.Events, func(i, j int) bool { return manifest.Events[i].FrameNum < manifest.Events[j].FrameNum })
 
 	return manifest
 }
@@ -142,19 +192,22 @@ func buildManifest(session *Session, chunkCount uint32) *pbv2.Manifest {
 func soldierDefToProto(rec *soldierRecord) *pbv2.SoldierDef {
 	sol := rec.Soldier
 	def := &pbv2.SoldierDef{
-		Id:        uint32(sol.ID),
-		Name:      sol.UnitName,
-		Side:      sideStringToProto(sol.Side),
-		GroupName: sol.GroupID,
-		Role:      sol.RoleDescription,
+		Id:         uint32(sol.ID),
+		Name:       sol.UnitName,
+		Side:       sideStringToProto(sol.Side),
+		GroupName:  sol.GroupID,
+		Role:       sol.RoleDescription,
 		StartFrame: uint32(sol.JoinFrame),
-		IsPlayer:  sol.IsPlayer,
-		ClassName: sol.ClassName,
-		PlayerUid: sol.PlayerUID,
+		IsPlayer:   sol.IsPlayer,
+		ClassName:  sol.ClassName,
+		PlayerUid:  sol.PlayerUID,
 	}
 	if len(rec.States) > 0 {
 		lastFrame := rec.States[len(rec.States)-1].CaptureFrame
 		def.EndFrame = uint32(lastFrame)
+	}
+	if rec.deleted || sol.DeleteFrame > 0 {
+		def.EndFrame = uint32(sol.DeleteFrame)
 	}
 
 	for _, fe := range rec.FiredEvents {
@@ -199,6 +252,9 @@ func vehicleDefToProto(rec *vehicleRecord) *pbv2.VehicleDef {
 		lastFrame := rec.States[len(rec.States)-1].CaptureFrame
 		def.EndFrame = uint32(lastFrame)
 	}
+	if rec.deleted || veh.DeleteFrame > 0 {
+		def.EndFrame = uint32(veh.DeleteFrame)
+	}
 	return def
 }
 
@@ -214,10 +270,10 @@ func eventToProto(rec eventRecord) *pbv2.Event {
 		}
 		k := rec.kill
 		kill := &pbv2.KillEvent{
-			WeaponName:    k.WeaponName,
+			WeaponName:     k.WeaponName,
 			WeaponMagazine: k.WeaponMagazine,
-			EventText:     k.EventText,
-			Distance:      k.Distance,
+			EventText:      k.EventText,
+			Distance:       k.Distance,
 		}
 		if k.VictimSoldierID != nil {
 			kill.VictimSoldierId = uint32(*k.VictimSoldierID)
@@ -241,10 +297,10 @@ func eventToProto(rec eventRecord) *pbv2.Event {
 		}
 		h := rec.hit
 		hit := &pbv2.HitEvent{
-			WeaponName:    h.WeaponName,
+			WeaponName:     h.WeaponName,
 			WeaponMagazine: h.WeaponMagazine,
-			EventText:     h.EventText,
-			Distance:      h.Distance,
+			EventText:      h.EventText,
+			Distance:       h.Distance,
 		}
 		if h.VictimSoldierID != nil {
 			hit.VictimSoldierId = uint32(*h.VictimSoldierID)
@@ -284,6 +340,7 @@ func eventToProto(rec eventRecord) *pbv2.Event {
 				Name:    rec.eventType,
 				Message: rec.general.Message,
 			}
+			ge.ExtraDataJson, _ = json.Marshal(rec.general.ExtraData)
 			if v, ok := rec.general.ExtraData["objectType"].(string); ok {
 				ge.ObjectType = v
 			}
@@ -321,6 +378,10 @@ func markerToProto(rec *markerRecord) *pbv2.MarkerDef {
 		Brush:      m.Brush,
 		Size:       parseMarkerSizeF32(m.Size),
 	}
+	if m.IsDeleted {
+		frame := uint32(m.EndFrame)
+		marker.DeletedFrame = &frame
+	}
 
 	// Initial position.
 	if m.Shape == "POLYLINE" && len(m.Polyline) > 0 {
@@ -356,6 +417,8 @@ func markerToProto(rec *markerRecord) *pbv2.MarkerDef {
 				},
 				Direction: st.Direction,
 				Alpha:     st.Alpha,
+				Text:      st.Text, Color: strings.TrimPrefix(st.Color, "#"), Size: parseMarkerSizeF32(st.Size), Type: st.MarkerType, Brush: st.Brush, Shape: st.Shape,
+				HasStyle: st.Text != "" || st.Color != "" || st.Size != "" || st.MarkerType != "" || st.Brush != "" || st.Shape != "",
 			})
 		}
 	}
@@ -442,17 +505,17 @@ func SoldierStateToProto(st core.SoldierState) *pbv2.SoldierState {
 // VehicleStateToProto converts a core.VehicleState to a v2 protobuf VehicleState.
 func VehicleStateToProto(st core.VehicleState) *pbv2.VehicleState {
 	state := &pbv2.VehicleState{
-		Id:               uint32(st.VehicleID),
-		Position:         pos3DToProto(st.Position),
-		Bearing:          uint32(st.Bearing),
-		Alive:            st.IsAlive,
-		Fuel:             st.Fuel,
-		Damage:           st.Damage,
-		Locked:           st.Locked,
-		EngineOn:         st.EngineOn,
-		Side:             st.Side,
-		TurretAzimuth:    st.TurretAzimuth,
-		TurretElevation:  st.TurretElevation,
+		Id:              uint32(st.VehicleID),
+		Position:        pos3DToProto(st.Position),
+		Bearing:         uint32(st.Bearing),
+		Alive:           st.IsAlive,
+		Fuel:            st.Fuel,
+		Damage:          st.Damage,
+		Locked:          st.Locked,
+		EngineOn:        st.EngineOn,
+		Side:            st.Side,
+		TurretAzimuth:   st.TurretAzimuth,
+		TurretElevation: st.TurretElevation,
 	}
 
 	// Parse crew JSON string to extract crew IDs.
@@ -623,7 +686,7 @@ func projectileToProtoEvent(pe core.ProjectileEvent) *pbv2.Event {
 	for _, tp := range pe.Trajectory {
 		proj.Trajectory = append(proj.Trajectory, &pbv2.TrajectoryPoint{
 			Position: pos3DToProto(tp.Position),
-			FrameNum: uint32(tp.Frame),
+			FrameNum: uint32(tp.FrameNum),
 		})
 	}
 	for _, h := range pe.Hits {

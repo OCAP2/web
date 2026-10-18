@@ -112,9 +112,9 @@ func TestWriteV2Manifest_Roundtrip(t *testing.T) {
 	})
 
 	session.HandleTimeState(core.TimeState{
-		CaptureFrame:  0,
-		SystemTimeUTC: "2025-01-15T10:30:00Z",
-		MissionDate:   "2035/6/15",
+		CaptureFrame:   0,
+		SystemTimeUTC:  "2025-01-15T10:30:00Z",
+		MissionDate:    "2035/6/15",
 		TimeMultiplier: 1.0,
 		MissionTime:    28800,
 	})

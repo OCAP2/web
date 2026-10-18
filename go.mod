@@ -3,7 +3,7 @@ module github.com/OCAP2/web
 go 1.26.5
 
 require (
-	github.com/OCAP2/extension/v5 v5.0.0-alpha.1.0.20260216221044-4932fc4f0a04
+	github.com/OCAP2/extension/v5 v5.0.2-0.20261017205049-e48654e8bf01
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-fuego/fuego v0.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -27,7 +27,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.3 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -42,8 +42,8 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

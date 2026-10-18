@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,6 +34,9 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest data: %w", err)
+	}
+	if protobufVersion(data) == 2 {
+		return readV2Manifest(data)
 	}
 
 	var pbManifest pbv1.Manifest
@@ -86,8 +90,30 @@ func (e *ProtobufEngine) GetManifest(ctx context.Context, filename string) (*Man
 	return manifest, nil
 }
 
+func protobufVersion(data []byte) uint64 {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			return 0
+		}
+		data = data[n:]
+		if num == 1 && typ == protowire.VarintType {
+			v, _ := protowire.ConsumeVarint(data)
+			return v
+		}
+		n = protowire.ConsumeFieldValue(num, typ, data)
+		if n < 0 {
+			return 0
+		}
+		data = data[n:]
+	}
+	return 0
+}
+
 func (e *ProtobufEngine) Convert(ctx context.Context, jsonPath, outputPath string) error {
+	if data, err := os.ReadFile(filepath.Join(outputPath, "manifest.pb")); err == nil && protobufVersion(data) >= 2 {
+		return fmt.Errorf("cannot replace a native v2 recording with legacy conversion")
+	}
 	converter := NewConverter(DefaultChunkSize)
 	return converter.Convert(ctx, jsonPath, outputPath)
 }
-

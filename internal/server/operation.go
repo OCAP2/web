@@ -842,11 +842,11 @@ func (r *RepoOperation) Update(ctx context.Context, op *Operation) error {
 		UPDATE operations SET
 			world_name = ?, mission_name = ?, mission_duration = ?, filename = ?,
 			date = ?, tag = ?, storage_format = ?, conversion_status = ?,
-			schema_version = ?, chunk_count = ?
+			schema_version = ?, chunk_count = ?, focus_start = ?, focus_end = ?
 		WHERE id = ?`,
 		op.WorldName, op.MissionName, op.MissionDuration, op.Filename,
 		op.Date, op.Tag, op.StorageFormat, op.ConversionStatus,
-		op.SchemaVersion, op.ChunkCount, op.ID)
+		op.SchemaVersion, op.ChunkCount, op.FocusStart, op.FocusEnd, op.ID)
 	return err
 }
 

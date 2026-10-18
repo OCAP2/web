@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/OCAP2/extension/v5/pkg/streaming"
 	"github.com/OCAP2/web/internal/storage"
 	"github.com/go-fuego/fuego"
 	"github.com/gorilla/websocket"
@@ -23,6 +26,75 @@ func TestStreamingSettingDefaults(t *testing.T) {
 	assert.False(t, s.Streaming.Enabled)
 	assert.Equal(t, time.Duration(0), s.Streaming.PingInterval)
 	assert.Equal(t, time.Duration(0), s.Streaming.PingTimeout)
+}
+
+func TestHandleStream_InvalidStartMetadata(t *testing.T) {
+	for _, payload := range []string{`null`, `{}`, `{"mission":null,"world":{}}`, `{"mission":{"MissionName":"Bad","CaptureDelay":0},"world":{"WorldName":"altis"}}`} {
+		t.Run(payload, func(t *testing.T) {
+			h, mux, _ := newTestStreamHandlerWithRepo(t)
+			srv := httptest.NewServer(mux)
+			defer srv.Close()
+			c, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/stream?secret=test-secret", nil)
+			require.NoError(t, err)
+			defer c.Close()
+			require.NoError(t, c.WriteJSON(map[string]any{"type": "start_mission", "payload": json.RawMessage(payload)}))
+			c.SetReadDeadline(time.Now().Add(time.Second))
+			_, _, err = c.ReadMessage()
+			require.Error(t, err)
+			ops, err := h.repoOperation.Select(context.Background(), Filter{})
+			require.NoError(t, err)
+			require.Empty(t, ops)
+		})
+	}
+}
+
+func TestHandleStream_FinalizationFailureIsNotAcknowledged(t *testing.T) {
+	h, mux, dir := newTestStreamHandlerWithRepo(t)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	c, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/stream?secret=test-secret", nil)
+	require.NoError(t, err)
+	defer c.Close()
+	sendStartMission(t, c, "Failure", "altis")
+	ops, err := h.repoOperation.Select(context.Background(), Filter{})
+	require.NoError(t, err)
+	require.Len(t, ops, 1)
+	// A directory blocks atomic publication of the legacy backup.
+	require.NoError(t, os.Mkdir(filepath.Join(dir, ops[0].Filename+".json.gz"), 0755))
+	require.NoError(t, c.WriteJSON(map[string]string{"type": "end_mission"}))
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	_, _, err = c.ReadMessage()
+	require.True(t, websocket.IsCloseError(err, websocket.CloseInternalServerErr), "%v", err)
+	stored, err := h.repoOperation.GetByFilename(context.Background(), ops[0].Filename)
+	require.NoError(t, err)
+	require.Equal(t, ConversionStatusFailed, stored.ConversionStatus)
+}
+
+func TestHandleStream_V2FailurePreservesLegacyFallback(t *testing.T) {
+	h, mux, dir := newTestStreamHandlerWithRepo(t)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	c, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/stream?secret=test-secret", nil)
+	require.NoError(t, err)
+	defer c.Close()
+	sendStartMission(t, c, "Fallback", "altis")
+	ops, err := h.repoOperation.Select(context.Background(), Filter{})
+	require.NoError(t, err)
+	require.Len(t, ops, 1)
+	chunkDir := filepath.Join(dir, ops[0].Filename, "chunks")
+	require.NoError(t, os.Rename(chunkDir, chunkDir+".unavailable"))
+	require.NoError(t, os.WriteFile(chunkDir, []byte("blocked"), 0600))
+	require.NoError(t, c.WriteJSON(map[string]string{"type": "end_mission"}))
+	var ack streaming.AckMessage
+	require.NoError(t, c.ReadJSON(&ack))
+	require.Equal(t, "end_mission", ack.For)
+	stored, err := h.repoOperation.GetByFilename(context.Background(), ops[0].Filename)
+	require.NoError(t, err)
+	require.Equal(t, "json", stored.StorageFormat)
+	require.Equal(t, uint32(1), stored.SchemaVersion)
+	require.Equal(t, ConversionStatusCompleted, stored.ConversionStatus)
+	_, err = storage.NewJSONEngine(dir).GetManifest(context.Background(), stored.Filename)
+	require.NoError(t, err)
 }
 
 func newTestStreamHandler(enabled bool) (*Handler, *http.ServeMux) {
@@ -62,7 +134,13 @@ func newTestStreamHandlerWithRepo(t *testing.T) (*Handler, *http.ServeMux, strin
 			},
 		},
 	}
-	mux.HandleFunc("GET /api/v1/stream", hdlr.HandleStream)
+	var streams sync.WaitGroup
+	mux.HandleFunc("GET /api/v1/stream", func(w http.ResponseWriter, r *http.Request) {
+		streams.Add(1)
+		defer streams.Done()
+		hdlr.HandleStream(w, r)
+	})
+	t.Cleanup(streams.Wait)
 	return hdlr, mux, dir
 }
 
@@ -332,7 +410,7 @@ func TestHandleStream_FullLifecycle(t *testing.T) {
 		stPayload, _ := json.Marshal(map[string]any{
 			"SoldierID": 1, "CaptureFrame": i,
 			"Position": map[string]any{"x": 100 + i, "y": 200, "z": 10},
-			"Bearing": 90, "Lifestate": 0, "IsPlayer": true,
+			"Bearing":  90, "Lifestate": 0, "IsPlayer": true,
 			"UnitName": "TestPlayer", "GroupID": "Alpha", "Side": "WEST",
 		})
 		conn.WriteJSON(map[string]any{"type": "soldier_state", "payload": json.RawMessage(stPayload)})

@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OCAP2/extension/v5/pkg/core"
 	"github.com/OCAP2/extension/v5/pkg/streaming"
 	"github.com/OCAP2/web/internal/ingestion"
 	"github.com/OCAP2/web/internal/storage"
@@ -48,10 +47,10 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 	// Ping/pong keepalive
 	pingInterval := h.setting.Streaming.PingInterval
 	pingTimeout := h.setting.Streaming.PingTimeout
-	if pingInterval == 0 {
+	if pingInterval <= 0 {
 		pingInterval = 30 * time.Second
 	}
-	if pingTimeout == 0 {
+	if pingTimeout <= 0 {
 		pingTimeout = 10 * time.Second
 	}
 
@@ -84,7 +83,7 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 	defer close(done)
 
 	var session *ingestion.Session
-	var v2OutputDir string // set on start_mission when data dir is available
+	var v2OutputDir string  // set on start_mission when data dir is available
 	var streamingOpID int64 // DB row created at start_mission, updated at finalize
 	counts := make(map[string]int)
 
@@ -95,13 +94,30 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 		mu.Unlock()
 	}
 
-	finalize := func(tag string) {
+	finalizing := false
+	finalize := func(tag string) error {
 		if session == nil {
-			return
+			return nil
 		}
-		if err := h.finalizeSession(session, tag, v2OutputDir, streamingOpID); err != nil {
+		finalizing = true
+		err := h.finalizeSession(session, tag, v2OutputDir, streamingOpID)
+		if err != nil {
 			slog.Error("stream: finalization failed", "error", err)
+			if streamingOpID > 0 {
+				h.repoOperation.UpdateConversionStatus(context.Background(), streamingOpID, ConversionStatusFailed)
+			}
+			return err
 		}
+		session = nil
+		return nil
+	}
+	defer func() {
+		if session != nil && !finalizing {
+			finalize("partial")
+		}
+	}()
+	fail := func(reason string) {
+		ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, reason), time.Now().Add(pingTimeout))
 	}
 
 	for {
@@ -109,7 +125,7 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				slog.Warn("stream: unexpected disconnect, finalizing partial data", "error", err, "counts", counts)
-				finalize("partial")
+
 			} else {
 				slog.Info("stream: connection closed", "counts", counts)
 			}
@@ -132,51 +148,54 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 
 		switch envelope.Type {
 		case streaming.TypeStartMission:
+			if session != nil {
+				fail("mission already active")
+				return
+			}
 			var payload streaming.StartMissionPayload
-			if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-				slog.Warn("stream: invalid start_mission payload", "error", err)
-				continue
+			if err := json.Unmarshal(envelope.Payload, &payload); err != nil || payload.Mission == nil || payload.World == nil || payload.Mission.MissionName == "" || payload.World.WorldName == "" || payload.Mission.CaptureDelay <= 0 {
+				fail("invalid mission metadata")
+				return
+			}
+			// Additional protocol metadata is optional for historical clients. Keep
+			// Mission and World in the shared extension types.
+			var framing struct {
+				FrameBase uint8 `json:"frameBase"`
+			}
+			if err := json.Unmarshal(envelope.Payload, &framing); err != nil || framing.FrameBase > 1 {
+				fail("invalid frame base")
+				return
+			}
+			if h.setting.Data == "" || h.repoOperation == nil {
+				fail("streaming storage unavailable")
+				return
+			}
+			if err := os.MkdirAll(h.setting.Data, 0755); err != nil {
+				fail("streaming storage unavailable")
+				return
+			}
+			// Allocate one unique key for the row, v2 directory and legacy backup.
+			output, err := os.MkdirTemp(h.setting.Data, ingestion.MakeFilename(payload.Mission.MissionName)+"_*")
+			if err != nil {
+				fail("streaming storage unavailable")
+				return
+			}
+			cf, err := ingestion.NewChunkFlusher(output, 300)
+			if err != nil {
+				fail("streaming storage unavailable")
+				return
+			}
+			op := Operation{WorldName: payload.World.WorldName, MissionName: payload.Mission.MissionName, Filename: filepath.Base(output), Date: time.Now().Format("2006-01-02"), Tag: payload.Mission.Tag, StorageFormat: "protobuf", ConversionStatus: ConversionStatusStreaming, SchemaVersion: uint32(storage.SchemaVersionV2)}
+			if err := h.repoOperation.Store(context.Background(), &op); err != nil {
+				fail("cannot register mission")
+				return
 			}
 			session = ingestion.NewSession()
+			session.SetFrameBase(framing.FrameBase)
 			session.SetMission(payload.Mission, payload.World)
-
-			// Set up v2 protobuf output directory and chunk flusher.
-			if h.setting.Data != "" {
-				v2OutputDir = filepath.Join(h.setting.Data, ingestion.MakeFilename(payload.Mission.MissionName))
-				if err := os.MkdirAll(v2OutputDir, 0755); err != nil {
-					slog.Error("stream: failed to create v2 output dir", "error", err)
-				} else {
-					cf, err := ingestion.NewChunkFlusher(v2OutputDir, 300)
-					if err != nil {
-						slog.Error("stream: failed to create chunk flusher", "error", err)
-					} else {
-						session.SetChunkFlusher(cf)
-					}
-				}
-			}
-
-			slog.Info("stream: mission started",
-				"mission", payload.Mission.MissionName,
-				"world", payload.World.WorldName)
-
-			// Insert a "streaming" operation so it appears in the operations list.
-			filename := ingestion.MakeFilename(payload.Mission.MissionName)
-			op := Operation{
-				WorldName:        payload.World.WorldName,
-				MissionName:      payload.Mission.MissionName,
-				Filename:         filename,
-				Date:             time.Now().Format("2006-01-02"),
-				Tag:              payload.Mission.Tag,
-				StorageFormat:    "protobuf",
-				ConversionStatus: ConversionStatusStreaming,
-				SchemaVersion:    uint32(storage.SchemaVersionV2),
-			}
-			if err := h.repoOperation.Store(context.TODO(), &op); err != nil {
-				slog.Error("stream: failed to store streaming operation", "error", err)
-			} else {
-				streamingOpID = op.ID
-			}
-
+			session.SetChunkFlusher(cf)
+			v2OutputDir = output
+			streamingOpID = op.ID
 			writeAck(streaming.TypeStartMission)
 
 		case streaming.TypeEndMission:
@@ -185,145 +204,24 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 				tag = session.Mission().Tag
 			}
 			slog.Info("stream: mission ended", "counts", counts)
-			finalize(tag)
+			if err := finalize(tag); err != nil {
+				fail("mission could not be saved")
+				return
+			}
 			writeAck(streaming.TypeEndMission)
 			return
 
-		case streaming.TypeAddSoldier:
-			var sol core.Soldier
-			if err := json.Unmarshal(envelope.Payload, &sol); err != nil {
-				slog.Warn("stream: invalid add_soldier", "error", err)
-				continue
-			}
-			session.HandleAddSoldier(sol)
-
-		case streaming.TypeSoldierState:
-			var st core.SoldierState
-			if err := json.Unmarshal(envelope.Payload, &st); err != nil {
-				slog.Warn("stream: invalid soldier_state", "error", err)
-				continue
-			}
-			session.HandleSoldierState(st)
-
-		case streaming.TypeAddVehicle:
-			var veh core.Vehicle
-			if err := json.Unmarshal(envelope.Payload, &veh); err != nil {
-				slog.Warn("stream: invalid add_vehicle", "error", err)
-				continue
-			}
-			session.HandleAddVehicle(veh)
-
-		case streaming.TypeVehicleState:
-			var st core.VehicleState
-			if err := json.Unmarshal(envelope.Payload, &st); err != nil {
-				slog.Warn("stream: invalid vehicle_state", "error", err)
-				continue
-			}
-			session.HandleVehicleState(st)
-
-		case streaming.TypeAddMarker:
-			var m core.Marker
-			if err := json.Unmarshal(envelope.Payload, &m); err != nil {
-				slog.Warn("stream: invalid add_marker", "error", err)
-				continue
-			}
-			session.HandleAddMarker(m)
-
-		case streaming.TypeMarkerState:
-			var st core.MarkerState
-			if err := json.Unmarshal(envelope.Payload, &st); err != nil {
-				slog.Warn("stream: invalid marker_state", "error", err)
-				continue
-			}
-			session.HandleMarkerState(st)
-
-		case streaming.TypeDeleteMarker:
-			var dm core.DeleteMarker
-			if err := json.Unmarshal(envelope.Payload, &dm); err != nil {
-				slog.Warn("stream: invalid delete_marker", "error", err)
-				continue
-			}
-			session.HandleDeleteMarker(dm.Name, dm.EndFrame)
-
-		case streaming.TypeFiredEvent:
-			var fe core.FiredEvent
-			if err := json.Unmarshal(envelope.Payload, &fe); err != nil {
-				slog.Warn("stream: invalid fired_event", "error", err)
-				continue
-			}
-			session.HandleFiredEvent(fe)
-
-		case streaming.TypeKillEvent:
-			var evt core.KillEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid kill_event", "error", err)
-				continue
-			}
-			session.HandleKillEvent(evt)
-
-		case streaming.TypeHitEvent:
-			var evt core.HitEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid hit_event", "error", err)
-				continue
-			}
-			session.HandleHitEvent(evt)
-
-		case streaming.TypeGeneralEvent:
-			var evt core.GeneralEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid general_event", "error", err)
-				continue
-			}
-			session.HandleGeneralEvent(evt)
-
-		case streaming.TypeChatEvent:
-			var evt core.ChatEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid chat_event", "error", err)
-				continue
-			}
-			session.HandleChatEvent(evt)
-
-		case streaming.TypeTelemetry:
-			var evt core.TelemetryEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid telemetry", "error", err)
-				continue
-			}
-			session.HandleTelemetry(evt)
-
-			// Update operation metadata so the operations list stays current.
-			if streamingOpID > 0 {
-				captureDelay := float64(1.0)
-				if session.Mission() != nil && session.Mission().CaptureDelay > 0 {
-					captureDelay = float64(session.Mission().CaptureDelay)
-				}
-				duration := float64(session.FrameCount()) * captureDelay
-				playerCount := int(evt.GlobalCounts.PlayersConnected)
-				if err := h.repoOperation.UpdateStreamingMeta(context.TODO(), streamingOpID, duration, playerCount); err != nil {
-					slog.Warn("stream: failed to update streaming meta", "error", err)
-				}
-			}
-
-		case streaming.TypeProjectileEvent:
-			var evt core.ProjectileEvent
-			if err := json.Unmarshal(envelope.Payload, &evt); err != nil {
-				slog.Warn("stream: invalid projectile_event", "error", err)
-				continue
-			}
-			session.HandleProjectileEvent(evt)
-
-		case streaming.TypeTimeState:
-			var ts core.TimeState
-			if err := json.Unmarshal(envelope.Payload, &ts); err != nil {
-				slog.Warn("stream: invalid time_state", "error", err)
-				continue
-			}
-			session.HandleTimeState(ts)
-
 		default:
-			slog.Warn("stream: unknown message type", "type", envelope.Type)
+			if err := session.HandleMessage(envelope); err != nil {
+				slog.Warn("stream: invalid message", "type", envelope.Type, "error", err)
+				continue
+			}
+			if envelope.Type == streaming.TypeTelemetry && streamingOpID > 0 {
+				duration := float64(session.FrameCount()) * float64(session.Mission().CaptureDelay)
+				if err := h.repoOperation.UpdateStreamingMeta(context.Background(), streamingOpID, duration, session.LivePlayerCount()); err != nil {
+					slog.Warn("stream: metadata update failed", "error", err)
+				}
+			}
 		}
 	}
 }
@@ -355,6 +253,14 @@ func (h *Handler) finalizeSession(session *ingestion.Session, tag string, v2Outp
 	}
 	duration := float64(session.FrameCount()) * float64(captureDelay)
 
+	filename := filepath.Base(v2OutputDir)
+	if v2OutputDir == "" {
+		filename = ingestion.MakeFilename(missionName)
+	}
+	if err := session.WriteJSONGzNamed(h.setting.Data, filename); err != nil {
+		return fmt.Errorf("write JSON.gz: %w", err)
+	}
+
 	// Write v2 protobuf (manifest + finalize chunks).
 	var chunkCount int
 	hasV2 := session.ChunkFlusher() != nil && v2OutputDir != ""
@@ -367,14 +273,6 @@ func (h *Handler) finalizeSession(session *ingestion.Session, tag string, v2Outp
 		}
 	}
 
-	// Always write v1 JSON.gz as backup/fallback.
-	v1Filename, err := session.WriteJSONGz(h.setting.Data)
-	if err != nil {
-		return fmt.Errorf("write JSON.gz: %w", err)
-	}
-
-	// Use v2 output directory name as filename if v2 succeeded, otherwise v1.
-	filename := v1Filename
 	storageFormat := "json"
 	schemaVersion := uint32(storage.SchemaVersionV1)
 	conversionStatus := ConversionStatusPending
@@ -398,6 +296,11 @@ func (h *Handler) finalizeSession(session *ingestion.Session, tag string, v2Outp
 		SchemaVersion:    schemaVersion,
 		ChunkCount:       chunkCount,
 	}
+	if ranges := session.FocusRanges(); len(ranges) > 0 {
+		start, end := int64(ranges[0].Start), int64(ranges[0].End)
+		op.FocusStart = &start
+		op.FocusEnd = &end
+	}
 	ctx := context.TODO()
 
 	if streamingOpID > 0 {
@@ -417,7 +320,7 @@ func (h *Handler) finalizeSession(session *ingestion.Session, tag string, v2Outp
 	stats := session.Stats()
 	sideComp := make(SideComposition, len(stats.Sides))
 	for side, sc := range stats.Sides {
-		sideComp[side] = SideCounts{Players: sc.Players, Units: sc.Units, Dead: sc.Dead}
+		sideComp[side] = SideCounts{Players: sc.Players, Units: sc.Units, Dead: sc.Dead, Kills: sc.Kills}
 	}
 	if err := h.repoOperation.UpdateOperationStats(ctx, op.ID,
 		stats.PlayerCount, stats.KillCount, stats.PlayerKillCount, sideComp); err != nil {

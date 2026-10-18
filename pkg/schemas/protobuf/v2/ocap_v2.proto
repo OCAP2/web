@@ -35,6 +35,11 @@ message Manifest {
   repeated Event events = 12;
   repeated MarkerDef markers = 13;
   repeated TimeSample times = 14;
+  repeated PlacedObject placed_objects = 15;
+  repeated PlacedObjectEvent placed_events = 16;
+  repeated FocusRange focus_ranges = 17;
+  bytes metadata_json = 18; // complete shared Mission/World metadata
+  repeated uint32 snapshot_unit_ids = 19; // v1-compatible player snapshot sidecars
 }
 
 message WorldMeta {
@@ -201,6 +206,7 @@ message RadioEvent {
   int32 channel = 5;
   bool is_additional = 6;
   float frequency = 7;
+  string code = 8;
 }
 
 message Ace3DeathEvent {
@@ -295,6 +301,34 @@ message GeneralEvent {
   string object_type = 3;
   string unit_name = 4;
   string side = 5;
+  bytes extra_data_json = 6;
+}
+
+message PlacedObject {
+  uint32 id = 1;
+  uint32 start_frame = 2;
+  string class_name = 3;
+  string display_name = 4;
+  Position3D position = 5;
+  uint32 owner_id = 6;
+  string side = 7;
+  string weapon = 8;
+  string magazine_icon = 9;
+  float direction = 10;
+  string marker_icon = 11;
+}
+
+message PlacedObjectEvent {
+  uint32 frame_num = 1;
+  uint32 placed_id = 2;
+  string event_type = 3;
+  Position3D position = 4;
+  optional uint32 hit_entity_id = 5;
+}
+
+message FocusRange {
+  uint32 start = 1;
+  uint32 end = 2;
 }
 
 message ConnectEvent {
@@ -379,6 +413,7 @@ message MarkerDef {
   repeated float size = 9;
   string shape = 10;
   string brush = 11;
+  optional uint32 deleted_frame = 12;
 }
 
 message MarkerPosition {
@@ -387,6 +422,13 @@ message MarkerPosition {
   float direction = 3;
   float alpha = 4;
   repeated float line_coords = 5;
+  string text = 6;
+  string color = 7;
+  repeated float size = 8;
+  string type = 9;
+  string brush = 10;
+  string shape = 11;
+  bool has_style = 12;
 }
 
 message TimeSample {

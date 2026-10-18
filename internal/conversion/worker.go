@@ -91,6 +91,9 @@ func (w *Worker) cleanupInterrupted(ctx context.Context) {
 		slog.Error("failed to select converting operations", "error", err)
 	} else {
 		for _, op := range ops {
+			if m, err := w.engine.GetManifest(ctx, op.Filename); err == nil && m.Version >= 2 {
+				continue
+			}
 			// Remove partial output directory
 			outputPath := filepath.Join(w.dataDir, op.Filename)
 			if err := os.RemoveAll(outputPath); err != nil && !os.IsNotExist(err) {
@@ -169,6 +172,10 @@ func (w *Worker) processOnce(ctx context.Context) {
 
 // convertOperation converts a single operation from JSON to protobuf format
 func (w *Worker) convertOperation(ctx context.Context, op server.Operation) error {
+	if m, err := w.engine.GetManifest(ctx, op.Filename); err == nil && m.Version >= 2 {
+		slog.Info("native v2 recording already finalized", "operation_id", op.ID)
+		return w.repo.UpdateConversionStatus(ctx, op.ID, server.ConversionStatusCompleted)
+	}
 	slog.Info("converting", "operation_id", op.ID, "filename", op.Filename)
 
 	// Update status to converting

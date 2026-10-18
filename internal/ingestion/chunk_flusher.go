@@ -6,168 +6,190 @@ import (
 	"path/filepath"
 	"sort"
 
-	"google.golang.org/protobuf/proto"
-
 	pbv2 "github.com/OCAP2/web/pkg/schemas/protobuf/v2"
+	"google.golang.org/protobuf/proto"
 )
 
-// ChunkFlusher writes v2 protobuf chunks incrementally during streaming.
-// Every chunkSize frames, accumulated states are flushed to disk.
-// All methods are called from a single goroutine (the WebSocket read loop).
+// ChunkFlusher buffers one chunk. Late messages amend their on-disk chunk;
+// independent extension workers need not deliver entity types in frame order.
+// It is owned by the WebSocket read goroutine.
 type ChunkFlusher struct {
-	chunksDir       string
-	chunkSize       uint32
-	currentChunkIdx uint32
-	chunkStartFrame uint32
-
-	// Buffered states keyed by frame number.
-	soldierStates map[uint32][]*pbv2.SoldierState
-	vehicleStates map[uint32][]*pbv2.VehicleState
-
+	chunksDir     string
+	chunkSize     uint32
+	current       *pbv2.Chunk
 	flushedChunks uint32
 }
 
-// NewChunkFlusher creates a flusher that writes chunks of chunkSize frames
-// to the given output directory.
 func NewChunkFlusher(outputDir string, chunkSize uint32) (*ChunkFlusher, error) {
-	chunksDir := filepath.Join(outputDir, "chunks")
-	if err := os.MkdirAll(chunksDir, 0755); err != nil {
-		return nil, fmt.Errorf("create chunks dir: %w", err)
+	if chunkSize == 0 {
+		return nil, fmt.Errorf("chunk size must be positive")
 	}
-	return &ChunkFlusher{
-		chunksDir:     chunksDir,
-		chunkSize:     chunkSize,
-		soldierStates: make(map[uint32][]*pbv2.SoldierState),
-		vehicleStates: make(map[uint32][]*pbv2.VehicleState),
-	}, nil
+	dir := filepath.Join(outputDir, "chunks")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
+	return &ChunkFlusher{chunksDir: dir, chunkSize: chunkSize}, nil
 }
 
-// AddSoldierState buffers a soldier state and flushes if a chunk boundary is crossed.
-func (cf *ChunkFlusher) AddSoldierState(frameNum uint32, state *pbv2.SoldierState) error {
-	cf.soldierStates[frameNum] = append(cf.soldierStates[frameNum], state)
-	return cf.maybeFlush(frameNum)
-}
+func (cf *ChunkFlusher) ChunkSize() uint32  { return cf.chunkSize }
+func (cf *ChunkFlusher) ChunkCount() uint32 { return cf.flushedChunks }
 
-// AddVehicleState buffers a vehicle state and flushes if a chunk boundary is crossed.
-func (cf *ChunkFlusher) AddVehicleState(frameNum uint32, state *pbv2.VehicleState) error {
-	cf.vehicleStates[frameNum] = append(cf.vehicleStates[frameNum], state)
-	return cf.maybeFlush(frameNum)
-}
-
-// Flush writes any remaining buffered frames as the final chunk.
-func (cf *ChunkFlusher) Flush() error {
-	if len(cf.soldierStates) == 0 && len(cf.vehicleStates) == 0 {
-		return nil
-	}
-	return cf.writeCurrentChunk()
-}
-
-// ChunkCount returns the total number of chunks written (including pending).
-func (cf *ChunkFlusher) ChunkCount() uint32 {
-	return cf.flushedChunks
-}
-
-func (cf *ChunkFlusher) maybeFlush(frameNum uint32) error {
-	// Check if this frame crosses the next chunk boundary.
-	chunkEnd := cf.chunkStartFrame + cf.chunkSize
-	if frameNum >= chunkEnd {
-		return cf.writeCurrentChunk()
-	}
-	return nil
-}
-
-func (cf *ChunkFlusher) writeCurrentChunk() error {
-	// Collect all frame numbers in this chunk.
-	frameSet := make(map[uint32]bool)
-	for f := range cf.soldierStates {
-		frameSet[f] = true
-	}
-	for f := range cf.vehicleStates {
-		frameSet[f] = true
-	}
-
-	if len(frameSet) == 0 {
-		return nil
-	}
-
-	// Sort frame numbers.
-	frames := make([]uint32, 0, len(frameSet))
-	for f := range frameSet {
-		frames = append(frames, f)
-	}
-	sort.Slice(frames, func(i, j int) bool { return frames[i] < frames[j] })
-
-	// Determine which frames belong to the current chunk vs next.
-	chunkEnd := cf.chunkStartFrame + cf.chunkSize
-	var currentFrames, nextFrames []uint32
-	for _, f := range frames {
-		if f < chunkEnd {
-			currentFrames = append(currentFrames, f)
-		} else {
-			nextFrames = append(nextFrames, f)
+func (cf *ChunkFlusher) AddSoldierState(frame uint32, state *pbv2.SoldierState) error {
+	return cf.add(frame, func(f *pbv2.Frame) {
+		for i, old := range f.Soldiers {
+			if old.Id == state.Id {
+				f.Soldiers[i] = state
+				return
+			}
 		}
-	}
+		f.Soldiers = append(f.Soldiers, state)
+	})
+}
 
-	// Build and write the current chunk from currentFrames.
-	if len(currentFrames) > 0 {
-		chunk := cf.buildChunk(cf.currentChunkIdx, cf.chunkStartFrame, currentFrames)
-		if err := cf.writeChunkFile(chunk); err != nil {
+func (cf *ChunkFlusher) AddVehicleState(frame uint32, state *pbv2.VehicleState) error {
+	return cf.add(frame, func(f *pbv2.Frame) {
+		for i, old := range f.Vehicles {
+			if old.Id == state.Id {
+				f.Vehicles[i] = state
+				return
+			}
+		}
+		f.Vehicles = append(f.Vehicles, state)
+	})
+}
+
+// SeedFrame makes a chunk independently seekable without repeating unchanged
+// states on disk for every frame. Actual samples at the boundary win.
+func (cf *ChunkFlusher) SeedFrame(frame uint32, soldiers []*pbv2.SoldierState, vehicles []*pbv2.VehicleState) error {
+	return cf.add(frame, func(f *pbv2.Frame) {
+		seen := make(map[uint32]bool)
+		for _, s := range f.Soldiers {
+			seen[s.Id] = true
+		}
+		for _, s := range soldiers {
+			if !seen[s.Id] {
+				f.Soldiers = append(f.Soldiers, s)
+			}
+		}
+		seen = make(map[uint32]bool)
+		for _, v := range f.Vehicles {
+			seen[v.Id] = true
+		}
+		for _, v := range vehicles {
+			if !seen[v.Id] {
+				f.Vehicles = append(f.Vehicles, v)
+			}
+		}
+	})
+}
+
+func (cf *ChunkFlusher) add(frame uint32, update func(*pbv2.Frame)) error {
+	idx := frame / cf.chunkSize
+	if cf.current != nil && idx != cf.current.Index {
+		if err := cf.Flush(); err != nil {
 			return err
 		}
-
-		// Remove flushed frames from buffers.
-		for _, f := range currentFrames {
-			delete(cf.soldierStates, f)
-			delete(cf.vehicleStates, f)
-		}
-
-		cf.flushedChunks++
-		cf.currentChunkIdx++
-		cf.chunkStartFrame = chunkEnd
 	}
-
-	// If we have frames that spill into the next chunk, check again.
-	// (Typically only one chunk boundary is crossed per state message.)
-	if len(nextFrames) > 0 {
-		// The next frames are already in the buffer, check if they cross another boundary.
-		maxNext := nextFrames[len(nextFrames)-1]
-		if maxNext >= cf.chunkStartFrame+cf.chunkSize {
-			return cf.writeCurrentChunk()
+	late := idx < cf.flushedChunks
+	var chunk *pbv2.Chunk
+	if late {
+		data, err := os.ReadFile(cf.chunkPath(idx))
+		if err != nil {
+			return err
+		}
+		chunk = &pbv2.Chunk{}
+		if err := proto.Unmarshal(data, chunk); err != nil {
+			return err
+		}
+	} else {
+		if cf.current == nil {
+			cf.current = cf.emptyChunk(idx)
+		}
+		chunk = cf.current
+	}
+	var target *pbv2.Frame
+	for _, f := range chunk.Frames {
+		if f.FrameNum == frame {
+			target = f
+			break
 		}
 	}
-
+	if target == nil {
+		target = &pbv2.Frame{FrameNum: frame}
+		chunk.Frames = append(chunk.Frames, target)
+	}
+	update(target)
+	if late {
+		return cf.writeChunk(chunk)
+	}
 	return nil
 }
 
-func (cf *ChunkFlusher) buildChunk(idx, startFrame uint32, frameNums []uint32) *pbv2.Chunk {
-	chunk := &pbv2.Chunk{
-		Index:      idx,
-		StartFrame: startFrame,
-		FrameCount: cf.chunkSize,
+// FlushThrough creates every chunk on the timeline, including event-only spans.
+func (cf *ChunkFlusher) FlushThrough(frameCount uint32) error {
+	if err := cf.Flush(); err != nil {
+		return err
 	}
-
-	for _, fn := range frameNums {
-		frame := &pbv2.Frame{
-			FrameNum: fn,
-			Soldiers: cf.soldierStates[fn],
-			Vehicles: cf.vehicleStates[fn],
+	count := (uint64(frameCount) + uint64(cf.chunkSize) - 1) / uint64(cf.chunkSize)
+	// Playback always requests chunk zero, even for a mission with no states.
+	if count == 0 {
+		count = 1
+	}
+	for uint64(cf.flushedChunks) < count {
+		if err := cf.writeChunk(cf.emptyChunk(cf.flushedChunks)); err != nil {
+			return err
 		}
-		chunk.Frames = append(chunk.Frames, frame)
+		cf.flushedChunks++
 	}
-
-	return chunk
+	return nil
 }
 
-func (cf *ChunkFlusher) writeChunkFile(chunk *pbv2.Chunk) error {
+func (cf *ChunkFlusher) Flush() error {
+	if cf.current == nil {
+		return nil
+	}
+	for cf.flushedChunks < cf.current.Index {
+		if err := cf.writeChunk(cf.emptyChunk(cf.flushedChunks)); err != nil {
+			return err
+		}
+		cf.flushedChunks++
+	}
+	if err := cf.writeChunk(cf.current); err != nil {
+		return err
+	}
+	cf.flushedChunks = cf.current.Index + 1
+	cf.current = nil
+	return nil
+}
+
+func (cf *ChunkFlusher) emptyChunk(idx uint32) *pbv2.Chunk {
+	return &pbv2.Chunk{Index: idx, StartFrame: idx * cf.chunkSize, FrameCount: cf.chunkSize}
+}
+func (cf *ChunkFlusher) chunkPath(idx uint32) string {
+	return filepath.Join(cf.chunksDir, fmt.Sprintf("%04d.pb", idx))
+}
+func (cf *ChunkFlusher) writeChunk(chunk *pbv2.Chunk) error {
+	sort.Slice(chunk.Frames, func(i, j int) bool { return chunk.Frames[i].FrameNum < chunk.Frames[j].FrameNum })
 	data, err := proto.Marshal(chunk)
 	if err != nil {
-		return fmt.Errorf("marshal chunk %d: %w", chunk.Index, err)
+		return err
 	}
+	return writeAtomic(cf.chunkPath(chunk.Index), data)
+}
 
-	path := filepath.Join(cf.chunksDir, fmt.Sprintf("%04d.pb", chunk.Index))
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("write chunk %d: %w", chunk.Index, err)
+func writeAtomic(path string, data []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".stream-*")
+	if err != nil {
+		return err
 	}
-
-	return nil
+	defer os.Remove(f.Name())
+	_, writeErr := f.Write(data)
+	closeErr := f.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return os.Rename(f.Name(), path)
 }
