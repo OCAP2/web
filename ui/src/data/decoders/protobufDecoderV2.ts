@@ -69,6 +69,8 @@ function mapSideString(raw: string): Side {
     case "INDEPENDENT": return "GUER";
     case "CIV":
     case "CIVILIAN": return "CIV";
+    case "VIRTUAL":
+    case "LOGIC": return "VIRTUAL";
     default: return "CIV";
   }
 }
