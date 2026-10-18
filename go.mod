@@ -1,12 +1,13 @@
 module github.com/OCAP2/web
 
-go 1.26.5
+go 1.27.2
 
 require (
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-fuego/fuego v0.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/websocket v1.5.3
+	github.com/klauspost/compress v1.20.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
@@ -28,7 +29,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
-	github.com/klauspost/compress v1.20.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
