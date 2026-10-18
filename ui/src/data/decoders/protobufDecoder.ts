@@ -124,7 +124,7 @@ function convertEntityState(pb: PbEntityState): AppEntityState {
   return state;
 }
 
-function convertEvent(pb: PbEvent): EventDef | null {
+export function convertEvent(pb: PbEvent): EventDef | null {
   const { frameNum, type } = pb;
 
   switch (type) {

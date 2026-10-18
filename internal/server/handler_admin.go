@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/OCAP2/web/internal/storage"
 	"github.com/go-fuego/fuego"
 )
 
@@ -168,6 +169,9 @@ func (h *Handler) RetryConversion(c ContextNoBody) (RetryResponse, error) {
 
 	if op.ConversionStatus != ConversionStatusFailed {
 		return RetryResponse{}, fuego.ConflictError{Detail: "operation is not in failed state"}
+	}
+	if m, err := storage.NewProtobufEngine(h.setting.Data).GetManifest(ctx, op.Filename); err == nil && m.Version >= 2 {
+		return RetryResponse{}, fuego.ConflictError{Detail: "native v2 recording cannot be replaced by legacy conversion"}
 	}
 
 	// Remove partial protobuf output
