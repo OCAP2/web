@@ -351,6 +351,36 @@ describe("ProtobufDecoderV2.decodeChunk", () => {
     expect(vehicleStates![1]).toEqual(vehicleStates![0]); // unchanged state carries forward
   });
 
+  it("maps VIRTUAL/LOGIC per-frame sides to the VIRTUAL faction (backport parity with v1)", () => {
+    const buffer = encodePb(PbChunk, {
+      index: 0,
+      startFrame: 0,
+      frameCount: 2,
+      frames: [
+        {
+          frameNum: 0,
+          soldiers: [{
+            id: 1,
+            position: { x: 0, y: 0, z: 0 },
+            bearing: 0,
+            lifestate: 1,
+            side: "VIRTUAL",
+          }, {
+            id: 2,
+            position: { x: 0, y: 0, z: 0 },
+            bearing: 0,
+            lifestate: 1,
+            side: "LOGIC",
+          }],
+        },
+      ],
+    });
+
+    const chunk = decoder.decodeChunk(buffer);
+    expect(chunk.entities.get(1)![0].side).toBe("VIRTUAL");
+    expect(chunk.entities.get(2)![0].side).toBe("VIRTUAL");
+  });
+
   it("decodes v2 soldier extensions", () => {
     const buffer = encodePb(PbChunk, {
       index: 0,
