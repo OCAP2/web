@@ -28,7 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@solidjs/testing-library": "^0.8.0",
-    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.1.2",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
