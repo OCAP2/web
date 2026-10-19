@@ -265,24 +265,34 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 		}
 	}
 
+	// Every session holds its mission in memory until it is saved. A producer
+	// turned away keeps its data and retries.
+	if !reg.acquire(h.setting.Streaming.MaxSessions) {
+		slog.Warn("stream: refusing mission, too many active", "limit", h.setting.Streaming.MaxSessions, "mission", payload.Mission.MissionName)
+		return nil, "too many active missions"
+	}
+	refuse := func(reason string) (*streamSession, string) {
+		reg.release()
+		return nil, reason
+	}
 	if h.setting.Data == "" || h.repoOperation == nil {
-		return nil, "streaming storage unavailable"
+		return refuse("streaming storage unavailable")
 	}
 	if err := os.MkdirAll(h.setting.Data, 0755); err != nil {
-		return nil, "streaming storage unavailable"
+		return refuse("streaming storage unavailable")
 	}
 	// Allocate one unique key for the row, v2 directory and legacy backup.
 	output, err := os.MkdirTemp(h.setting.Data, ingestion.MakeFilename(payload.Mission.MissionName)+"_*")
 	if err != nil {
-		return nil, "streaming storage unavailable"
+		return refuse("streaming storage unavailable")
 	}
 	cf, err := ingestion.NewChunkFlusher(output, 300)
 	if err != nil {
-		return nil, "streaming storage unavailable"
+		return refuse("streaming storage unavailable")
 	}
 	op := Operation{WorldName: payload.World.WorldName, MissionName: payload.Mission.MissionName, Filename: filepath.Base(output), Date: time.Now().Format("2006-01-02"), Tag: payload.Mission.Tag, StorageFormat: "protobuf", ConversionStatus: ConversionStatusStreaming, SchemaVersion: uint32(storage.SchemaVersionV2)}
 	if err := h.repoOperation.Store(context.Background(), &op); err != nil {
-		return nil, "cannot register mission"
+		return refuse("cannot register mission")
 	}
 	session := ingestion.NewSession()
 	session.SetFrameBase(framing.FrameBase)
@@ -375,7 +385,11 @@ func (h *Handler) ingestStream(ss *streamSession, conn *streamConn, envelope str
 		slog.Warn("stream: invalid message", "type", envelope.Type, "error", err)
 		return true
 	}
-	if envelope.Type == streaming.TypeTelemetry && ss.opID > 0 {
+	// The live duration and player count need no more than an occasional
+	// write; telemetry from every game server would otherwise contend for
+	// the SQLite writer.
+	if envelope.Type == streaming.TypeTelemetry && ss.opID > 0 && time.Since(ss.metaWritten) >= streamMetaInterval {
+		ss.metaWritten = time.Now()
 		duration := float64(ss.session.FrameCount()) * float64(ss.session.Mission().CaptureDelay)
 		if err := h.repoOperation.UpdateStreamingMeta(context.Background(), ss.opID, duration, ss.session.LivePlayerCount()); err != nil {
 			slog.Warn("stream: metadata update failed", "error", err)
@@ -542,6 +556,7 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 // saveStream finalizes the session, marking the row failed on error. Caller
 // must hold ss.mu.
 func (h *Handler) saveStream(ss *streamSession, tag string) error {
+	defer h.streamRegistry().release() // every session is saved exactly once
 	err := h.finalizeSession(ss.session, tag, ss.outputDir, ss.opID)
 	if err != nil {
 		slog.Error("stream: finalization failed", "error", err)

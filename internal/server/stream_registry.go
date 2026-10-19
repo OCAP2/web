@@ -14,6 +14,9 @@ import (
 // whose end_mission acknowledgement was lost learns the mission was saved.
 const completedTTL = time.Hour
 
+// streamMetaInterval spaces live metadata writes per session; tests lower it.
+var streamMetaInterval = 15 * time.Second
+
 // streamConn is one producer WebSocket connection.
 type streamConn struct {
 	ws      *websocket.Conn
@@ -46,7 +49,9 @@ type streamSession struct {
 	owner     *streamConn   // nil while detached
 	grace     *time.Timer
 	detachGen uint64 // identifies the detachment the grace timer belongs to
-	done      bool   // finalized, or being finalized
+	// metaWritten is when the live metadata row was last updated.
+	metaWritten time.Time
+	done        bool // finalized, or being finalized
 }
 
 func (s *streamSession) resumable() bool { return s.missionID != "" }
@@ -58,6 +63,33 @@ type streamRegistry struct {
 	mu        sync.Mutex
 	sessions  map[string]*streamSession
 	completed map[string]time.Time // mission ids saved through end_mission
+	active    int                  // sessions being ingested, legacy ones included
+}
+
+// acquire reserves a slot for a new session; limit <= 0 means no limit.
+func (r *streamRegistry) acquire(limit int) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if limit > 0 && r.active >= limit {
+		return false
+	}
+	r.active++
+	return true
+}
+
+// release frees the slot of a session that was saved or abandoned.
+func (r *streamRegistry) release() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.active > 0 {
+		r.active--
+	}
+}
+
+func (r *streamRegistry) activeCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.active
 }
 
 func newStreamRegistry() *streamRegistry {

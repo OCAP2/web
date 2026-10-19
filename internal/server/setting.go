@@ -72,6 +72,9 @@ type Streaming struct {
 	// AckInterval is how often received envelopes are acknowledged to a
 	// resumable producer.
 	AckInterval time.Duration `json:"ackInterval" yaml:"ackInterval"`
+	// MaxSessions limits missions ingested at once; each holds its history
+	// in memory. A producer turned away retries. 0 means no limit.
+	MaxSessions int `json:"maxSessions" yaml:"maxSessions"`
 }
 
 type CORSConfig struct {
@@ -131,6 +134,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("streaming.pingTimeout", "10s")
 	viper.SetDefault("streaming.resumeGrace", "5m")
 	viper.SetDefault("streaming.ackInterval", "1s")
+	viper.SetDefault("streaming.maxSessions", 0)
 	viper.SetDefault("auth.sessionTTL", "24h")
 	viper.SetDefault("auth.adminSteamIds", []string{})
 	viper.SetDefault("auth.steamApiKey", "")

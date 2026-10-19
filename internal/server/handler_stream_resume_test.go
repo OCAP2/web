@@ -148,7 +148,9 @@ func TestStreamResume_CumulativeAcks(t *testing.T) {
 	c := rh.dial()
 	startResumable(t, c, "Acks", "m-acks", "p-1")
 	last := sendStates(t, c, 2, 1, 10)
-	m := readUntil(t, c, func(m streaming.AckMessage) bool { return m.Type == streaming.ServerAck && m.For == "" && m.Seq == last })
+	m := readUntil(t, c, func(m streaming.AckMessage) bool {
+		return m.Type == streaming.ServerAck && m.For == "" && m.Seq == last
+	})
 	assert.Equal(t, uint64(11), m.Seq)
 }
 
@@ -557,4 +559,82 @@ func TestStreamResume_InterruptedEndSavesPartial(t *testing.T) {
 	ended, err := rh.h.repoOperation.StreamEnded(context.Background(), "m-crash")
 	require.NoError(t, err)
 	assert.True(t, ended, "a later resume learns it is saved")
+}
+
+func TestStreamResume_MaxSessions(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	rh.h.setting.Streaming.MaxSessions = 1
+	a := rh.dial()
+	startResumable(t, a, "A", "m-a1", "p-a")
+
+	// A second mission is refused while the first holds the only slot.
+	b := rh.dial()
+	sendEnv(t, b, streaming.TypeStartMission, 1, startPayload("B", "m-b1", "p-b"))
+	b.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, err := b.ReadMessage()
+	require.True(t, websocket.IsCloseError(err, websocket.CloseInternalServerErr), "%v", err)
+	assert.Len(t, rh.ops(), 1, "no row for the refused mission")
+
+	// Continuing the admitted mission needs no new slot.
+	a.Close()
+	a2 := rh.dial()
+	sendEnv(t, a2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-a1", ProducerID: "p-a"})
+	readUntil(t, a2, isType(streaming.ServerResumeOK))
+	sendEnv(t, a2, streaming.TypeEndMission, 2, nil)
+	readUntil(t, a2, isAckFor(streaming.TypeEndMission))
+	assert.Zero(t, rh.h.streamRegistry().activeCount())
+
+	// The freed slot admits the producer's retry.
+	b2 := rh.dial()
+	startResumable(t, b2, "B", "m-b1", "p-b")
+}
+
+func TestStreamResume_SlotsReleasedOnEveryEnding(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	reg := rh.h.streamRegistry()
+
+	saved := rh.dial()
+	replayMission(t, saved, "Saved", "m-s", "p-1", 2)
+	expired := rh.dial()
+	startResumable(t, expired, "Expired", "m-x", "p-2")
+	expired.Close()
+	legacy := rh.dial()
+	sendStartMission(t, legacy, "Legacy", "altis")
+	legacy.Close()
+	old := rh.dial()
+	startResumable(t, old, "Old", "m-old", "p-3")
+	old.Close()
+	superseding := rh.dial()
+	startResumable(t, superseding, "New", "m-new", "p-3") // supersedes m-old
+
+	require.Eventually(t, func() bool { return reg.activeCount() == 1 }, 5*time.Second, 10*time.Millisecond, "only the newest mission is still active")
+}
+
+func TestStreamResume_LiveMetadataThrottled(t *testing.T) {
+	old := streamMetaInterval
+	streamMetaInterval = time.Hour
+	t.Cleanup(func() { streamMetaInterval = old })
+
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Meta", "m-meta", "p-1")
+	// Envelopes are handled in order: once the next one is accepted, the
+	// previous one, database write included, is done.
+	barrier := func(seq uint64) {
+		sendEnv(t, c, streaming.TypeSoldierState, seq, soldierState(1))
+		rh.waitSeq("m-meta", seq)
+	}
+	sendEnv(t, c, streaming.TypeTelemetry, 2, map[string]any{"CaptureFrame": 10})
+	barrier(3)
+	first := rh.ops()[0].MissionDuration
+	require.Positive(t, first)
+
+	sendEnv(t, c, streaming.TypeTelemetry, 4, map[string]any{"CaptureFrame": 500})
+	barrier(5)
+	assert.Equal(t, first, rh.ops()[0].MissionDuration, "a second write within the interval is skipped")
+
+	streamMetaInterval = 0
+	sendEnv(t, c, streaming.TypeTelemetry, 6, map[string]any{"CaptureFrame": 600})
+	barrier(7)
+	assert.Greater(t, rh.ops()[0].MissionDuration, first)
 }

@@ -102,6 +102,15 @@ the next section.
 |---|---|---|
 | `streaming.resumeGrace` | `5m` | How long a disconnected mission waits for its producer |
 | `streaming.ackInterval` | `1s` | How often received envelopes are acknowledged |
+| `streaming.maxSessions` | `0` | Missions ingested at once; `0` = no limit |
+
+Each session holds its mission in memory until it is saved, so many game
+servers resending missions in full after a web restart can add up.
+`maxSessions` bounds that. A refused `start_mission` closes the connection;
+the producer keeps its data and retries with backoff. Resuming or repeating
+the start of a mission already admitted needs no new slot. The live duration
+and player count of a streaming recording are written to the database at most
+every 15 seconds per mission.
 
 The extension holds unacknowledged envelopes in memory (256 MiB by default) and
 spools every envelope of the mission to disk until the mission is saved. During
