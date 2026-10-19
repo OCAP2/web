@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/OCAP2/web/internal/testfs"
 )
 
 func TestScanMaps_Complete(t *testing.T) {
@@ -91,13 +93,9 @@ func TestScanMaps_NonExistent(t *testing.T) {
 }
 
 func TestScanMaps_NotADirectory(t *testing.T) {
-	// A regular file instead of a directory — ReadDir should fail
-	f, err := os.CreateTemp("", "not-a-dir")
-	require.NoError(t, err)
-	f.Close()
-	defer os.Remove(f.Name())
-
-	_, err = ScanMaps(f.Name())
+	// A path every OS rejects — ReadDir should fail with an error other than
+	// not-exist (a regular file would read as "not found" on Windows)
+	_, err := ScanMaps(testfs.InvalidPath(t))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "read maps dir")
 }

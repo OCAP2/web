@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/OCAP2/web/internal/testfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -735,21 +736,15 @@ func TestMigrationV11_NoDataDir(t *testing.T) {
 }
 
 func TestSafeRename_LstatDstError(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission tests require non-root user")
-	}
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	require.NoError(t, os.WriteFile(src, []byte("x"), 0o644))
 
-	locked := filepath.Join(dir, "locked")
-	require.NoError(t, os.MkdirAll(locked, 0o755))
-	require.NoError(t, os.Chmod(locked, 0o000))
-	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
-
-	// Lstat(dst) returns EACCES (not ENOENT) -> exercises the dst-error branch.
-	err := safeRename(src, filepath.Join(locked, "dst"))
+	// Lstat(dst) fails with an error other than not-exist -> exercises the
+	// dst-error branch.
+	err := safeRename(src, testfs.InvalidPath(t))
 	assert.Error(t, err)
+	assert.FileExists(t, src, "the source is left in place")
 }
 
 func TestMigrateDecodeFilenames_QueryError(t *testing.T) {
@@ -803,58 +798,40 @@ func TestMigrateDecodeFilenames_VersionInsertError(t *testing.T) {
 }
 
 func TestSafeRename_LstatError(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission tests require non-root user")
-	}
 	dir := t.TempDir()
-	parent := filepath.Join(dir, "locked")
-	require.NoError(t, os.MkdirAll(parent, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(parent, "src"), []byte("x"), 0o644))
-	require.NoError(t, os.Chmod(parent, 0o000))
-	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
 
-	// Lstat on a path inside an unreadable directory returns EACCES, not
-	// ENOENT, exercising the non-ErrNotExist error branch.
-	err := safeRename(filepath.Join(parent, "src"), filepath.Join(parent, "dst"))
+	// Lstat(src) fails with an error other than not-exist, exercising the
+	// non-ErrNotExist error branch.
+	err := safeRename(testfs.InvalidPath(t), filepath.Join(dir, "dst"))
 	assert.Error(t, err)
 }
 
-func TestRenameMissionPaths_PermissionError(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission tests require non-root user")
-	}
+func TestRenameMissionPaths_FileRenameError(t *testing.T) {
 	dir := t.TempDir()
 
-	// File rename should fail when destination parent is read-only.
+	// The file rename fails: the destination's parent directory is missing.
 	src := filepath.Join(dir, "old.json.gz")
 	require.NoError(t, os.WriteFile(src, []byte("x"), 0o644))
-	require.NoError(t, os.Chmod(dir, 0o500))
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
 
-	err := renameMissionPaths(dir, "old", "new")
+	err := renameMissionPaths(dir, "old", filepath.Join("missing", "new"))
 	assert.Error(t, err)
+	assert.FileExists(t, src)
 }
 
-func TestRenameMissionPaths_DirPermissionError(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission tests require non-root user")
-	}
+func TestRenameMissionPaths_DirRenameError(t *testing.T) {
 	dir := t.TempDir()
 
 	// No .json.gz file -> first safeRename is a no-op. Streaming directory
-	// exists -> second safeRename must fail when dataDir is read-only.
+	// exists -> second safeRename must fail: the destination's parent
+	// directory is missing.
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "old"), 0o755))
-	require.NoError(t, os.Chmod(dir, 0o500))
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
 
-	err := renameMissionPaths(dir, "old", "new")
+	err := renameMissionPaths(dir, "old", filepath.Join("missing", "new"))
 	assert.Error(t, err)
+	assert.DirExists(t, filepath.Join(dir, "old"))
 }
 
 func TestMigrationV11_RenameErrorPropagates(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission tests require non-root user")
-	}
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
 	require.NoError(t, os.MkdirAll(dataDir, 0o755))
@@ -877,10 +854,8 @@ func TestMigrationV11_RenameErrorPropagates(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 
-	require.NoError(t, os.Chmod(dataDir, 0o500))
-	t.Cleanup(func() { _ = os.Chmod(dataDir, 0o755) })
-
-	_, err = NewRepoOperationWithDataDir(pathDB, dataDir)
+	// A data directory every OS rejects makes the recording rename fail.
+	_, err = NewRepoOperationWithDataDir(pathDB, testfs.InvalidPath(t))
 	assert.Error(t, err, "migration should propagate rename failure")
 }
 

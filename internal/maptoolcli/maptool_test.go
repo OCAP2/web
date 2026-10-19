@@ -19,6 +19,7 @@ import (
 
 	"github.com/OCAP2/web/internal/maptool"
 	"github.com/OCAP2/web/internal/server"
+	"github.com/OCAP2/web/internal/testfs"
 )
 
 // ---------------------------------------------------------------------------
@@ -392,9 +393,16 @@ func TestOrchestrate_PostRenderSkipWhenFinalDirExists(t *testing.T) {
 func TestOrchestrate_UniquePartialDirsForSameGuess(t *testing.T) {
 	inDir := t.TempDir()
 	outDir := t.TempDir()
-	// "altis.zip" and "Altis.zip" both lowercase to "altis".
-	require.NoError(t, os.WriteFile(filepath.Join(inDir, "altis.zip"), []byte("x"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(inDir, "Altis.zip"), []byte("x"), 0644))
+	// Two distinct files whose names lowercase to the same guess, "kavala".
+	// "Kavala.zip" and "kavala.zip" would be one file on a case-insensitive
+	// filesystem (Windows), so the second name starts with the Kelvin sign
+	// U+212A: it lowercases to "k", yet case-insensitive filesystems keep it
+	// apart from "k".
+	require.NoError(t, os.WriteFile(filepath.Join(inDir, "kavala.zip"), []byte("x"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(inDir, "Kavala.zip"), []byte("x"), 0644))
+	entries, err := os.ReadDir(inDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 2, "the filesystem must keep both inputs")
 
 	var observedPartials sync.Map
 	renderFn := func(ctx context.Context, inputZip, outDir string, fm formatter) (string, error) {
@@ -663,12 +671,10 @@ func TestWorldClaim_PublishFnError_NotMarkedSeen(t *testing.T) {
 }
 
 func TestWorldClaim_StatError_NotNotExist(t *testing.T) {
-	// Stat a path whose parent is a regular file → ENOTDIR.
-	// os.IsNotExist(ENOTDIR) == false, so the "stat final dir" branch fires.
-	parent := t.TempDir()
-	blocker := filepath.Join(parent, "blocker")
-	require.NoError(t, os.WriteFile(blocker, []byte("x"), 0644))
-	finalDir := filepath.Join(blocker, "child") // stat error: ENOTDIR
+	// Stat a path every OS rejects with an error other than not-exist, so the
+	// "stat final dir" branch fires. (A regular file as parent would read as
+	// "not found" on Windows.)
+	finalDir := testfs.InvalidPath(t)
 
 	c := newWorldClaim()
 	err := c.publish("altis", finalDir, false, func() error {

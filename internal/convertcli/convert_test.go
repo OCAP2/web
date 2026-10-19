@@ -41,6 +41,7 @@ func newTempRepo(t *testing.T) (*server.RepoOperation, string) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 	return repo, dir
 }
 
@@ -143,6 +144,7 @@ func TestConvertSingleFile(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	err = convertSingleFile(ctx, repo, inputPath, dataDir, 300)
 	require.NoError(t, err)
@@ -187,6 +189,7 @@ func TestConvertSingleFile_WithDatabaseEntry(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	op := &server.Operation{
 		WorldName:        "Stratis",
@@ -230,6 +233,7 @@ func TestConvertAll_WithOperations(t *testing.T) {
 
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	ctx := context.Background()
 
@@ -262,6 +266,7 @@ func TestConvertAll_WithFailedOperation(t *testing.T) {
 
 	repo, err := server.NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	ctx := context.Background()
 

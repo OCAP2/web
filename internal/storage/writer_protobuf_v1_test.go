@@ -14,12 +14,11 @@ import (
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
-func TestWriteManifest_ReadOnlyDir(t *testing.T) {
+func TestWriteManifest_WriteFailure(t *testing.T) {
 	dir := t.TempDir()
-	outputDir := filepath.Join(dir, "readonly")
-	require.NoError(t, os.MkdirAll(outputDir, 0755))
-	require.NoError(t, os.Chmod(outputDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(outputDir, 0755)) }()
+	outputDir := filepath.Join(dir, "output")
+	// A directory where the manifest belongs makes writing it fail on every OS
+	require.NoError(t, os.MkdirAll(filepath.Join(outputDir, "manifest.pb"), 0755))
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{
@@ -34,11 +33,13 @@ func TestWriteManifest_ReadOnlyDir(t *testing.T) {
 	assert.Contains(t, err.Error(), "write manifest")
 }
 
-func TestWriteChunks_ReadOnlyDir(t *testing.T) {
+func TestWriteChunks_ChunksDirFailure(t *testing.T) {
 	dir := t.TempDir()
 	outputDir := filepath.Join(dir, "output")
-	require.NoError(t, os.MkdirAll(outputDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(outputDir, 0755)) }()
+	require.NoError(t, os.MkdirAll(outputDir, 0755))
+	// A regular file where the chunks directory belongs makes creating it fail
+	// on every OS
+	require.NoError(t, os.WriteFile(filepath.Join(outputDir, "chunks"), []byte("x"), 0644))
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{
@@ -53,14 +54,13 @@ func TestWriteChunks_ReadOnlyDir(t *testing.T) {
 	assert.Contains(t, err.Error(), "create chunks directory")
 }
 
-func TestWriteChunks_ReadOnlyChunksDir(t *testing.T) {
-	// Test the writeChunk error path: chunks dir exists but is read-only
+func TestWriteChunks_ChunkWriteFailure(t *testing.T) {
+	// Test the writeChunk error path: a directory where the first chunk file
+	// belongs makes writing it fail on every OS
 	dir := t.TempDir()
 	outputDir := filepath.Join(dir, "output")
 	chunksDir := filepath.Join(outputDir, "chunks")
-	require.NoError(t, os.MkdirAll(chunksDir, 0755))
-	require.NoError(t, os.Chmod(chunksDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(chunksDir, 0755)) }()
+	require.NoError(t, os.MkdirAll(filepath.Join(chunksDir, "0000.pb"), 0755))
 
 	w := &ProtobufWriterV1{}
 	result := &ParseResult{

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -482,11 +483,17 @@ func TestPaintPNG_InvalidImage(t *testing.T) {
 func TestScanDir_UnreadableSubdir(t *testing.T) {
 	dir := t.TempDir()
 
-	// Create a subdirectory, then make it unreadable
+	// Create a subdirectory and make listing it fail. Permission bits cannot
+	// do that on every OS, so fail the listing itself.
 	subdir := filepath.Join(dir, "locked")
 	require.NoError(t, os.MkdirAll(subdir, 0755))
-	require.NoError(t, os.Chmod(subdir, 0000))
-	defer func() { assert.NoError(t, os.Chmod(subdir, 0755)) }()
+	scanReadDir = func(name string) ([]os.DirEntry, error) {
+		if filepath.Base(name) == "locked" {
+			return nil, errors.New("permission denied")
+		}
+		return os.ReadDir(name)
+	}
+	t.Cleanup(func() { scanReadDir = os.ReadDir })
 
 	files := make(map[string]string)
 	err := scanDir(dir, files)

@@ -74,6 +74,9 @@ func (h *Handler) getMapToolMaps(c ContextNoBody) ([]maptool.MapInfo, error) {
 	return maps, nil
 }
 
+// removeMapDir deletes a map directory; tests replace it to simulate failure.
+var removeMapDir = os.RemoveAll
+
 // deleteMapToolMap removes a map directory.
 func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
 	name := c.PathParam("name")
@@ -86,7 +89,7 @@ func (h *Handler) deleteMapToolMap(c ContextNoBody) (any, error) {
 	if !strings.HasPrefix(absDir, absMaps+string(filepath.Separator)) {
 		return nil, fuego.BadRequestError{Detail: "invalid map name"}
 	}
-	if err := os.RemoveAll(dir); err != nil {
+	if err := removeMapDir(dir); err != nil {
 		return nil, fuego.InternalServerError{Err: err, Detail: "failed to delete map"}
 	}
 	c.SetStatus(http.StatusNoContent)

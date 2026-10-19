@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/OCAP2/web/internal/maptool"
+	"github.com/OCAP2/web/internal/testfs"
 	"github.com/go-fuego/fuego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -350,10 +352,8 @@ func TestImportMapToolZip_ValidZip(t *testing.T) {
 func TestGetMapToolMaps_ScanError(t *testing.T) {
 	hdlr, _ := setupMaptoolTest(t)
 
-	// Point mapsDir at a file (not a directory) so ScanMaps returns an error.
-	tmpFile := filepath.Join(t.TempDir(), "notadir")
-	require.NoError(t, os.WriteFile(tmpFile, []byte("x"), 0644))
-	hdlr.maptoolCfg.mapsDir = tmpFile
+	// Point mapsDir at a path every OS rejects so ScanMaps returns an error.
+	hdlr.maptoolCfg.mapsDir = testfs.InvalidPath(t)
 
 	ctx := fuego.NewMockContextNoBody()
 	_, err := hdlr.getMapToolMaps(ctx)
@@ -475,13 +475,9 @@ func TestImportMapToolZip_NoGradMehDir(t *testing.T) {
 }
 
 func TestRestyleMapToolAll_ScanError(t *testing.T) {
-	// Use a file (not dir) as maps dir so ScanMaps returns an error
-	dir := t.TempDir()
-	fakeFile := filepath.Join(dir, "notadir")
-	require.NoError(t, os.WriteFile(fakeFile, []byte("x"), 0644))
-
+	// Use a path every OS rejects as maps dir so ScanMaps returns an error
 	hdlr := &Handler{
-		maptoolCfg: &maptoolConfig{mapsDir: fakeFile},
+		maptoolCfg: &maptoolConfig{mapsDir: testfs.InvalidPath(t)},
 	}
 
 	ctx := fuego.NewMockContextNoBody()
@@ -495,11 +491,12 @@ func TestDeleteMapToolMap_RemoveError(t *testing.T) {
 		maptoolCfg: &maptoolConfig{mapsDir: mapsDir},
 	}
 
-	// Try to remove a map that exists but can't be removed (read-only parent)
+	// Try to remove a map that exists but can't be removed. No filesystem
+	// state makes RemoveAll fail on every OS, so fail the call itself.
 	mapDir := filepath.Join(mapsDir, "locked")
 	require.NoError(t, os.MkdirAll(mapDir, 0755))
-	require.NoError(t, os.Chmod(mapsDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(mapsDir, 0755)) }()
+	removeMapDir = func(string) error { return errors.New("remove failed") }
+	t.Cleanup(func() { removeMapDir = os.RemoveAll })
 
 	ctx := fuego.NewMockContextNoBody()
 	ctx.PathParams = map[string]string{"name": "locked"}

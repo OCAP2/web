@@ -259,6 +259,7 @@ func TestDeleteOperation_WithFiles(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	tctx := t.Context()
 	op := &Operation{
@@ -472,6 +473,7 @@ func TestEditOperation_UpdateError(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	tctx := context.Background()
 	op := &Operation{
@@ -508,6 +510,7 @@ func TestRetryConversion_UpdateStatusError(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	tctx := context.Background()
 	op := &Operation{
@@ -536,6 +539,7 @@ func TestDeleteOperation_DBDeleteError(t *testing.T) {
 	require.NoError(t, os.MkdirAll(dataDir, 0755))
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	tctx := context.Background()
 	op := &Operation{
@@ -814,12 +818,13 @@ func TestDeleteOperation_DBDeleteClosedDB(t *testing.T) {
 	assert.Error(t, err, "should fail with read-only DB on Delete")
 }
 
-func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
+func TestDeleteOperation_FileCleanupFailure(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
 	require.NoError(t, os.MkdirAll(dataDir, 0755))
 	repo, err := NewRepoOperation(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	tctx := context.Background()
 	op := &Operation{
@@ -829,16 +834,14 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	}
 	require.NoError(t, repo.Store(tctx, op))
 
-	// Create the json.gz file and protobuf dir
+	// A non-empty directory where the json.gz belongs makes os.Remove fail
+	// on every OS, unlike permission bits.
 	jsonGzPath := filepath.Join(dataDir, "test_ro_files.json.gz")
-	require.NoError(t, os.WriteFile(jsonGzPath, []byte("fake"), 0644))
+	require.NoError(t, os.MkdirAll(jsonGzPath, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(jsonGzPath, "keep"), []byte("fake"), 0644))
 	pbDir := filepath.Join(dataDir, "test_ro_files")
 	require.NoError(t, os.MkdirAll(filepath.Join(pbDir, "chunks"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(pbDir, "manifest.pb"), []byte("fake"), 0644))
-
-	// Make data dir read-only so os.Remove and os.RemoveAll fail with permission error
-	require.NoError(t, os.Chmod(dataDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(dataDir, 0755)) }()
 
 	jwt := NewJWTManager("secret", time.Hour)
 	h := &Handler{repoOperation: repo, setting: Setting{Data: dataDir}, jwt: jwt}
@@ -850,8 +853,7 @@ func TestDeleteOperation_ReadOnlyFileCleanup(t *testing.T) {
 	_, err = h.DeleteOperation(ctx)
 	assert.NoError(t, err)
 
-	// Files should still exist since removal failed
-	os.Chmod(dataDir, 0755) // restore to check
+	// The json.gz path survives since its removal failed
 	_, err = os.Stat(jsonGzPath)
 	assert.NoError(t, err, "json.gz should still exist")
 }

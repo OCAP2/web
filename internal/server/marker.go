@@ -221,8 +221,12 @@ func (r *RepoMarker) scanColor(scolor string) (color.Color, error) {
 	return c, nil
 }
 
+// scanReadDir lists a directory for scanDir; tests replace it to simulate
+// an unreadable subdirectory.
+var scanReadDir = os.ReadDir
+
 func scanDir(dir string, files map[string]string) error {
-	entrys, err := os.ReadDir(dir)
+	entrys, err := scanReadDir(dir)
 	if err != nil {
 		return err
 	}

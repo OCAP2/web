@@ -584,9 +584,9 @@ func TestIntegration_UploadWriteFailureLeavesNoRow(t *testing.T) {
 		setting:       Setting{Data: dataDir, Secret: "test-secret"},
 	}
 
-	// Make the data directory read-only so the temp file cannot be created.
-	require.NoError(t, os.Chmod(dataDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(dataDir, 0755)) }()
+	// A directory where the upload's temp file belongs makes creating it fail
+	// on every OS, unlike permission bits.
+	require.NoError(t, os.Mkdir(filepath.Join(dataDir, "write_fail.json.gz.tmp"), 0755))
 
 	rec := uploadJSONRecording(t, hdlr, "write_fail", "Write Fail")
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)

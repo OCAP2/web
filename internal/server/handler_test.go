@@ -19,6 +19,7 @@ import (
 	"testing/fstest"
 
 	"github.com/OCAP2/web/internal/maptool"
+	"github.com/OCAP2/web/internal/testfs"
 	"github.com/go-fuego/fuego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1900,6 +1901,7 @@ func TestStoreOperation_JWTAuth(t *testing.T) {
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	jwt := NewJWTManager("test-secret", time.Hour)
 	token, err := jwt.Create("", WithRole("admin"))
@@ -2077,15 +2079,17 @@ func TestSpaFileServer_FallsBackToIndex(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "__BASE_PATH__")
 }
 
-func TestStoreOperation_ReadOnlyDataDir(t *testing.T) {
+func TestStoreOperation_DataDirWriteFailure(t *testing.T) {
 	dir := t.TempDir()
 	dataDir := filepath.Join(dir, "data")
-	os.MkdirAll(dataDir, 0555) // Read-only
-	defer os.Chmod(dataDir, 0755)
+	// A directory where the upload's temp file belongs makes creating it fail
+	// on every OS, unlike permission bits.
+	require.NoError(t, os.MkdirAll(filepath.Join(dataDir, "test_readonly.json.gz.tmp"), 0755))
 
 	pathDB := filepath.Join(dir, "test.db")
 	repo, err := NewRepoOperation(pathDB)
 	require.NoError(t, err)
+	t.Cleanup(func() { repo.Close() })
 
 	h := &Handler{
 		repoOperation: repo,
@@ -2363,15 +2367,11 @@ func TestGetWorlds(t *testing.T) {
 		assert.Empty(t, result)
 	})
 
-	t.Run("error when maps path is a file", func(t *testing.T) {
-		f, err := os.CreateTemp(t.TempDir(), "not-a-dir")
-		require.NoError(t, err)
-		f.Close()
-
-		hdlr := Handler{setting: Setting{Maps: f.Name()}}
+	t.Run("error when maps path is unreadable", func(t *testing.T) {
+		hdlr := Handler{setting: Setting{Maps: testfs.InvalidPath(t)}}
 
 		mockCtx := fuego.NewMockContextNoBody()
-		_, err = hdlr.GetWorlds(mockCtx)
+		_, err := hdlr.GetWorlds(mockCtx)
 		assert.Error(t, err)
 	})
 }

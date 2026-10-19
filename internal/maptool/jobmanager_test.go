@@ -370,17 +370,22 @@ func TestCheckWritable_NotWritable(t *testing.T) {
 }
 
 func TestCheckWritable_ReadOnlyDir(t *testing.T) {
-	if os.Getuid() == 0 {
-		t.Skip("test requires non-root")
-	}
-	// MkdirAll succeeds (dir exists) but CreateTemp fails (no write permission)
+	// MkdirAll succeeds (dir exists) but CreateTemp fails. Permission bits
+	// cannot cause that on every OS, so fail the call itself.
 	dir := filepath.Join(t.TempDir(), "readonly")
 	require.NoError(t, os.MkdirAll(dir, 0755))
-	require.NoError(t, os.Chmod(dir, 0555))
-	t.Cleanup(func() { os.Chmod(dir, 0755) })
+	createTemp = func(string, string) (*os.File, error) { return nil, os.ErrPermission }
+	t.Cleanup(func() { createTemp = os.CreateTemp })
 
 	err := checkWritable(dir)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, os.ErrPermission)
+}
+
+func TestCheckWritable_NotADirectory(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "file")
+	require.NoError(t, os.WriteFile(file, []byte("x"), 0644))
+
+	assert.Error(t, checkWritable(file))
 }
 
 func TestWriteErrorJSON(t *testing.T) {
