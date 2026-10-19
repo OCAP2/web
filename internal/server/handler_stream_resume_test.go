@@ -531,3 +531,30 @@ func TestFailInterruptedStreams(t *testing.T) {
 		}
 	}
 }
+
+func TestStreamResume_InterruptedEndSavesPartial(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Crashed", "m-crash", "p-1")
+	sendStates(t, c, 2, 1, 5)
+	rh.waitSeq("m-crash", 6)
+	c.Close() // the game server crashed; the session expires as partial
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-crash") == nil }, 5*time.Second, 10*time.Millisecond)
+
+	// After its restart the extension recovers the mission from its spool and
+	// ends it on the crashed process' behalf.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-crash", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+	startResumable(t, c2, "Crashed", "m-crash", "p-1")
+	last := sendStates(t, c2, 2, 1, 8)
+	sendEnv(t, c2, streaming.TypeEndMission, last+1, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, c2, isAckFor(streaming.TypeEndMission))
+
+	ops := rh.ops()
+	require.Len(t, ops, 1, "the recovered recording replaces the expired segment")
+	assert.Equal(t, "TvT,partial", ops[0].Tag, "an interrupted mission is partial")
+	ended, err := rh.h.repoOperation.StreamEnded(context.Background(), "m-crash")
+	require.NoError(t, err)
+	assert.True(t, ended, "a later resume learns it is saved")
+}

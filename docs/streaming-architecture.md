@@ -126,6 +126,18 @@ Without a spool (`spoolDir` empty) a full memory buffer refuses envelopes, and
 the gap marks the recording partial, as does a resend after the server lost the
 mission.
 
+**Game server crashes.** The spool stays on disk when the game server
+crashes. The next extension process resends the mission from it:
+1. It resumes as the crashed process' producer id, read from the spooled
+   `start_mission`. The server therefore continues a session still waiting in
+   its grace period, or takes the whole mission with `resume_unknown`.
+2. It then sends an `end_mission` with `"interrupted": true`.
+
+The server saves such a recording with `partial` appended to its tags. It
+still replaces the earlier partial segments when nothing is missing. Missions
+whose save was never confirmed are recovered the same way, with their own
+`end_mission`.
+
 ### Legacy producers
 
 For producers without `protocolVersion: 2`, disconnecting without `end_mission`,

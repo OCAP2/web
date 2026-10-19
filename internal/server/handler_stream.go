@@ -402,6 +402,7 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	acceptSeq(ss, envelope.Seq)
 
 	tag := ""
+	interrupted := false
 	if ss.session.Mission() != nil {
 		tag = ss.session.Mission().Tag
 	}
@@ -409,19 +410,22 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	// payload. Prefer it over the mission-start tag when non-empty so
 	// the operation row and the v2 manifest both reflect it.
 	if len(envelope.Payload) > 0 && string(envelope.Payload) != "null" {
-		var endPayload struct {
-			Tag string `json:"tag"`
-		}
+		var endPayload streaming.EndMissionPayload
 		if err := json.Unmarshal(envelope.Payload, &endPayload); err != nil {
 			slog.Warn("stream: invalid end_mission payload", "error", err)
-		} else if endPayload.Tag != "" {
-			tag = endPayload.Tag
-			if ss.session.Mission() != nil {
-				ss.session.Mission().Tag = endPayload.Tag
+		} else {
+			if endPayload.Tag != "" {
+				tag = endPayload.Tag
+				if ss.session.Mission() != nil {
+					ss.session.Mission().Tag = endPayload.Tag
+				}
 			}
+			// A producer recovering a mission its game server crashed in ends
+			// it on its behalf: the recording stops where the crash cut it.
+			interrupted = endPayload.Interrupted
 		}
 	}
-	if ss.gap {
+	if ss.gap || interrupted {
 		tag = withPartialTag(tag)
 	}
 	slog.Info("stream: mission ended", "missionId", ss.missionID, "counts", ss.counts)
