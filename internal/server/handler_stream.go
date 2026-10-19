@@ -247,7 +247,14 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 	reg := h.streamRegistry()
 	resumable := payload.MissionID != "" && payload.ProtocolVersion >= streaming.ProtocolVersionResume
 	if resumable {
-		if existing := reg.get(payload.MissionID); existing != nil {
+		// Reserve the mission id before the slow setup below, so a repeated
+		// start racing this one takes over the same session instead of
+		// creating a second recording.
+		existing, err := reg.reserve(payload.MissionID, streamReserveWait)
+		if err != nil {
+			return nil, "mission start in progress"
+		}
+		if existing != nil {
 			if existing.producer != payload.ProducerID {
 				return nil, "mission id in use"
 			}
@@ -264,15 +271,27 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 			go h.expireStream(old, 0)
 		}
 	}
+	// settle ends the reservation: ss nil when the mission was refused.
+	settle := func(ss *streamSession) {
+		if resumable {
+			reg.settle(payload.MissionID, ss)
+		}
+	}
+
+	if hook := streamTestHooks.beforeCreate; hook != nil {
+		hook()
+	}
 
 	// Every session holds its mission in memory until it is saved. A producer
 	// turned away keeps its data and retries.
 	if !reg.acquire(h.setting.Streaming.MaxSessions) {
+		settle(nil)
 		slog.Warn("stream: refusing mission, too many active", "limit", h.setting.Streaming.MaxSessions, "mission", payload.Mission.MissionName)
 		return nil, "too many active missions"
 	}
 	refuse := func(reason string) (*streamSession, string) {
 		reg.release()
+		settle(nil)
 		return nil, reason
 	}
 	if h.setting.Data == "" || h.repoOperation == nil {
@@ -304,10 +323,10 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 	if resumable {
 		ss.missionID = payload.MissionID
 		ss.producer = payload.ProducerID
-		reg.add(ss)
 		if err := h.repoOperation.SetStreamMission(context.Background(), op.ID, ss.missionID); err != nil {
 			slog.Warn("stream: cannot record mission id", "error", err)
 		}
+		settle(ss)
 	}
 	slog.Info("stream: mission started", "mission", payload.Mission.MissionName, "missionId", ss.missionID, "producerId", ss.producer, "resumable", resumable)
 	return ss, ""
@@ -354,6 +373,18 @@ func (h *Handler) resumeStream(raw json.RawMessage, conn *streamConn) (streaming
 // acceptSeq applies envelope numbering. It reports false for a duplicate the
 // session already holds. Caller must hold ss.mu.
 func acceptSeq(ss *streamSession, seq uint64) bool {
+	if !checkSeq(ss, seq) {
+		return false
+	}
+	if seq > 0 {
+		ss.lastSeq.Store(seq)
+	}
+	return true
+}
+
+// checkSeq reports whether seq is new to the session and records a gap in
+// front of it, without counting it as received. Caller must hold ss.mu.
+func checkSeq(ss *streamSession, seq uint64) bool {
 	if seq == 0 {
 		return true // legacy producer: no numbering
 	}
@@ -365,7 +396,6 @@ func acceptSeq(ss *streamSession, seq uint64) bool {
 		slog.Warn("stream: envelopes missing, recording will be partial", "missionId", ss.missionID, "expected", last+1, "got", seq)
 		ss.gap = true
 	}
-	ss.lastSeq.Store(seq)
 	return true
 }
 
@@ -413,7 +443,10 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if ss.owner != conn || ss.done {
 		return endTakenOver
 	}
-	acceptSeq(ss, envelope.Seq)
+	// end_mission is acknowledged only once its save succeeded: until then
+	// its number stays out of the progress acknowledgements, so the producer
+	// keeps it to resend if the save fails.
+	checkSeq(ss, envelope.Seq)
 
 	tag := ""
 	interrupted := false
@@ -451,6 +484,9 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	}
 	if err != nil {
 		return endFailed
+	}
+	if envelope.Seq > 0 {
+		ss.lastSeq.Store(envelope.Seq)
 	}
 	if ss.resumable() {
 		ctx := context.Background()
@@ -557,6 +593,9 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 // must hold ss.mu.
 func (h *Handler) saveStream(ss *streamSession, tag string) error {
 	defer h.streamRegistry().release() // every session is saved exactly once
+	if hook := streamTestHooks.beforeSave; hook != nil {
+		hook()
+	}
 	err := h.finalizeSession(ss.session, tag, ss.outputDir, ss.opID)
 	if err != nil {
 		slog.Error("stream: finalization failed", "error", err)

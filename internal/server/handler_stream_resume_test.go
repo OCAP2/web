@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -385,7 +387,10 @@ func TestWithPartialTag(t *testing.T) {
 func TestStreamRegistryCompletedExpires(t *testing.T) {
 	r := newStreamRegistry()
 	s := &streamSession{missionID: "m"}
-	r.add(s)
+	got, err := r.reserve("m", time.Second)
+	require.NoError(t, err)
+	require.Nil(t, got)
+	r.settle("m", s)
 	r.remove(s, true)
 	assert.True(t, r.isCompleted("m"))
 	r.completed["m"] = time.Now().Add(-2 * completedTTL)
@@ -637,4 +642,142 @@ func TestStreamResume_LiveMetadataThrottled(t *testing.T) {
 	sendEnv(t, c, streaming.TypeTelemetry, 6, map[string]any{"CaptureFrame": 600})
 	barrier(7)
 	assert.Greater(t, rh.ops()[0].MissionDuration, first)
+}
+
+func TestStreamResume_EndNotAcknowledgedBeforeSaveSucceeds(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "SlowFail", "m-slow", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-slow", last)
+
+	// The save is slow, then fails: a directory blocks the legacy backup.
+	ops := rh.ops()
+	require.Len(t, ops, 1)
+	require.NoError(t, os.Mkdir(filepath.Join(rh.dir, ops[0].Filename+".json.gz"), 0o755))
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	streamTestHooks.beforeSave = func() { <-release }
+	// Registered after the harness, so it runs first: a failing assertion
+	// must not leave the save blocked while cleanup waits for it.
+	t.Cleanup(func() { unblock(); streamTestHooks.beforeSave = nil })
+
+	// Collect every server message until the connection closes.
+	type received struct {
+		msg streaming.AckMessage
+		err error
+	}
+	msgs := make(chan received, 64)
+	go func() {
+		for {
+			var m streaming.AckMessage
+			err := c.ReadJSON(&m)
+			msgs <- received{m, err}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	endSeq := last + 1
+	sendEnv(t, c, streaming.TypeEndMission, endSeq, nil)
+	// Several acknowledgement ticks pass while the save is held.
+	hold := time.After(300 * time.Millisecond)
+holding:
+	for {
+		select {
+		case r := <-msgs:
+			require.NoError(t, r.err)
+			require.Less(t, r.msg.Seq, endSeq, "end_mission acknowledged before its save completed: %+v", r.msg)
+		case <-hold:
+			break holding
+		}
+	}
+	unblock()
+
+	timeout := time.After(5 * time.Second)
+	for {
+		select {
+		case r := <-msgs:
+			if r.err != nil {
+				require.True(t, websocket.IsCloseError(r.err, websocket.CloseInternalServerErr), "%v", r.err)
+				return
+			}
+			require.Less(t, r.msg.Seq, endSeq, "a failed save must not acknowledge end_mission: %+v", r.msg)
+		case <-timeout:
+			t.Fatal("the failed save did not close the connection")
+		}
+	}
+}
+
+func TestStreamResume_ConcurrentRepeatedStartsShareOneSession(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	entered := make(chan struct{}, 2)
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	streamTestHooks.beforeCreate = func() {
+		entered <- struct{}{}
+		<-release
+	}
+	t.Cleanup(func() { unblock(); streamTestHooks.beforeCreate = nil })
+
+	// The first start is held while it sets the mission up...
+	first := rh.dial()
+	sendEnv(t, first, streaming.TypeStartMission, 1, startPayload("Race", "m-race", "p-1"))
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("first start did not reach setup")
+	}
+	// ...when the producer reconnects and repeats it.
+	second := rh.dial()
+	sendEnv(t, second, streaming.TypeStartMission, 1, startPayload("Race", "m-race", "p-1"))
+	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-entered:
+		t.Fatal("the repeated start set up a second session")
+	default:
+	}
+	unblock()
+
+	ack := readUntil(t, second, isAckFor(streaming.TypeStartMission))
+	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Len(t, rh.ops(), 1, "one recording for one mission")
+	assert.Equal(t, 1, rh.h.streamRegistry().activeCount(), "one admission for one mission")
+
+	// The repeated start took the session over and closed the first connection.
+	first.SetReadDeadline(time.Now().Add(2 * time.Second))
+	for {
+		if _, _, err := first.ReadMessage(); err != nil {
+			break
+		}
+	}
+	sendEnv(t, second, streaming.TypeEndMission, 2, nil)
+	readUntil(t, second, isAckFor(streaming.TypeEndMission))
+}
+
+func TestStreamRegistryReserveWaitsForConcurrentStart(t *testing.T) {
+	r := newStreamRegistry()
+	got, err := r.reserve("m", time.Second)
+	require.NoError(t, err)
+	require.Nil(t, got, "reserved")
+
+	// A second start waits, and fails when the first never finishes.
+	_, err = r.reserve("m", 50*time.Millisecond)
+	require.ErrorIs(t, err, errReserveTimeout)
+
+	// A failed first start frees the id for the next one.
+	r.settle("m", nil)
+	got, err = r.reserve("m", time.Second)
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	s := &streamSession{missionID: "m"}
+	done := make(chan *streamSession)
+	go func() { got, _ := r.reserve("m", time.Second); done <- got }()
+	time.Sleep(20 * time.Millisecond)
+	r.settle("m", s)
+	assert.Same(t, s, <-done, "the waiting start gets the session")
 }

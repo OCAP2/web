@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,6 +17,17 @@ const completedTTL = time.Hour
 
 // streamMetaInterval spaces live metadata writes per session; tests lower it.
 var streamMetaInterval = 15 * time.Second
+
+// streamReserveWait bounds how long a start waits for a concurrent start of
+// the same mission to finish setting it up.
+const streamReserveWait = 30 * time.Second
+
+// streamTestHooks let tests hold a session at points where races matter.
+// They are nil outside tests.
+var streamTestHooks struct {
+	beforeCreate func() // a start reserved its mission and is about to set it up
+	beforeSave   func() // a session is about to be finalized
+}
 
 // streamConn is one producer WebSocket connection.
 type streamConn struct {
@@ -62,8 +74,54 @@ func (s *streamSession) resumable() bool { return s.missionID != "" }
 type streamRegistry struct {
 	mu        sync.Mutex
 	sessions  map[string]*streamSession
-	completed map[string]time.Time // mission ids saved through end_mission
-	active    int                  // sessions being ingested, legacy ones included
+	pending   map[string]chan struct{} // mission ids whose session is being created
+	completed map[string]time.Time     // mission ids saved through end_mission
+	active    int                      // sessions being ingested, legacy ones included
+}
+
+// errReserveTimeout means a concurrent start of the same mission did not
+// finish in time.
+var errReserveTimeout = errors.New("mission start in progress")
+
+// reserve returns the session registered for missionID, or, when there is
+// none, reserves the id for the caller (nil session) until settle. A start
+// racing another start of the same mission waits for it to finish and then
+// gets its session.
+func (r *streamRegistry) reserve(missionID string, wait time.Duration) (*streamSession, error) {
+	deadline := time.Now().Add(wait)
+	for {
+		r.mu.Lock()
+		if s := r.sessions[missionID]; s != nil {
+			r.mu.Unlock()
+			return s, nil
+		}
+		ch := r.pending[missionID]
+		if ch == nil {
+			r.pending[missionID] = make(chan struct{})
+			r.mu.Unlock()
+			return nil, nil
+		}
+		r.mu.Unlock()
+		select {
+		case <-ch:
+		case <-time.After(time.Until(deadline)):
+			return nil, errReserveTimeout
+		}
+	}
+}
+
+// settle ends a reservation: s is registered, or nil when the start failed,
+// and waiting starts proceed.
+func (r *streamRegistry) settle(missionID string, s *streamSession) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if s != nil {
+		r.sessions[missionID] = s
+	}
+	if ch := r.pending[missionID]; ch != nil {
+		close(ch)
+		delete(r.pending, missionID)
+	}
 }
 
 // acquire reserves a slot for a new session; limit <= 0 means no limit.
@@ -93,19 +151,13 @@ func (r *streamRegistry) activeCount() int {
 }
 
 func newStreamRegistry() *streamRegistry {
-	return &streamRegistry{sessions: map[string]*streamSession{}, completed: map[string]time.Time{}}
+	return &streamRegistry{sessions: map[string]*streamSession{}, pending: map[string]chan struct{}{}, completed: map[string]time.Time{}}
 }
 
 func (r *streamRegistry) get(missionID string) *streamSession {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.sessions[missionID]
-}
-
-func (r *streamRegistry) add(s *streamSession) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.sessions[s.missionID] = s
 }
 
 // remove unregisters a session; saved marks it completed for resume.
