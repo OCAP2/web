@@ -1,5 +1,5 @@
-github.com/OCAP2/extension/v5 v5.0.2-0.20261019164512-cd2df2320c4a h1:QqHNdb5p8rKOv4y/jWdaoq96bNjDDsBjICVn14JpAXU=
-github.com/OCAP2/extension/v5 v5.0.2-0.20261019164512-cd2df2320c4a/go.mod h1:ARWSkL4KXpgAsA3jb2Ls2PST63gDido3/ZMgcC1yeKs=
+github.com/OCAP2/extension/v5 v5.0.2-0.20261019173050-9ef6f2444ee8 h1:FgLuVMC2vSqwhfELiMGXuEJaN36qNY9N4m/0e5ioqQU=
+github.com/OCAP2/extension/v5 v5.0.2-0.20261019173050-9ef6f2444ee8/go.mod h1:+sonvAIzk+dRa7sFzKfjpcKcCFpDo7wyQF6M63XxUsg=
 github.com/dlclark/regexp2 v1.11.0 h1:G/nrcoOa7ZXlpoa/91N3X7mM3r8eIlMBBJZvsz/mxKI=
 github.com/dlclark/regexp2 v1.11.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
