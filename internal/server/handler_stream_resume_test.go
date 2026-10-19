@@ -1,0 +1,392 @@
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/OCAP2/extension/v5/pkg/streaming"
+	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// resumeHarness drives the stream endpoint with the resumable protocol.
+type resumeHarness struct {
+	t   *testing.T
+	h   *Handler
+	srv *httptest.Server
+	dir string
+}
+
+func newResumeHarness(t *testing.T, grace time.Duration) *resumeHarness {
+	t.Helper()
+	h, mux, dir := newTestStreamHandlerWithRepo(t)
+	h.setting.Streaming.ResumeGrace = grace
+	h.setting.Streaming.AckInterval = 20 * time.Millisecond
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return &resumeHarness{t: t, h: h, srv: srv, dir: dir}
+}
+
+func (rh *resumeHarness) dial() *websocket.Conn {
+	rh.t.Helper()
+	c, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(rh.srv.URL, "http")+"/api/v1/stream?secret=test-secret", nil)
+	require.NoError(rh.t, err)
+	rh.t.Cleanup(func() { c.Close() })
+	return c
+}
+
+func sendEnv(t *testing.T, c *websocket.Conn, typ string, seq uint64, payload any) {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	require.NoError(t, err)
+	require.NoError(t, c.WriteJSON(streaming.Envelope{Type: typ, Seq: seq, Payload: raw}))
+}
+
+// readUntil reads server messages until match, skipping cumulative acks.
+func readUntil(t *testing.T, c *websocket.Conn, match func(streaming.AckMessage) bool) streaming.AckMessage {
+	t.Helper()
+	c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	defer c.SetReadDeadline(time.Time{})
+	for {
+		var m streaming.AckMessage
+		require.NoError(t, c.ReadJSON(&m))
+		if match(m) {
+			return m
+		}
+	}
+}
+
+func isAckFor(typ string) func(streaming.AckMessage) bool {
+	return func(m streaming.AckMessage) bool { return m.Type == streaming.ServerAck && m.For == typ }
+}
+
+func isType(typ string) func(streaming.AckMessage) bool {
+	return func(m streaming.AckMessage) bool { return m.Type == typ }
+}
+
+func startPayload(name, missionID, producerID string) map[string]any {
+	return map[string]any{
+		"mission":         map[string]any{"MissionName": name, "CaptureDelay": 1.0, "Tag": "TvT"},
+		"world":           map[string]any{"WorldName": "altis"},
+		"frameBase":       1,
+		"missionId":       missionID,
+		"producerId":      producerID,
+		"protocolVersion": streaming.ProtocolVersionResume,
+	}
+}
+
+// startResumable starts a mission as seq 1 and returns the ack.
+func startResumable(t *testing.T, c *websocket.Conn, name, missionID, producerID string) streaming.AckMessage {
+	t.Helper()
+	sendEnv(t, c, streaming.TypeStartMission, 1, startPayload(name, missionID, producerID))
+	return readUntil(t, c, isAckFor(streaming.TypeStartMission))
+}
+
+func soldierState(frame int) map[string]any {
+	return map[string]any{"SoldierID": 1, "CaptureFrame": frame, "Position": map[string]any{"x": frame, "y": 1, "z": 0}}
+}
+
+// sendStates sends soldier states for frames from..to as envelopes seq+1...
+func sendStates(t *testing.T, c *websocket.Conn, firstSeq uint64, from, to int) uint64 {
+	t.Helper()
+	seq := firstSeq
+	for f := from; f <= to; f++ {
+		sendEnv(t, c, streaming.TypeSoldierState, seq, soldierState(f))
+		seq++
+	}
+	return seq - 1
+}
+
+func (rh *resumeHarness) waitSeq(missionID string, seq uint64) *streamSession {
+	rh.t.Helper()
+	var ss *streamSession
+	require.Eventually(rh.t, func() bool {
+		ss = rh.h.streamRegistry().get(missionID)
+		return ss != nil && ss.lastSeq.Load() == seq
+	}, 5*time.Second, 5*time.Millisecond)
+	return ss
+}
+
+func (rh *resumeHarness) ops() []Operation {
+	rh.t.Helper()
+	ops, err := rh.h.repoOperation.Select(context.Background(), Filter{})
+	require.NoError(rh.t, err)
+	return ops
+}
+
+func (rh *resumeHarness) counts(ss *streamSession, typ string) int {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	return ss.counts[typ]
+}
+
+func TestStreamResume_StartAckAdvertisesResume(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	ack := startResumable(t, c, "Advertise", "m-1", "p-1")
+	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Equal(t, uint64(1), ack.Seq)
+	assert.NotNil(t, rh.h.streamRegistry().get("m-1"))
+}
+
+func TestStreamResume_LegacyStartIsNotRegistered(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	sendStartMission(t, c, "Legacy", "altis")
+	assert.Zero(t, rh.h.streamRegistry().count())
+}
+
+func TestStreamResume_CumulativeAcks(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Acks", "m-acks", "p-1")
+	last := sendStates(t, c, 2, 1, 10)
+	m := readUntil(t, c, func(m streaming.AckMessage) bool { return m.Type == streaming.ServerAck && m.For == "" && m.Seq == last })
+	assert.Equal(t, uint64(11), m.Seq)
+}
+
+func TestStreamResume_ReconnectContinuesSameRecording(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c1 := rh.dial()
+	startResumable(t, c1, "Resume", "m-r", "p-1")
+	sendEnv(t, c1, streaming.TypeAddSoldier, 2, map[string]any{"ID": 1, "JoinFrame": 1, "UnitName": "P1", "Side": "WEST", "IsPlayer": true})
+	last := sendStates(t, c1, 3, 1, 20)
+	rh.waitSeq("m-r", last)
+	c1.Close() // network drops
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-r", ProducerID: "p-1"})
+	ok := readUntil(t, c2, isType(streaming.ServerResumeOK))
+	require.Equal(t, last, ok.Seq)
+
+	// The producer may resend envelopes the server already holds.
+	sendStates(t, c2, last-4, 16, 20)
+	last = sendStates(t, c2, last+1, 21, 30)
+	ss := rh.waitSeq("m-r", last)
+	assert.Equal(t, 30, rh.counts(ss, streaming.TypeSoldierState), "resent envelopes are applied once")
+
+	sendEnv(t, c2, streaming.TypeEndMission, last+1, nil)
+	end := readUntil(t, c2, isAckFor(streaming.TypeEndMission))
+	assert.Equal(t, last+1, end.Seq)
+
+	ops := rh.ops()
+	require.Len(t, ops, 1, "one recording, not two segments")
+	assert.Equal(t, "TvT", ops[0].Tag, "a resumed recording is complete")
+	assert.Equal(t, ConversionStatusCompleted, ops[0].ConversionStatus)
+	assert.FileExists(t, rh.dir+"/"+ops[0].Filename+"/manifest.pb")
+	assert.Nil(t, rh.h.streamRegistry().get("m-r"))
+}
+
+func TestStreamResume_GraceExpirySavesPartial(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Expire", "m-e", "p-1")
+	last := sendStates(t, c, 2, 1, 5)
+	rh.waitSeq("m-e", last)
+	c.Close()
+
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-e") == nil }, 5*time.Second, 10*time.Millisecond)
+	ops := rh.ops()
+	require.Len(t, ops, 1)
+	assert.Equal(t, "TvT,partial", ops[0].Tag)
+	assert.Equal(t, ConversionStatusCompleted, ops[0].ConversionStatus)
+
+	// The producer comes back too late: the server no longer holds the mission.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-e", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+}
+
+func TestStreamResume_ResumeWithinGraceKeepsSession(t *testing.T) {
+	rh := newResumeHarness(t, 300*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Grace", "m-g", "p-1")
+	c.Close()
+	time.Sleep(100 * time.Millisecond)
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-g", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeOK))
+	time.Sleep(400 * time.Millisecond) // past the original grace deadline
+	require.NotNil(t, rh.h.streamRegistry().get("m-g"), "a resumed session is not expired")
+	assert.Equal(t, ConversionStatusStreaming, rh.ops()[0].ConversionStatus, "still recording, not saved as partial")
+}
+
+func TestStreamResume_CompletedMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Done", "m-d", "p-1")
+	sendEnv(t, c, streaming.TypeEndMission, 2, nil)
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+
+	// The end ack was lost on the producer side; it reconnects.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-d", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeCompleted))
+	assert.Len(t, rh.ops(), 1)
+}
+
+func TestStreamResume_UnknownMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	sendEnv(t, c, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "nope", ProducerID: "p-1"})
+	readUntil(t, c, isType(streaming.ServerResumeUnknown))
+	sendEnv(t, c, streaming.TypeResume, 0, nil)
+	readUntil(t, c, isType(streaming.ServerResumeUnknown))
+}
+
+func TestStreamResume_OtherProducerCannotResume(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Owned", "m-o", "p-1")
+	c.Close()
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-o", ProducerID: "p-2"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+
+	c3 := rh.dial()
+	sendEnv(t, c3, streaming.TypeStartMission, 1, startPayload("Owned", "m-o", "p-2"))
+	c3.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, err := c3.ReadMessage()
+	require.Error(t, err, "a mission id of another producer is refused")
+	assert.True(t, websocket.IsCloseError(err, websocket.CloseInternalServerErr), "%v", err)
+}
+
+func TestStreamResume_TakeoverClosesHalfOpenConnection(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c1 := rh.dial()
+	startResumable(t, c1, "Takeover", "m-t", "p-1")
+	last := sendStates(t, c1, 2, 1, 5)
+	rh.waitSeq("m-t", last)
+
+	// c1 is still open on the server (half-open); the producer reconnects.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-t", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeOK))
+
+	c1.SetReadDeadline(time.Now().Add(2 * time.Second))
+	for {
+		if _, _, err := c1.ReadMessage(); err != nil {
+			break // the server dropped the predecessor
+		}
+	}
+	// A late write on the old socket must not reach the session.
+	_ = c1.WriteJSON(streaming.Envelope{Type: streaming.TypeSoldierState, Seq: last + 1, Payload: json.RawMessage(`{"SoldierID":1,"CaptureFrame":99}`)})
+
+	last = sendStates(t, c2, last+1, 6, 10)
+	ss := rh.waitSeq("m-t", last)
+	assert.Equal(t, 10, rh.counts(ss, streaming.TypeSoldierState))
+	sendEnv(t, c2, streaming.TypeEndMission, last+1, nil)
+	readUntil(t, c2, isAckFor(streaming.TypeEndMission))
+	assert.Len(t, rh.ops(), 1)
+}
+
+func TestStreamResume_ParallelProducersAreIndependent(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	a := rh.dial()
+	b := rh.dial()
+	startResumable(t, a, "Server A", "m-a", "p-a")
+	startResumable(t, b, "Server B", "m-b", "p-b")
+
+	lastA := sendStates(t, a, 2, 1, 10)
+	lastB := sendStates(t, b, 2, 1, 10)
+	rh.waitSeq("m-a", lastA)
+	rh.waitSeq("m-b", lastB)
+
+	a.Close() // only server A loses its network
+	lastB = sendStates(t, b, lastB+1, 11, 20)
+	rh.waitSeq("m-b", lastB)
+	sendEnv(t, b, streaming.TypeEndMission, lastB+1, nil)
+	readUntil(t, b, isAckFor(streaming.TypeEndMission))
+
+	a2 := rh.dial()
+	sendEnv(t, a2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-a", ProducerID: "p-a"})
+	ok := readUntil(t, a2, isType(streaming.ServerResumeOK))
+	require.Equal(t, lastA, ok.Seq)
+	lastA = sendStates(t, a2, lastA+1, 11, 20)
+	sendEnv(t, a2, streaming.TypeEndMission, lastA+1, nil)
+	readUntil(t, a2, isAckFor(streaming.TypeEndMission))
+
+	ops := rh.ops()
+	require.Len(t, ops, 2)
+	for _, op := range ops {
+		assert.Equal(t, "TvT", op.Tag, "%s must be complete", op.MissionName)
+	}
+}
+
+func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	c := rh.dial()
+	startResumable(t, c, "Old", "m-old", "p-1")
+	other := rh.dial()
+	startResumable(t, other, "Other", "m-other", "p-2")
+	c.Close() // waiting for resume, an hour of grace
+
+	// The game server restarted and records a new mission.
+	c2 := rh.dial()
+	startResumable(t, c2, "New", "m-new", "p-1")
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-old") == nil }, 5*time.Second, 10*time.Millisecond)
+	assert.NotNil(t, rh.h.streamRegistry().get("m-other"), "another producer's mission is untouched")
+
+	var old Operation
+	for _, op := range rh.ops() {
+		if op.MissionName == "Old" {
+			old = op
+		}
+	}
+	assert.Equal(t, "TvT,partial", old.Tag)
+}
+
+func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Repeat", "m-rep", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-rep", last)
+	c.Close()
+
+	// The start ack was lost: the producer reconnects and repeats the start.
+	c2 := rh.dial()
+	ack := startResumable(t, c2, "Repeat", "m-rep", "p-1")
+	assert.Equal(t, last, ack.Seq, "the ack reports everything the server holds")
+	assert.Len(t, rh.ops(), 1)
+}
+
+func TestStreamResume_GapMarksPartial(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Gap", "m-gap", "p-1")
+	sendEnv(t, c, streaming.TypeSoldierState, 2, soldierState(1))
+	sendEnv(t, c, streaming.TypeSoldierState, 5, soldierState(4)) // 3 and 4 never arrive
+	sendEnv(t, c, streaming.TypeEndMission, 6, nil)
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+	ops := rh.ops()
+	require.Len(t, ops, 1)
+	assert.Equal(t, "TvT,partial", ops[0].Tag)
+}
+
+func TestWithPartialTag(t *testing.T) {
+	assert.Equal(t, "partial", withPartialTag(""))
+	assert.Equal(t, "TvT,partial", withPartialTag("TvT"))
+	assert.Equal(t, "TvT,partial", withPartialTag("TvT,partial"))
+	assert.Equal(t, "partial, TvT", withPartialTag("partial, TvT"))
+}
+
+func TestStreamRegistryCompletedExpires(t *testing.T) {
+	r := newStreamRegistry()
+	s := &streamSession{missionID: "m"}
+	r.add(s)
+	r.remove(s, true)
+	assert.True(t, r.isCompleted("m"))
+	r.completed["m"] = time.Now().Add(-2 * completedTTL)
+	assert.False(t, r.isCompleted("m"))
+	r.remove(&streamSession{missionID: "n"}, true) // prunes stale entries
+	_, stale := r.completed["m"]
+	assert.False(t, stale)
+}

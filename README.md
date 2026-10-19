@@ -223,6 +223,8 @@ Live mission data can be streamed to the server via WebSocket.
 | `streaming.enabled` | `OCAP_STREAMING_ENABLED` | Enable the WebSocket streaming endpoint | `false` |
 | `streaming.pingInterval` | `OCAP_STREAMING_PINGINTERVAL` | Interval between WebSocket keepalive pings | `30s` |
 | `streaming.pingTimeout` | `OCAP_STREAMING_PINGTIMEOUT` | Timeout waiting for pong response | `10s` |
+| `streaming.resumeGrace` | `OCAP_STREAMING_RESUMEGRACE` | How long a disconnected mission waits for its producer to resume before it is saved as partial | `5m` |
+| `streaming.ackInterval` | `OCAP_STREAMING_ACKINTERVAL` | How often received messages are acknowledged to a resuming producer | `1s` |
 
 ### CORS
 

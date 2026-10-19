@@ -64,11 +64,58 @@ If v2 writing fails, a successful legacy backup becomes the operation's source
 and follows the existing conversion setting. A failed save is reported by closing
 the connection without a success acknowledgement, and the row is marked failed.
 
-Disconnecting without `end_mission`, including an addon/extension crash or a
-normal WebSocket close, finalizes received data and appends `partial` to the
-mission's existing tags. Repeated starts cannot silently discard an active mission.
-The extension's reconnect starts a new recording segment; the current protocol
-does not replay a complete entity history or provide lossless network recovery.
+### Resume after a network failure
+
+Producers that declare `protocolVersion: 2` in `start_mission` get lossless
+recovery from network failures. Older producers keep the behavior described in
+the next section.
+
+- `start_mission` carries a `missionId` (a random UUID per recording) and a
+  `producerId` (a random UUID per extension process). Every envelope carries a
+  `seq`, starting with 1 for `start_mission`.
+- The server acknowledges `start_mission` with `protocolVersion: 2`, and then
+  acknowledges received envelopes cumulatively (`{"type":"ack","seq":N}`) every
+  `streaming.ackInterval` and during bursts. The extension holds every envelope
+  in memory until it is acknowledged.
+- When the connection drops, the session stays registered under its mission id
+  for `streaming.resumeGrace`. The extension keeps recording, reconnects, and
+  sends `resume`. The server answers `resume_ok` with the last `seq` it holds,
+  and the extension resends everything after it. Envelopes keep their capture
+  frames, so resent data lands on its original frames. Duplicates are ignored.
+- If the server no longer holds the mission (`resume_unknown`, for example after
+  a web restart), the extension starts a new segment: it sends `start_mission`
+  again followed by every envelope the server never acknowledged. The skipped
+  numbers mark the new recording `partial`.
+- If the mission was already saved but the `end_mission` acknowledgement was
+  lost, the server answers `resume_completed` instead.
+- A connection that resumes a mission closes any older connection still bound to
+  it, such as a half-open socket. The extension also abandons a socket whose
+  written envelopes stay unacknowledged for 20 seconds.
+- Sessions are keyed only by mission id, so any number of game servers can stream
+  to one web server. Only a session of the same producer is affected by a new
+  `start_mission`: its earlier mission is saved as `partial` at once instead of
+  waiting for the grace period.
+- A session not resumed within the grace period is saved with `partial` appended
+  to its tags.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `streaming.resumeGrace` | `5m` | How long a disconnected mission waits for its producer |
+| `streaming.ackInterval` | `1s` | How often received envelopes are acknowledged |
+
+The extension buffers up to 256 MiB of unacknowledged envelopes in memory. If
+the buffer fills, further envelopes are refused, and the gap marks the recording
+partial. The buffer is not persisted: a web restart or an outage longer than the
+buffer or the grace period still produces a partial recording.
+
+### Legacy producers
+
+For producers without `protocolVersion: 2`, disconnecting without `end_mission`,
+including an addon/extension crash or a normal WebSocket close, finalizes
+received data and appends `partial` to the mission's existing tags. Repeated
+starts cannot silently discard an active mission. Their reconnect starts a new
+recording segment.
+
 The session retains history in web memory for its legacy backup. A web process
 crash is not the same as a producer disconnect and does not guarantee a finalized
 backup; this protocol does not yet include a durable ingestion journal.
@@ -82,10 +129,12 @@ extension also has an opt-in test using its real WebSocket backend:
 
 ```sh
 OCAP_TEST_WEB_URL=http://127.0.0.1:5000 OCAP_TEST_WEB_SECRET=same-secret \
-  go test ./internal/storage/websocket -run TestWebIngestionIntegration -count=1 -v
+  go test ./internal/storage/websocket -run 'TestWebIngestionIntegration|TestWebResumeIntegration' -count=1 -v
 ```
 
 Use a disposable web database/data directory with streaming enabled for that test.
+`TestWebResumeIntegration` routes the extension through a proxy that it cuts three
+times mid-mission, and expects one complete, non-partial recording.
 
 ## Playback Flow
 
