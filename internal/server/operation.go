@@ -301,7 +301,81 @@ func (r *RepoOperation) migration() (err error) {
 		}
 	}
 
+	if version < 15 {
+		// Streamed recordings remember the producer's mission id, so a mission
+		// resent in full after a web restart replaces its partial segments and
+		// a producer asking about a saved mission is told it is saved.
+		var n int
+		if err = r.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('operations') WHERE name = 'stream_mission_id'`).Scan(&n); err != nil {
+			return err
+		}
+		var stmts []string
+		if n == 0 {
+			stmts = append(stmts,
+				`ALTER TABLE operations ADD COLUMN stream_mission_id TEXT DEFAULT ''`,
+				`ALTER TABLE operations ADD COLUMN stream_ended INTEGER DEFAULT 0`,
+			)
+		}
+		stmts = append(stmts, `CREATE INDEX IF NOT EXISTS idx_operations_stream_mission_id ON operations(stream_mission_id)`)
+		if err = r.runMigration(15, stmts...); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// SetStreamMission records the producer mission a streamed operation belongs to.
+func (r *RepoOperation) SetStreamMission(ctx context.Context, id int64, missionID string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE operations SET stream_mission_id = ? WHERE id = ?`, missionID, id)
+	return err
+}
+
+// MarkStreamEnded records that a streamed operation was saved through end_mission.
+func (r *RepoOperation) MarkStreamEnded(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE operations SET stream_ended = 1 WHERE id = ?`, id)
+	return err
+}
+
+// StreamEnded reports whether a recording of the producer mission was saved
+// through end_mission.
+func (r *RepoOperation) StreamEnded(ctx context.Context, missionID string) (bool, error) {
+	if missionID == "" {
+		return false, nil
+	}
+	var n int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM operations WHERE stream_mission_id = ? AND stream_ended = 1`, missionID).Scan(&n)
+	return n > 0, err
+}
+
+// StreamSegment is an operation recorded for a producer mission.
+type StreamSegment struct {
+	ID       int64
+	Filename string
+}
+
+// StreamSegments returns the operations recorded for the producer mission,
+// except the one with id exceptID.
+func (r *RepoOperation) StreamSegments(ctx context.Context, missionID string, exceptID int64) ([]StreamSegment, error) {
+	if missionID == "" {
+		return nil, nil
+	}
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, filename FROM operations WHERE stream_mission_id = ? AND id != ? ORDER BY id`, missionID, exceptID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []StreamSegment
+	for rows.Next() {
+		var s StreamSegment
+		if err := rows.Scan(&s.ID, &s.Filename); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
 }
 
 // isInvalidStorageName reports whether name is unsafe to use as a recording's

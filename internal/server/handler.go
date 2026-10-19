@@ -86,6 +86,9 @@ type Handler struct {
 	spriteOnce    sync.Once
 	spriteFiles   map[string][]byte
 	spriteInitErr error
+
+	streamsOnce sync.Once
+	streams     *streamRegistry // resumable streaming sessions
 }
 
 // HandlerOption configures the Handler

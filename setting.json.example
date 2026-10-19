@@ -33,7 +33,10 @@
 	"streaming": {
 		"enabled": false,
 		"pingInterval": "30s",
-		"pingTimeout": "10s"
+		"pingTimeout": "10s",
+		"resumeGrace": "5m",
+		"ackInterval": "1s",
+		"maxSessions": 0
 	},
 	"auth": {
 		"mode": "public",
