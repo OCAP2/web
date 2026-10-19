@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -294,6 +295,9 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 		ss.missionID = payload.MissionID
 		ss.producer = payload.ProducerID
 		reg.add(ss)
+		if err := h.repoOperation.SetStreamMission(context.Background(), op.ID, ss.missionID); err != nil {
+			slog.Warn("stream: cannot record mission id", "error", err)
+		}
 	}
 	slog.Info("stream: mission started", "mission", payload.Mission.MissionName, "missionId", ss.missionID, "producerId", ss.producer, "resumable", resumable)
 	return ss, ""
@@ -330,7 +334,7 @@ func (h *Handler) resumeStream(raw json.RawMessage, conn *streamConn) (streaming
 		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq)
 		return streaming.AckMessage{Type: streaming.ServerResumeOK, Seq: seq}, ss
 	}
-	if reg.isCompleted(p.MissionID) {
+	if reg.isCompleted(p.MissionID) || h.streamEnded(p.MissionID) {
 		return streaming.AckMessage{Type: streaming.ServerResumeCompleted}, nil
 	}
 	slog.Warn("stream: resume of unknown mission", "missionId", p.MissionID)
@@ -430,7 +434,49 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if err != nil {
 		return endFailed
 	}
+	if ss.resumable() {
+		ctx := context.Background()
+		if err := h.repoOperation.MarkStreamEnded(ctx, ss.opID); err != nil {
+			slog.Warn("stream: cannot mark mission ended", "error", err)
+		}
+		if !ss.gap {
+			h.replaceStreamSegments(ctx, ss)
+		}
+	}
 	return endSaved
+}
+
+// replaceStreamSegments removes the partial recordings an earlier attempt of
+// the mission left behind, once a complete recording of it is saved. They
+// exist when the producer resent the mission in full, for example after a web
+// server restart lost the session.
+func (h *Handler) replaceStreamSegments(ctx context.Context, ss *streamSession) {
+	segments, err := h.repoOperation.StreamSegments(ctx, ss.missionID, ss.opID)
+	if err != nil {
+		slog.Warn("stream: cannot list earlier segments", "missionId", ss.missionID, "error", err)
+		return
+	}
+	for _, seg := range segments {
+		if err := h.repoOperation.Delete(ctx, seg.ID); err != nil && !errors.Is(err, ErrNotFound) {
+			slog.Warn("stream: cannot remove earlier segment", "id", seg.ID, "error", err)
+			continue
+		}
+		removeRecordingArtifacts(h.setting.Data, seg.Filename)
+		slog.Info("stream: replaced partial segment with complete recording", "missionId", ss.missionID, "removed", seg.Filename, "kept", filepath.Base(ss.outputDir))
+	}
+}
+
+// streamEnded reports whether the database holds a saved recording of the
+// producer mission, which outlives the in-memory registry across restarts.
+func (h *Handler) streamEnded(missionID string) bool {
+	if h.repoOperation == nil {
+		return false
+	}
+	ended, err := h.repoOperation.StreamEnded(context.Background(), missionID)
+	if err != nil {
+		slog.Warn("stream: cannot look up mission", "missionId", missionID, "error", err)
+	}
+	return ended
 }
 
 // detachStream records that conn stopped feeding the session. A legacy

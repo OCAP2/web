@@ -98,6 +98,12 @@ func app() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if n, err := server.FailInterruptedStreams(ctx, operation); err != nil {
+		slog.Error("failed to mark interrupted streaming sessions", "error", err)
+	} else if n > 0 {
+		slog.Warn("marked recordings interrupted by a shutdown as failed", "count", n)
+	}
+
 	// Resolve static frontend filesystem
 	var staticFS fs.FS
 	if setting.Static != "" {

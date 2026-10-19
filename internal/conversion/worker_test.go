@@ -952,7 +952,7 @@ func TestWorker_CleanupInterrupted_ResetStatusError(t *testing.T) {
 	worker.cleanupInterrupted(ctx)
 }
 
-func TestWorker_CleanupInterrupted_ResetsStreaming(t *testing.T) {
+func TestWorker_CleanupInterrupted_LeavesStreaming(t *testing.T) {
 	dir := t.TempDir()
 
 	repo := newMockRepo()
@@ -971,9 +971,10 @@ func TestWorker_CleanupInterrupted_ResetsStreaming(t *testing.T) {
 	ctx := context.Background()
 	worker.cleanupInterrupted(ctx)
 
-	// Streaming and converting both reset to pending
-	assert.Len(t, repo.byStatus["pending"], 3)
-	assert.Len(t, repo.byStatus["streaming"], 0)
+	// Converting resets to pending. Interrupted streaming sessions have no
+	// JSON to convert; server.FailInterruptedStreams handles them.
+	assert.Len(t, repo.byStatus["pending"], 1)
+	assert.Len(t, repo.byStatus["streaming"], 2)
 	assert.Len(t, repo.byStatus["converting"], 0)
 }
 

@@ -103,10 +103,28 @@ the next section.
 | `streaming.resumeGrace` | `5m` | How long a disconnected mission waits for its producer |
 | `streaming.ackInterval` | `1s` | How often received envelopes are acknowledged |
 
-The extension buffers up to 256 MiB of unacknowledged envelopes in memory. If
-the buffer fills, further envelopes are refused, and the gap marks the recording
-partial. The buffer is not persisted: a web restart or an outage longer than the
-buffer or the grace period still produces a partial recording.
+The extension holds unacknowledged envelopes in memory (256 MiB by default) and
+spools every envelope of the mission to disk until the mission is saved. During
+a long outage, memory keeps the newest envelopes and the rest are resent from
+the spool. When the server answers `resume_unknown` (after a web restart, or a
+return past the grace period), the extension resends the whole mission from the
+spool. The server then holds a complete recording, and on `end_mission` it
+deletes the partial segments it had saved under the same mission id: rows and
+files. A replay that still has a numbering gap, for example because the spool
+hit its disk limit, keeps the earlier segments.
+
+The mission id is stored with each streamed operation (`stream_mission_id`,
+migration 15), together with whether `end_mission` saved it (`stream_ended`).
+That record outlives a restart, so a producer whose `end_mission`
+acknowledgement was lost still gets `resume_completed`, not a duplicate.
+
+At startup, recordings still marked `streaming` belong to sessions the previous
+process lost. They are marked `failed` instead of staying live forever. A
+producer that returns replaces them with its full resend.
+
+Without a spool (`spoolDir` empty) a full memory buffer refuses envelopes, and
+the gap marks the recording partial, as does a resend after the server lost the
+mission.
 
 ### Legacy producers
 

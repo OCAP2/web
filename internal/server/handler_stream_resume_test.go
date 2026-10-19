@@ -3,7 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -389,4 +391,143 @@ func TestStreamRegistryCompletedExpires(t *testing.T) {
 	r.remove(&streamSession{missionID: "n"}, true) // prunes stale entries
 	_, stale := r.completed["m"]
 	assert.False(t, stale)
+}
+
+// restart replaces the web server with a fresh process image: same database
+// and data directory, empty session registry.
+func (rh *resumeHarness) restart() {
+	rh.t.Helper()
+	rh.srv.Close()
+	h := &Handler{repoOperation: rh.h.repoOperation, setting: rh.h.setting}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/stream", h.HandleStream)
+	rh.h = h
+	rh.srv = httptest.NewServer(mux)
+	rh.t.Cleanup(rh.srv.Close)
+}
+
+func (rh *resumeHarness) opsByMission(missionID string) []StreamSegment {
+	rh.t.Helper()
+	segs, err := rh.h.repoOperation.StreamSegments(context.Background(), missionID, 0)
+	require.NoError(rh.t, err)
+	return segs
+}
+
+// replayMission sends start_mission, frames 1..frames as envelopes 2.., and
+// end_mission, as a producer resending a mission in full.
+func replayMission(t *testing.T, c *websocket.Conn, name, missionID, producerID string, frames int) {
+	t.Helper()
+	startResumable(t, c, name, missionID, producerID)
+	last := sendStates(t, c, 2, 1, frames)
+	sendEnv(t, c, streaming.TypeEndMission, last+1, nil)
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+}
+
+func TestStreamResume_FullReplayReplacesPartialSegment(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Replay", "m-full", "p-1")
+	sendStates(t, c, 2, 1, 5)
+	rh.waitSeq("m-full", 6)
+	c.Close()
+	// The producer stays away past the grace period: a partial segment is saved.
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-full") == nil }, 5*time.Second, 10*time.Millisecond)
+	segs := rh.opsByMission("m-full")
+	require.Len(t, segs, 1)
+	partial := segs[0]
+
+	// It returns, learns the server lost the mission, and resends it in full.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-full", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+	replayMission(t, c2, "Replay", "m-full", "p-1", 10)
+
+	ops := rh.ops()
+	require.Len(t, ops, 1, "the complete recording replaces the partial segment")
+	assert.Equal(t, "TvT", ops[0].Tag)
+	assert.NotEqual(t, partial.Filename, ops[0].Filename)
+	assert.NoDirExists(t, filepath.Join(rh.dir, partial.Filename))
+	assert.NoFileExists(t, filepath.Join(rh.dir, partial.Filename+".json.gz"))
+	assert.DirExists(t, filepath.Join(rh.dir, ops[0].Filename))
+}
+
+func TestStreamResume_WebRestartMidMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Restart", "m-restart", "p-1")
+	sendStates(t, c, 2, 1, 5)
+	rh.waitSeq("m-restart", 6)
+	c.Close()
+	rh.restart() // the session in memory is gone; its row stays "streaming"
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-restart", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+	replayMission(t, c2, "Restart", "m-restart", "p-1", 10)
+
+	ops := rh.ops()
+	require.Len(t, ops, 1, "the interrupted row is replaced")
+	assert.Equal(t, "TvT", ops[0].Tag)
+	assert.Equal(t, ConversionStatusCompleted, ops[0].ConversionStatus)
+}
+
+func TestStreamResume_SavedMissionKnownAfterRestart(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	replayMission(t, c, "Saved", "m-saved", "p-1", 3)
+	rh.restart()
+
+	// The end_mission ack was lost; the producer asks after the restart.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-saved", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeCompleted))
+	assert.Len(t, rh.ops(), 1)
+}
+
+func TestStreamResume_IncompleteReplayKeepsEarlierSegments(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Holes", "m-holes", "p-1")
+	sendStates(t, c, 2, 1, 5)
+	rh.waitSeq("m-holes", 6)
+	c.Close()
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-holes") == nil }, 5*time.Second, 10*time.Millisecond)
+
+	// A replay with a numbering gap is no better than what is saved: keep both.
+	c2 := rh.dial()
+	startResumable(t, c2, "Holes", "m-holes", "p-1")
+	sendEnv(t, c2, streaming.TypeSoldierState, 2, soldierState(1))
+	sendEnv(t, c2, streaming.TypeSoldierState, 9, soldierState(8))
+	sendEnv(t, c2, streaming.TypeEndMission, 10, nil)
+	readUntil(t, c2, isAckFor(streaming.TypeEndMission))
+	assert.Len(t, rh.ops(), 2)
+}
+
+func TestStreamResume_ReplacementLeavesOtherMissionsAlone(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	other := rh.dial()
+	replayMission(t, other, "Other", "m-other2", "p-2", 3)
+	c := rh.dial()
+	replayMission(t, c, "Mine", "m-mine", "p-1", 3)
+	assert.Len(t, rh.ops(), 2)
+}
+
+func TestFailInterruptedStreams(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Interrupted", "m-int", "p-1")
+	done := rh.dial()
+	replayMission(t, done, "Done", "m-done", "p-2", 3)
+
+	// The server stops while the first mission streams.
+	n, err := FailInterruptedStreams(context.Background(), rh.h.repoOperation)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), n)
+	for _, op := range rh.ops() {
+		if op.MissionName == "Interrupted" {
+			assert.Equal(t, ConversionStatusFailed, op.ConversionStatus, "no longer shown as live")
+		} else {
+			assert.Equal(t, ConversionStatusCompleted, op.ConversionStatus)
+		}
+	}
 }

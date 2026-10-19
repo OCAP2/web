@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -117,6 +118,15 @@ func (r *streamRegistry) count() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return len(r.sessions)
+}
+
+// FailInterruptedStreams marks recordings that were still streaming when the
+// server stopped as failed. Their sessions lived in memory and are gone, so
+// they would otherwise show as live forever. A producer that comes back
+// resends the mission in full, and the complete recording replaces them.
+// Call it once at startup, before the stream endpoint accepts connections.
+func FailInterruptedStreams(ctx context.Context, repo *RepoOperation) (int64, error) {
+	return repo.ResetConversionStatus(ctx, ConversionStatusStreaming, ConversionStatusFailed)
 }
 
 // streamRegistry returns the handler's registry, creating it on first use.
