@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/OCAP2/web/internal/testfs"
 	pbv1 "github.com/OCAP2/web/pkg/schemas/protobuf/v1"
 )
 
@@ -253,31 +254,29 @@ func TestChunkBucket_CleanupRemovesFiles(t *testing.T) {
 }
 
 func TestNewChunkBucket_InvalidDir(t *testing.T) {
-	// /dev/null is a file, not a directory — MkdirAll should fail
-	_, err := NewChunkBucket("/dev/null/impossible/path")
+	_, err := NewChunkBucket(testfs.InvalidPath(t))
 	assert.Error(t, err)
 }
 
-func TestNewChunkBucket_ReadOnlyParent(t *testing.T) {
+func TestNewChunkBucket_ParentIsFile(t *testing.T) {
 	dir := t.TempDir()
-	// Make the dir read-only so MkdirAll for a subdir fails
-	readOnlyDir := filepath.Join(dir, "readonly")
-	require.NoError(t, os.MkdirAll(readOnlyDir, 0555))
-	defer func() { assert.NoError(t, os.Chmod(readOnlyDir, 0755)) }()
+	// A regular file where the parent directory belongs makes MkdirAll fail
+	// on every OS
+	parent := filepath.Join(dir, "file")
+	require.NoError(t, os.WriteFile(parent, []byte("x"), 0644))
 
-	_, err := NewChunkBucket(filepath.Join(readOnlyDir, "chunks"))
-	assert.Error(t, err)
+	_, err := NewChunkBucket(filepath.Join(parent, "chunks"))
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "create bucket dir")
 }
 
-func TestChunkBucket_Write_ReadOnlyDir(t *testing.T) {
+func TestChunkBucket_Write_OpenFailure(t *testing.T) {
 	dir := t.TempDir()
 	bucket, err := NewChunkBucket(dir)
 	require.NoError(t, err)
-	defer func() { assert.NoError(t, os.Chmod(dir, 0755)) }()
 
-	// Make the bucket directory read-only AFTER creation so getWriter can't create files
-	require.NoError(t, os.Chmod(dir, 0555))
+	// A directory where the chunk file belongs makes getWriter fail on every OS
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "chunk_0000.tmp"), 0755))
 
 	err = bucket.Write(0, &pbv1.EntityState{EntityId: 1})
 	assert.Error(t, err)
@@ -297,18 +296,14 @@ func TestChunkBucket_FlushAfterCleanup(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestChunkBucket_Read_PermissionDenied(t *testing.T) {
+func TestChunkBucket_Read_OpenFailure(t *testing.T) {
 	dir := t.TempDir()
 	bucket, err := NewChunkBucket(dir)
 	require.NoError(t, err)
 
-	require.NoError(t, bucket.Write(0, &pbv1.EntityState{EntityId: 1}))
-	require.NoError(t, bucket.Flush())
-
-	// Make the chunk file unreadable
-	chunkFile := filepath.Join(dir, "chunk_0000.tmp")
-	require.NoError(t, os.Chmod(chunkFile, 0000))
-	defer func() { assert.NoError(t, os.Chmod(chunkFile, 0644)) }()
+	// Point the bucket at a directory every OS rejects, so opening the chunk
+	// fails with an error other than not-exist
+	bucket.dir = testfs.InvalidPath(t)
 
 	_, err = bucket.Read(0)
 	assert.Error(t, err)

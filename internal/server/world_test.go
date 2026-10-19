@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/OCAP2/web/internal/testfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,12 +80,9 @@ func TestScanWorlds_MalformedJSON(t *testing.T) {
 }
 
 func TestScanWorlds_ReadDirError(t *testing.T) {
-	// Use a file (not a directory) as the maps path to trigger a non-IsNotExist error
-	f, err := os.CreateTemp(t.TempDir(), "not-a-dir")
-	require.NoError(t, err)
-	f.Close()
-
-	worlds, err := ScanWorlds(f.Name())
+	// A NUL byte makes every OS reject the path with an error other than
+	// IsNotExist (a regular file would read as "not found" on Windows).
+	worlds, err := ScanWorlds(testfs.InvalidPath(t))
 	assert.Error(t, err)
 	assert.Nil(t, worlds)
 }

@@ -116,9 +116,9 @@ func TestNewGeneratePreviewStage_ResizeError(t *testing.T) {
 	require.NoError(t, png.Encode(f, img))
 	require.NoError(t, f.Close())
 
-	// Make output dir read-only so resizeAndSavePNG fails
-	require.NoError(t, os.Chmod(outputDir, 0555))
-	t.Cleanup(func() { os.Chmod(outputDir, 0755) })
+	// A directory where the first preview belongs makes resizeAndSavePNG fail
+	// on every OS
+	require.NoError(t, os.Mkdir(filepath.Join(outputDir, fmt.Sprintf("preview_%d.png", previewSizes[0])), 0755))
 
 	stage := NewGeneratePreviewStage()
 	job := &Job{InputPath: inputDir, OutputDir: outputDir}

@@ -372,11 +372,15 @@ func writeErrorJSON(job *Job) {
 
 // checkWritable verifies that a directory is writable by creating and
 // immediately removing a temp file.
+// createTemp creates checkWritable's probe file; tests replace it to simulate
+// a directory that exists but cannot be written.
+var createTemp = os.CreateTemp
+
 func checkWritable(dir string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(dir, ".writable-check-*")
+	f, err := createTemp(dir, ".writable-check-*")
 	if err != nil {
 		return err
 	}

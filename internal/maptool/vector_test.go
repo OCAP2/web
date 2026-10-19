@@ -403,10 +403,14 @@ func TestDiscoverGeoJSONLayers_UnreadableSubdir(t *testing.T) {
 	geojsonDir := filepath.Join(dir, "geojson")
 	require.NoError(t, os.MkdirAll(geojsonDir, 0755))
 
-	// Create an unreadable subdirectory — Walk will report an error for it
+	// Walk reports an unreadable subdirectory to the callback. Permission bits
+	// cannot cause that on every OS, so report it from a stand-in walk.
 	badSubDir := filepath.Join(geojsonDir, "locked")
-	require.NoError(t, os.MkdirAll(badSubDir, 0000))
-	t.Cleanup(func() { os.Chmod(badSubDir, 0755) })
+	require.NoError(t, os.MkdirAll(badSubDir, 0755))
+	walkGeoJSON = func(root string, fn filepath.WalkFunc) error {
+		return fn(badSubDir, nil, os.ErrPermission)
+	}
+	t.Cleanup(func() { walkGeoJSON = filepath.Walk })
 
 	_, err := DiscoverGeoJSONLayers(dir)
 	require.Error(t, err)

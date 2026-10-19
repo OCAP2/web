@@ -3,6 +3,7 @@ package maptool
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,7 +103,7 @@ func TestSetProgress(t *testing.T) {
 func TestTilesOutputDir(t *testing.T) {
 	t.Run("SubDirs=true", func(t *testing.T) {
 		job := &Job{OutputDir: "/out", SubDirs: true}
-		assert.Equal(t, "/out/tiles", job.TilesOutputDir())
+		assert.Equal(t, filepath.Join("/out", "tiles"), job.TilesOutputDir())
 	})
 	t.Run("SubDirs=false", func(t *testing.T) {
 		job := &Job{OutputDir: "/out", SubDirs: false}
@@ -113,7 +114,7 @@ func TestTilesOutputDir(t *testing.T) {
 func TestStylesOutputDir(t *testing.T) {
 	t.Run("SubDirs=true", func(t *testing.T) {
 		job := &Job{OutputDir: "/out", SubDirs: true}
-		assert.Equal(t, "/out/styles", job.StylesOutputDir())
+		assert.Equal(t, filepath.Join("/out", "styles"), job.StylesOutputDir())
 	})
 	t.Run("SubDirs=false", func(t *testing.T) {
 		job := &Job{OutputDir: "/out", SubDirs: false}

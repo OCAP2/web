@@ -26,6 +26,10 @@ var layerNameAliases = map[string]string{
 	"mounts": "mount",
 }
 
+// walkGeoJSON walks the geojson directory; tests replace it to simulate an
+// unreadable subdirectory.
+var walkGeoJSON = filepath.Walk
+
 // DiscoverGeoJSONLayers scans a grad_meh export directory for GeoJSON layers.
 // Looks for geojson/**/*.geojson.gz files recursively (layers may be in subdirectories
 // like geojson/locations/ or geojson/roads/).
@@ -36,7 +40,7 @@ func DiscoverGeoJSONLayers(inputDir string) ([]geoJSONSource, error) {
 	}
 
 	var sources []geoJSONSource
-	err := filepath.Walk(geojsonDir, func(path string, info os.FileInfo, err error) error {
+	err := walkGeoJSON(geojsonDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

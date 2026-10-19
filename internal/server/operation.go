@@ -95,10 +95,16 @@ func NewRepoOperationWithDataDir(pathDB, dataDir string) (*RepoOperation, error)
 	}
 
 	if err := r.migration(); err != nil {
+		db.Close()
 		return nil, err
 	}
 
 	return r, nil
+}
+
+// Close closes the underlying database.
+func (r *RepoOperation) Close() error {
+	return r.db.Close()
 }
 
 // runMigration executes a set of SQL statements atomically within a transaction,

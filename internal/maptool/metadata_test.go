@@ -212,10 +212,9 @@ func TestNewGenerateStylesStage_SubDirsMkdirError(t *testing.T) {
 }
 
 func TestNewGenerateGradMehMetadataStage_WriteError(t *testing.T) {
-	// OutputDir is read-only so writeJSON fails
+	// A directory where map.json belongs makes writeJSON fail on every OS
 	dir := t.TempDir()
-	require.NoError(t, os.Chmod(dir, 0555))
-	t.Cleanup(func() { os.Chmod(dir, 0755) })
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "map.json"), 0755))
 
 	stage := NewGenerateGradMehMetadataStage()
 	job := &Job{
