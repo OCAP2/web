@@ -1088,6 +1088,10 @@ func (s *Session) WriteJSONGzNamed(dataDir, filename string) error {
 	if fileErr != nil {
 		return fmt.Errorf("close file: %w", fileErr)
 	}
+	// os.CreateTemp creates files as 0600; match the permissions of uploaded recordings.
+	if err := os.Chmod(f.Name(), 0644); err != nil {
+		return fmt.Errorf("chmod file: %w", err)
+	}
 
 	return os.Rename(f.Name(), outPath)
 }

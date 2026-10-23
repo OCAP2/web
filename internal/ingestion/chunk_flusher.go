@@ -191,5 +191,9 @@ func writeAtomic(path string, data []byte) error {
 	if closeErr != nil {
 		return closeErr
 	}
+	// os.CreateTemp creates files as 0600; match the permissions of uploaded recordings.
+	if err := os.Chmod(f.Name(), 0644); err != nil {
+		return err
+	}
 	return os.Rename(f.Name(), path)
 }

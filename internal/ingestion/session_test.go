@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/OCAP2/extension/v5/pkg/core"
@@ -385,6 +386,21 @@ func TestSession_FinalizeWritesFile(t *testing.T) {
 	err = json.NewDecoder(gr).Decode(&data)
 	require.NoError(t, err)
 	assert.Equal(t, "altis", data["worldName"])
+}
+
+func TestSession_WriteJSONGzNamed_FileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not supported on Windows")
+	}
+	s := NewSession()
+	s.SetMission(&core.Mission{MissionName: "Test Op"}, &core.World{WorldName: "altis"})
+
+	dir := t.TempDir()
+	require.NoError(t, s.WriteJSONGzNamed(dir, "test_op"))
+
+	info, err := os.Stat(filepath.Join(dir, "test_op.json.gz"))
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
 }
 
 func TestSession_RoundTrip_ParserV1(t *testing.T) {
