@@ -12,7 +12,9 @@ import {
   deathHeatmapVisible,
   setDeathHeatmapVisible,
   setTrailMode,
+  setTransmissionsVisible,
   trailMode,
+  transmissionsVisible,
   type TrailMode,
 } from "../viewOptions";
 import styles from "./ViewSettings.module.css";
@@ -198,6 +200,32 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
               }}
             >
               {t("overlay_death_heatmap")}
+            </span>
+          </button>
+
+          <button
+            class={styles.checkItem}
+            onClick={() => setTransmissionsVisible(!transmissionsVisible())}
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: transmissionsVisible(),
+                [styles.checkboxInactive]: !transmissionsVisible(),
+              }}
+            >
+              <Show when={transmissionsVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: transmissionsVisible(),
+                [styles.itemTextInactive]: !transmissionsVisible(),
+              }}
+            >
+              {t("overlay_radio_transmissions")}
             </span>
           </button>
 

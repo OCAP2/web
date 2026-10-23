@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent, screen } from "@solidjs/testing-library";
 import { TimelineScrubber } from "../components/TimelineScrubber";
 import type { FocusRange } from "../components/FocusToolbar";
+import { setTransmissionsVisible } from "../viewOptions";
 import {
   createTestEngine,
   TestProviders,
@@ -274,6 +275,29 @@ describe("TimelineScrubber", () => {
     // "other" segments should be rendered (connect events are not HitKilledEvent)
     const otherSegment = buckets[0].querySelector('[class*="heatmapOther"]');
     expect(otherSegment).not.toBeNull();
+  });
+
+  it("drops comms segments from the heatmap while transmissions are hidden", () => {
+    const events: Parameters<typeof makeManifest>[1] = [
+      { frameNum: 10, type: "radioTransmission", payload: {
+        unitId: 1, radio: "TFAR_anprc152", type: "SW", action: "Start", channel: 1,
+        additional: false, frequency: 100, code: "",
+      } },
+    ];
+    renderScrubber([unitDef({ id: 1 })], events, 100);
+
+    // Hidden by default, and not re-counted as "other": the bucket stays empty.
+    const commsSegment = () => document.querySelector('[class*="heatmapComms"]');
+    expect(commsSegment()).toBeNull();
+    expect(screen.queryAllByTestId("heatmap-bucket").length).toBe(0);
+
+    setTransmissionsVisible(true);
+    try {
+      expect(commsSegment()).not.toBeNull();
+    } finally {
+      setTransmissionsVisible(false);
+    }
+    expect(commsSegment()).toBeNull();
   });
 
   it("applies past class to buckets before current frame", () => {

@@ -10,6 +10,7 @@ import {
   TestProviders,
   makeManifest,
 } from "./testHelpers";
+import { setTransmissionsVisible, transmissionsVisible } from "../viewOptions";
 
 afterEach(() => {
   cleanup();
@@ -143,6 +144,21 @@ describe("ViewSettings - projectile labels", () => {
 
     fireEvent.click(screen.getByText("Projectile labels"));
     expect(spy).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("ViewSettings - radio transmissions", () => {
+  afterEach(() => setTransmissionsVisible(false));
+
+  it("toggles transmissions (hidden by default)", () => {
+    renderViewSettings();
+    openPanel();
+
+    expect(transmissionsVisible()).toBe(false);
+    fireEvent.click(screen.getByText("Radio transmissions"));
+    expect(transmissionsVisible()).toBe(true);
+    fireEvent.click(screen.getByText("Radio transmissions"));
+    expect(transmissionsVisible()).toBe(false);
   });
 });
 
