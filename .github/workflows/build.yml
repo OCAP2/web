@@ -7,6 +7,13 @@ on:
     tags:
       - "v*.*.*"
 
+# Every main build moves the same :main and :main-full tags, so two builds
+# racing let an older commit overwrite a newer one. A new push cancels the
+# build still running for that ref, so the newest commit always tags last.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
