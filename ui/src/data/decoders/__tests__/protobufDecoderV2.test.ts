@@ -265,6 +265,26 @@ describe("ProtobufDecoderV2.decodeManifest", () => {
     }
   });
 
+  it("decodes chat as its own event type, not a general mission event", () => {
+    const buffer = encodePb(PbManifest, {
+      version: 2,
+      world: { worldName: "Altis" },
+      mission: { missionName: "Op" },
+      frameCount: 500,
+      chunkSize: 300,
+      captureDelayMs: 1000,
+      chunkCount: 2,
+      events: [
+        { frameNum: 350, chat: { soldierId: 131, channel: "Vehicle", fromName: "Driver (Player1)", message: "Engine starting...", playerUid: "1" } },
+      ],
+    });
+
+    const manifest = decoder.decodeManifest(buffer);
+    expect(manifest.events).toEqual([
+      { frameNum: 350, type: "chat", channel: "Vehicle", fromName: "Driver (Player1)", message: "Engine starting..." },
+    ]);
+  });
+
   it("decodes time samples", () => {
     const buffer = encodePb(PbManifest, {
       version: 2,

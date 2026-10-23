@@ -1263,7 +1263,7 @@ describe("isConstructionMarker", () => {
 
 describe("MarkerManager.setConstructionLabelsVisible", () => {
   const trench = () =>
-    makeDef("trench_big", { player: 5, text: "Trench - Big - Kurten - 05:47" });
+    makeDef("trench_big", { player: 5, text: "Trench - Big - Player1 - 05:47" });
 
   it("shows construction labels by default", () => {
     const renderer = makeStubRenderer();
@@ -1271,7 +1271,7 @@ describe("MarkerManager.setConstructionLabelsVisible", () => {
     mgr.loadMarkers([trench()]);
     mgr.updateFrame(0);
     expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Kurten - 05:47" }),
+      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Player1 - 05:47" }),
     );
   });
 
@@ -1294,7 +1294,7 @@ describe("MarkerManager.setConstructionLabelsVisible", () => {
     expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(2);
     mgr.updateFrame(0);
     expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
-      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Kurten - 05:47" }),
+      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Player1 - 05:47" }),
     );
   });
 

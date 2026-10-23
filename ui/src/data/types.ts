@@ -126,6 +126,15 @@ export interface GeneralEventDef {
   message: string;
 }
 
+export interface ChatEventDef {
+  type: "chat";
+  /** Arma channel name: "Side", "Vehicle", "Global", ... */
+  channel: string;
+  /** Sender as the game prints it, e.g. "Driver (<player>)". */
+  fromName: string;
+  message: string;
+}
+
 export interface CapturedEventDef {
   type: "captured" | "capturedFlag" | "contested";
   unitName: string;
@@ -535,6 +544,7 @@ export type EventDef = { frameNum: number } & (
   | CounterEventDef
   | EndMissionEventDef
   | GeneralEventDef
+  | ChatEventDef
   | CapturedEventDef
   | TerminalHackEventDef
   | PlayerSnapshotEventDef
