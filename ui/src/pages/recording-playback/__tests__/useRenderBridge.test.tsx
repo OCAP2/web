@@ -5,6 +5,7 @@ import { MarkerManager } from "../../../playback/markerManager";
 import { PlaybackEngine } from "../../../playback/engine";
 import { useRenderBridge } from "../useRenderBridge";
 import { setLeftPanelVisible } from "../shortcuts";
+import { setTransmissionsVisible } from "../viewOptions";
 import { unitDef, vehicleDef, makeManifest, hitEvent } from "./testHelpers";
 import type { RendererEvent } from "../../../renderers/renderer.types";
 import type { EventDef, WorldConfig } from "../../../data/types";
@@ -75,9 +76,11 @@ function loadRadioRecording(engine: PlaybackEngine): void {
 describe("useRenderBridge", () => {
   beforeEach(() => {
     setLeftPanelVisible(true);
+    setTransmissionsVisible(true);
   });
 
   afterEach(() => {
+    setTransmissionsVisible(false);
     vi.restoreAllMocks();
   });
 
@@ -104,6 +107,36 @@ describe("useRenderBridge", () => {
       await flush();
       await flush();
       expect(lines.mock.calls.slice(-1)[0]?.[2].color).toBe("#f87171");
+    } finally { dispose(); engine.dispose(); }
+  });
+
+  it("removes transmission lines while transmissions are hidden and redraws them when shown", async () => {
+    const { engine, renderer, markerManager } = createTestSetup();
+    vi.spyOn(dem, "loadWorldDem").mockResolvedValue(dem.makeFlatDem(1000));
+    const added = vi.spyOn(renderer, "addLine");
+    const removed = vi.spyOn(renderer, "removeLine");
+    const dispose = createRoot((dispose) => {
+      useRenderBridge(engine, renderer, markerManager);
+      return dispose;
+    });
+    try {
+      engine.setWorldConfig(radioWorld);
+      loadRadioRecording(engine);
+      await flush();
+      await flush();
+      expect(added).toHaveBeenCalled();
+      const drawn = added.mock.results.map((r) => r.value);
+
+      setTransmissionsVisible(false);
+      await flush();
+      for (const handle of drawn) expect(removed).toHaveBeenCalledWith(handle);
+      added.mockClear();
+      await flush();
+      expect(added).not.toHaveBeenCalled();
+
+      setTransmissionsVisible(true);
+      await flush();
+      expect(added).toHaveBeenCalled();
     } finally { dispose(); engine.dispose(); }
   });
 

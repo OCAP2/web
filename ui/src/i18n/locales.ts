@@ -1727,6 +1727,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Kuolemien lämpökartta",
     uk: "Теплова карта смертей",
   },
+  overlay_radio_transmissions: {
+    ru: "Радиопередачи",
+    en: "Radio transmissions",
+    de: "Funksprüche",
+    cs: "Rádiové přenosy",
+    it: "Trasmissioni radio",
+    fr: "Transmissions radio",
+    fi: "Radiolähetykset",
+    uk: "Радіопередачі",
+  },
   trails_off: {
     ru: "Без следов движения",
     en: "No movement trails",
