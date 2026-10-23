@@ -10,7 +10,12 @@ import {
   TestProviders,
   makeManifest,
 } from "./testHelpers";
-import { setTransmissionsVisible, transmissionsVisible } from "../viewOptions";
+import {
+  constructionLabelsVisible,
+  setConstructionLabelsVisible,
+  setTransmissionsVisible,
+  transmissionsVisible,
+} from "../viewOptions";
 
 afterEach(() => {
   cleanup();
@@ -144,6 +149,21 @@ describe("ViewSettings - projectile labels", () => {
 
     fireEvent.click(screen.getByText("Projectile labels"));
     expect(spy).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("ViewSettings - fortification labels", () => {
+  afterEach(() => setConstructionLabelsVisible(true));
+
+  it("toggles fortification labels (shown by default)", () => {
+    renderViewSettings();
+    openPanel();
+
+    expect(constructionLabelsVisible()).toBe(true);
+    fireEvent.click(screen.getByText("Fortification labels"));
+    expect(constructionLabelsVisible()).toBe(false);
+    fireEvent.click(screen.getByText("Fortification labels"));
+    expect(constructionLabelsVisible()).toBe(true);
   });
 });
 
