@@ -3,6 +3,7 @@ package ingestion
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,18 @@ import (
 
 	pbv2 "github.com/OCAP2/web/pkg/schemas/protobuf/v2"
 )
+
+func TestWriteAtomic_FileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not supported on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "0000.pb")
+	require.NoError(t, writeAtomic(path, []byte("data")))
+
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
+}
 
 func TestChunkFlusher_FlushesAtBoundary(t *testing.T) {
 	dir := t.TempDir()
