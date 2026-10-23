@@ -21,6 +21,7 @@ import { HitKilledEvent } from "./events/hitKilledEvent";
 import { ConnectEvent } from "./events/connectEvent";
 import { EndMissionEvent } from "./events/endMissionEvent";
 import { GeneralMissionEvent } from "./events/generalEvent";
+import { ChatEvent } from "./events/chatEvent";
 import { CapturedEvent } from "./events/capturedEvent";
 import { TerminalHackEvent } from "./events/terminalHackEvent";
 import { PlayerSnapshotEvent } from "./events/playerSnapshotEvent";
@@ -68,6 +69,8 @@ function createGameEvent(def: EventDef): GameEvent | null {
       return new EndMissionEvent(def.frameNum, id, def.side, def.message);
     case "generalEvent":
       return new GeneralMissionEvent(def.frameNum, id, def.message);
+    case "chat":
+      return new ChatEvent(def.frameNum, id, def.channel, def.fromName, def.message);
     case "captured":
     case "capturedFlag":
     case "contested":

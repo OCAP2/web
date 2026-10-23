@@ -1497,6 +1497,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Tälle kartalle ei ole maastodataa, joten kantama on vain linnuntietä.",
     uk: "Для цієї карти немає даних рельєфу, дальність рахується по прямій.",
   },
+  chat_messages: {
+    ru: "Чат",
+    en: "Chat",
+    de: "Chat",
+    cs: "Chat",
+    it: "Chat",
+    fr: "Chat",
+    fi: "Chat",
+    uk: "Чат",
+  },
   transmissions: {
     ru: "Передачи",
     en: "Transmissions",
