@@ -53,6 +53,7 @@ import {
   DEATH_HEATMAP_CELL_M,
   TRAIL_SAMPLES,
   TRAIL_SECONDS,
+  constructionLabelsVisible,
   deathHeatmapVisible,
   trailMode,
   transmissionsVisible,
@@ -764,8 +765,10 @@ export function useRenderBridge(
     markerManager.setSideFilter(activeSide());
   });
 
-  // Frame → briefing markers
+  // Frame → briefing markers. The construction label setting shares this effect
+  // so markers it drops are recreated straight away, even while paused.
   createEffect(() => {
+    markerManager.setConstructionLabelsVisible(constructionLabelsVisible());
     const frame = engine.currentFrame();
     markerManager.updateFrame(frame);
   });

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   parseMarkerPosition,
   findPositionIndex,
+  isConstructionMarker,
   MarkerManager,
 } from "../markerManager";
 import type { MarkerDef } from "../../data/types";
@@ -1244,5 +1245,77 @@ describe("MarkerManager style overrides", () => {
     mgr.updateFrame(10);
     expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
     expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── MarkerManager.setConstructionLabelsVisible ───
+
+describe("isConstructionMarker", () => {
+  it("matches trench and fortification icons only", () => {
+    for (const type of ["trench", "trench_big", "trench_vehicle", "fortification", "fort_sandbag"]) {
+      expect(isConstructionMarker(type)).toBe(true);
+    }
+    for (const type of ["mil_dot", "Minefield", "magIcons/gear_M67_CA.paa", "loc_Fortress"]) {
+      expect(isConstructionMarker(type)).toBe(false);
+    }
+  });
+});
+
+describe("MarkerManager.setConstructionLabelsVisible", () => {
+  const trench = () =>
+    makeDef("trench_big", { player: 5, text: "Trench - Big - Kurten - 05:47" });
+
+  it("shows construction labels by default", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([trench()]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Kurten - 05:47" }),
+    );
+  });
+
+  it("recreates construction markers without their label, and with it again", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([trench(), makeDef("mil_dot", { text: "Objective" })]);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(2);
+
+    mgr.setConstructionLabelsVisible(false);
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(1);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledTimes(3);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: "trench_big", text: undefined }),
+    );
+
+    mgr.setConstructionLabelsVisible(true);
+    expect(renderer.removeBriefingMarker).toHaveBeenCalledTimes(2);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: "trench_big", text: "Trench - Big - Kurten - 05:47" }),
+    );
+  });
+
+  it("does nothing when the setting does not change", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([trench()]);
+    mgr.updateFrame(0);
+
+    mgr.setConstructionLabelsVisible(true);
+    expect(renderer.removeBriefingMarker).not.toHaveBeenCalled();
+  });
+
+  it("creates new construction markers unlabelled while labels are hidden", () => {
+    const renderer = makeStubRenderer();
+    const mgr = new MarkerManager(renderer);
+    mgr.loadMarkers([trench()]);
+    mgr.setConstructionLabelsVisible(false);
+    mgr.updateFrame(0);
+    expect(renderer.createBriefingMarker).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "trench_big", text: undefined }),
+    );
   });
 });

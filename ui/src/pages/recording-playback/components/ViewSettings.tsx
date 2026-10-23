@@ -9,7 +9,9 @@ import type { TimeMode } from "../../../playback/time";
 import type { RenderLayer } from "../../../renderers/renderer.types";
 import type { WorldConfig } from "../../../data/types";
 import {
+  constructionLabelsVisible,
   deathHeatmapVisible,
+  setConstructionLabelsVisible,
   setDeathHeatmapVisible,
   setTrailMode,
   setTransmissionsVisible,
@@ -169,6 +171,33 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
               }}
             >
               {t("layer_projectile_labels")}
+            </span>
+          </button>
+
+          {/* Construction labels — trench and fortification captions, icons stay */}
+          <button
+            class={styles.checkItem}
+            onClick={() => setConstructionLabelsVisible(!constructionLabelsVisible())}
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: constructionLabelsVisible(),
+                [styles.checkboxInactive]: !constructionLabelsVisible(),
+              }}
+            >
+              <Show when={constructionLabelsVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: constructionLabelsVisible(),
+                [styles.itemTextInactive]: !constructionLabelsVisible(),
+              }}
+            >
+              {t("layer_construction_labels")}
             </span>
           </button>
 

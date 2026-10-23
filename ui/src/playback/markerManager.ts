@@ -165,6 +165,20 @@ const SYSTEM_MARKER_TYPES = ["ObjectMarker", "moduleCoverMap", "safeStart"];
 const PROJECTILE_TYPES = ["Minefield", "mil_triangle"];
 
 /**
+ * Whether a marker is a player-built structure: an ACE/GRAD trench or an ACE
+ * Fortify object. The addon records these as placed objects with their own icon
+ * names (`trench_big`, `fort_sandbag`, ...) and a "type - builder - time" label.
+ */
+export function isConstructionMarker(type: string): boolean {
+  return (
+    type === "trench" ||
+    type.startsWith("trench_") ||
+    type === "fortification" ||
+    type.startsWith("fort_")
+  );
+}
+
+/**
  * Determine which layer group an ICON marker belongs to,
  * matching the old frontend's _createMarker layer assignment.
  */
@@ -228,6 +242,8 @@ interface TrackedMarker {
   def: MarkerDef;
   popupText: string;
   layer: "briefingMarkers" | "systemMarkers" | "projectileMarkers";
+  /** Trench or fortification — its label follows the construction label setting. */
+  construction: boolean;
   handle: BriefingMarkerHandle | null;
   /** Last applied position index — skip update when unchanged. */
   lastPosIndex: number;
@@ -269,9 +285,29 @@ export class MarkerManager {
   private renderer: MapRenderer;
   private sideFilter: string | null = null;
   private blacklistedPlayers: Set<number> = new Set();
+  private constructionLabels = true;
 
   constructor(renderer: MapRenderer) {
     this.renderer = renderer;
+  }
+
+  /**
+   * Show or hide the labels of trenches and fortifications, keeping their icons.
+   * Labelled construction markers on the map are dropped so the next
+   * updateFrame recreates them with or without their text.
+   */
+  setConstructionLabelsVisible(visible: boolean): void {
+    if (this.constructionLabels === visible) return;
+    this.constructionLabels = visible;
+
+    for (const tracked of this.markers) {
+      if (tracked.handle && tracked.construction && tracked.popupText) {
+        this.renderer.removeBriefingMarker(tracked.handle);
+        tracked.handle = null;
+        tracked.lastPosIndex = -1;
+        tracked.lastInterpFrame = -1;
+      }
+    }
   }
 
   /**
@@ -357,7 +393,8 @@ export class MarkerManager {
       const popupText = buildMarkerPopupText(def, lookup);
       const layer = classifyMarkerLayer(def);
       this.markers.push({
-        def, popupText, layer, handle: null, lastPosIndex: -1, lastInterpFrame: -1,
+        def, popupText, layer, construction: isConstructionMarker(def.type),
+        handle: null, lastPosIndex: -1, lastInterpFrame: -1,
         activeType: def.type, activeColor: def.color, activeBrush: def.brush, activeSize: def.size,
       });
     }
@@ -451,11 +488,12 @@ export class MarkerManager {
 
         if (!tracked.handle) {
           // Create the marker with current active style
+          const hideLabel = tracked.construction && !this.constructionLabels;
           const briefingDef: BriefingMarkerDef = {
             shape: tracked.def.shape,
             type: tracked.activeType,
             color: tracked.activeColor,
-            text: tracked.popupText || undefined,
+            text: hideLabel ? undefined : tracked.popupText || undefined,
             side: tracked.def.side,
             size: tracked.activeSize,
             brush: tracked.activeBrush,

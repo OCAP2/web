@@ -32,6 +32,12 @@ export const TRAIL_SAMPLES = 40;
  */
 export const [transmissionsVisible, setTransmissionsVisible] = createSignal(false);
 
+/**
+ * Labels on player-built structures ("Trench - Big - <builder> - 05:47"). The
+ * icons stay either way; a dug-in position otherwise covers the map in text.
+ */
+export const [constructionLabelsVisible, setConstructionLabelsVisible] = createSignal(true);
+
 /** Death markers aggregated into a density overlay. */
 export const [deathHeatmapVisible, setDeathHeatmapVisible] = createSignal(false);
 

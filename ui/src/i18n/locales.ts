@@ -1087,6 +1087,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     fi: "Ammusten nimet",
     uk: "Підписи снарядів",
   },
+  layer_construction_labels: {
+    ru: "Подписи фортификаций",
+    en: "Fortification labels",
+    de: "Befestigungsbeschriftungen",
+    cs: "Popisky opevnění",
+    it: "Etichette fortificazioni",
+    fr: "Étiquettes de fortifications",
+    fi: "Linnoitteiden nimet",
+    uk: "Підписи фортифікацій",
+  },
   layer_map_icons: {
     ru: "Иконки карты",
     en: "Map icons",
