@@ -21,7 +21,7 @@
     "@tanstack/solid-virtual": "^3.13.48",
     "leaflet": "^1.9.0",
     "leaflet-rotatedmarker": "^0.2.0",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "^6.15.0",
     "pmtiles": "^4.5.0",
     "solid-js": "^1.9.17"
   },
@@ -42,5 +42,13 @@
     "vite": "^8.3.4",
     "vite-plugin-solid": "^2.11.14",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.12",
+    "baseline-browser-mapping": "2.11.32",
+    "browserslist": "4.29.4",
+    "fflate": "0.8.3",
+    "@humanfs/node": "0.17.0",
+    "@babel/core": "7.29.7"
   }
 }
