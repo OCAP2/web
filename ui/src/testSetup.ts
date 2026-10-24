@@ -66,3 +66,20 @@ Element.prototype.getBoundingClientRect = function () {
   }
   return r;
 };
+
+// TanStack Virtual >= 3.19.5 reads the scroll element's clientWidth/clientHeight
+// (not getBoundingClientRect) to size the virtualizer, synchronously before the
+// ResizeObserver callback. jsdom reports both as 0, so the virtualizer renders
+// zero rows. Back them with getBoundingClientRect so the default rect applies.
+Object.defineProperty(Element.prototype, "clientHeight", {
+  configurable: true,
+  get() {
+    return this.getBoundingClientRect().height;
+  },
+});
+Object.defineProperty(Element.prototype, "clientWidth", {
+  configurable: true,
+  get() {
+    return this.getBoundingClientRect().width;
+  },
+});
