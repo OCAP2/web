@@ -6,6 +6,7 @@ import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { ConnectEvent } from "../../../playback/events/connectEvent";
 import { EndMissionEvent } from "../../../playback/events/endMissionEvent";
 import { GeneralMissionEvent } from "../../../playback/events/generalEvent";
+import { ChatEvent } from "../../../playback/events/chatEvent";
 import { CapturedEvent } from "../../../playback/events/capturedEvent";
 import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import { PlayerSnapshotEvent } from "../../../playback/events/playerSnapshotEvent";
@@ -20,7 +21,7 @@ import { formatNet } from "../../../playback/comms";
 import type { GameEvent } from "../../../playback/events/gameEvent";
 import { SIDE_COLORS_UI } from "../../../config/sideColors";
 import { formatElapsedTime } from "../../../playback/time";
-import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon, TargetIcon, ExplosionIcon, WrenchIcon, StaticWeaponIcon, RadioIcon, ZapIcon } from "../../../components/Icons";
+import { SkullIcon, BulletIcon, LinkIcon, ClockIcon, DoorExitIcon, ActivityIcon, FlagIcon, AlertTriangleIcon, TerminalIcon, TargetIcon, ExplosionIcon, WrenchIcon, StaticWeaponIcon, RadioIcon, ZapIcon, MessageSquareIcon } from "../../../components/Icons";
 import { EventFilters, DEFAULT_EVENT_FILTERS, DEFAULT_FACTION_FILTER, allFactionsEnabled } from "./EventFilters";
 import type { EventFilterState } from "./EventFilters";
 import type { Side } from "../../../data/types";
@@ -76,6 +77,9 @@ function eventStyle(event: GameEvent): { icon: JSX.Element; color: string } {
   if (event instanceof RadioTransmissionEvent) {
     return { icon: <RadioIcon size={16} />, color: "var(--accent-purple)" };
   }
+  if (event instanceof ChatEvent) {
+    return { icon: <MessageSquareIcon size={16} />, color: "var(--text-secondary)" };
+  }
   return { icon: <ActivityIcon size={16} />, color: "#888" };
 }
 
@@ -125,6 +129,7 @@ export function EventsTab(): JSX.Element {
     // Only the key-down is listed: a Stop says nothing on its own, and pairing
     // the two into a duration is the comms tab's job.
     if (event instanceof RadioTransmissionEvent) return f.showTransmissions && event.isStart;
+    if (event instanceof ChatEvent) return f.showChat;
     if (event instanceof EndMissionEvent || event instanceof GeneralMissionEvent) {
       return f.showMissionEvents;
     }
@@ -174,6 +179,10 @@ export function EventsTab(): JSX.Element {
           if (!event.message.toLowerCase().includes(text)) return false;
         } else if (event instanceof GeneralMissionEvent) {
           if (!event.message.toLowerCase().includes(text)) return false;
+        } else if (event instanceof ChatEvent) {
+          const haystack = [event.channel, event.fromName, event.message]
+            .join(" ").toLowerCase();
+          if (!haystack.includes(text)) return false;
         } else if (event instanceof CapturedEvent) {
           if (!event.unitName.toLowerCase().includes(text)) return false;
         } else if (event instanceof TerminalHackEvent) {
@@ -357,6 +366,22 @@ export function EventsTab(): JSX.Element {
                             <ClockIcon size={14} />
                             {timeStr(event.frameNum)}
                           </span>
+                        </span>
+                      </>
+                    ) : event instanceof ChatEvent ? (
+                      <>
+                        <span class={styles.eventMessage}>
+                          {event.fromName}:{" "}
+                          <span style={{ color: "var(--text-secondary)" }}>{event.message}</span>
+                        </span>
+                        <span class={styles.eventMeta}>
+                          <span class={styles.eventTime}>
+                            <ClockIcon size={14} />
+                            {timeStr(event.frameNum)}
+                          </span>
+                          <Show when={event.channel}>
+                            <span class={styles.eventWeapon}>{event.channel}</span>
+                          </Show>
                         </span>
                       </>
                     ) : event instanceof CapturedEvent ? (

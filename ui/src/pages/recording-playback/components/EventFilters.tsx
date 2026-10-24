@@ -40,6 +40,7 @@ export interface EventFilterState {
   showServicing: boolean;
   showConstructions: boolean;
   showTransmissions: boolean;
+  showChat: boolean;
   sideFilter: SideFilter;
   factions: FactionFilter;
 }
@@ -61,6 +62,9 @@ export const DEFAULT_EVENT_FILTERS: EventFilterState = {
   // Off by default like hits and explosions: a talkative op keys up hundreds of
   // times, and the Comms tab is where transmissions are actually readable.
   showTransmissions: false,
+  // Off by default: most of it is scripted, e.g. an engine start-up mod writes
+  // "Engine starting..." / "Engine ready" for every driver.
+  showChat: false,
   sideFilter: "all",
   factions: { ...DEFAULT_FACTION_FILTER },
 };
@@ -85,6 +89,7 @@ const EVENT_TYPE_ITEMS: EventTypeItem[] = [
   { key: "showServicing", labelKey: "servicing" },
   { key: "showConstructions", labelKey: "constructions" },
   { key: "showTransmissions", labelKey: "transmissions" },
+  { key: "showChat", labelKey: "chat_messages" },
 ];
 
 const SIDE_FILTER_OPTIONS: { key: SideFilter; labelKey: string }[] = [
@@ -107,6 +112,7 @@ function isNonDefault(state: EventFilterState): boolean {
     state.showServicing !== DEFAULT_EVENT_FILTERS.showServicing ||
     state.showConstructions !== DEFAULT_EVENT_FILTERS.showConstructions ||
     state.showTransmissions !== DEFAULT_EVENT_FILTERS.showTransmissions ||
+    state.showChat !== DEFAULT_EVENT_FILTERS.showChat ||
     state.sideFilter !== DEFAULT_EVENT_FILTERS.sideFilter ||
     SIDES.some((side) => state.factions[side] !== DEFAULT_FACTION_FILTER[side])
   );

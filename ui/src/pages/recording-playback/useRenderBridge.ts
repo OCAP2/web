@@ -53,8 +53,10 @@ import {
   DEATH_HEATMAP_CELL_M,
   TRAIL_SAMPLES,
   TRAIL_SECONDS,
+  constructionLabelsVisible,
   deathHeatmapVisible,
   trailMode,
+  transmissionsVisible,
 } from "./viewOptions";
 
 /**
@@ -484,7 +486,7 @@ export function useRenderBridge(
   const hasLiveTransmission = createMemo(() => liveTransmissions().length > 0);
   createEffect(() => {
     engine.recordingVersion();
-    if (!hasLiveTransmission()) return;
+    if (!transmissionsVisible() || !hasLiveTransmission()) return;
     // Receiver membership needs every player's radios. Share the engine's
     // deduplicated sidecar loads with panels, without waiting for a panel visit.
     void engine.ensureAllPlayerSnapshots();
@@ -497,6 +499,7 @@ export function useRenderBridge(
     for (const handle of commsLines) renderer.removeLine(handle);
     commsLines = [];
 
+    if (!transmissionsVisible()) return;
     const live = liveTransmissions();
     if (live.length === 0) return;
     engine.playerSnapshotsVersion();
@@ -762,8 +765,10 @@ export function useRenderBridge(
     markerManager.setSideFilter(activeSide());
   });
 
-  // Frame → briefing markers
+  // Frame → briefing markers. The construction label setting shares this effect
+  // so markers it drops are recreated straight away, even while paused.
   createEffect(() => {
+    markerManager.setConstructionLabelsVisible(constructionLabelsVisible());
     const frame = engine.currentFrame();
     markerManager.updateFrame(frame);
   });

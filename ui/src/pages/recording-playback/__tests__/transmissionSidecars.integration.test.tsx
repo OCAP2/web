@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "solid-js";
 import type { ApiClient } from "../../../data/apiClient";
 import { ChunkManager } from "../../../data/chunkManager";
@@ -11,9 +11,15 @@ import { PlaybackEngine } from "../../../playback/engine";
 import { MarkerManager } from "../../../playback/markerManager";
 import { MockRenderer } from "../../../renderers/mockRenderer";
 import { useRenderBridge } from "../useRenderBridge";
+import { setTransmissionsVisible } from "../viewOptions";
 
 const cleanup: Array<() => void> = [];
-afterEach(() => { for (const dispose of cleanup.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
+beforeEach(() => setTransmissionsVisible(true));
+afterEach(() => {
+  for (const dispose of cleanup.splice(0).reverse()) dispose();
+  setTransmissionsVisible(false);
+  vi.restoreAllMocks();
+});
 const buffer = (bytes: Uint8Array): ArrayBuffer => new Uint8Array(bytes).buffer;
 
 async function setup(transmit = true) {

@@ -767,6 +767,36 @@ describe("EventsTab", () => {
     expect(screen.queryByText("Objective completed")).toBeNull();
   });
 
+  it("lists chat under its own filter, off by default, apart from mission events", () => {
+    const { engine, renderer } = createTestEngine();
+    const events: EventDef[] = [
+      generalEvent(0, "Recording started."),
+      { type: "chat", frameNum: 1, channel: "Vehicle", fromName: "Driver (Player1)", message: "Engine starting..." },
+    ];
+    engine.loadRecording(makeManifest([unitDef()], events));
+    engine.seekTo(10);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("Recording started.")).toBeTruthy();
+    expect(screen.queryByText("Engine starting...")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Chat"));
+    expect(screen.getByText("Engine starting...")).toBeTruthy();
+    expect(screen.getByText(/Driver \(Player1\)/)).toBeTruthy();
+    expect(screen.getByText("Vehicle")).toBeTruthy();
+
+    // Mission events off leaves chat alone, and the other way round.
+    fireEvent.click(screen.getByText("Mission events"));
+    expect(screen.queryByText("Recording started.")).toBeNull();
+    expect(screen.getByText("Engine starting...")).toBeTruthy();
+  });
+
   it("side filter does not affect non-HitKilled events (connections pass through)", () => {
     const { engine, renderer } = createTestEngine();
     const entities = [

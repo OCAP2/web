@@ -10,6 +10,12 @@ import {
   TestProviders,
   makeManifest,
 } from "./testHelpers";
+import {
+  constructionLabelsVisible,
+  setConstructionLabelsVisible,
+  setTransmissionsVisible,
+  transmissionsVisible,
+} from "../viewOptions";
 
 afterEach(() => {
   cleanup();
@@ -143,6 +149,36 @@ describe("ViewSettings - projectile labels", () => {
 
     fireEvent.click(screen.getByText("Projectile labels"));
     expect(spy).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("ViewSettings - fortification labels", () => {
+  afterEach(() => setConstructionLabelsVisible(true));
+
+  it("toggles fortification labels (shown by default)", () => {
+    renderViewSettings();
+    openPanel();
+
+    expect(constructionLabelsVisible()).toBe(true);
+    fireEvent.click(screen.getByText("Fortification labels"));
+    expect(constructionLabelsVisible()).toBe(false);
+    fireEvent.click(screen.getByText("Fortification labels"));
+    expect(constructionLabelsVisible()).toBe(true);
+  });
+});
+
+describe("ViewSettings - radio transmissions", () => {
+  afterEach(() => setTransmissionsVisible(false));
+
+  it("toggles transmissions (hidden by default)", () => {
+    renderViewSettings();
+    openPanel();
+
+    expect(transmissionsVisible()).toBe(false);
+    fireEvent.click(screen.getByText("Radio transmissions"));
+    expect(transmissionsVisible()).toBe(true);
+    fireEvent.click(screen.getByText("Radio transmissions"));
+    expect(transmissionsVisible()).toBe(false);
   });
 });
 

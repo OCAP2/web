@@ -9,10 +9,14 @@ import type { TimeMode } from "../../../playback/time";
 import type { RenderLayer } from "../../../renderers/renderer.types";
 import type { WorldConfig } from "../../../data/types";
 import {
+  constructionLabelsVisible,
   deathHeatmapVisible,
+  setConstructionLabelsVisible,
   setDeathHeatmapVisible,
   setTrailMode,
+  setTransmissionsVisible,
   trailMode,
+  transmissionsVisible,
   type TrailMode,
 } from "../viewOptions";
 import styles from "./ViewSettings.module.css";
@@ -170,6 +174,33 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
             </span>
           </button>
 
+          {/* Construction labels — trench and fortification captions, icons stay */}
+          <button
+            class={styles.checkItem}
+            onClick={() => setConstructionLabelsVisible(!constructionLabelsVisible())}
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: constructionLabelsVisible(),
+                [styles.checkboxInactive]: !constructionLabelsVisible(),
+              }}
+            >
+              <Show when={constructionLabelsVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: constructionLabelsVisible(),
+                [styles.itemTextInactive]: !constructionLabelsVisible(),
+              }}
+            >
+              {t("layer_construction_labels")}
+            </span>
+          </button>
+
           {/* ── Analysis overlays ── */}
           <div class={`${styles.sectionLabel} ${styles.sectionBorder}`}>
             {t("section_overlays")}
@@ -198,6 +229,32 @@ export function ViewSettings(props: ViewSettingsProps): JSX.Element {
               }}
             >
               {t("overlay_death_heatmap")}
+            </span>
+          </button>
+
+          <button
+            class={styles.checkItem}
+            onClick={() => setTransmissionsVisible(!transmissionsVisible())}
+          >
+            <div
+              class={styles.checkbox}
+              classList={{
+                [styles.checkboxActive]: transmissionsVisible(),
+                [styles.checkboxInactive]: !transmissionsVisible(),
+              }}
+            >
+              <Show when={transmissionsVisible()}>
+                <div class={styles.checkboxDot} />
+              </Show>
+            </div>
+            <span
+              class={styles.itemText}
+              classList={{
+                [styles.itemTextActive]: transmissionsVisible(),
+                [styles.itemTextInactive]: !transmissionsVisible(),
+              }}
+            >
+              {t("overlay_radio_transmissions")}
             </span>
           </button>
 

@@ -234,8 +234,10 @@ function convertEvent(pb: PbEvent): EventDef | null {
   if (pb.chat) {
     return {
       frameNum,
-      type: "generalEvent",
-      message: `[${pb.chat.channel}] ${pb.chat.fromName}: ${pb.chat.message}`,
+      type: "chat",
+      channel: pb.chat.channel,
+      fromName: pb.chat.fromName,
+      message: pb.chat.message,
     };
   }
   return null;

@@ -5,9 +5,11 @@ import type { GameEvent } from "../../../playback/events/gameEvent";
 import { HitKilledEvent } from "../../../playback/events/hitKilledEvent";
 import { ExplosionEvent, RadioTransmissionEvent } from "../../../playback/events/supportEvents";
 import { bookmarks } from "../bookmarks";
+import { transmissionsVisible } from "../viewOptions";
 import { ConnectEvent } from "../../../playback/events/connectEvent";
 import { EndMissionEvent } from "../../../playback/events/endMissionEvent";
 import { GeneralMissionEvent } from "../../../playback/events/generalEvent";
+import { ChatEvent } from "../../../playback/events/chatEvent";
 import { CapturedEvent } from "../../../playback/events/capturedEvent";
 import { TerminalHackEvent } from "../../../playback/events/terminalHackEvent";
 import { formatElapsedTime } from "../../../playback/time";
@@ -120,6 +122,7 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
       other: 0,
     }));
 
+    const showComms = transmissionsVisible();
     for (const ev of engine.eventManager.getAll()) {
       if (ev.frameNum < start || ev.frameNum > end) continue;
       const idx = Math.min(Math.floor(((ev.frameNum - start) / span) * BUCKET_COUNT), BUCKET_COUNT - 1);
@@ -131,7 +134,12 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
       } else if (ev instanceof RadioTransmissionEvent) {
         // Only the key-down: counting the release too would double every
         // transmission and make a chatty net look twice as busy as it was.
-        if (ev.isStart) buckets[idx].comms++;
+        // Hidden transmissions are dropped, not folded into "other".
+        if (ev.isStart && showComms) buckets[idx].comms++;
+      } else if (ev instanceof ChatEvent) {
+        // Chat says nothing about the fight, and scripted vehicle messages
+        // would make every engine start look like activity.
+        continue;
       } else {
         buckets[idx].other++;
       }
@@ -159,7 +167,9 @@ export function TimelineScrubber(props: TimelineScrubberProps): JSX.Element {
     const bucket = buckets[idx];
     const nearby = engine.eventManager
       .getAll()
-      .filter((e) => e.frameNum >= bucket.frameStart && e.frameNum < bucket.frameEnd);
+      .filter((e) => e.frameNum >= bucket.frameStart && e.frameNum < bucket.frameEnd)
+      .filter((e) => transmissionsVisible() || !(e instanceof RadioTransmissionEvent))
+      .filter((e) => !(e instanceof ChatEvent));
 
     // Deduplicate HitKilledEvents, then sort by priority: other > killed > hit
     const seen = new Set<string>();
