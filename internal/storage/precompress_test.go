@@ -138,3 +138,32 @@ func TestWriteArtifact_OverwritesPreviousSidecars(t *testing.T) {
 	assert.Equal(t, updated, readZstd(t, path+".zst"))
 	assert.Equal(t, updated, readGzip(t, path+".gz"))
 }
+
+func TestCompress_UnknownEncoding(t *testing.T) {
+	_, err := compress("br", []byte("data"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `unknown encoding "br"`)
+}
+
+func TestWriteSidecars_SmallPayloadRemovesStaleSidecars(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chunk.pb")
+
+	// Seed stale sidecars, then call WriteSidecars with a small payload: it must
+	// remove them rather than leave a stale compressed copy.
+	require.NoError(t, WriteArtifact(path, compressiblePayload()))
+	require.FileExists(t, path+".zst")
+
+	require.NoError(t, WriteSidecars(path, []byte("tiny")))
+	_, err := os.Stat(path + ".zst")
+	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestRemoveSidecar_IsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "missing.pb")
+
+	// Removing a sidecar that does not exist is not an error.
+	require.NoError(t, removeSidecar(path+".zst"))
+	require.NoError(t, removeSidecar(path+".gz"))
+}
