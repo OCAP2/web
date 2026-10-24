@@ -521,6 +521,43 @@ describe("ProtobufDecoderV2.decodeChunk", () => {
     const chunk = decoder.decodeChunk(buffer);
     expect(chunk.entities.size).toBe(0);
   });
+  it("maps every vehicle class to its entity type (v2)", () => {
+    const classes: Array<[string, string]> = [
+      ["car", "car"],
+      ["tank", "tank"],
+      ["apc", "apc"],
+      ["truck", "truck"],
+      ["sea", "ship"],
+      ["heli", "heli"],
+      ["plane", "plane"],
+      ["parachute", "parachute"],
+      ["static-weapon", "staticWeapon"],
+      ["static-mortar", "staticMortar"],
+      ["something-unknown", "unknown"],
+    ];
+    const byClass = encodePb(PbManifest, {
+      version: 2,
+      world: { worldName: "Altis" },
+      mission: { missionName: "Op" },
+      frameCount: 1,
+      chunkSize: 1,
+      captureDelayMs: 1000,
+      chunkCount: 1,
+      vehicles: classes.map(([vehicleClass], i) => ({
+        id: i + 1,
+        name: vehicleClass,
+        vehicleClass,
+        startFrame: 0,
+        endFrame: 1,
+      })),
+    });
+    const manifest = new ProtobufDecoderV2().decodeManifest(byClass);
+    expect(manifest.entities).toHaveLength(classes.length);
+    for (const [vehicleClass, expected] of classes) {
+      const e = manifest.entities.find((x) => x.name === vehicleClass);
+      expect(e?.type).toBe(expected);
+    }
+  });
 });
 
 // ─── DecoderStrategy interface compliance ───
