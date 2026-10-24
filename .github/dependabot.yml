@@ -40,8 +40,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@vitest/coverage-v8"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "maplibre-gl"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "@solidjs/router"
         update-types: ["version-update:semver-major"]
     groups:
