@@ -309,4 +309,11 @@ func TestChunkFlusher_LateStateReachesFlushedChunk(t *testing.T) {
 
 	frame := frameAt(t, readChunk(t, dir, 0), 0)
 	require.Len(t, frame.Vehicles, 2, "late vehicle joins the already-flushed frame")
+
+	fuel, ok := vehicleFuel(frame, 10)
+	assert.True(t, ok)
+	assert.InDelta(t, 0.5, fuel, 1e-5, "the original vehicle survives the rewrite")
+	fuel, ok = vehicleFuel(frame, 11)
+	assert.True(t, ok)
+	assert.InDelta(t, 0.1, fuel, 1e-5)
 }

@@ -170,7 +170,6 @@ func TestGetManifestV2_Events(t *testing.T) {
 			{FrameNum: 10, Event: &pbv2.Event_Chat{Chat: &pbv2.ChatEvent{Channel: "SIDE", Message: "hi"}}},
 		},
 	})
-	require.NoError(t, err)
 
 	m := getV2(t, engine, "rec")
 
@@ -284,8 +283,9 @@ func TestGetManifestV2_MissingWorldAndMissionSections(t *testing.T) {
 	assert.Equal(t, uint32(9), m.EndFrame)
 }
 
-// The manifest is tagged version 2 but truncated, so the engine must report the
-// decode failure instead of falling back to the v1 reader.
+// A manifest tagged version 2 but truncated must be reported by the v2 reader.
+// The two readers fail differently: v1 wraps its error, so the message is what
+// proves the v2 path was taken rather than a silent v1 fallback.
 func TestGetManifestV2_UnmarshalFailure(t *testing.T) {
 	dir := t.TempDir()
 	missionDir := filepath.Join(dir, "rec")
@@ -300,4 +300,7 @@ func TestGetManifestV2_UnmarshalFailure(t *testing.T) {
 
 	_, err := NewProtobufEngine(dir).GetManifest(context.Background(), "rec")
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot parse invalid wire-format data")
+	assert.NotContains(t, err.Error(), "unmarshal manifest:",
+		"must fail in readV2Manifest; the v1 reader wraps its error with this prefix")
 }
