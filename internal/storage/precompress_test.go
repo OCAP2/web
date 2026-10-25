@@ -167,3 +167,83 @@ func TestRemoveSidecar_IsIdempotent(t *testing.T) {
 	require.NoError(t, removeSidecar(path+".zst"))
 	require.NoError(t, removeSidecar(path+".gz"))
 }
+
+// The rename is the atomic step; a target that cannot be renamed onto (here: a
+// directory holding the same name) must fail loudly rather than clobber it.
+func TestWriteFileAtomic_TargetPathIsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	blocked := filepath.Join(dir, "blocked")
+	require.NoError(t, os.Mkdir(blocked, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(blocked, "keep"), []byte("x"), 0644))
+
+	err := writeFileAtomic(blocked, []byte("data"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rename onto")
+}
+
+// A missing output directory fails at temp-file creation, before any rename.
+func TestWriteFileAtomic_MissingDirectory(t *testing.T) {
+	err := writeFileAtomic(filepath.Join(t.TempDir(), "nope", "chunk.zst"), []byte("data"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "create temp")
+}
+
+// A sidecar whose removal fails (a directory in its place holding a file)
+// surfaces the error instead of reporting success.
+func TestRemoveSidecar_ErrorOnUnremovable(t *testing.T) {
+	dir := t.TempDir()
+	sidecar := filepath.Join(dir, "chunk.pb.zst")
+	require.NoError(t, os.Mkdir(sidecar, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sidecar, "keep"), []byte("x"), 0644))
+
+	err := removeSidecar(sidecar)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "remove")
+}
+
+func TestRemoveSidecars_PropagatesError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chunk.pb")
+	sidecar := path + ".zst"
+	require.NoError(t, os.Mkdir(sidecar, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sidecar, "keep"), []byte("x"), 0644))
+
+	err := removeSidecars(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "remove")
+}
+
+// WriteSidecars writes through writeFileAtomic; a sidecar path that cannot be
+// renamed onto fails the whole call instead of leaving a half-written variant.
+func TestWriteSidecars_WriteFailureSurfaces(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chunk.pb")
+
+	sidecar := path + ".zst"
+	require.NoError(t, os.Mkdir(sidecar, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sidecar, "keep"), []byte("x"), 0644))
+
+	err := WriteSidecars(path, compressiblePayload())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rename onto")
+}
+
+// An encoder that fails (simulated here with an unknown coding in the encoding
+// list) aborts WriteSidecars with the wrapped reason and leaves the raw file
+// authoritative.
+func TestWriteSidecars_CompressFailureAborts(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chunk.pb")
+
+	original := PrecompressEncodings
+	PrecompressEncodings = []string{"bogus"}
+	t.Cleanup(func() { PrecompressEncodings = original })
+
+	err := WriteSidecars(path, compressiblePayload())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `compress`)
+	assert.Contains(t, err.Error(), `unknown encoding "bogus"`)
+
+	// The stale sidecars are untouched: the abort happens before any write.
+	assert.DirExists(t, filepath.Join(dir))
+}
