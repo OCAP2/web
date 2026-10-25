@@ -12,7 +12,7 @@ import {
 } from "../viewOptions";
 import { SIDE_COLORS_BRIGHT } from "../../../config/sideColors";
 import { unitDef, vehicleDef, makeManifest, killedEvent } from "./testHelpers";
-import type { BriefingMarkerDef, EntityMarkerOpts } from "../../../renderers/renderer.types";
+import type { BriefingMarkerDef, EntityMarkerOpts, EntityMarkerState } from "../../../renderers/renderer.types";
 import type { TimeMode } from "../../../playback/time";
 import type { EntityDef, EventDef, EntityState } from "../../../data/types";
 
@@ -27,6 +27,10 @@ function flush(): Promise<void> {
 
 async function flushMany(times = 6): Promise<void> {
   for (let i = 0; i < times; i++) await flush();
+}
+
+function stationary(x: number, y: number, count: number): EntityState[] {
+  return Array.from({ length: count }, () => ({ position: [x, y, 0], direction: 0, alive: 1 as const }));
 }
 
 function trackPath(count: number, scale = 2): EntityState[] {
@@ -45,6 +49,8 @@ interface Harness {
   removedHandles: () => unknown[];
   removedEntityMarkers: () => unknown[];
   entityMarkers: () => { id: number; opts: EntityMarkerOpts }[];
+  /** Per-frame states sent for one entity's own handle, oldest first. */
+  entityUpdatesFor: (id: number) => EntityMarkerState[];
   dispose: () => void;
 }
 
@@ -63,6 +69,7 @@ function harness(
   const removed = vi.spyOn(renderer, "removeBriefingMarker");
   const removedEntities = vi.spyOn(renderer, "removeEntityMarker");
   const entityMarkers = vi.spyOn(renderer, "createEntityMarker");
+  const entityUpdates = vi.spyOn(renderer, "updateEntityMarker");
 
   engine.loadRecording(makeManifest(entities, events, endFrame));
 
@@ -79,6 +86,16 @@ function harness(
     removedHandles: () => removed.mock.calls.map((call) => call[0]),
     removedEntityMarkers: () => removedEntities.mock.calls.map((call) => call[0]),
     entityMarkers: () => entityMarkers.mock.calls.map(([id, opts]) => ({ id, opts })),
+    entityUpdatesFor: (id: number) => {
+      // createEntityMarker takes the id and returns the handle every later
+      // update is keyed by, so the handle comes from the spy's result, not its args.
+      const created = entityMarkers.mock.calls.findIndex(([mid]) => mid === id);
+      if (created < 0) return [];
+      const handle = entityMarkers.mock.results[created]?.value;
+      return entityUpdates.mock.calls
+        .filter(([updated]) => updated === handle)
+        .map(([, state]) => state);
+    },
     dispose: () => {
       disposeRoot();
       engine.dispose();
@@ -181,7 +198,8 @@ describe("useRenderBridge — zeus ping overlay", () => {
     try {
       h.engine.seekTo(5);
       await flushMany();
-      expect(pingLabels(h.created())[0].text).not.toContain("<br>");
+      const firstText = pingLabels(h.created())[0].text ?? "";
+      expect(firstText).not.toContain("<br>");
 
       h.engine.seekTo(6);
       await flushMany();
@@ -191,8 +209,8 @@ describe("useRenderBridge — zeus ping overlay", () => {
       const text = last(labels)!.text ?? "";
       expect(text).toContain("<br>");
       expect(text.split("<br>")).toHaveLength(2);
-      // The group tracks the newest ping, so the label shows the later time too.
-      expect(last(h.updates())!.state.alpha).toBeGreaterThan(0);
+      // The whole divIcon is rebuilt, so the rendered label really changed.
+      expect(text).not.toBe(firstText);
     } finally {
       h.dispose();
     }
@@ -557,19 +575,16 @@ describe("useRenderBridge — movement trails", () => {
   it("does not draw a degenerate one-point trail", async () => {
     setTrailMode("players");
     // Only the current frame resolves, so no window sample can be added.
+    // The unit starts at frame 61 and the playhead sits at 62, so none of the
+    // window samples at the 3-frame stride resolve and only the current head
+    // point exists. One point cannot form a line.
     const h = harness([
-      unitDef({ id: 1, isPlayer: true, startFrame: 60, endFrame: 100, positions: trackPath(41) }),
+      unitDef({ id: 1, isPlayer: true, startFrame: 61, endFrame: 101, positions: trackPath(41) }),
     ]);
     try {
-      h.engine.seekTo(60);
+      h.engine.seekTo(62);
       await flushMany();
-      const polylines = h.created().filter((d) => d.shape === "POLYLINE");
-      const pointUpdates = h.updates().filter((u) => Array.isArray(u.state.points));
-      // Either nothing was created, or every created line carries >= 2 points.
-      for (const u of pointUpdates) {
-        expect((u.state.points as unknown[]).length).toBeGreaterThanOrEqual(2);
-      }
-      expect(polylines.length).toBeLessThanOrEqual(1);
+      expect(h.created().filter((d) => d.shape === "POLYLINE")).toHaveLength(0);
     } finally {
       h.dispose();
     }
@@ -634,20 +649,45 @@ describe("useRenderBridge — death heatmap", () => {
     }
   });
 
-  it("grows blobs as more deaths fall inside the playhead", async () => {
+  // A blob's radius is sized against the busiest cell, so it only changes once a
+  // cell catches up. The radius is baked into the handle at creation, which means
+  // a growing cell has to discard its blob and draw a larger one.
+  it("recreates a blob with a larger radius as its cell fills up", async () => {
     setDeathHeatmapVisible(true);
-    const h = harness(deadly(), deaths());
+    const h = harness(
+      [
+        unitDef({ id: 1, isPlayer: true, endFrame: 100, positions: stationary(5, 5, 101) }),
+        // Two deaths early in the busy cell at ~(100,100).
+        unitDef({ id: 2, isPlayer: false, side: "EAST", endFrame: 100, positions: stationary(100, 100, 101) }),
+        unitDef({ id: 3, isPlayer: false, side: "EAST", endFrame: 100, positions: stationary(110, 105, 101) }),
+        // One death in the far cell at ~(500,500), joined by a second at frame 20.
+        unitDef({ id: 4, isPlayer: false, side: "EAST", endFrame: 100, positions: stationary(500, 500, 101) }),
+        unitDef({ id: 5, isPlayer: false, side: "EAST", endFrame: 100, positions: stationary(505, 495, 101) }),
+      ],
+      [killedEvent(4, 2, 1), killedEvent(5, 3, 1), killedEvent(6, 4, 1), killedEvent(20, 5, 1)],
+    );
     try {
       h.engine.seekTo(10);
       await flushMany(12);
-      const early = h.updates().filter((u) => u.state.alpha !== undefined);
-      const earlyCount = ellipses(h.created()).length;
+
+      // Busy cell holds 2 deaths, the far cell 1, so it is drawn smaller.
+      const radiiEarly = ellipses(h.created()).map((d) => d.size![0]);
+      expect(radiiEarly).toHaveLength(2);
+      const small = Math.min(...radiiEarly);
+      const large = Math.max(...radiiEarly);
+      expect(small).toBeLessThan(large);
+
+      const createdBefore = h.created().length;
+      const removedBefore = h.removedHandles().length;
 
       h.engine.seekTo(20);
       await flushMany(12);
 
-      expect(ellipses(h.created()).length).toBeGreaterThanOrEqual(earlyCount);
-      expect(early.length).toBeGreaterThan(0);
+      // Both cells now hold 2 deaths, so the small blob is replaced by a bigger one.
+      const drawnLate = ellipses(h.created().slice(createdBefore));
+      expect(drawnLate.length).toBeGreaterThan(0);
+      expect(Math.max(...drawnLate.map((d) => d.size![0]))).toBeGreaterThan(small);
+      expect(h.removedHandles().length).toBeGreaterThan(removedBefore);
     } finally {
       h.dispose();
     }
@@ -746,8 +786,20 @@ describe("useRenderBridge — entity and vehicle popups", () => {
     try {
       h.engine.seekTo(8);
       await flushMany();
-      const victim = h.entityMarkers().find((m) => m.id === 2);
-      expect(victim).toBeDefined();
+
+      const victim = h.entityUpdatesFor(2);
+      expect(victim.length).toBeGreaterThan(0);
+      expect(last(victim)!.hit).toBe(true);
+
+      // The shooter is not flashed alongside the victim.
+      const shooter = h.entityUpdatesFor(1);
+      expect(shooter.length).toBeGreaterThan(0);
+      expect(last(shooter)!.hit).toBe(false);
+
+      // The flash belongs to that one frame only.
+      h.engine.seekTo(9);
+      await flushMany();
+      expect(last(h.entityUpdatesFor(2))!.hit).toBe(false);
     } finally {
       h.dispose();
     }
@@ -772,13 +824,26 @@ describe("useRenderBridge — renderer plumbing", () => {
       // second per frame, which is what the renderer sizes its tween to.
       expect(smoothing).toHaveBeenLastCalledWith(false, 0.1);
 
-      engine.setSpeed(1);
+      // Smoothing is only worth doing while frames are actually advancing.
+      engine.play();
       await flushMany();
-      expect(smoothing).toHaveBeenLastCalledWith(false, 1);
+      expect(smoothing).toHaveBeenLastCalledWith(true, 0.1);
+
+      engine.pause();
+      await flushMany();
+      expect(smoothing).toHaveBeenLastCalledWith(false, 0.1);
+
+      engine.setSpeed(1);
+      engine.play();
+      await flushMany();
+      expect(smoothing).toHaveBeenLastCalledWith(true, 1);
 
       engine.setSpeed(60);
       await flushMany();
-      expect(smoothing).toHaveBeenLastCalledWith(false, 1 / 60);
+      expect(smoothing).toHaveBeenLastCalledWith(true, 1 / 60);
+
+      engine.pause();
+      await flushMany();
 
       // Speed is clamped, so the tween never targets a zero-length interval.
       engine.setSpeed(0);
