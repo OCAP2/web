@@ -1,6 +1,7 @@
 package ingestion
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OCAP2/extension/v5/pkg/core"
@@ -36,8 +37,9 @@ func TestExtractFilename(t *testing.T) {
 func TestFormatWeaponText(t *testing.T) {
 	assert.Equal(t, "M16A4", formatWeaponText("M16A4", ""))
 	assert.Equal(t, "M16A4 [30Rnd_556x45]", formatWeaponText("M16A4", "30Rnd_556x45"))
-	// A magazine without a weapon still renders the bracket form; the caller is
-	// expected to have resolved a display name first.
+	// Current behaviour, not a requirement: an unresolved weapon still yields the
+	// bracket form. Callers resolve a display name first, so this only shows up if
+	// the recording carried neither. A formatting fix should update this line.
 	assert.Equal(t, " [30Rnd_556x45]", formatWeaponText("", "30Rnd_556x45"))
 	assert.Equal(t, "", formatWeaponText("", ""))
 }
@@ -160,7 +162,10 @@ func TestSession_ProjectileMarkerFromUnknownVehicle(t *testing.T) {
 
 	rec, ok := s.markers["_projectile_1"]
 	require.True(t, ok)
-	assert.Equal(t, " Autocannon - Mag", rec.Marker.Text)
+	// What must not regress is that no name is invented for a vehicle the
+	// recording never described. The separator spacing is current formatting, not
+	// a requirement, so the surrounding space is not pinned.
+	assert.Equal(t, "Autocannon - Mag", strings.TrimSpace(rec.Marker.Text))
 }
 
 // The vehicle branch is checked first, so a grenade launched from a mounted
@@ -182,8 +187,7 @@ func TestSession_ProjectileMarkerVehicleBranchBeatsGrenade(t *testing.T) {
 
 	rec, ok := s.markers["_projectile_1"]
 	require.True(t, ok)
-	assert.Contains(t, rec.Marker.Text, "Launcher - Grenade")
-	assert.NotEqual(t, "Grenade", rec.Marker.Text)
+	assert.Equal(t, "Offroad Launcher - Grenade", rec.Marker.Text)
 }
 
 // A projectile fired from the soldier's own vehicle id is not a vehicle weapon.
@@ -205,6 +209,39 @@ func TestSession_ProjectileMarkerVehicleEqualToFirerIsNotVehicleText(t *testing.
 	rec, ok := s.markers["_projectile_1"]
 	require.True(t, ok)
 	assert.Equal(t, "Titan - Titan AP", rec.Marker.Text)
+}
+
+// The two derivations differ on purpose when the firer is inside the vehicle it
+// is carrying: the marker label drops the redundant vehicle prefix, while the
+// hit still records the vehicle so the shot is attributable. Pinned so a change
+// to either side is a deliberate one.
+func TestSession_ProjectileFromOwnVehicleLabelsMarkerButAttributesVehicleHit(t *testing.T) {
+	s := NewSession()
+	s.HandleAddVehicle(core.Vehicle{ID: 5, DisplayName: "Offroad", OcapType: "car"})
+
+	s.HandleProjectileEvent(core.ProjectileEvent{
+		FirerObjectID:   5,
+		VehicleObjectID: ptr(uint16(5)),
+		MuzzleDisplay:   "Titan",
+		MagazineDisplay: "Titan AP",
+		SimulationType:  "shotRocket",
+		Trajectory:      []core.TrajectoryPoint{{FrameNum: 1, Position: core.Position3D{X: 0, Y: 0}}},
+		Hits: []core.ProjectileHit{
+			{CaptureFrame: 2, Position: core.Position3D{X: 3, Y: 4}, SoldierID: ptr(uint16(8))},
+		},
+	})
+
+	s.deriveProjectileData()
+
+	rec, ok := s.markers["_projectile_1"]
+	require.True(t, ok)
+	assert.Equal(t, "Titan - Titan AP", rec.Marker.Text)
+
+	require.Len(t, s.events, 1)
+	hit := s.events[0].hit
+	require.NotNil(t, hit)
+	require.NotNil(t, hit.ShooterVehicleID)
+	assert.Equal(t, uint(5), *hit.ShooterVehicleID)
 }
 
 // A trajectory-less projectile carries no position, so no marker can be drawn.
@@ -315,6 +352,7 @@ func TestSession_ProjectileHitsBecomeHitEvents(t *testing.T) {
 		},
 	})
 
+	trackedBefore := s.FrameCount()
 	s.deriveProjectileData()
 
 	require.Len(t, s.events, 1)
@@ -336,8 +374,34 @@ func TestSession_ProjectileHitsBecomeHitEvents(t *testing.T) {
 	// Distance is measured from the first trajectory point to the impact.
 	assert.InDelta(t, 50, hit.hit.Distance, 1e-4)
 
-	// The hit frame extends the recording so playback reaches the impact.
-	assert.Equal(t, core.Frame(5), s.FrameCount())
+	// Ingestion already tracked the hit frame, so deriving must not move the
+	// recording's end.
+	assert.Equal(t, core.Frame(5), trackedBefore)
+	assert.Equal(t, trackedBefore, s.FrameCount(), "derivation does not change the frame count")
+}
+
+// The recording has to reach the impact frame, which matters when a hit lands
+// after the last trajectory sample.
+func TestSession_ProjectileHitFrameExtendsRecording(t *testing.T) {
+	s := NewSession()
+	s.HandleProjectileEvent(core.ProjectileEvent{
+		FirerObjectID:  5,
+		MuzzleDisplay:  "Titan",
+		SimulationType: "shotRocket",
+		Trajectory: []core.TrajectoryPoint{
+			{FrameNum: 1}, {FrameNum: 2}, {FrameNum: 4},
+		},
+		Hits: []core.ProjectileHit{{CaptureFrame: 40, SoldierID: ptr(uint16(8))}},
+	})
+
+	// Tracked as the projectile arrives, well past its final trajectory sample.
+	assert.Equal(t, core.Frame(41), s.FrameCount())
+
+	s.deriveProjectileData()
+
+	require.Len(t, s.events, 1)
+	assert.Equal(t, core.Frame(40), s.events[0].frame)
+	assert.Equal(t, core.Frame(41), s.FrameCount(), "derivation does not change the frame count")
 }
 
 func TestSession_ProjectileHitOnVehicle(t *testing.T) {
@@ -427,12 +491,14 @@ func TestSession_MultipleProjectileHitsProduceMultipleEvents(t *testing.T) {
 		},
 	})
 
+	trackedBefore := s.FrameCount()
 	s.deriveProjectileData()
 
 	require.Len(t, s.events, 2)
 	assert.Equal(t, core.Frame(2), s.events[0].frame)
 	assert.Equal(t, core.Frame(9), s.events[1].frame)
-	assert.Equal(t, core.Frame(10), s.FrameCount(), "the latest hit extends the recording")
+	assert.Equal(t, core.Frame(10), trackedBefore, "ingestion tracked the latest hit frame")
+	assert.Equal(t, trackedBefore, s.FrameCount(), "derivation does not change the frame count")
 }
 
 // A bullet that both flies and hits yields a fire line and a hit event.
