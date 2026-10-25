@@ -129,3 +129,191 @@ describe("GearDiffView", () => {
     expect(screen.getByText((t) => t.includes("Hand grenade"))).toBeTruthy();
   });
 });
+
+import { MedicalDiffView, RadioDiffView, StaminaDiffView, DiffEmpty } from "../PlayerProfileDiff";
+import type { MedicalDiff, RadioDiff, FieldDelta } from "../../profileDiff";
+
+function renderView(ui: () => import("solid-js").JSX.Element) {
+  render(() => <I18nProvider locale="en">{ui()}</I18nProvider>);
+}
+
+const field = (labelKey: string, kind: FieldDelta["kind"], from: unknown, to: unknown, extra: Partial<FieldDelta> = {}): FieldDelta => ({
+  labelKey,
+  kind,
+  from,
+  to,
+  ...extra,
+});
+
+describe("MedicalDiffView", () => {
+  it("renders nothing when the diff is empty", () => {
+    renderView(() => (
+      <I18nProvider locale="en">
+        <MedicalDiffView diff={{ fields: [], bodyParts: [], treatments: [], activity: [], quickView: [] }} />
+      </I18nProvider>
+    ));
+    expect(screen.queryByText("Body parts")).toBeNull();
+    expect(screen.queryByText("In the system")).toBeNull();
+    expect(screen.queryByText("New since then")).toBeNull();
+  });
+
+  it("formats every field kind through the grid", () => {
+    const diff: MedicalDiff = {
+      fields: [
+        field("profile_heart_rate", "number", 80, 92),
+        field("profile_pain", "percent", 0.25, 0.5),
+        field("profile_blood", "bool", false, true),
+        field("profile_pressure", "bp", [0, 0], [120, 80]),
+        field("profile_hemorrhage", "hemorrhage", 0, 2),
+        field("profile_stance", "stance", 1, 3),
+        field("profile_note", "text", "old", "new"),
+      ],
+      bodyParts: [],
+      treatments: [],
+      activity: [],
+      quickView: [],
+    };
+    renderView(() => (
+      <I18nProvider locale="en">
+        <MedicalDiffView diff={diff} />
+      </I18nProvider>
+    ));
+
+    // number
+    expect(screen.getByText((t) => t.includes("80 → 92"))).toBeTruthy();
+    // percent
+    expect(screen.getByText((t) => t.includes("25% → 50%"))).toBeTruthy();
+    // bool
+    expect(screen.getByText((t) => t.includes("No → Yes"))).toBeTruthy();
+    // bp: zero/zero falls back to the none label, a real pressure renders
+    expect(screen.getByText((t) => t.includes("No pressure → 80/120"))).toBeTruthy();
+    // hemorrhage levels
+    expect(screen.getByText((t) => t.includes("→ Class II"))).toBeTruthy();
+    // stance keys map through their labels
+    expect(screen.getByText((t) => t.includes("Standing → Prone"))).toBeTruthy();
+    // plain values pass through
+    expect(screen.getByText((t) => t.includes("old → new"))).toBeTruthy();
+  });
+
+  it("renders body parts with damage and items", () => {
+    const diff: MedicalDiff = {
+      fields: [],
+      bodyParts: [
+        {
+          part: "head",
+          damage: field("profile_damage", "percent", 0.1, 0.9),
+          items: [{ polarity: "removed", class: "bandage", name: "Bandage", fromCount: 2, toCount: 0 }],
+        },
+        { part: "torsolog", damage: undefined, items: [] },
+      ],
+      treatments: [],
+      activity: [],
+      quickView: [],
+    };
+    renderView(() => (
+      <I18nProvider locale="en">
+        <MedicalDiffView diff={diff} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("Body parts")).toBeTruthy();
+    expect(screen.getByText("Head")).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("10% → 90%"))).toBeTruthy();
+    expect(screen.getByText("torsolog")).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("Bandage"))).toBeTruthy();
+  });
+
+  it("lists treatments, activity and quick view entries", () => {
+    const diff: MedicalDiff = {
+      fields: [],
+      bodyParts: [],
+      treatments: [{ polarity: "added", class: "morphine", name: "Morphine", fromCount: 0, toCount: 1 }],
+      activity: [{ time: "12:00", text: "Bandage applied" }],
+      quickView: [{ time: "12:01", text: "Pain reduced" }],
+    };
+    renderView(() => (
+      <I18nProvider locale="en">
+        <MedicalDiffView diff={diff} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("In the system")).toBeTruthy();
+    expect(screen.getByText("New since then")).toBeTruthy();
+    expect(screen.getByText("Quick view")).toBeTruthy();
+    expect(screen.getByText("Bandage applied")).toBeTruthy();
+    expect(screen.getByText("Pain reduced")).toBeTruthy();
+  });
+
+  it("renders item rounds deltas for each polarity", () => {
+    const diff: MedicalDiff = {
+      fields: [],
+      bodyParts: [],
+      treatments: [
+        { polarity: "added", class: "mag", name: "Mag", fromCount: 0, toCount: 2, toRounds: 30 },
+        { polarity: "removed", class: "mag", name: "Spent", fromCount: 1, toCount: 0, fromRounds: 30 },
+        { polarity: "changed", class: "mag", name: "Partial", fromCount: 1, toCount: 1, fromRounds: 10, toRounds: 25 },
+        { polarity: "changed", class: "mag", name: "Unknown rounds", fromCount: 1, toCount: 1 },
+      ],
+      activity: [],
+      quickView: [],
+    };
+    renderView(() => (
+      <I18nProvider locale="en">
+        <MedicalDiffView diff={diff} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText((t) => t.includes("+ Mag") && t.includes("×2") && t.includes("30 rds"))).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("− Spent") && t.includes("×1") && t.includes("30 rds"))).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("Partial") && t.includes("10 → 25"))).toBeTruthy();
+    // Without round counts there is no rounds suffix at all.
+    expect(screen.queryByText((t) => t.includes("Unknown rounds") && t.includes("rds"))).toBeNull();
+  });
+});
+
+describe("RadioDiffView", () => {
+  it("marks each radio row with its polarity", () => {
+    const diff: RadioDiff = {
+      radios: [
+        { polarity: "added", name: "PRC-343", fields: [field("profile_radio_freq", "number", 0, 2560)] },
+        { polarity: "removed", name: "PRC-152", fields: [] },
+        { polarity: "changed", name: "BF-888S", fields: [] },
+      ],
+    };
+    renderView(() => (
+      <I18nProvider locale="en">
+        <RadioDiffView diff={diff} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("PRC-343")).toBeTruthy();
+    expect(screen.getByText("PRC-152")).toBeTruthy();
+    expect(screen.getByText("BF-888S")).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("0 → 2560"))).toBeTruthy();
+  });
+});
+
+describe("StaminaDiffView and DiffEmpty", () => {
+  it("renders stamina fields through the same grid", () => {
+    renderView(() => (
+      <I18nProvider locale="en">
+        <StaminaDiffView fields={[field("profile_weight", "number", 30, 35, { digits: 1, suffix: " kg" })]} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText((t) => t.includes("30.0 kg → 35.0 kg"))).toBeTruthy();
+  });
+
+  it("tells apart same-frame and empty diffs", () => {
+    renderView(() => (
+      <I18nProvider locale="en">
+        <DiffEmpty sameFrame={true} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("Scrub the timeline to pick the other time.")).toBeTruthy();
+  });
+
+  it("explains when there are no changes at all", () => {
+    renderView(() => (
+      <I18nProvider locale="en">
+        <DiffEmpty sameFrame={false} />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("No changes in this tab.")).toBeTruthy();
+  });
+});

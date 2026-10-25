@@ -1116,3 +1116,181 @@ describe("EventsTab", () => {
     expect(screen.getByText(/Satchel Charge/)).toBeTruthy();
   });
 });
+
+function zeusPingEvent(frameNum: number, name: string, side: string, x = 100, y = 200): EventDef {
+  return {
+    type: "zeusPing",
+    frameNum,
+    payload: { curatorId: 9, unitId: 2, name, side, x, y },
+  } as EventDef;
+}
+
+function zeusModuleEvent(frameNum: number, displayName: string, x = 100, y = 200): EventDef {
+  return {
+    type: "zeusModule",
+    frameNum,
+    payload: { curatorId: 9, curatorName: "Zeus", displayName, className: "ModuleCup", x, y, attachedUnitId: 2, attachedName: "Alpha 1-1" },
+  } as EventDef;
+}
+
+function serviceEvent(frameNum: number, kind: string, vehicleName: string): EventDef {
+  return {
+    type: "serviceEvent",
+    frameNum,
+    payload: { kind, vehicleId: -1, vehicleName, unitId: 2, unitName: "Alpha 1-1", side: "WEST", x: 100, y: 200, from: 0.2, to: 1, magazine: "30rnd_556", magazineName: "STANAG 30", count: 4 },
+  } as unknown as EventDef;
+}
+
+function staticWeaponEvent(frameNum: number, action: string, name: string): EventDef {
+  return {
+    type: "staticWeapon",
+    frameNum,
+    payload: { action, unitId: 2, unitName: "Alpha 1-1", side: "WEST", vehicleId: -1, class: "M2", name, x: 100, y: 200 },
+  } as unknown as EventDef;
+}
+
+function radioTransmission(frameNum: number, action: "Start" | "Stop", frequency: number): EventDef {
+  return {
+    type: "radioTransmission",
+    frameNum,
+    payload: { unitId: 2, radio: "TFAR_anprc152", type: "SW", action, channel: 1, additional: false, frequency, code: "" },
+  };
+}
+
+describe("EventsTab event-type rendering", () => {
+  function engineWithEvents(events: EventDef[]) {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(
+      makeManifest([unitDef({ id: 2, name: "Alpha 1-1", side: "WEST" })], events, 60),
+    );
+    engine.seekTo(50);
+    return { engine, renderer };
+  }
+
+  it("renders zeus pings with their pinger and pans on click", () => {
+    const { engine, renderer } = engineWithEvents([zeusPingEvent(5, "Zeus", "WEST")]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText((t) => t.includes("Zeus") && t.includes("pinged Zeus"))).toBeTruthy();
+
+    const pan = vi.spyOn(engine, "panToPosition");
+    fireEvent.click(screen.getByTestId("event-row-5"));
+    expect(pan).toHaveBeenCalledWith([100, 200]);
+    pan.mockRestore();
+  });
+
+  it("renders zeus module placements with their names and pans on click", () => {
+    const { engine, renderer } = engineWithEvents([zeusModuleEvent(6, "Artillery strike")]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText((t) => t.includes("Artillery strike"))).toBeTruthy();
+
+    const pan = vi.spyOn(engine, "panToPosition");
+    fireEvent.click(screen.getByTestId("event-row-6"));
+    expect(pan).toHaveBeenCalledWith([100, 200]);
+    pan.mockRestore();
+  });
+
+  it("renders servicing with the magazine detail for rearms and pans to the vehicle", () => {
+    const { engine, renderer } = engineWithEvents([serviceEvent(7, "rearm", "Hunter")]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText((t) => t.includes("rearmed") && t.includes("Hunter"))).toBeTruthy();
+    expect(screen.getByText((t) => t.includes("STANAG 30"))).toBeTruthy();
+
+    // vehicleId -1 falls back to the event position.
+    const pan = vi.spyOn(engine, "panToPosition");
+    fireEvent.click(screen.getByTestId("event-row-7"));
+    expect(pan).toHaveBeenCalledWith([100, 200]);
+    pan.mockRestore();
+  });
+
+  it("renders static weapon assembly and pans to its position", () => {
+    const { engine, renderer } = engineWithEvents([staticWeaponEvent(8, "assembled", "M2 HMG")]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText((t) => t.includes("M2 HMG"))).toBeTruthy();
+
+    const pan = vi.spyOn(engine, "panToPosition");
+    fireEvent.click(screen.getByTestId("event-row-8"));
+    expect(pan).toHaveBeenCalledWith([100, 200]);
+    pan.mockRestore();
+  });
+
+  it("renders a transmission with the speaker and net, panning to the speaker", () => {
+    const { engine, renderer } = engineWithEvents([
+      radioTransmission(10, "Start", 100),
+      radioTransmission(20, "Stop", 100),
+    ]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    // Transmissions are hidden by default; the comms tab owns them.
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Transmissions"));
+    const row = screen.getByText((t) => t.includes("transmitted on"));
+    expect(row.textContent).toContain("Alpha 1-1");
+    expect(row.textContent).toContain("100 MHz");
+
+    const pan = vi.spyOn(engine, "panToEntity");
+    fireEvent.click(screen.getByTestId("event-row-10"));
+    expect(pan).toHaveBeenCalledWith(2);
+    pan.mockRestore();
+  });
+
+  it("searches chat messages, transmissions and module names", () => {
+    const { engine, renderer } = engineWithEvents([
+      { frameNum: 5, type: "chat", channel: "Global", fromName: "Alpha 1-1", message: "pushing north" } as unknown as EventDef,
+      radioTransmission(10, "Start", 100),
+      radioTransmission(20, "Stop", 100),
+      zeusModuleEvent(15, "Artillery strike"),
+    ]);
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <EventsTab />
+      </TestProviders>
+    ));
+
+    fireEvent.click(screen.getByLabelText("Event filters"));
+    fireEvent.click(screen.getByText("Transmissions"));
+    fireEvent.click(screen.getByText("Chat"));
+
+    const input = screen.getByPlaceholderText("Search events...") as HTMLInputElement;
+
+    // Chat haystack includes channel, sender and message.
+    fireEvent.input(input, { target: { value: "global" } });
+    expect(screen.getByText((t) => t.includes("pushing north"))).toBeTruthy();
+    fireEvent.input(input, { target: { value: "alpha 1-1 pushing" } });
+    expect(screen.getByText((t) => t.includes("pushing north"))).toBeTruthy();
+
+    // Transmissions match on radio, formatted net, and speaker name.
+    fireEvent.input(input, { target: { value: "anprc152" } });
+    expect(screen.queryByText((t) => t.includes("pushing north"))).toBeNull();
+    expect(screen.getByText((t) => t.includes("transmitted on"))).toBeTruthy();
+
+    fireEvent.input(input, { target: { value: "artillery" } });
+    expect(screen.getByText((t) => t.includes("Artillery strike"))).toBeTruthy();
+
+    fireEvent.input(input, { target: { value: "zzz" } });
+    expect(screen.queryByTestId("event-row-0")).toBeNull();
+  });
+});

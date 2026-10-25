@@ -523,3 +523,118 @@ describe("StatsTab", () => {
     expect(screen.queryByText("CIV")).toBeNull();
   });
 });
+
+describe("StatsTab weather detail and movement", () => {
+  it("reports wind direction without a speed sample", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest(
+      [unitDef({ id: 1, side: "WEST" })],
+      [{
+        frameNum: 0,
+        type: "weather",
+        payload: { overcast: 0.5, rain: 0, fog: 0, windDir: 315, moonPhase: 0, ace: false },
+      }],
+      60,
+    ));
+    engine.seekTo(30);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    // Value and label render in separate cells.
+    expect(screen.getByText("NW 315°")).toBeTruthy();
+    expect(screen.getByText("Wind")).toBeTruthy();
+  });
+
+  it("shows gusts, lightnings and waves when the sample carries them", () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest(
+      [unitDef({ id: 1, side: "WEST" })],
+      [{
+        frameNum: 0,
+        type: "weather",
+        payload: { overcast: 0.5, rain: 0, fog: 0, moonPhase: 0, gusts: 0.4, lightnings: 0.2, waves: 0.3, ace: false },
+      }],
+      60,
+    ));
+    engine.seekTo(30);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    expect(screen.getByText("40%")).toBeTruthy();
+    expect(screen.getByText("20%")).toBeTruthy();
+    expect(screen.getByText("30%")).toBeTruthy();
+  });
+
+  it("ranks movement across players and formats distances", async () => {
+    const { engine, renderer } = createTestEngine();
+    // Two players moving at different speeds: Walker covers 2 m/frame from a
+    // standing start, Runner 10 m/frame. Default capture delay of 1 s samples
+    // every 5 frames.
+    const walk = Array.from({ length: 101 }, (_, i) => ({
+      position: [100 + i * 2, 200] as [number, number],
+      direction: 0,
+      alive: 1 as const,
+    }));
+    const run = Array.from({ length: 101 }, (_, i) => ({
+      position: [1000 + i * 10, 2000] as [number, number],
+      direction: 0,
+      alive: 1 as const,
+    }));
+    engine.loadRecording(makeManifest(
+      [
+        unitDef({ id: 1, name: "Walker", side: "WEST", isPlayer: true, positions: walk }),
+        unitDef({ id: 2, name: "Runner", side: "EAST", isPlayer: true, positions: run }),
+      ],
+      [],
+      100,
+    ));
+    engine.seekTo(100);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("Runner")).toBeTruthy();
+      expect(screen.getByText("Walker")).toBeTruthy();
+    });
+
+    // Steps are 5 frames apart: Walker moves 10 m per step over 20 steps = 200 m
+    // on foot; Runner does 50 m per step over 20 steps = 1.0 km and ranks first.
+    const rows = screen.getAllByText(/^(200 m|1\.0 km)$/);
+    expect(rows.map((el) => el.textContent).sort()).toEqual(["1.0 km", "1.0 km", "200 m", "200 m"]);
+    // Runner (1.0 km) is ranked above Walker (200 m).
+    expect(screen.getByText("Runner").compareDocumentPosition(screen.getByText("Walker")) &
+      Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("explains when nobody moved", async () => {
+    const { engine, renderer } = createTestEngine();
+    engine.loadRecording(makeManifest(
+      [unitDef({ id: 1, side: "WEST", isPlayer: false })],
+      [],
+      100,
+    ));
+    engine.seekTo(100);
+
+    render(() => (
+      <TestProviders engine={engine} renderer={renderer}>
+        <StatsTab />
+      </TestProviders>
+    ));
+
+    await vi.waitFor(() =>
+      expect(screen.getByText("No movement recorded")).toBeTruthy(),
+    );
+  });
+});
