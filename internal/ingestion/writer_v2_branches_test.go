@@ -195,6 +195,7 @@ func TestEventToProto_Chat(t *testing.T) {
 		},
 	})
 
+	require.NotNil(t, evt)
 	assert.Equal(t, uint32(12), evt.FrameNum)
 	chat := evt.GetChat()
 	require.NotNil(t, chat)
@@ -400,16 +401,98 @@ func TestMarkerToProto_StatesAndStyleFlags(t *testing.T) {
 	assert.Equal(t, "ELLIPSE", reshaped.Shape)
 }
 
-// Only a size component is enough to count as a style change.
-func TestMarkerToProto_StateStyleFromSizeOnly(t *testing.T) {
+// Every style field has to flip HasStyle on its own. Dropping any one of them
+// from the check means a restyle that changes only that field is stored without
+// its style, so the map keeps drawing the old text, colour or icon.
+func TestMarkerToProto_EachStyleFieldFlipsHasStyle(t *testing.T) {
+	cases := []struct {
+		name        string
+		style       core.MarkerState
+		expectStyle bool
+		check       func(t *testing.T, mp *pbv2.MarkerPosition)
+	}{
+		{
+			name:        "text only",
+			style:       core.MarkerState{Text: "renamed"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, "renamed", mp.Text) },
+		},
+		{
+			name:        "colour only",
+			style:       core.MarkerState{Color: "#00FF00"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, "00FF00", mp.Color) },
+		},
+		{
+			name:        "size only",
+			style:       core.MarkerState{Size: "[8,8]"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, []float32{8, 8}, mp.Size) },
+		},
+		{
+			name:        "marker type only",
+			style:       core.MarkerState{MarkerType: "mil_box"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, "mil_box", mp.Type) },
+		},
+		{
+			name:        "brush only",
+			style:       core.MarkerState{Brush: "Vertical"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, "Vertical", mp.Brush) },
+		},
+		{
+			name:        "shape only",
+			style:       core.MarkerState{Shape: "ELLIPSE"},
+			expectStyle: true,
+			check:       func(t *testing.T, mp *pbv2.MarkerPosition) { assert.Equal(t, "ELLIPSE", mp.Shape) },
+		},
+		{
+			name:        "position only",
+			expectStyle: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			state := tc.style
+			state.CaptureFrame = 1
+			state.Position = core.Position3D{X: 5, Y: 6}
+
+			marker := markerToProto(&markerRecord{
+				Marker: core.Marker{CaptureFrame: 0, Shape: "ICON", MarkerType: "mil_dot"},
+				States: []core.MarkerState{state},
+			})
+
+			require.Len(t, marker.Positions, 2)
+			mp := marker.Positions[1]
+			if tc.expectStyle {
+				assert.True(t, mp.HasStyle, "a change to %s must be flagged as a style change", tc.name)
+			} else {
+				assert.False(t, mp.HasStyle, "a move alone is not a style change")
+			}
+			if tc.check != nil {
+				tc.check(t, mp)
+			}
+		})
+	}
+}
+
+// A polyline is geometry rather than a moving icon, so its states are dropped
+// instead of being written as extra positions. Pinned as intended behaviour.
+func TestMarkerToProto_PolylineDropsStates(t *testing.T) {
 	marker := markerToProto(&markerRecord{
-		Marker: core.Marker{CaptureFrame: 0},
-		States: []core.MarkerState{{CaptureFrame: 1, Size: "[8,8]"}},
+		Marker: core.Marker{
+			CaptureFrame: 1,
+			Shape:        "POLYLINE",
+			Polyline:     core.Polyline{{X: 1, Y: 2}, {X: 3, Y: 4}},
+		},
+		States: []core.MarkerState{{CaptureFrame: 5, Position: core.Position3D{X: 9, Y: 9}, Text: "ignored"}},
 	})
 
-	require.Len(t, marker.Positions, 2)
-	assert.True(t, marker.Positions[1].HasStyle)
-	assert.Equal(t, []float32{8, 8}, marker.Positions[1].Size)
+	require.Len(t, marker.Positions, 1, "only the initial geometry is carried")
+	assert.Equal(t, []float32{1, 2, 3, 4}, marker.Positions[0].LineCoords)
+	assert.Empty(t, marker.Positions[0].Text)
 }
 
 func TestProjectileToProtoEvent(t *testing.T) {
@@ -469,8 +552,8 @@ func TestProjectileToProtoEvent(t *testing.T) {
 	assert.Equal(t, []string{"hitengine"}, proj.Hits[1].ComponentsHit)
 }
 
-// A foot-mobile projectile carries no vehicle, and the flags distinguish a miss
-// from a hit on nothing.
+// A foot-mobile projectile carries no vehicle id, and one with no hits carries
+// an empty hit list rather than a zero-valued entry.
 func TestProjectileToProtoEvent_FootSoldierWithoutHits(t *testing.T) {
 	proj := projectileToProtoEvent(core.ProjectileEvent{
 		FirerObjectID:  5,
@@ -559,8 +642,16 @@ func TestTelemetryToProtoEvent(t *testing.T) {
 	require.NotNil(t, tele.Weather)
 	assert.InDelta(t, 0.2, tele.Weather.Fog, 1e-5)
 	assert.InDelta(t, 0.6, tele.Weather.Overcast, 1e-5)
+	assert.InDelta(t, 0.1, tele.Weather.Rain, 1e-5)
+	assert.InDelta(t, 0.5, tele.Weather.Humidity, 1e-5)
+	assert.InDelta(t, 0.3, tele.Weather.Waves, 1e-5)
 	assert.InDelta(t, 12, tele.Weather.WindStr, 1e-5)
 	assert.InDelta(t, 270, tele.Weather.WindDir, 1e-5)
+	assert.InDelta(t, 0.4, tele.Weather.Gusts, 1e-5)
+	assert.InDelta(t, 0.9, tele.Weather.Lightnings, 1e-5)
+	assert.InDelta(t, 0.7, tele.Weather.MoonIntensity, 1e-5)
+	assert.InDelta(t, 0.25, tele.Weather.MoonPhase, 1e-5)
+	assert.InDelta(t, 1, tele.Weather.SunOrMoon, 1e-5)
 
 	require.Len(t, tele.Players, 2)
 	assert.Equal(t, "76561198000000000", tele.Players[0].Uid)
