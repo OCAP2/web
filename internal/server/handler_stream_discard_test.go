@@ -167,6 +167,28 @@ func TestStreamDiscard_LegacySession(t *testing.T) {
 	assert.Zero(t, rh.h.streamRegistry().activeCount())
 }
 
+// gate holds the hook calls it is installed in until it opens; reached
+// closes on the first call. Any number of calls is safe, including a stray
+// one from a session an earlier test left behind.
+type gate struct {
+	reached              chan struct{}
+	release              chan struct{}
+	reachOnce, openOnce sync.Once
+}
+
+func newGate(t *testing.T) *gate {
+	g := &gate{reached: make(chan struct{}), release: make(chan struct{})}
+	t.Cleanup(g.open)
+	return g
+}
+
+func (g *gate) hold() {
+	g.reachOnce.Do(func() { close(g.reached) })
+	<-g.release
+}
+
+func (g *gate) open() { g.openOnce.Do(func() { close(g.release) }) }
+
 // discardPayload names a mission in discard_mission.
 func discardPayload(missionID, producerID string) streaming.DiscardMissionPayload {
 	return streaming.DiscardMissionPayload{MissionID: missionID, ProducerID: producerID}
@@ -389,24 +411,20 @@ func TestStreamDiscard_WithoutSessionWaitsForExpiry(t *testing.T) {
 
 	// The grace expires and the partial is being saved when the discard
 	// arrives: it waits for the save, then removes the partial.
-	saving := make(chan struct{})
-	release := make(chan struct{})
-	var once sync.Once
-	unblock := func() { once.Do(func() { close(release) }) }
-	streamTestHooks.beforeSave = func() { close(saving); <-release }
-	t.Cleanup(func() { unblock(); streamTestHooks.beforeSave = nil })
+	save := newGate(t)
+	streamTestHooks.beforeSave = save.hold
+	t.Cleanup(func() { streamTestHooks.beforeSave = nil })
 	go rh.h.expireStream(ss, 0)
-	<-saving
-	streamTestHooks.beforeSave = nil
+	<-save.reached
 
-	reached := make(chan struct{})
-	var reachedOnce sync.Once
-	streamTestHooks.beforeDiscardSession = func() { reachedOnce.Do(func() { close(reached) }) }
+	found := newGate(t)
+	found.open() // only notes that the discard got there
+	streamTestHooks.beforeDiscardSession = found.hold
 	t.Cleanup(func() { streamTestHooks.beforeDiscardSession = nil })
 	c2 := rh.dial()
 	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-expiring", "p-1"))
-	<-reached // the discard found the session being saved
-	unblock()
+	<-found.reached // the discard found the session being saved
+	save.open()
 	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
 	assert.Empty(t, rh.ops(), "the partial saved meanwhile is removed")
 }
@@ -420,24 +438,20 @@ func TestStreamDiscard_WithoutSessionKeepsRecordingSavedMeanwhile(t *testing.T) 
 
 	// end_mission is being saved when a session-less discard of the
 	// mission arrives: the saved recording stays.
-	saving := make(chan struct{})
-	release := make(chan struct{})
-	var once sync.Once
-	unblock := func() { once.Do(func() { close(release) }) }
-	streamTestHooks.beforeSave = func() { close(saving); <-release }
-	t.Cleanup(func() { unblock(); streamTestHooks.beforeSave = nil })
+	save := newGate(t)
+	streamTestHooks.beforeSave = save.hold
+	t.Cleanup(func() { streamTestHooks.beforeSave = nil })
 	sendEnv(t, c, streaming.TypeEndMission, last+1, nil)
-	<-saving
-	streamTestHooks.beforeSave = nil
+	<-save.reached
 
-	reached := make(chan struct{})
-	var reachedOnce sync.Once
-	streamTestHooks.beforeDiscardSession = func() { reachedOnce.Do(func() { close(reached) }) }
+	found := newGate(t)
+	found.open()
+	streamTestHooks.beforeDiscardSession = found.hold
 	t.Cleanup(func() { streamTestHooks.beforeDiscardSession = nil })
 	c2 := rh.dial()
 	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-saving", "p-1"))
-	<-reached
-	unblock()
+	<-found.reached
+	save.open()
 	readUntil(t, c, isAckFor(streaming.TypeEndMission))
 	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
 	require.Len(t, rh.ops(), 1, "a recording saved through end_mission is never discarded")
@@ -453,21 +467,17 @@ func TestStreamDiscard_WithoutSessionHoldsOffStart(t *testing.T) {
 
 	// The session-less discard is removing the partial when a start of the
 	// same mission arrives: the start waits for it.
-	removing := make(chan struct{})
-	release := make(chan struct{})
-	var once sync.Once
-	unblock := func() { once.Do(func() { close(release) }) }
-	streamTestHooks.beforeRemove = func() error { close(removing); <-release; return nil }
-	t.Cleanup(func() { unblock(); streamTestHooks.beforeRemove = nil })
+	remove := newGate(t)
+	streamTestHooks.beforeRemove = func() error { remove.hold(); return nil }
+	t.Cleanup(func() { streamTestHooks.beforeRemove = nil })
 	c2 := rh.dial()
 	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-held", "p-1"))
-	<-removing
-	streamTestHooks.beforeRemove = nil
+	<-remove.reached
 
 	c3 := rh.dial()
 	sendEnv(t, c3, streaming.TypeStartMission, 1, startPayload("Restarted", "m-held", "p-1"))
 	assert.Never(t, func() bool { return rh.h.streamRegistry().get("m-held") != nil }, 200*time.Millisecond, 10*time.Millisecond, "the start waits for the discard")
-	unblock()
+	remove.open()
 	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
 	readUntil(t, c3, isAckFor(streaming.TypeStartMission))
 	ops := rh.ops()
@@ -558,4 +568,45 @@ func TestStreamDiscard_WithoutSessionFailedRemoval(t *testing.T) {
 	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-exp-f", "p-1"))
 	requireClosedUnacknowledged(t, c2)
 	require.Len(t, rh.ops(), 1)
+}
+
+func TestStreamDiscard_WithoutSessionInvalidPayload(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	for _, payload := range []any{map[string]any{"missionId": 7}, map[string]any{"producerId": "p-1"}} {
+		c := rh.dial()
+		sendEnv(t, c, streaming.TypeDiscardMission, 0, payload)
+		requireClosedUnacknowledged(t, c) // the producer keeps its spool
+	}
+}
+
+func TestStreamDiscard_KeepsSavedRecordingOfTheMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	replayMission(t, c, "Saved", "m-twice", "p-1", 3)
+
+	// A later attempt of the same mission id is discarded on its session.
+	c2 := rh.dial()
+	startResumable(t, c2, "Again", "m-twice", "p-1")
+	last := sendStates(t, c2, 2, 1, 2)
+	sendEnv(t, c2, streaming.TypeDiscardMission, last+1, discardPayload("m-twice", "p-1"))
+	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
+	ops := rh.ops()
+	require.Len(t, ops, 1, "the recording saved through end_mission stays")
+	assert.Equal(t, "Saved", ops[0].MissionName)
+}
+
+func TestStreamDiscard_EmptyMissionRemovalFailure(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	streamTestHooks.beforeRemove = func() error { return errors.New("database is locked") }
+	t.Cleanup(func() { streamTestHooks.beforeRemove = nil })
+	c := rh.dial()
+	startResumable(t, c, "Empty", "m-empty-f", "p-1")
+	c.Close()
+
+	reg := rh.h.streamRegistry()
+	require.Eventually(t, func() bool { return reg.get("m-empty-f") == nil }, 5*time.Second, 10*time.Millisecond)
+	assert.Zero(t, reg.activeCount(), "the slot is released")
+	ops := rh.ops()
+	require.Len(t, ops, 1)
+	assert.Equal(t, ConversionStatusFailed, ops[0].ConversionStatus, "no longer shown as live")
 }

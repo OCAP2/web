@@ -597,12 +597,12 @@ func (h *Handler) dropSession(ss *streamSession) error {
 	if err == nil {
 		err = h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir))
 	}
+	h.streamRegistry().release() // before leaving the registry, as saveStream does
 	if ss.resumable() {
 		// Remembered as finished, so a producer whose acknowledgement was
 		// lost learns from resume that the discard went through.
 		h.streamRegistry().remove(ss, err == nil)
 	}
-	h.streamRegistry().release()
 	if err != nil {
 		slog.Error("stream: cannot remove discarded mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
 		if ss.opID > 0 {
@@ -620,9 +620,15 @@ func (h *Handler) dropSession(ss *streamSession) error {
 // could not be removed, or a connection still feeds the mission.
 func (h *Handler) discardStreamed(raw json.RawMessage) bool {
 	var p streaming.DiscardMissionPayload
-	if len(raw) == 0 || json.Unmarshal(raw, &p) != nil || p.MissionID == "" {
+	if len(raw) == 0 || string(raw) == "null" {
 		slog.Info("stream: mission discarded without an active session")
-		return true
+		return true // like end_mission without a session: nothing named
+	}
+	if err := json.Unmarshal(raw, &p); err != nil || p.MissionID == "" {
+		// Not acknowledged: the producer keeps its spool rather than
+		// believing the mission dropped.
+		slog.Warn("stream: invalid discard_mission payload", "error", err)
+		return false
 	}
 	reg := h.streamRegistry()
 	// Reserving the mission id holds off a start of it while its recordings
@@ -787,8 +793,8 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 		reason = "superseded by a new mission"
 	}
 	ss.done = true
-	if ss.lastSeq.Load() <= 1 {
-		// Nothing was recorded after the start, for example a start the
+	if len(ss.counts) == 0 {
+		// Nothing was received after the start, for example a start the
 		// producer gave up waiting for: an empty recording is not kept.
 		slog.Info("stream: dropping abandoned mission that recorded nothing", "missionId", ss.missionID, "reason", reason)
 		ctx := context.Background()
@@ -798,8 +804,8 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 				h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
 			}
 		}
-		h.streamRegistry().remove(ss, false)
 		h.streamRegistry().release()
+		h.streamRegistry().remove(ss, false)
 		return
 	}
 	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)
