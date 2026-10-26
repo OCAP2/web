@@ -55,6 +55,7 @@ type streamSession struct {
 	mu        sync.Mutex
 	missionID string // empty for legacy sessions
 	producer  string
+	recovered bool // started by a resend from the producer's spool
 	session   *ingestion.Session
 	outputDir string
 	opID      int64
@@ -188,13 +189,15 @@ func (r *streamRegistry) isCompleted(missionID string) bool {
 	return ok && time.Since(at) <= completedTTL
 }
 
-// byProducer returns the producer's active sessions except keep.
+// byProducer returns the producer's active sessions except keep, and except
+// recovered ones: a resend from the spool is not the mission the producer
+// records live, which a new start supersedes.
 func (r *streamRegistry) byProducer(producer string, keep string) []*streamSession {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	var out []*streamSession
 	for id, s := range r.sessions {
-		if id != keep && s.producer == producer {
+		if id != keep && s.producer == producer && !s.recovered {
 			out = append(out, s)
 		}
 	}

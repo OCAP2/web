@@ -98,8 +98,9 @@ the next section.
   to one web server. Only a session of the same producer is affected by a new
   `start_mission`: its earlier mission is saved as `partial` at once instead of
   waiting for the grace period. A start marked `"recovered": true` resends an
-  older mission from the extension's spool and supersedes nothing: the
-  producer may be recording its next mission meanwhile.
+  older mission from the extension's spool. It supersedes nothing, and the
+  producer's next start does not supersede it either: the producer may be
+  recording its next mission meanwhile.
 - A session not resumed within the grace period is saved with `partial` appended
   to its tags.
 
@@ -163,14 +164,16 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
 - The server removes the recording's `streaming` row and files, along with the
   partial and failed segments earlier attempts of the same mission id left
   behind, and acknowledges it like `end_mission`
-  (`{"type":"ack","for":"discard_mission","seq":N}`). Recordings saved through
-  `end_mission` are never removed.
+  (`{"type":"ack","for":"discard_mission","seq":N}`). Recordings marked as
+  saved through `end_mission` (`stream_ended`, set before the session leaves
+  the registry) are never removed.
 - It also ends a legacy session (no numbering) the same way; the disconnect that
   follows no longer saves it as `partial`.
 - Like `end_mission`, it is acknowledged only once the recording is gone: until
   then progress acknowledgements stop short of its number. If the removal
   fails, the server closes the connection without acknowledging it, marks the
-  row `failed`, and the producer repeats the discard.
+  session's row `failed` (it is removed last), and the producer repeats the
+  discard.
 - The mission id is remembered as finished for an hour, in memory only, so a
   producer whose acknowledgement was lost gets `resume_completed`. After a web
   restart it gets `resume_unknown` and repeats the discard, which finds nothing
@@ -183,15 +186,16 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
   then removes every recording of that mission id not saved through
   `end_mission`, and acknowledges it without `seq`. It holds off a start of the
   mission id meanwhile. A session of the mission still waiting for its producer
-  (`producerId` must match) is dropped in its place. One a connection still
-  feeds is left alone, and the discard is not acknowledged.
+  (`producerId` must match) is dropped in its place, and one being saved is
+  waited for. One a connection still feeds, or another producer's, is left
+  alone, and the discard is not acknowledged.
 - Files are removed on a best-effort basis, as for a deleted operation: once the
   row is gone, the discard counts as done.
 
 The extension sends `discard_mission` only to servers that acknowledged
-`start_mission` with `protocolVersion: 3` or later. With an older server it
-closes the connection instead, and that server saves the recording as
-`partial`.
+`start_mission`, or answered `resume` for the session-less form, with
+`protocolVersion: 3` or later. With an older server it closes the connection
+instead, and that server saves the recording as `partial`.
 
 ### Legacy producers
 

@@ -354,21 +354,32 @@ func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	live := rh.dial()
 	startResumable(t, live, "Live", "m-live", "p-1")
 
+	reg := rh.h.streamRegistry()
+	running := func(missionID string) bool {
+		ss := reg.get(missionID)
+		if ss == nil {
+			return false
+		}
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return !ss.done && ss.owner != nil
+	}
+
 	// The producer resends an older mission from its spool.
 	c := rh.dial()
 	start := startPayload("Spooled", "m-spooled", "p-1")
 	start["recovered"] = true
 	sendEnv(t, c, streaming.TypeStartMission, 1, start)
 	readUntil(t, c, isAckFor(streaming.TypeStartMission))
+	assert.Never(t, func() bool { return !running("m-live") }, 300*time.Millisecond, 10*time.Millisecond, "the live mission is not superseded")
+
+	// The producer's next live mission supersedes the live one, not the resend.
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next", "p-1")
+	require.Eventually(t, func() bool { return reg.get("m-live") == nil }, 5*time.Second, 10*time.Millisecond)
+	assert.Never(t, func() bool { return !running("m-spooled") }, 300*time.Millisecond, 10*time.Millisecond, "the resend is not superseded")
 	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
 	readUntil(t, c, isAckFor(streaming.TypeEndMission))
-
-	ss := rh.h.streamRegistry().get("m-live")
-	require.NotNil(t, ss, "the live mission is not superseded")
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
-	assert.False(t, ss.done)
-	assert.NotNil(t, ss.owner, "its connection still feeds it")
 }
 
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {

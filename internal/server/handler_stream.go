@@ -287,9 +287,9 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 			return existing, ""
 		}
 		// A producer records one mission at a time: a new start supersedes
-		// whatever it left behind. Other producers are unaffected, and so is
-		// the producer's live mission when the start resends an older one
-		// from the spool.
+		// whatever it left behind. Other producers are unaffected. Resends
+		// from the spool are not the live mission: a recovered start
+		// supersedes nothing, and is not superseded (see byProducer).
 		if !payload.Recovered {
 			for _, old := range reg.byProducer(payload.ProducerID, payload.MissionID) {
 				go h.expireStream(old, 0)
@@ -348,6 +348,7 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 	if resumable {
 		ss.missionID = payload.MissionID
 		ss.producer = payload.ProducerID
+		ss.recovered = payload.Recovered
 		if err := h.repoOperation.SetStreamMission(context.Background(), op.ID, ss.missionID); err != nil {
 			slog.Warn("stream: cannot record mission id", "error", err)
 		}
@@ -582,9 +583,14 @@ func (h *Handler) discardStream(ss *streamSession, conn *streamConn, envelope st
 func (h *Handler) dropSession(ss *streamSession) error {
 	slog.Info("stream: mission discarded", "missionId", ss.missionID, "mission", ss.session.Mission().MissionName, "counts", ss.counts)
 	ctx := context.Background()
-	err := h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir))
-	if err == nil && ss.resumable() {
+	// The session's own row goes last: after a failure it is still there to
+	// be marked failed.
+	var err error
+	if ss.resumable() {
 		err = h.removeUnendedSegments(ctx, ss.missionID, ss.opID)
+	}
+	if err == nil {
+		err = h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir))
 	}
 	if ss.resumable() {
 		// Remembered as finished, so a producer whose acknowledgement was
@@ -636,6 +642,7 @@ func (h *Handler) discardStreamed(raw json.RawMessage) bool {
 			return dropped
 		}
 	}
+	slog.Warn("stream: cannot discard mission, its session is still being finalized", "missionId", p.MissionID)
 	return false
 }
 
@@ -649,8 +656,12 @@ func (h *Handler) discardDetached(ss *streamSession, producer string) (dropped, 
 	if ss.done {
 		return false, true
 	}
-	if ss.owner != nil || ss.producer != producer {
-		slog.Warn("stream: cannot discard mission, another connection feeds it", "missionId", ss.missionID)
+	if ss.owner != nil {
+		slog.Warn("stream: cannot discard mission, a connection feeds it", "missionId", ss.missionID)
+		return false, false
+	}
+	if ss.producer != producer {
+		slog.Warn("stream: cannot discard mission of another producer", "missionId", ss.missionID)
 		return false, false
 	}
 	if ss.grace != nil {

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -35,9 +36,18 @@ func requireClosed(t *testing.T, c *websocket.Conn) {
 	c.SetReadDeadline(time.Now().Add(5 * time.Second))
 	for {
 		if _, _, err := c.ReadMessage(); err != nil {
+			requireNotTimeout(t, err)
 			return
 		}
 	}
+}
+
+// requireNotTimeout fails when a read ended by its deadline: the server was
+// expected to close the connection.
+func requireNotTimeout(t *testing.T, err error) {
+	t.Helper()
+	var netErr net.Error
+	require.False(t, errors.As(err, &netErr) && netErr.Timeout(), "the server did not close the connection: %v", err)
 }
 
 func TestStreamDiscard_RemovesRecording(t *testing.T) {
@@ -311,6 +321,7 @@ func requireClosedUnacknowledged(t *testing.T, c *websocket.Conn) {
 	for {
 		var m streaming.AckMessage
 		if err := c.ReadJSON(&m); err != nil {
+			requireNotTimeout(t, err)
 			return
 		}
 		require.NotEqual(t, streaming.TypeDiscardMission, m.For, "discard_mission must not be acknowledged")
@@ -341,6 +352,90 @@ func TestStreamDiscard_WithoutSessionDropsWaitingSession(t *testing.T) {
 	assert.Nil(t, reg.get("m-wait"))
 	assert.True(t, reg.isCompleted("m-wait"))
 	assert.Zero(t, reg.activeCount())
+}
+
+// detachedSession waits until the mission's session waits for its producer.
+func (rh *resumeHarness) detachedSession(missionID string) {
+	rh.t.Helper()
+	require.Eventually(rh.t, func() bool {
+		ss := rh.h.streamRegistry().get(missionID)
+		if ss == nil {
+			return false
+		}
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return ss.owner == nil
+	}, 5*time.Second, 10*time.Millisecond)
+}
+
+func TestStreamDiscard_WithoutSessionLeavesOtherProducersSession(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Theirs", "m-theirs", "p-1")
+	rh.waitSeq("m-theirs", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	rh.detachedSession("m-theirs")
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-theirs", "p-2"))
+	requireClosedUnacknowledged(t, c2)
+	require.Len(t, rh.ops(), 1)
+	assert.NotNil(t, rh.h.streamRegistry().get("m-theirs"), "its producer may still resume it")
+}
+
+func TestStreamDiscard_WithoutSessionWaitsForExpiry(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Expiring", "m-expiring", "p-1")
+	rh.waitSeq("m-expiring", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	rh.detachedSession("m-expiring")
+	ss := rh.h.streamRegistry().get("m-expiring")
+
+	// The grace expires and the partial is being saved when the discard
+	// arrives: it waits for the save, then removes the partial.
+	saving := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(release) }) }
+	streamTestHooks.beforeSave = func() { close(saving); <-release }
+	t.Cleanup(func() { unblock(); streamTestHooks.beforeSave = nil })
+	go rh.h.expireStream(ss, 0)
+	<-saving
+	streamTestHooks.beforeSave = nil
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-expiring", "p-1"))
+	time.Sleep(100 * time.Millisecond) // the discard blocks on the session
+	unblock()
+	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
+	assert.Empty(t, rh.ops(), "the partial saved meanwhile is removed")
+}
+
+func TestStreamDiscard_FailedSegmentRemovalMarksRowFailed(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Earlier", "m-part", "p-1")
+	rh.waitSeq("m-part", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-part") == nil }, 5*time.Second, 10*time.Millisecond)
+
+	// A resend of the mission is discarded, but its earlier segment cannot go.
+	c2 := rh.dial()
+	startResumable(t, c2, "Resent", "m-part", "p-1")
+	last := sendStates(t, c2, 2, 1, 3)
+	rh.waitSeq("m-part", last)
+	streamTestHooks.beforeRemove = func() error { return errors.New("database is locked") }
+	t.Cleanup(func() { streamTestHooks.beforeRemove = nil })
+	sendEnv(t, c2, streaming.TypeDiscardMission, last+1, discardPayload("m-part", "p-1"))
+	requireClosedUnacknowledged(t, c2)
+
+	statuses := map[string]string{}
+	for _, op := range rh.ops() {
+		statuses[op.MissionName] = op.ConversionStatus
+	}
+	assert.Len(t, statuses, 2, "nothing was removed")
+	assert.Equal(t, ConversionStatusFailed, statuses["Resent"], "the discarded session's row is no longer live")
 }
 
 func TestStreamDiscard_WithoutSessionLeavesFedSession(t *testing.T) {
