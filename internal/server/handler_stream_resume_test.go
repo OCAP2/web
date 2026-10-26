@@ -349,6 +349,28 @@ func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
 	assert.Equal(t, "TvT,partial", old.Tag)
 }
 
+func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	live := rh.dial()
+	startResumable(t, live, "Live", "m-live", "p-1")
+
+	// The producer resends an older mission from its spool.
+	c := rh.dial()
+	start := startPayload("Spooled", "m-spooled", "p-1")
+	start["recovered"] = true
+	sendEnv(t, c, streaming.TypeStartMission, 1, start)
+	readUntil(t, c, isAckFor(streaming.TypeStartMission))
+	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+
+	ss := rh.h.streamRegistry().get("m-live")
+	require.NotNil(t, ss, "the live mission is not superseded")
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	assert.False(t, ss.done)
+	assert.NotNil(t, ss.owner, "its connection still feeds it")
+}
+
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {
 	rh := newResumeHarness(t, time.Minute)
 	c := rh.dial()

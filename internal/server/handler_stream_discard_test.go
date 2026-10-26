@@ -225,8 +225,8 @@ func TestStreamDiscard_NotAcknowledgedBeforeRemoval(t *testing.T) {
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	unblock := func() { releaseOnce.Do(func() { close(release) }) }
-	streamTestHooks.beforeDiscard = func() error { <-release; return nil }
-	t.Cleanup(func() { unblock(); streamTestHooks.beforeDiscard = nil })
+	streamTestHooks.beforeRemove = func() error { <-release; return nil }
+	t.Cleanup(func() { unblock(); streamTestHooks.beforeRemove = nil })
 
 	msgs := make(chan streaming.AckMessage, 64)
 	go func() {
@@ -271,8 +271,8 @@ func TestStreamDiscard_FailedRemovalIsRepeated(t *testing.T) {
 	last := sendStates(t, c, 2, 1, 3)
 	rh.waitSeq("m-fail", last)
 
-	streamTestHooks.beforeDiscard = func() error { return errors.New("database is locked") }
-	t.Cleanup(func() { streamTestHooks.beforeDiscard = nil })
+	streamTestHooks.beforeRemove = func() error { return errors.New("database is locked") }
+	t.Cleanup(func() { streamTestHooks.beforeRemove = nil })
 	sendEnv(t, c, streaming.TypeDiscardMission, last+1, discardPayload("m-fail", "p-1"))
 	c.SetReadDeadline(time.Now().Add(5 * time.Second))
 	for {
@@ -291,7 +291,7 @@ func TestStreamDiscard_FailedRemovalIsRepeated(t *testing.T) {
 	reg := rh.h.streamRegistry()
 	assert.False(t, reg.isCompleted("m-fail"))
 	assert.Zero(t, reg.activeCount())
-	streamTestHooks.beforeDiscard = nil
+	streamTestHooks.beforeRemove = nil
 
 	// The producer repeats the discard: resume_unknown, then without a session.
 	c2 := rh.dial()
@@ -301,4 +301,109 @@ func TestStreamDiscard_FailedRemovalIsRepeated(t *testing.T) {
 	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
 	assert.Empty(t, rh.ops())
 	assert.Empty(t, rh.recordingFiles())
+}
+
+// requireClosedUnacknowledged checks that the server closes the connection
+// with an error and never acknowledges discard_mission.
+func requireClosedUnacknowledged(t *testing.T, c *websocket.Conn) {
+	t.Helper()
+	c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		var m streaming.AckMessage
+		if err := c.ReadJSON(&m); err != nil {
+			return
+		}
+		require.NotEqual(t, streaming.TypeDiscardMission, m.For, "discard_mission must not be acknowledged")
+	}
+}
+
+func TestStreamDiscard_WithoutSessionDropsWaitingSession(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Waiting", "m-wait", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-wait", last)
+	c.Close()
+	reg := rh.h.streamRegistry()
+	require.Eventually(t, func() bool {
+		ss := reg.get("m-wait")
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return ss.owner == nil
+	}, 5*time.Second, 10*time.Millisecond, "the session waits for its producer")
+
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-wait", "p-1"))
+	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
+
+	assert.Empty(t, rh.ops())
+	assert.Empty(t, rh.recordingFiles())
+	assert.Nil(t, reg.get("m-wait"))
+	assert.True(t, reg.isCompleted("m-wait"))
+	assert.Zero(t, reg.activeCount())
+}
+
+func TestStreamDiscard_WithoutSessionLeavesFedSession(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Fed", "m-fed", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-fed", last)
+
+	other := rh.dial()
+	sendEnv(t, other, streaming.TypeDiscardMission, 0, discardPayload("m-fed", "p-1"))
+	requireClosedUnacknowledged(t, other)
+
+	require.Len(t, rh.ops(), 1, "the live recording stays")
+	sendEnv(t, c, streaming.TypeEndMission, last+1, nil)
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+}
+
+func TestStreamDiscard_LosesToSupersede(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Superseded", "m-old-d", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-old-d", last)
+
+	// The producer's next mission supersedes this one; its save is held.
+	saving := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(release) }) }
+	streamTestHooks.beforeSave = func() { close(saving); <-release }
+	t.Cleanup(func() { unblock(); streamTestHooks.beforeSave = nil })
+	next := rh.dial()
+	sendEnv(t, next, streaming.TypeStartMission, 1, startPayload("Next", "m-next-d", "p-1"))
+	<-saving
+	streamTestHooks.beforeSave = nil
+
+	sendEnv(t, c, streaming.TypeDiscardMission, last+1, discardPayload("m-old-d", "p-1"))
+	unblock()
+	requireClosedUnacknowledged(t, c)
+	require.Len(t, rh.opsByMission("m-old-d"), 1, "saved as partial by the supersede")
+
+	// The producer finishes the discard without a session.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-old-d", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-old-d", "p-1"))
+	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
+	assert.Empty(t, rh.opsByMission("m-old-d"))
+}
+
+func TestStreamDiscard_WithoutSessionFailedRemoval(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Expired", "m-exp-f", "p-1")
+	rh.waitSeq("m-exp-f", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	require.Eventually(t, func() bool { return rh.h.streamRegistry().get("m-exp-f") == nil }, 5*time.Second, 10*time.Millisecond)
+
+	streamTestHooks.beforeRemove = func() error { return errors.New("database is locked") }
+	t.Cleanup(func() { streamTestHooks.beforeRemove = nil })
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-exp-f", "p-1"))
+	requireClosedUnacknowledged(t, c2)
+	require.Len(t, rh.ops(), 1)
 }

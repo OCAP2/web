@@ -97,7 +97,9 @@ the next section.
 - Sessions are keyed only by mission id, so any number of game servers can stream
   to one web server. Only a session of the same producer is affected by a new
   `start_mission`: its earlier mission is saved as `partial` at once instead of
-  waiting for the grace period.
+  waiting for the grace period. A start marked `"recovered": true` resends an
+  older mission from the extension's spool and supersedes nothing: the
+  producer may be recording its next mission meanwhile.
 - A session not resumed within the grace period is saved with `partial` appended
   to its tags.
 
@@ -163,6 +165,8 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
   behind, and acknowledges it like `end_mission`
   (`{"type":"ack","for":"discard_mission","seq":N}`). Recordings saved through
   `end_mission` are never removed.
+- It also ends a legacy session (no numbering) the same way; the disconnect that
+  follows no longer saves it as `partial`.
 - Like `end_mission`, it is acknowledged only once the recording is gone: until
   then progress acknowledgements stop short of its number. If the removal
   fails, the server closes the connection without acknowledging it, marks the
@@ -177,7 +181,12 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
   expired and the mission was saved as `partial`, or the web server restarted
   and marked it `failed`, the discard is sent without a session. The server
   then removes every recording of that mission id not saved through
-  `end_mission`.
+  `end_mission`, and acknowledges it without `seq`. It holds off a start of the
+  mission id meanwhile. A session of the mission still waiting for its producer
+  (`producerId` must match) is dropped in its place. One a connection still
+  feeds is left alone, and the discard is not acknowledged.
+- Files are removed on a best-effort basis, as for a deleted operation: once the
+  row is gone, the discard counts as done.
 
 The extension sends `discard_mission` only to servers that acknowledged
 `start_mission` with `protocolVersion: 3` or later. With an older server it
