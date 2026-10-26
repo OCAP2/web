@@ -73,7 +73,8 @@ the next section.
 - `start_mission` carries a `missionId` (a random UUID per recording) and a
   `producerId` (a random UUID per extension process). Every envelope carries a
   `seq`, starting with 1 for `start_mission`.
-- The server acknowledges `start_mission` with `protocolVersion: 2`, and then
+- The server acknowledges `start_mission` with `protocolVersion: 3` (resume
+  plus `discard_mission`, see below), and then
   acknowledges received envelopes cumulatively (`{"type":"ack","seq":N}`) every
   `streaming.ackInterval` and during bursts. The extension holds every envelope
   in memory until it is acknowledged.
@@ -146,6 +147,27 @@ The server saves such a recording with `partial` appended to its tags. It
 still replaces the earlier partial segments when nothing is missing. Missions
 whose save was never confirmed are recovered the same way, with their own
 `end_mission`.
+
+### Discarding a mission
+
+The addon enforces its save limits, such as `OCAP_settings_minMissionTime`, by
+not saving a recording. A streamed recording already lives on the server,
+which would save it as `partial` once its producer is gone. So instead of
+`end_mission` the producer sends a numbered `discard_mission` (no payload):
+
+- The server removes the recording's `streaming` row and files, along with the
+  partial segments earlier attempts of the same mission id left behind, and
+  acknowledges it like `end_mission` (`{"type":"ack","for":"discard_mission"}`).
+- The mission id is remembered as finished, so a producer whose acknowledgement
+  was lost gets `resume_completed`.
+- An unconfirmed discard stays in the extension's spool. Recovery sends only the
+  `discard_mission` again: a server that no longer holds the mission
+  (`resume_unknown`) has nothing left to drop, and the mission is not resent.
+
+The extension sends `discard_mission` only to servers that acknowledged
+`start_mission` with `protocolVersion: 3` or later. With an older server it
+closes the connection instead, and that server saves the recording as
+`partial`.
 
 ### Legacy producers
 

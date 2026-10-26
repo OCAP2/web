@@ -133,7 +133,7 @@ func TestStreamResume_StartAckAdvertisesResume(t *testing.T) {
 	rh := newResumeHarness(t, time.Minute)
 	c := rh.dial()
 	ack := startResumable(t, c, "Advertise", "m-1", "p-1")
-	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), ack.ProtocolVersion)
 	assert.Equal(t, uint64(1), ack.Seq)
 	assert.NotNil(t, rh.h.streamRegistry().get("m-1"))
 }
@@ -743,7 +743,7 @@ func TestStreamResume_ConcurrentRepeatedStartsShareOneSession(t *testing.T) {
 	unblock()
 
 	ack := readUntil(t, second, isAckFor(streaming.TypeStartMission))
-	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), ack.ProtocolVersion)
 	assert.Len(t, rh.ops(), 1, "one recording for one mission")
 	assert.Equal(t, 1, rh.h.streamRegistry().activeCount(), "one admission for one mission")
 
