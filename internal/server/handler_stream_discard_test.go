@@ -171,8 +171,8 @@ func TestStreamDiscard_LegacySession(t *testing.T) {
 // closes on the first call. Any number of calls is safe, including a stray
 // one from a session an earlier test left behind.
 type gate struct {
-	reached              chan struct{}
-	release              chan struct{}
+	reached             chan struct{}
+	release             chan struct{}
 	reachOnce, openOnce sync.Once
 }
 
