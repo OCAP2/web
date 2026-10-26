@@ -30,6 +30,9 @@ var streamTestHooks struct {
 	// beforeRemove runs before a streamed recording is removed; an error
 	// stands in for a failed removal.
 	beforeRemove func() error
+	// beforeDiscardSession runs before a session-less discard_mission
+	// handles a session of its mission.
+	beforeDiscardSession func()
 }
 
 // streamConn is one producer WebSocket connection.

@@ -33,7 +33,30 @@ func newResumeHarness(t *testing.T, grace time.Duration) *resumeHarness {
 	h.setting.Streaming.AckInterval = 20 * time.Millisecond
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	return &resumeHarness{t: t, h: h, srv: srv, dir: dir}
+	rh := &resumeHarness{t: t, h: h, srv: srv, dir: dir}
+	t.Cleanup(func() { retire(rh.h) })
+	return rh
+}
+
+// retire keeps a handler's sessions from ever being finalized, so a grace
+// timer a test leaves behind cannot fire into a later test's hooks.
+func retire(h *Handler) {
+	reg := h.streamRegistry()
+	reg.mu.Lock()
+	sessions := make([]*streamSession, 0, len(reg.sessions))
+	for _, ss := range reg.sessions {
+		sessions = append(sessions, ss)
+	}
+	reg.mu.Unlock()
+	for _, ss := range sessions {
+		ss.mu.Lock()
+		ss.done = true
+		if ss.grace != nil {
+			ss.grace.Stop()
+			ss.grace = nil
+		}
+		ss.mu.Unlock()
+	}
 }
 
 func (rh *resumeHarness) dial() *websocket.Conn {
@@ -330,6 +353,7 @@ func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
 	rh := newResumeHarness(t, time.Hour)
 	c := rh.dial()
 	startResumable(t, c, "Old", "m-old", "p-1")
+	rh.waitSeq("m-old", sendStates(t, c, 2, 1, 3))
 	other := rh.dial()
 	startResumable(t, other, "Other", "m-other", "p-2")
 	c.Close() // waiting for resume, an hour of grace
@@ -347,6 +371,24 @@ func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
 		}
 	}
 	assert.Equal(t, "TvT,partial", old.Tag)
+}
+
+func TestStreamResume_AbandonedEmptyMissionIsDropped(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Expired empty", "m-empty-x", "p-1")
+	c.Close()
+	empty := rh.dial()
+	startResumable(t, empty, "Superseded empty", "m-empty-s", "p-2")
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next-e", "p-2")
+
+	reg := rh.h.streamRegistry()
+	require.Eventually(t, func() bool { return reg.get("m-empty-x") == nil && reg.get("m-empty-s") == nil }, 5*time.Second, 10*time.Millisecond)
+	ops := rh.ops()
+	require.Len(t, ops, 1, "neither the expired nor the superseded empty mission is kept")
+	assert.Equal(t, "Next", ops[0].MissionName)
+	assert.Equal(t, 1, reg.activeCount())
 }
 
 func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
@@ -438,6 +480,7 @@ func TestStreamRegistryCompletedExpires(t *testing.T) {
 func (rh *resumeHarness) restart() {
 	rh.t.Helper()
 	rh.srv.Close()
+	retire(rh.h) // the old process is gone
 	h := &Handler{repoOperation: rh.h.repoOperation, setting: rh.h.setting}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/stream", h.HandleStream)

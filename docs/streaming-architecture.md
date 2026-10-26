@@ -66,7 +66,7 @@ the connection without a success acknowledgement, and the row is marked failed.
 
 ### Resume after a network failure
 
-Producers that declare `protocolVersion: 2` in `start_mission` get lossless
+Producers that declare `protocolVersion: 2` or later in `start_mission` get lossless
 recovery from network failures. Older producers keep the behavior described in
 the next section.
 
@@ -102,7 +102,8 @@ the next section.
   producer's next start does not supersede it either: the producer may be
   recording its next mission meanwhile.
 - A session not resumed within the grace period is saved with `partial` appended
-  to its tags.
+  to its tags. A session superseded or expired before it received anything
+  after `start_mission` is removed instead: an empty recording is not kept.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -199,7 +200,7 @@ instead, and that server saves the recording as `partial`.
 
 ### Legacy producers
 
-For producers without `protocolVersion: 2`, disconnecting without `end_mission`,
+For producers without `protocolVersion: 2` or later, disconnecting without `end_mission`,
 including an addon/extension crash or a normal WebSocket close, finalizes
 received data and appends `partial` to the mission's existing tags. Repeated
 starts cannot silently discard an active mission. Their reconnect starts a new

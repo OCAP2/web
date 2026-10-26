@@ -230,7 +230,11 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 				return
 			}
 			current.Store(nil)
-			writeJSON(streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeDiscardMission, Seq: ss.lastSeq.Load()})
+			ack := streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeDiscardMission}
+			if ss.resumable() {
+				ack.Seq = ss.lastSeq.Load()
+			}
+			writeJSON(ack)
 			return
 
 		default:
@@ -515,7 +519,8 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 		// Marked before the session leaves the registry, so a discard of the
 		// mission id never takes the saved recording for an unended one.
 		if err := h.repoOperation.MarkStreamEnded(ctx, ss.opID); err != nil {
-			slog.Warn("stream: cannot mark mission ended", "error", err)
+			// A discard of the mission id would now take it for unended.
+			slog.Error("stream: cannot mark mission ended", "missionId", ss.missionID, "id", ss.opID, "error", err)
 		}
 	}
 	if ss.resumable() {
@@ -630,13 +635,17 @@ func (h *Handler) discardStreamed(raw json.RawMessage) bool {
 			return false
 		}
 		if existing == nil {
-			defer reg.settle(p.MissionID, nil)
-			if err := h.removeUnendedSegments(context.Background(), p.MissionID, 0); err != nil {
+			err := h.removeUnendedSegments(context.Background(), p.MissionID, 0)
+			reg.settle(p.MissionID, nil)
+			if err != nil {
 				slog.Error("stream: cannot remove discarded mission", "missionId", p.MissionID, "error", err)
 				return false
 			}
 			slog.Info("stream: mission discarded after its session ended", "missionId", p.MissionID)
 			return true
+		}
+		if hook := streamTestHooks.beforeDiscardSession; hook != nil {
+			hook()
 		}
 		if dropped, retry := h.discardDetached(existing, p.ProducerID); !retry {
 			return dropped
@@ -777,8 +786,23 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 	if gen == 0 {
 		reason = "superseded by a new mission"
 	}
-	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)
 	ss.done = true
+	if ss.lastSeq.Load() <= 1 {
+		// Nothing was recorded after the start, for example a start the
+		// producer gave up waiting for: an empty recording is not kept.
+		slog.Info("stream: dropping abandoned mission that recorded nothing", "missionId", ss.missionID, "reason", reason)
+		ctx := context.Background()
+		if err := h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir)); err != nil {
+			slog.Error("stream: cannot remove empty mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
+			if ss.opID > 0 {
+				h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
+			}
+		}
+		h.streamRegistry().remove(ss, false)
+		h.streamRegistry().release()
+		return
+	}
+	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)
 	_ = h.saveStream(ss, "partial")
 	h.streamRegistry().remove(ss, false)
 }
