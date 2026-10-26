@@ -611,6 +611,10 @@ func TestStreamResume_SlotsReleasedOnEveryEnding(t *testing.T) {
 	old.Close()
 	superseding := rh.dial()
 	startResumable(t, superseding, "New", "m-new", "p-3") // supersedes m-old
+	discarded := rh.dial()
+	startResumable(t, discarded, "Discarded", "m-d", "p-4")
+	sendEnv(t, discarded, streaming.TypeDiscardMission, 2, nil)
+	readUntil(t, discarded, isAckFor(streaming.TypeDiscardMission))
 
 	require.Eventually(t, func() bool { return reg.activeCount() == 1 }, 5*time.Second, 10*time.Millisecond, "only the newest mission is still active")
 }

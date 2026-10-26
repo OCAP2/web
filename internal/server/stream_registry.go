@@ -27,6 +27,9 @@ const streamReserveWait = 30 * time.Second
 var streamTestHooks struct {
 	beforeCreate func() // a start reserved its mission and is about to set it up
 	beforeSave   func() // a session is about to be finalized
+	// beforeDiscard runs before a discarded session is removed; an error
+	// stands in for a failed removal.
+	beforeDiscard func() error
 }
 
 // streamConn is one producer WebSocket connection.

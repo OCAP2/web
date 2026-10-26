@@ -87,8 +87,10 @@ the next section.
   a web restart), the extension starts a new segment: it sends `start_mission`
   again followed by every envelope the server never acknowledged. The skipped
   numbers mark the new recording `partial`.
-- If the mission was already saved but the `end_mission` acknowledgement was
-  lost, the server answers `resume_completed` instead.
+- If the mission was already saved, or discarded, but the `end_mission` or
+  `discard_mission` acknowledgement was lost, the server answers
+  `resume_completed` instead.
+- Servers at protocol version 3 put `protocolVersion: 3` on every resume reply.
 - A connection that resumes a mission closes any older connection still bound to
   it, such as a half-open socket. The extension also abandons a socket whose
   written envelopes stay unacknowledged for 20 seconds.
@@ -153,16 +155,29 @@ whose save was never confirmed are recovered the same way, with their own
 The addon enforces its save limits, such as `OCAP_settings_minMissionTime`, by
 not saving a recording. A streamed recording already lives on the server,
 which would save it as `partial` once its producer is gone. So instead of
-`end_mission` the producer sends a numbered `discard_mission` (no payload):
+`end_mission` the producer sends a numbered `discard_mission`, whose payload
+names the mission (`{"missionId":"…","producerId":"…"}`):
 
 - The server removes the recording's `streaming` row and files, along with the
-  partial segments earlier attempts of the same mission id left behind, and
-  acknowledges it like `end_mission` (`{"type":"ack","for":"discard_mission"}`).
-- The mission id is remembered as finished, so a producer whose acknowledgement
-  was lost gets `resume_completed`.
+  partial and failed segments earlier attempts of the same mission id left
+  behind, and acknowledges it like `end_mission`
+  (`{"type":"ack","for":"discard_mission","seq":N}`). Recordings saved through
+  `end_mission` are never removed.
+- Like `end_mission`, it is acknowledged only once the recording is gone: until
+  then progress acknowledgements stop short of its number. If the removal
+  fails, the server closes the connection without acknowledging it, marks the
+  row `failed`, and the producer repeats the discard.
+- The mission id is remembered as finished for an hour, in memory only, so a
+  producer whose acknowledgement was lost gets `resume_completed`. After a web
+  restart it gets `resume_unknown` and repeats the discard, which finds nothing
+  left to remove.
 - An unconfirmed discard stays in the extension's spool. Recovery sends only the
-  `discard_mission` again: a server that no longer holds the mission
-  (`resume_unknown`) has nothing left to drop, and the mission is not resent.
+  `discard_mission` again, never the mission data. When the server no longer
+  holds the session (`resume_unknown`), for example because the resume grace
+  expired and the mission was saved as `partial`, or the web server restarted
+  and marked it `failed`, the discard is sent without a session. The server
+  then removes every recording of that mission id not saved through
+  `end_mission`.
 
 The extension sends `discard_mission` only to servers that acknowledged
 `start_mission` with `protocolVersion: 3` or later. With an older server it
