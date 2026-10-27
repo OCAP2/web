@@ -480,6 +480,37 @@ func TestStreamResume_RecoveredResumeIsNotSuperseded(t *testing.T) {
 	readUntil(t, rec, isAckFor(streaming.TypeEndMission))
 }
 
+func TestStreamResume_RecoveredResumeAfterSupersedeChoseIt(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	c := rh.dial()
+	startResumable(t, c, "Left", "m-chosen", "p-1")
+	rh.waitSeq("m-chosen", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	rh.detachedSession("m-chosen")
+
+	// The producer's next start chooses the waiting mission to supersede...
+	reg := rh.h.streamRegistry()
+	chosen := reg.byProducer("p-1", "m-next-c")
+	require.Len(t, chosen, 1)
+
+	// ...its recovery resumes the mission before the supersede runs...
+	rec := rh.dial()
+	sendEnv(t, rec, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-chosen", ProducerID: "p-1", Recovered: true})
+	readUntil(t, rec, isType(streaming.ServerResumeOK))
+
+	// ...and then the supersede runs.
+	rh.h.expireStream(chosen[0], 0)
+	ss := reg.get("m-chosen")
+	require.NotNil(t, ss, "the resumed recovery stays registered")
+	ss.mu.Lock()
+	done, owned := ss.done, ss.owner != nil
+	ss.mu.Unlock()
+	assert.False(t, done, "the resumed recovery is not saved")
+	assert.True(t, owned, "its connection is not closed")
+	sendEnv(t, rec, streaming.TypeEndMission, 5, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, rec, isAckFor(streaming.TypeEndMission))
+}
+
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {
 	rh := newResumeHarness(t, time.Minute)
 	c := rh.dial()

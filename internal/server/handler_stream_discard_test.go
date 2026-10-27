@@ -459,6 +459,42 @@ func TestStreamDiscard_WithoutSessionKeepsRecordingSavedMeanwhile(t *testing.T) 
 	require.Len(t, rh.ops(), 1, "a recording saved through end_mission is never discarded")
 }
 
+func TestStreamDiscard_EndNotAcknowledgedWithoutEndedMark(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	startResumable(t, c, "Unmarked", "m-unmarked", "p-1")
+	last := sendStates(t, c, 2, 1, 3)
+	rh.waitSeq("m-unmarked", last)
+
+	// The recording is saved, but marking it ended fails: the discard
+	// protection is not durable, so the save does not count.
+	streamTestHooks.beforeMarkEnded = func() error { return errors.New("database is locked") }
+	t.Cleanup(func() { streamTestHooks.beforeMarkEnded = nil })
+	sendEnv(t, c, streaming.TypeEndMission, last+1, nil)
+	c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		var m streaming.AckMessage
+		err := c.ReadJSON(&m)
+		if err != nil {
+			require.True(t, websocket.IsCloseError(err, websocket.CloseInternalServerErr), "%v", err)
+			break
+		}
+		require.NotEqual(t, streaming.TypeEndMission, m.For, "end_mission is not acknowledged without the mark")
+		require.Less(t, m.Seq, last+1)
+	}
+	assert.False(t, rh.h.streamRegistry().isCompleted("m-unmarked"))
+	streamTestHooks.beforeMarkEnded = nil
+
+	// The producer was never told the recording is kept: resume finds it
+	// unknown, and the producer's discard removes it.
+	c2 := rh.dial()
+	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-unmarked", ProducerID: "p-1"})
+	readUntil(t, c2, isType(streaming.ServerResumeUnknown))
+	sendEnv(t, c2, streaming.TypeDiscardMission, 0, discardPayload("m-unmarked", "p-1"))
+	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
+	assert.Empty(t, rh.ops())
+}
+
 func TestStreamDiscard_WithoutSessionHoldsOffStart(t *testing.T) {
 	rh := newResumeHarness(t, 100*time.Millisecond)
 	c := rh.dial()

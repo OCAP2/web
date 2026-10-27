@@ -284,11 +284,8 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 				return nil, "mission id in use"
 			}
 			// The producer repeats a start whose acknowledgement it missed.
-			if !h.takeOver(existing, conn) {
+			if !h.takeOver(existing, conn, payload.Recovered) {
 				return nil, "mission already saved"
-			}
-			if payload.Recovered {
-				existing.recovered.Store(true)
 			}
 			slog.Info("stream: mission start repeated", "missionId", payload.MissionID)
 			return existing, ""
@@ -367,11 +364,18 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 
 // takeOver makes conn the session's connection, closing any previous one and
 // cancelling a pending grace expiry. It fails once the session is saved.
-func (h *Handler) takeOver(ss *streamSession, conn *streamConn) bool {
+// recovered marks the session continued from the producer's spool: not the
+// mission it records live, which its next start supersedes. It is set under
+// the session's lock, so a supersede already scheduled sees it (see
+// expireStream).
+func (h *Handler) takeOver(ss *streamSession, conn *streamConn, recovered bool) bool {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	if ss.done {
 		return false
+	}
+	if recovered {
+		ss.recovered.Store(true)
 	}
 	if ss.owner != nil && ss.owner != conn {
 		ss.owner.kick() // a half-open predecessor must not feed the session any more
@@ -396,12 +400,7 @@ func (h *Handler) resumeStream(raw json.RawMessage, conn *streamConn) (streaming
 		return reply(streaming.ServerResumeUnknown, 0), nil
 	}
 	reg := h.streamRegistry()
-	if ss := reg.get(p.MissionID); ss != nil && ss.producer == p.ProducerID && h.takeOver(ss, conn) {
-		if p.Recovered {
-			// Continued from the producer's spool: not the mission it
-			// records live, which its next start supersedes.
-			ss.recovered.Store(true)
-		}
+	if ss := reg.get(p.MissionID); ss != nil && ss.producer == p.ProducerID && h.takeOver(ss, conn, p.Recovered) {
 		seq := ss.lastSeq.Load()
 		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq, "recovered", p.Recovered)
 		return reply(streaming.ServerResumeOK, seq), ss
@@ -537,8 +536,10 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if err == nil && ss.resumable() {
 		// Marked before the session leaves the registry, so a discard of the
 		// mission id never takes the saved recording for an unended one.
-		if err := h.repoOperation.MarkStreamEnded(ctx, ss.opID); err != nil {
-			// A discard of the mission id would now take it for unended.
+		// Without the mark the save does not count: end_mission is not
+		// acknowledged, and the producer resends the mission, whose
+		// recording replaces this one, or discards it.
+		if err = h.markStreamEnded(ctx, ss.opID); err != nil {
 			slog.Error("stream: cannot mark mission ended", "missionId", ss.missionID, "id", ss.opID, "error", err)
 		}
 	}
@@ -555,6 +556,17 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 		h.replaceStreamSegments(ctx, ss)
 	}
 	return endSaved
+}
+
+// markStreamEnded records that the session's row was saved through
+// end_mission.
+func (h *Handler) markStreamEnded(ctx context.Context, id int64) error {
+	if hook := streamTestHooks.beforeMarkEnded; hook != nil {
+		if err := hook(); err != nil {
+			return err
+		}
+	}
+	return h.repoOperation.MarkStreamEnded(ctx, id)
 }
 
 // replaceStreamSegments removes the partial recordings an earlier attempt of
@@ -820,6 +832,11 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 	}
 	if gen != 0 && (ss.owner != nil || gen != ss.detachGen) {
 		return // resumed, or detached again with a newer timer
+	}
+	if gen == 0 && ss.recovered.Load() {
+		// Recovery resumed it after the new start chose it: a resend from
+		// the spool is not superseded (see byProducer).
+		return
 	}
 	if ss.owner != nil {
 		ss.owner.kick()
