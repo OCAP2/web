@@ -395,6 +395,7 @@ func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	rh := newResumeHarness(t, time.Hour)
 	live := rh.dial()
 	startResumable(t, live, "Live", "m-live", "p-1")
+	rh.waitSeq("m-live", sendStates(t, live, 2, 1, 3))
 
 	reg := rh.h.streamRegistry()
 	running := func(missionID string) bool {
@@ -422,6 +423,13 @@ func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	assert.Never(t, func() bool { return !running("m-spooled") }, 300*time.Millisecond, 10*time.Millisecond, "the resend is not superseded")
 	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
 	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+
+	tags := map[string]string{}
+	for _, op := range rh.ops() {
+		tags[op.MissionName] = op.Tag
+	}
+	assert.Equal(t, "TvT,partial", tags["Live"], "the superseded live mission is saved as partial")
+	assert.Equal(t, "TvT,partial", tags["Spooled"], "the resend is saved through its interrupted end")
 }
 
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {

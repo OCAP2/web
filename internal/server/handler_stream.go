@@ -586,7 +586,7 @@ func (h *Handler) discardStream(ss *streamSession, conn *streamConn, envelope st
 // marked failed, no longer live; the producer's repeated discard, without a
 // session, removes it. Caller holds ss.mu and has set ss.done.
 func (h *Handler) dropSession(ss *streamSession) error {
-	slog.Info("stream: mission discarded", "missionId", ss.missionID, "mission", ss.session.Mission().MissionName, "counts", ss.counts)
+	slog.Info("stream: discarding mission", "missionId", ss.missionID, "mission", ss.session.Mission().MissionName, "counts", ss.counts)
 	ctx := context.Background()
 	// The session's own row goes last: after a failure it is still there to
 	// be marked failed.

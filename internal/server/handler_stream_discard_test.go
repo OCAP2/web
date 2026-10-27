@@ -80,7 +80,8 @@ func TestStreamDiscard_LostAckResolvedByResume(t *testing.T) {
 
 	c2 := rh.dial()
 	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-lost", ProducerID: "p-1"})
-	readUntil(t, c2, isType(streaming.ServerResumeCompleted))
+	reply := readUntil(t, c2, isType(streaming.ServerResumeCompleted))
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), reply.ProtocolVersion)
 	assert.Empty(t, rh.ops())
 }
 
@@ -96,6 +97,7 @@ func TestStreamDiscard_ResumedSession(t *testing.T) {
 	c2 := rh.dial()
 	sendEnv(t, c2, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-res", ProducerID: "p-1"})
 	reply := readUntil(t, c2, isType(streaming.ServerResumeOK))
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), reply.ProtocolVersion, "the producer learns the server still takes discard_mission")
 	sendEnv(t, c2, streaming.TypeDiscardMission, reply.Seq+1, nil)
 	readUntil(t, c2, isAckFor(streaming.TypeDiscardMission))
 
