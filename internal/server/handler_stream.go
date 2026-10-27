@@ -287,6 +287,9 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 			if !h.takeOver(existing, conn) {
 				return nil, "mission already saved"
 			}
+			if payload.Recovered {
+				existing.recovered.Store(true)
+			}
 			slog.Info("stream: mission start repeated", "missionId", payload.MissionID)
 			return existing, ""
 		}
@@ -515,6 +518,17 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if ss.gap || interrupted {
 		tag = withPartialTag(tag)
 	}
+	if interrupted && len(ss.counts) == 0 && ss.resumable() {
+		// A mission recovered after a crash right after its start: an empty
+		// recording is not kept, as on grace expiry.
+		slog.Info("stream: dropping interrupted mission that recorded nothing", "missionId", ss.missionID)
+		ss.done = true
+		h.dropEmptySession(ss, true)
+		if envelope.Seq > ss.lastSeq.Load() {
+			ss.lastSeq.Store(envelope.Seq)
+		}
+		return endSaved
+	}
 	slog.Info("stream: mission ended", "missionId", ss.missionID, "counts", ss.counts)
 
 	ss.done = true
@@ -587,10 +601,29 @@ func (h *Handler) discardStream(ss *streamSession, conn *streamConn, envelope st
 	return endSaved
 }
 
+// dropEmptySession removes a session that received nothing after its start
+// instead of saving an empty recording, and releases it; finished remembers
+// the mission id as finished for resume. Caller holds ss.mu and has set
+// ss.done.
+func (h *Handler) dropEmptySession(ss *streamSession, finished bool) {
+	ctx := context.Background()
+	if err := h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir)); err != nil {
+		slog.Error("stream: cannot remove empty mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
+		if ss.opID > 0 {
+			h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
+		}
+	}
+	h.streamRegistry().release()
+	if ss.resumable() {
+		h.streamRegistry().remove(ss, finished)
+	}
+}
+
 // dropSession removes a discarded session's recording and earlier unended
 // segments of its mission, and releases the session. On failure the row is
-// marked failed, no longer live; the producer's repeated discard, without a
-// session, removes it. Caller holds ss.mu and has set ss.done.
+// marked failed, no longer live, and the producer repeats the discard: on a
+// new session after resume_unknown, or without one from its spool's
+// recovery. Either removes it. Caller holds ss.mu and has set ss.done.
 func (h *Handler) dropSession(ss *streamSession) error {
 	slog.Info("stream: discarding mission", "missionId", ss.missionID, "mission", ss.session.Mission().MissionName, "counts", ss.counts)
 	ctx := context.Background()
@@ -803,17 +836,9 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 	ss.done = true
 	if len(ss.counts) == 0 {
 		// Nothing was received after the start, for example a start the
-		// producer gave up waiting for: an empty recording is not kept.
+		// producer gave up waiting for.
 		slog.Info("stream: dropping abandoned mission that recorded nothing", "missionId", ss.missionID, "reason", reason)
-		ctx := context.Background()
-		if err := h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir)); err != nil {
-			slog.Error("stream: cannot remove empty mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
-			if ss.opID > 0 {
-				h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
-			}
-		}
-		h.streamRegistry().release()
-		h.streamRegistry().remove(ss, false)
+		h.dropEmptySession(ss, false)
 		return
 	}
 	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)

@@ -104,7 +104,8 @@ the next section.
   the session it continues exempt too.
 - A session not resumed within the grace period is saved with `partial` appended
   to its tags. A session superseded or expired before it received anything
-  after `start_mission` is removed instead: an empty recording is not kept.
+  after `start_mission`, or ended as interrupted with nothing in it, is
+  removed instead: an empty recording is not kept.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -180,7 +181,9 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
 - The mission id is remembered as finished for an hour, in memory only, so a
   producer whose acknowledgement was lost gets `resume_completed`. After a web
   restart it gets `resume_unknown` and repeats the discard, which finds nothing
-  left to remove.
+  left to remove. A live connection repeats it by resending the mission from
+  its spool into a new session first, which the discard then drops with the
+  rest; recovery repeats it without a session.
 - An unconfirmed discard stays in the extension's spool. Recovery sends only the
   `discard_mission` again, never the mission data. When the server no longer
   holds the session (`resume_unknown`), for example because the resume grace

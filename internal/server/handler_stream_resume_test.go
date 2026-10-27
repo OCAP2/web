@@ -391,6 +391,24 @@ func TestStreamResume_AbandonedEmptyMissionIsDropped(t *testing.T) {
 	assert.Equal(t, 1, reg.activeCount())
 }
 
+func TestStreamResume_InterruptedEmptyMissionIsDropped(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	// Recovery after a crash right after the start: nothing but the start.
+	start := startPayload("Crashed early", "m-crash-empty", "p-1")
+	start["recovered"] = true
+	sendEnv(t, c, streaming.TypeStartMission, 1, start)
+	readUntil(t, c, isAckFor(streaming.TypeStartMission))
+	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
+	ack := readUntil(t, c, isAckFor(streaming.TypeEndMission))
+	assert.Equal(t, uint64(2), ack.Seq)
+
+	assert.Empty(t, rh.ops(), "an empty recording is not kept")
+	reg := rh.h.streamRegistry()
+	assert.True(t, reg.isCompleted("m-crash-empty"), "a lost ack is answered by resume_completed")
+	assert.Zero(t, reg.activeCount())
+}
+
 func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	rh := newResumeHarness(t, time.Hour)
 	live := rh.dial()
@@ -421,7 +439,8 @@ func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	startResumable(t, next, "Next", "m-next", "p-1")
 	require.Eventually(t, func() bool { return reg.get("m-live") == nil }, 5*time.Second, 10*time.Millisecond)
 	assert.Never(t, func() bool { return !running("m-spooled") }, 300*time.Millisecond, 10*time.Millisecond, "the resend is not superseded")
-	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
+	last := sendStates(t, c, 2, 1, 2)
+	sendEnv(t, c, streaming.TypeEndMission, last+1, streaming.EndMissionPayload{Interrupted: true})
 	readUntil(t, c, isAckFor(streaming.TypeEndMission))
 
 	tags := map[string]string{}
