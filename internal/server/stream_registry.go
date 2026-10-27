@@ -58,7 +58,7 @@ type streamSession struct {
 	mu        sync.Mutex
 	missionID string // empty for legacy sessions
 	producer  string
-	recovered bool // started by a resend from the producer's spool
+	recovered atomic.Bool // started or resumed by a resend from the producer's spool
 	session   *ingestion.Session
 	outputDir string
 	opID      int64
@@ -200,7 +200,7 @@ func (r *streamRegistry) byProducer(producer string, keep string) []*streamSessi
 	defer r.mu.Unlock()
 	var out []*streamSession
 	for id, s := range r.sessions {
-		if id != keep && s.producer == producer && !s.recovered {
+		if id != keep && s.producer == producer && !s.recovered.Load() {
 			out = append(out, s)
 		}
 	}

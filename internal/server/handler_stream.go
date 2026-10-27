@@ -352,7 +352,7 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 	if resumable {
 		ss.missionID = payload.MissionID
 		ss.producer = payload.ProducerID
-		ss.recovered = payload.Recovered
+		ss.recovered.Store(payload.Recovered)
 		if err := h.repoOperation.SetStreamMission(context.Background(), op.ID, ss.missionID); err != nil {
 			slog.Warn("stream: cannot record mission id", "error", err)
 		}
@@ -394,8 +394,13 @@ func (h *Handler) resumeStream(raw json.RawMessage, conn *streamConn) (streaming
 	}
 	reg := h.streamRegistry()
 	if ss := reg.get(p.MissionID); ss != nil && ss.producer == p.ProducerID && h.takeOver(ss, conn) {
+		if p.Recovered {
+			// Continued from the producer's spool: not the mission it
+			// records live, which its next start supersedes.
+			ss.recovered.Store(true)
+		}
 		seq := ss.lastSeq.Load()
-		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq)
+		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq, "recovered", p.Recovered)
 		return reply(streaming.ServerResumeOK, seq), ss
 	}
 	if reg.isCompleted(p.MissionID) || h.streamEnded(p.MissionID) {
@@ -575,9 +580,10 @@ func (h *Handler) discardStream(ss *streamSession, conn *streamConn, envelope st
 	if h.dropSession(ss) != nil {
 		return endFailed
 	}
-	if envelope.Seq > 0 {
+	if envelope.Seq > ss.lastSeq.Load() {
 		ss.lastSeq.Store(envelope.Seq)
 	}
+	slog.Info("stream: mission discarded", "missionId", ss.missionID)
 	return endSaved
 }
 
@@ -634,6 +640,8 @@ func (h *Handler) discardStreamed(raw json.RawMessage) bool {
 	// Reserving the mission id holds off a start of it while its recordings
 	// go. A session of the mission is dropped in its place, unless a
 	// connection still feeds it.
+	// A finalized session leaves the registry before it unlocks, so one retry
+	// is normally enough; the bound only guards against a broken invariant.
 	for range 3 {
 		existing, err := reg.reserve(p.MissionID, streamReserveWait)
 		if err != nil {

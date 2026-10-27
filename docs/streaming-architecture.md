@@ -100,7 +100,8 @@ the next section.
   waiting for the grace period. A start marked `"recovered": true` resends an
   older mission from the extension's spool. It supersedes nothing, and the
   producer's next start does not supersede it either: the producer may be
-  recording its next mission meanwhile.
+  recording its next mission meanwhile. A `resume` marked the same way makes
+  the session it continues exempt too.
 - A session not resumed within the grace period is saved with `partial` appended
   to its tags. A session superseded or expired before it received anything
   after `start_mission` is removed instead: an empty recording is not kept.
@@ -174,7 +175,8 @@ names the mission (`{"missionId":"…","producerId":"…"}`):
   then progress acknowledgements stop short of its number. If the removal
   fails, the server closes the connection without acknowledging it, marks the
   session's row `failed` (it is removed last), and the producer repeats the
-  discard.
+  discard. A legacy session has no mission id to repeat it by; its row stays
+  `failed`.
 - The mission id is remembered as finished for an hour, in memory only, so a
   producer whose acknowledgement was lost gets `resume_completed`. After a web
   restart it gets `resume_unknown` and repeats the discard, which finds nothing

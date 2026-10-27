@@ -432,6 +432,35 @@ func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
 	assert.Equal(t, "TvT,partial", tags["Spooled"], "the resend is saved through its interrupted end")
 }
 
+func TestStreamResume_RecoveredResumeIsNotSuperseded(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	c := rh.dial()
+	startResumable(t, c, "Left", "m-left", "p-1")
+	rh.waitSeq("m-left", sendStates(t, c, 2, 1, 3))
+	c.Close()
+
+	// The producer's recovery continues the mission from its spool...
+	rec := rh.dial()
+	sendEnv(t, rec, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-left", ProducerID: "p-1", Recovered: true})
+	readUntil(t, rec, isType(streaming.ServerResumeOK))
+
+	// ...while it starts recording its next mission.
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next-r", "p-1")
+	reg := rh.h.streamRegistry()
+	assert.Never(t, func() bool {
+		ss := reg.get("m-left")
+		if ss == nil {
+			return true
+		}
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return ss.done
+	}, 300*time.Millisecond, 10*time.Millisecond, "the resumed recovery is not superseded")
+	sendEnv(t, rec, streaming.TypeEndMission, 5, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, rec, isAckFor(streaming.TypeEndMission))
+}
+
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {
 	rh := newResumeHarness(t, time.Minute)
 	c := rh.dial()
