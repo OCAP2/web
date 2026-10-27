@@ -3,7 +3,7 @@ module github.com/OCAP2/web
 go 1.27.2
 
 require (
-	github.com/OCAP2/extension/v5 v5.0.2-0.20261019201552-0ebd39eb0267
+	github.com/OCAP2/extension/v5 v5.0.2-0.20261027093953-0a7ce6a9b9a7
 	github.com/getkin/kin-openapi v0.151.0
 	github.com/go-fuego/fuego v0.21.0
 	github.com/golang-jwt/jwt/v5 v5.3.1

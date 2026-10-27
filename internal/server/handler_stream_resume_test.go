@@ -33,7 +33,30 @@ func newResumeHarness(t *testing.T, grace time.Duration) *resumeHarness {
 	h.setting.Streaming.AckInterval = 20 * time.Millisecond
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	return &resumeHarness{t: t, h: h, srv: srv, dir: dir}
+	rh := &resumeHarness{t: t, h: h, srv: srv, dir: dir}
+	t.Cleanup(func() { retire(rh.h) })
+	return rh
+}
+
+// retire keeps a handler's sessions from ever being finalized, so a grace
+// timer a test leaves behind cannot fire into a later test's hooks.
+func retire(h *Handler) {
+	reg := h.streamRegistry()
+	reg.mu.Lock()
+	sessions := make([]*streamSession, 0, len(reg.sessions))
+	for _, ss := range reg.sessions {
+		sessions = append(sessions, ss)
+	}
+	reg.mu.Unlock()
+	for _, ss := range sessions {
+		ss.mu.Lock()
+		ss.done = true
+		if ss.grace != nil {
+			ss.grace.Stop()
+			ss.grace = nil
+		}
+		ss.mu.Unlock()
+	}
 }
 
 func (rh *resumeHarness) dial() *websocket.Conn {
@@ -133,7 +156,7 @@ func TestStreamResume_StartAckAdvertisesResume(t *testing.T) {
 	rh := newResumeHarness(t, time.Minute)
 	c := rh.dial()
 	ack := startResumable(t, c, "Advertise", "m-1", "p-1")
-	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), ack.ProtocolVersion)
 	assert.Equal(t, uint64(1), ack.Seq)
 	assert.NotNil(t, rh.h.streamRegistry().get("m-1"))
 }
@@ -330,6 +353,7 @@ func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
 	rh := newResumeHarness(t, time.Hour)
 	c := rh.dial()
 	startResumable(t, c, "Old", "m-old", "p-1")
+	rh.waitSeq("m-old", sendStates(t, c, 2, 1, 3))
 	other := rh.dial()
 	startResumable(t, other, "Other", "m-other", "p-2")
 	c.Close() // waiting for resume, an hour of grace
@@ -347,6 +371,144 @@ func TestStreamResume_NewMissionSupersedesProducersOldOne(t *testing.T) {
 		}
 	}
 	assert.Equal(t, "TvT,partial", old.Tag)
+}
+
+func TestStreamResume_AbandonedEmptyMissionIsDropped(t *testing.T) {
+	rh := newResumeHarness(t, 100*time.Millisecond)
+	c := rh.dial()
+	startResumable(t, c, "Expired empty", "m-empty-x", "p-1")
+	c.Close()
+	empty := rh.dial()
+	startResumable(t, empty, "Superseded empty", "m-empty-s", "p-2")
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next-e", "p-2")
+
+	reg := rh.h.streamRegistry()
+	require.Eventually(t, func() bool { return reg.get("m-empty-x") == nil && reg.get("m-empty-s") == nil }, 5*time.Second, 10*time.Millisecond)
+	ops := rh.ops()
+	require.Len(t, ops, 1, "neither the expired nor the superseded empty mission is kept")
+	assert.Equal(t, "Next", ops[0].MissionName)
+	assert.Equal(t, 1, reg.activeCount())
+}
+
+func TestStreamResume_InterruptedEmptyMissionIsDropped(t *testing.T) {
+	rh := newResumeHarness(t, time.Minute)
+	c := rh.dial()
+	// Recovery after a crash right after the start: nothing but the start.
+	start := startPayload("Crashed early", "m-crash-empty", "p-1")
+	start["recovered"] = true
+	sendEnv(t, c, streaming.TypeStartMission, 1, start)
+	readUntil(t, c, isAckFor(streaming.TypeStartMission))
+	sendEnv(t, c, streaming.TypeEndMission, 2, streaming.EndMissionPayload{Interrupted: true})
+	ack := readUntil(t, c, isAckFor(streaming.TypeEndMission))
+	assert.Equal(t, uint64(2), ack.Seq)
+
+	assert.Empty(t, rh.ops(), "an empty recording is not kept")
+	reg := rh.h.streamRegistry()
+	assert.True(t, reg.isCompleted("m-crash-empty"), "a lost ack is answered by resume_completed")
+	assert.Zero(t, reg.activeCount())
+}
+
+func TestStreamResume_RecoveredStartLeavesLiveMission(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	live := rh.dial()
+	startResumable(t, live, "Live", "m-live", "p-1")
+	rh.waitSeq("m-live", sendStates(t, live, 2, 1, 3))
+
+	reg := rh.h.streamRegistry()
+	running := func(missionID string) bool {
+		ss := reg.get(missionID)
+		if ss == nil {
+			return false
+		}
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return !ss.done && ss.owner != nil
+	}
+
+	// The producer resends an older mission from its spool.
+	c := rh.dial()
+	start := startPayload("Spooled", "m-spooled", "p-1")
+	start["recovered"] = true
+	sendEnv(t, c, streaming.TypeStartMission, 1, start)
+	readUntil(t, c, isAckFor(streaming.TypeStartMission))
+	assert.Never(t, func() bool { return !running("m-live") }, 300*time.Millisecond, 10*time.Millisecond, "the live mission is not superseded")
+
+	// The producer's next live mission supersedes the live one, not the resend.
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next", "p-1")
+	require.Eventually(t, func() bool { return reg.get("m-live") == nil }, 5*time.Second, 10*time.Millisecond)
+	assert.Never(t, func() bool { return !running("m-spooled") }, 300*time.Millisecond, 10*time.Millisecond, "the resend is not superseded")
+	last := sendStates(t, c, 2, 1, 2)
+	sendEnv(t, c, streaming.TypeEndMission, last+1, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, c, isAckFor(streaming.TypeEndMission))
+
+	tags := map[string]string{}
+	for _, op := range rh.ops() {
+		tags[op.MissionName] = op.Tag
+	}
+	assert.Equal(t, "TvT,partial", tags["Live"], "the superseded live mission is saved as partial")
+	assert.Equal(t, "TvT,partial", tags["Spooled"], "the resend is saved through its interrupted end")
+}
+
+func TestStreamResume_RecoveredResumeIsNotSuperseded(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	c := rh.dial()
+	startResumable(t, c, "Left", "m-left", "p-1")
+	rh.waitSeq("m-left", sendStates(t, c, 2, 1, 3))
+	c.Close()
+
+	// The producer's recovery continues the mission from its spool...
+	rec := rh.dial()
+	sendEnv(t, rec, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-left", ProducerID: "p-1", Recovered: true})
+	readUntil(t, rec, isType(streaming.ServerResumeOK))
+
+	// ...while it starts recording its next mission.
+	next := rh.dial()
+	startResumable(t, next, "Next", "m-next-r", "p-1")
+	reg := rh.h.streamRegistry()
+	assert.Never(t, func() bool {
+		ss := reg.get("m-left")
+		if ss == nil {
+			return true
+		}
+		ss.mu.Lock()
+		defer ss.mu.Unlock()
+		return ss.done
+	}, 300*time.Millisecond, 10*time.Millisecond, "the resumed recovery is not superseded")
+	sendEnv(t, rec, streaming.TypeEndMission, 5, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, rec, isAckFor(streaming.TypeEndMission))
+}
+
+func TestStreamResume_RecoveredResumeAfterSupersedeChoseIt(t *testing.T) {
+	rh := newResumeHarness(t, time.Hour)
+	c := rh.dial()
+	startResumable(t, c, "Left", "m-chosen", "p-1")
+	rh.waitSeq("m-chosen", sendStates(t, c, 2, 1, 3))
+	c.Close()
+	rh.detachedSession("m-chosen")
+
+	// The producer's next start chooses the waiting mission to supersede...
+	reg := rh.h.streamRegistry()
+	chosen := reg.byProducer("p-1", "m-next-c")
+	require.Len(t, chosen, 1)
+
+	// ...its recovery resumes the mission before the supersede runs...
+	rec := rh.dial()
+	sendEnv(t, rec, streaming.TypeResume, 0, streaming.ResumePayload{MissionID: "m-chosen", ProducerID: "p-1", Recovered: true})
+	readUntil(t, rec, isType(streaming.ServerResumeOK))
+
+	// ...and then the supersede runs.
+	rh.h.expireStream(chosen[0], 0)
+	ss := reg.get("m-chosen")
+	require.NotNil(t, ss, "the resumed recovery stays registered")
+	ss.mu.Lock()
+	done, owned := ss.done, ss.owner != nil
+	ss.mu.Unlock()
+	assert.False(t, done, "the resumed recovery is not saved")
+	assert.True(t, owned, "its connection is not closed")
+	sendEnv(t, rec, streaming.TypeEndMission, 5, streaming.EndMissionPayload{Interrupted: true})
+	readUntil(t, rec, isAckFor(streaming.TypeEndMission))
 }
 
 func TestStreamResume_RepeatedStartReusesSession(t *testing.T) {
@@ -405,6 +567,7 @@ func TestStreamRegistryCompletedExpires(t *testing.T) {
 func (rh *resumeHarness) restart() {
 	rh.t.Helper()
 	rh.srv.Close()
+	retire(rh.h) // the old process is gone
 	h := &Handler{repoOperation: rh.h.repoOperation, setting: rh.h.setting}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/stream", h.HandleStream)
@@ -611,6 +774,10 @@ func TestStreamResume_SlotsReleasedOnEveryEnding(t *testing.T) {
 	old.Close()
 	superseding := rh.dial()
 	startResumable(t, superseding, "New", "m-new", "p-3") // supersedes m-old
+	discarded := rh.dial()
+	startResumable(t, discarded, "Discarded", "m-d", "p-4")
+	sendEnv(t, discarded, streaming.TypeDiscardMission, 2, nil)
+	readUntil(t, discarded, isAckFor(streaming.TypeDiscardMission))
 
 	require.Eventually(t, func() bool { return reg.activeCount() == 1 }, 5*time.Second, 10*time.Millisecond, "only the newest mission is still active")
 }
@@ -743,7 +910,7 @@ func TestStreamResume_ConcurrentRepeatedStartsShareOneSession(t *testing.T) {
 	unblock()
 
 	ack := readUntil(t, second, isAckFor(streaming.TypeStartMission))
-	assert.Equal(t, uint8(streaming.ProtocolVersionResume), ack.ProtocolVersion)
+	assert.Equal(t, uint8(streaming.ProtocolVersionDiscard), ack.ProtocolVersion)
 	assert.Len(t, rh.ops(), 1, "one recording for one mission")
 	assert.Equal(t, 1, rh.h.streamRegistry().activeCount(), "one admission for one mission")
 

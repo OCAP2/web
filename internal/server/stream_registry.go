@@ -27,6 +27,15 @@ const streamReserveWait = 30 * time.Second
 var streamTestHooks struct {
 	beforeCreate func() // a start reserved its mission and is about to set it up
 	beforeSave   func() // a session is about to be finalized
+	// beforeRemove runs before a streamed recording is removed; an error
+	// stands in for a failed removal.
+	beforeRemove func() error
+	// beforeMarkEnded runs before a saved recording is marked ended; an
+	// error stands in for a failed write.
+	beforeMarkEnded func() error
+	// beforeDiscardSession runs before a session-less discard_mission
+	// handles a session of its mission.
+	beforeDiscardSession func()
 }
 
 // streamConn is one producer WebSocket connection.
@@ -52,6 +61,7 @@ type streamSession struct {
 	mu        sync.Mutex
 	missionID string // empty for legacy sessions
 	producer  string
+	recovered atomic.Bool // started or resumed by a resend from the producer's spool
 	session   *ingestion.Session
 	outputDir string
 	opID      int64
@@ -185,13 +195,15 @@ func (r *streamRegistry) isCompleted(missionID string) bool {
 	return ok && time.Since(at) <= completedTTL
 }
 
-// byProducer returns the producer's active sessions except keep.
+// byProducer returns the producer's active sessions except keep, and except
+// recovered ones: a resend from the spool is not the mission the producer
+// records live, which a new start supersedes.
 func (r *streamRegistry) byProducer(producer string, keep string) []*streamSession {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	var out []*streamSession
 	for id, s := range r.sessions {
-		if id != keep && s.producer == producer {
+		if id != keep && s.producer == producer && !s.recovered.Load() {
 			out = append(out, s)
 		}
 	}

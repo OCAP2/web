@@ -358,11 +358,22 @@ type StreamSegment struct {
 // StreamSegments returns the operations recorded for the producer mission,
 // except the one with id exceptID.
 func (r *RepoOperation) StreamSegments(ctx context.Context, missionID string, exceptID int64) ([]StreamSegment, error) {
+	return r.streamSegments(ctx, `stream_mission_id = ? AND id != ?`, missionID, exceptID)
+}
+
+// UnendedStreamSegments returns the operations recorded for the producer
+// mission that were not saved through end_mission, except the one with id
+// exceptID: partial and failed recordings, and live ones.
+func (r *RepoOperation) UnendedStreamSegments(ctx context.Context, missionID string, exceptID int64) ([]StreamSegment, error) {
+	return r.streamSegments(ctx, `stream_mission_id = ? AND id != ? AND stream_ended = 0`, missionID, exceptID)
+}
+
+func (r *RepoOperation) streamSegments(ctx context.Context, where string, missionID string, exceptID int64) ([]StreamSegment, error) {
 	if missionID == "" {
 		return nil, nil
 	}
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, filename FROM operations WHERE stream_mission_id = ? AND id != ? ORDER BY id`, missionID, exceptID)
+		`SELECT id, filename FROM operations WHERE `+where+` ORDER BY id`, missionID, exceptID)
 	if err != nil {
 		return nil, err
 	}

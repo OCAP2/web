@@ -66,14 +66,15 @@ the connection without a success acknowledgement, and the row is marked failed.
 
 ### Resume after a network failure
 
-Producers that declare `protocolVersion: 2` in `start_mission` get lossless
+Producers that declare `protocolVersion: 2` or later in `start_mission` get lossless
 recovery from network failures. Older producers keep the behavior described in
 the next section.
 
 - `start_mission` carries a `missionId` (a random UUID per recording) and a
   `producerId` (a random UUID per extension process). Every envelope carries a
   `seq`, starting with 1 for `start_mission`.
-- The server acknowledges `start_mission` with `protocolVersion: 2`, and then
+- The server acknowledges `start_mission` with `protocolVersion: 3` (resume
+  plus `discard_mission`, see below), and then
   acknowledges received envelopes cumulatively (`{"type":"ack","seq":N}`) every
   `streaming.ackInterval` and during bursts. The extension holds every envelope
   in memory until it is acknowledged.
@@ -86,17 +87,25 @@ the next section.
   a web restart), the extension starts a new segment: it sends `start_mission`
   again followed by every envelope the server never acknowledged. The skipped
   numbers mark the new recording `partial`.
-- If the mission was already saved but the `end_mission` acknowledgement was
-  lost, the server answers `resume_completed` instead.
+- If the mission was already saved, or discarded, but the `end_mission` or
+  `discard_mission` acknowledgement was lost, the server answers
+  `resume_completed` instead.
+- Servers at protocol version 3 put `protocolVersion: 3` on every resume reply.
 - A connection that resumes a mission closes any older connection still bound to
   it, such as a half-open socket. The extension also abandons a socket whose
   written envelopes stay unacknowledged for 20 seconds.
 - Sessions are keyed only by mission id, so any number of game servers can stream
   to one web server. Only a session of the same producer is affected by a new
   `start_mission`: its earlier mission is saved as `partial` at once instead of
-  waiting for the grace period.
+  waiting for the grace period. A start marked `"recovered": true` resends an
+  older mission from the extension's spool. It supersedes nothing, and the
+  producer's next start does not supersede it either: the producer may be
+  recording its next mission meanwhile. A `resume` marked the same way makes
+  the session it continues exempt too.
 - A session not resumed within the grace period is saved with `partial` appended
-  to its tags.
+  to its tags. A session superseded or expired before it received anything
+  after `start_mission`, or ended as interrupted with nothing in it, is
+  removed instead: an empty recording is not kept.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -147,9 +156,56 @@ still replaces the earlier partial segments when nothing is missing. Missions
 whose save was never confirmed are recovered the same way, with their own
 `end_mission`.
 
+### Discarding a mission
+
+The addon enforces its save limits, such as `OCAP_settings_minMissionTime`, by
+not saving a recording. A streamed recording already lives on the server,
+which would save it as `partial` once its producer is gone. So instead of
+`end_mission` the producer sends a numbered `discard_mission`, whose payload
+names the mission (`{"missionId":"…","producerId":"…"}`):
+
+- The server removes the recording's `streaming` row and files, along with the
+  partial and failed segments earlier attempts of the same mission id left
+  behind, and acknowledges it like `end_mission`
+  (`{"type":"ack","for":"discard_mission","seq":N}`). Recordings marked as
+  saved through `end_mission` (`stream_ended`, set before the session leaves
+  the registry) are never removed.
+- It also ends a legacy session (no numbering) the same way; the disconnect that
+  follows no longer saves it as `partial`.
+- Like `end_mission`, it is acknowledged only once the recording is gone: until
+  then progress acknowledgements stop short of its number. If the removal
+  fails, the server closes the connection without acknowledging it, marks the
+  session's row `failed` (it is removed last), and the producer repeats the
+  discard. A legacy session has no mission id to repeat it by; its row stays
+  `failed`.
+- The mission id is remembered as finished for an hour, in memory only, so a
+  producer whose acknowledgement was lost gets `resume_completed`. After a web
+  restart it gets `resume_unknown` and repeats the discard, which finds nothing
+  left to remove. A live connection repeats it by resending the mission from
+  its spool into a new session first, which the discard then drops with the
+  rest; recovery repeats it without a session.
+- An unconfirmed discard stays in the extension's spool. Recovery sends only the
+  `discard_mission` again, never the mission data. When the server no longer
+  holds the session (`resume_unknown`), for example because the resume grace
+  expired and the mission was saved as `partial`, or the web server restarted
+  and marked it `failed`, the discard is sent without a session. The server
+  then removes every recording of that mission id not saved through
+  `end_mission`, and acknowledges it without `seq`. It holds off a start of the
+  mission id meanwhile. A session of the mission still waiting for its producer
+  (`producerId` must match) is dropped in its place, and one being saved is
+  waited for. One a connection still feeds, or another producer's, is left
+  alone, and the discard is not acknowledged.
+- Files are removed on a best-effort basis, as for a deleted operation: once the
+  row is gone, the discard counts as done.
+
+The extension sends `discard_mission` only to servers that acknowledged
+`start_mission`, or answered `resume` for the session-less form, with
+`protocolVersion: 3` or later. With an older server it closes the connection
+instead, and that server saves the recording as `partial`.
+
 ### Legacy producers
 
-For producers without `protocolVersion: 2`, disconnecting without `end_mission`,
+For producers without `protocolVersion: 2` or later, disconnecting without `end_mission`,
 including an addon/extension crash or a normal WebSocket close, finalizes
 received data and appends `partial` to the mission's existing tags. Repeated
 starts cannot silently discard an active mission. Their reconnect starts a new

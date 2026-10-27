@@ -175,7 +175,7 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 			ack := streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeStartMission}
 			if started.resumable() {
 				ack.Seq = started.lastSeq.Load()
-				ack.ProtocolVersion = streaming.ProtocolVersionResume
+				ack.ProtocolVersion = streaming.ProtocolVersionDiscard
 			}
 			writeJSON(ack)
 
@@ -206,6 +206,31 @@ func (h *Handler) streamLoop(ws *websocket.Conn) {
 			}
 			current.Store(nil)
 			ack := streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeEndMission}
+			if ss.resumable() {
+				ack.Seq = ss.lastSeq.Load()
+			}
+			writeJSON(ack)
+			return
+
+		case streaming.TypeDiscardMission:
+			if ss == nil {
+				if !h.discardStreamed(envelope.Payload) {
+					fail("mission could not be discarded")
+					return
+				}
+				writeJSON(streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeDiscardMission})
+				return
+			}
+			switch h.discardStream(ss, conn, envelope) {
+			case endTakenOver:
+				return
+			case endFailed:
+				current.Store(nil)
+				fail("mission could not be discarded")
+				return
+			}
+			current.Store(nil)
+			ack := streaming.AckMessage{Type: streaming.ServerAck, For: streaming.TypeDiscardMission}
 			if ss.resumable() {
 				ack.Seq = ss.lastSeq.Load()
 			}
@@ -259,16 +284,20 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 				return nil, "mission id in use"
 			}
 			// The producer repeats a start whose acknowledgement it missed.
-			if !h.takeOver(existing, conn) {
+			if !h.takeOver(existing, conn, payload.Recovered) {
 				return nil, "mission already saved"
 			}
 			slog.Info("stream: mission start repeated", "missionId", payload.MissionID)
 			return existing, ""
 		}
 		// A producer records one mission at a time: a new start supersedes
-		// whatever it left behind. Other producers are unaffected.
-		for _, old := range reg.byProducer(payload.ProducerID, payload.MissionID) {
-			go h.expireStream(old, 0)
+		// whatever it left behind. Other producers are unaffected. Resends
+		// from the spool are not the live mission: a recovered start
+		// supersedes nothing, and is not superseded (see byProducer).
+		if !payload.Recovered {
+			for _, old := range reg.byProducer(payload.ProducerID, payload.MissionID) {
+				go h.expireStream(old, 0)
+			}
 		}
 	}
 	// settle ends the reservation: ss nil when the mission was refused.
@@ -323,6 +352,7 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 	if resumable {
 		ss.missionID = payload.MissionID
 		ss.producer = payload.ProducerID
+		ss.recovered.Store(payload.Recovered)
 		if err := h.repoOperation.SetStreamMission(context.Background(), op.ID, ss.missionID); err != nil {
 			slog.Warn("stream: cannot record mission id", "error", err)
 		}
@@ -334,11 +364,18 @@ func (h *Handler) startStream(envelope streaming.Envelope, conn *streamConn) (*s
 
 // takeOver makes conn the session's connection, closing any previous one and
 // cancelling a pending grace expiry. It fails once the session is saved.
-func (h *Handler) takeOver(ss *streamSession, conn *streamConn) bool {
+// recovered marks the session continued from the producer's spool: not the
+// mission it records live, which its next start supersedes. It is set under
+// the session's lock, so a supersede already scheduled sees it (see
+// expireStream).
+func (h *Handler) takeOver(ss *streamSession, conn *streamConn, recovered bool) bool {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	if ss.done {
 		return false
+	}
+	if recovered {
+		ss.recovered.Store(true)
 	}
 	if ss.owner != nil && ss.owner != conn {
 		ss.owner.kick() // a half-open predecessor must not feed the session any more
@@ -352,22 +389,27 @@ func (h *Handler) takeOver(ss *streamSession, conn *streamConn) bool {
 }
 
 // resumeStream answers resume and returns the session conn now feeds, if any.
+// Every reply carries the protocol version: a producer finishing a discard
+// learns whether the server takes discard_mission without a session.
 func (h *Handler) resumeStream(raw json.RawMessage, conn *streamConn) (streaming.AckMessage, *streamSession) {
+	reply := func(msgType string, seq uint64) streaming.AckMessage {
+		return streaming.AckMessage{Type: msgType, Seq: seq, ProtocolVersion: streaming.ProtocolVersionDiscard}
+	}
 	var p streaming.ResumePayload
 	if err := json.Unmarshal(raw, &p); err != nil || p.MissionID == "" {
-		return streaming.AckMessage{Type: streaming.ServerResumeUnknown}, nil
+		return reply(streaming.ServerResumeUnknown, 0), nil
 	}
 	reg := h.streamRegistry()
-	if ss := reg.get(p.MissionID); ss != nil && ss.producer == p.ProducerID && h.takeOver(ss, conn) {
+	if ss := reg.get(p.MissionID); ss != nil && ss.producer == p.ProducerID && h.takeOver(ss, conn, p.Recovered) {
 		seq := ss.lastSeq.Load()
-		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq)
-		return streaming.AckMessage{Type: streaming.ServerResumeOK, Seq: seq}, ss
+		slog.Info("stream: mission resumed", "missionId", p.MissionID, "seq", seq, "recovered", p.Recovered)
+		return reply(streaming.ServerResumeOK, seq), ss
 	}
 	if reg.isCompleted(p.MissionID) || h.streamEnded(p.MissionID) {
-		return streaming.AckMessage{Type: streaming.ServerResumeCompleted}, nil
+		return reply(streaming.ServerResumeCompleted, 0), nil
 	}
 	slog.Warn("stream: resume of unknown mission", "missionId", p.MissionID)
-	return streaming.AckMessage{Type: streaming.ServerResumeUnknown}, nil
+	return reply(streaming.ServerResumeUnknown, 0), nil
 }
 
 // acceptSeq applies envelope numbering. It reports false for a duplicate the
@@ -475,10 +517,32 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if ss.gap || interrupted {
 		tag = withPartialTag(tag)
 	}
+	if interrupted && len(ss.counts) == 0 && ss.resumable() {
+		// A mission recovered after a crash right after its start: an empty
+		// recording is not kept, as on grace expiry.
+		slog.Info("stream: dropping interrupted mission that recorded nothing", "missionId", ss.missionID)
+		ss.done = true
+		h.dropEmptySession(ss, true)
+		if envelope.Seq > ss.lastSeq.Load() {
+			ss.lastSeq.Store(envelope.Seq)
+		}
+		return endSaved
+	}
 	slog.Info("stream: mission ended", "missionId", ss.missionID, "counts", ss.counts)
 
 	ss.done = true
 	err := h.saveStream(ss, tag)
+	ctx := context.Background()
+	if err == nil && ss.resumable() {
+		// Marked before the session leaves the registry, so a discard of the
+		// mission id never takes the saved recording for an unended one.
+		// Without the mark the save does not count: end_mission is not
+		// acknowledged, and the producer resends the mission, whose
+		// recording replaces this one, or discards it.
+		if err = h.markStreamEnded(ctx, ss.opID); err != nil {
+			slog.Error("stream: cannot mark mission ended", "missionId", ss.missionID, "id", ss.opID, "error", err)
+		}
+	}
 	if ss.resumable() {
 		h.streamRegistry().remove(ss, err == nil)
 	}
@@ -488,16 +552,21 @@ func (h *Handler) endStream(ss *streamSession, conn *streamConn, envelope stream
 	if envelope.Seq > 0 {
 		ss.lastSeq.Store(envelope.Seq)
 	}
-	if ss.resumable() {
-		ctx := context.Background()
-		if err := h.repoOperation.MarkStreamEnded(ctx, ss.opID); err != nil {
-			slog.Warn("stream: cannot mark mission ended", "error", err)
-		}
-		if !ss.gap {
-			h.replaceStreamSegments(ctx, ss)
-		}
+	if ss.resumable() && !ss.gap {
+		h.replaceStreamSegments(ctx, ss)
 	}
 	return endSaved
+}
+
+// markStreamEnded records that the session's row was saved through
+// end_mission.
+func (h *Handler) markStreamEnded(ctx context.Context, id int64) error {
+	if hook := streamTestHooks.beforeMarkEnded; hook != nil {
+		if err := hook(); err != nil {
+			return err
+		}
+	}
+	return h.repoOperation.MarkStreamEnded(ctx, id)
 }
 
 // replaceStreamSegments removes the partial recordings an earlier attempt of
@@ -511,13 +580,206 @@ func (h *Handler) replaceStreamSegments(ctx context.Context, ss *streamSession) 
 		return
 	}
 	for _, seg := range segments {
-		if err := h.repoOperation.Delete(ctx, seg.ID); err != nil && !errors.Is(err, ErrNotFound) {
+		if err := h.removeStreamOperation(ctx, seg.ID, seg.Filename); err != nil {
 			slog.Warn("stream: cannot remove earlier segment", "id", seg.ID, "error", err)
 			continue
 		}
-		removeRecordingArtifacts(h.setting.Data, seg.Filename)
 		slog.Info("stream: replaced partial segment with complete recording", "missionId", ss.missionID, "removed", seg.Filename, "kept", filepath.Base(ss.outputDir))
 	}
+}
+
+// discardStream drops the session for discard_mission: the producer decided
+// the recording does not meet its save limits, for example the minimum
+// mission duration. The streaming row and its files go, along with any
+// partial segments an earlier attempt of the mission left behind. A failure
+// leaves the discard unacknowledged, so the producer repeats it.
+func (h *Handler) discardStream(ss *streamSession, conn *streamConn, envelope streaming.Envelope) endResult {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	if ss.owner != conn || ss.done {
+		return endTakenOver
+	}
+	// Like end_mission, discard_mission is acknowledged only once the
+	// recording is gone.
+	checkSeq(ss, envelope.Seq)
+	ss.done = true
+	if h.dropSession(ss) != nil {
+		return endFailed
+	}
+	if envelope.Seq > ss.lastSeq.Load() {
+		ss.lastSeq.Store(envelope.Seq)
+	}
+	slog.Info("stream: mission discarded", "missionId", ss.missionID)
+	return endSaved
+}
+
+// dropEmptySession removes a session that received nothing after its start
+// instead of saving an empty recording, and releases it; finished remembers
+// the mission id as finished for resume. Caller holds ss.mu and has set
+// ss.done.
+func (h *Handler) dropEmptySession(ss *streamSession, finished bool) {
+	ctx := context.Background()
+	if err := h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir)); err != nil {
+		slog.Error("stream: cannot remove empty mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
+		if ss.opID > 0 {
+			h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
+		}
+	}
+	h.streamRegistry().release()
+	if ss.resumable() {
+		h.streamRegistry().remove(ss, finished)
+	}
+}
+
+// dropSession removes a discarded session's recording and earlier unended
+// segments of its mission, and releases the session. On failure the row is
+// marked failed, no longer live, and the producer repeats the discard: on a
+// new session after resume_unknown, or without one from its spool's
+// recovery. Either removes it. Caller holds ss.mu and has set ss.done.
+func (h *Handler) dropSession(ss *streamSession) error {
+	slog.Info("stream: discarding mission", "missionId", ss.missionID, "mission", ss.session.Mission().MissionName, "counts", ss.counts)
+	ctx := context.Background()
+	// The session's own row goes last: after a failure it is still there to
+	// be marked failed.
+	var err error
+	if ss.resumable() {
+		err = h.removeUnendedSegments(ctx, ss.missionID, ss.opID)
+	}
+	if err == nil {
+		err = h.removeStreamOperation(ctx, ss.opID, filepath.Base(ss.outputDir))
+	}
+	h.streamRegistry().release() // before leaving the registry, as saveStream does
+	if ss.resumable() {
+		// Remembered as finished, so a producer whose acknowledgement was
+		// lost learns from resume that the discard went through.
+		h.streamRegistry().remove(ss, err == nil)
+	}
+	if err != nil {
+		slog.Error("stream: cannot remove discarded mission", "missionId", ss.missionID, "id", ss.opID, "error", err)
+		if ss.opID > 0 {
+			h.repoOperation.UpdateConversionStatus(ctx, ss.opID, ConversionStatusFailed)
+		}
+	}
+	return err
+}
+
+// discardStreamed handles discard_mission without a session: the producer
+// finishes a discard the server did not confirm after the session ended, for
+// example when its producer stayed away past the resume grace and the
+// mission was saved as partial. What the server kept of the mission goes;
+// recordings saved through end_mission stay. It reports false when they
+// could not be removed, or a connection still feeds the mission.
+func (h *Handler) discardStreamed(raw json.RawMessage) bool {
+	var p streaming.DiscardMissionPayload
+	if len(raw) == 0 || string(raw) == "null" {
+		slog.Info("stream: mission discarded without an active session")
+		return true // like end_mission without a session: nothing named
+	}
+	if err := json.Unmarshal(raw, &p); err != nil || p.MissionID == "" {
+		// Not acknowledged: the producer keeps its spool rather than
+		// believing the mission dropped.
+		slog.Warn("stream: invalid discard_mission payload", "error", err)
+		return false
+	}
+	reg := h.streamRegistry()
+	// Reserving the mission id holds off a start of it while its recordings
+	// go. A session of the mission is dropped in its place, unless a
+	// connection still feeds it.
+	// A finalized session leaves the registry before it unlocks, so one retry
+	// is normally enough; the bound only guards against a broken invariant.
+	for range 3 {
+		existing, err := reg.reserve(p.MissionID, streamReserveWait)
+		if err != nil {
+			slog.Warn("stream: cannot discard mission, start in progress", "missionId", p.MissionID)
+			return false
+		}
+		if existing == nil {
+			err := h.removeUnendedSegments(context.Background(), p.MissionID, 0)
+			reg.settle(p.MissionID, nil)
+			if err != nil {
+				slog.Error("stream: cannot remove discarded mission", "missionId", p.MissionID, "error", err)
+				return false
+			}
+			slog.Info("stream: mission discarded after its session ended", "missionId", p.MissionID)
+			return true
+		}
+		if hook := streamTestHooks.beforeDiscardSession; hook != nil {
+			hook()
+		}
+		if dropped, retry := h.discardDetached(existing, p.ProducerID); !retry {
+			return dropped
+		}
+	}
+	slog.Warn("stream: cannot discard mission, its session is still being finalized", "missionId", p.MissionID)
+	return false
+}
+
+// discardDetached drops a session waiting for its producer to resume, for a
+// session-less discard_mission. It refuses one a connection feeds or another
+// producer recorded, and asks for a retry when the session was finalized
+// meanwhile: it then leaves the registry.
+func (h *Handler) discardDetached(ss *streamSession, producer string) (dropped, retry bool) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	if ss.done {
+		return false, true
+	}
+	if ss.owner != nil {
+		slog.Warn("stream: cannot discard mission, a connection feeds it", "missionId", ss.missionID)
+		return false, false
+	}
+	if ss.producer != producer {
+		slog.Warn("stream: cannot discard mission of another producer", "missionId", ss.missionID)
+		return false, false
+	}
+	if ss.grace != nil {
+		ss.grace.Stop()
+		ss.grace = nil
+	}
+	ss.done = true
+	return h.dropSession(ss) == nil, false
+}
+
+// removeUnendedSegments removes the recordings of the producer mission not
+// saved through end_mission, except the one with id exceptID. It returns the
+// first error and removes what it can.
+func (h *Handler) removeUnendedSegments(ctx context.Context, missionID string, exceptID int64) error {
+	if h.repoOperation == nil {
+		return nil
+	}
+	segments, err := h.repoOperation.UnendedStreamSegments(ctx, missionID, exceptID)
+	if err != nil {
+		return fmt.Errorf("list segments: %w", err)
+	}
+	var first error
+	for _, seg := range segments {
+		if err := h.removeStreamOperation(ctx, seg.ID, seg.Filename); err != nil {
+			slog.Warn("stream: cannot remove segment", "id", seg.ID, "error", err)
+			if first == nil {
+				first = err
+			}
+			continue
+		}
+		slog.Info("stream: removed segment of discarded mission", "missionId", missionID, "removed", seg.Filename)
+	}
+	return first
+}
+
+// removeStreamOperation deletes a streamed operation row and its files. The
+// files go on a best-effort basis, as for a deleted operation.
+func (h *Handler) removeStreamOperation(ctx context.Context, id int64, filename string) error {
+	if hook := streamTestHooks.beforeRemove; hook != nil {
+		if err := hook(); err != nil {
+			return err
+		}
+	}
+	if id > 0 {
+		if err := h.repoOperation.Delete(ctx, id); err != nil && !errors.Is(err, ErrNotFound) {
+			return err
+		}
+	}
+	removeRecordingArtifacts(h.setting.Data, filename)
+	return nil
 }
 
 // streamEnded reports whether the database holds a saved recording of the
@@ -571,6 +833,11 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 	if gen != 0 && (ss.owner != nil || gen != ss.detachGen) {
 		return // resumed, or detached again with a newer timer
 	}
+	if gen == 0 && ss.recovered.Load() {
+		// Recovery resumed it after the new start chose it: a resend from
+		// the spool is not superseded (see byProducer).
+		return
+	}
 	if ss.owner != nil {
 		ss.owner.kick()
 		ss.owner = nil
@@ -583,8 +850,15 @@ func (h *Handler) expireStream(ss *streamSession, gen uint64) {
 	if gen == 0 {
 		reason = "superseded by a new mission"
 	}
-	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)
 	ss.done = true
+	if len(ss.counts) == 0 {
+		// Nothing was received after the start, for example a start the
+		// producer gave up waiting for.
+		slog.Info("stream: dropping abandoned mission that recorded nothing", "missionId", ss.missionID, "reason", reason)
+		h.dropEmptySession(ss, false)
+		return
+	}
+	slog.Warn("stream: saving abandoned mission as partial", "missionId", ss.missionID, "reason", reason)
 	_ = h.saveStream(ss, "partial")
 	h.streamRegistry().remove(ss, false)
 }
