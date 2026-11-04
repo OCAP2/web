@@ -24,6 +24,7 @@ import { createScaleControl } from "./leafletControls";
 import { basePath } from "../../data/basePath";
 import type { StyleCandidate } from "./leafletControls";
 import { createGridLayer } from "./leafletGrid";
+import { loadMaplibre } from "./maplibreLoader";
 import {
   ensureDefs,
   nextPatternId,
@@ -312,7 +313,7 @@ export class LeafletRenderer implements MapRenderer {
         if (!(window as any)._pmtilesRegistered) {
           try {
             const { Protocol } = await import("pmtiles");
-            const maplibregl = await import("maplibre-gl");
+            const maplibregl = await loadMaplibre();
             const protocol = new Protocol();
             // Wrap PMTiles handler to resolve relative paths against app base
             maplibregl.addProtocol(
@@ -389,6 +390,8 @@ export class LeafletRenderer implements MapRenderer {
           ];
         const initialStyle = await fetchStyle(initialCandidate.url);
 
+        // Set the worker URL even if PMTiles registration above failed.
+        await loadMaplibre();
         await import("@maplibre/maplibre-gl-leaflet");
         const mlLayer = (L as any).maplibreGL({
           style: initialStyle,
@@ -1435,7 +1438,7 @@ export class LeafletRenderer implements MapRenderer {
     document.body.appendChild(div);
 
     fetchStyleFn(styleUrl)
-      .then((style) => import("maplibre-gl").then((maplibregl) => ({ style, maplibregl })))
+      .then((style) => loadMaplibre().then((maplibregl) => ({ style, maplibregl })))
       .then(({ style, maplibregl }) => {
         const mapOpts: any = {
           container: div,
