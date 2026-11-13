@@ -53,27 +53,32 @@ func TestRealIPMiddleware(t *testing.T) {
 			name:       "trusted peer uses X-Forwarded-For",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"1.2.3.4"}},
-			wantAddr:   "1.2.3.4",		},
+			wantAddr:   "1.2.3.4",
+		},
 		{
 			name:       "spoofed left entries are skipped",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9, 1.2.3.4, 10.0.0.1"}},
-			wantAddr:   "1.2.3.4",		},
+			wantAddr:   "1.2.3.4",
+		},
 		{
 			name:       "multiple header lines are joined",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9", "1.2.3.4"}},
-			wantAddr:   "1.2.3.4",		},
+			wantAddr:   "1.2.3.4",
+		},
 		{
 			name:       "all entries trusted gives leftmost",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"172.18.0.9, 10.0.0.1"}},
-			wantAddr:   "172.18.0.9",		},
+			wantAddr:   "172.18.0.9",
+		},
 		{
 			name:       "malformed header falls back to next header",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"garbage"}, "X-Real-IP": {"5.6.7.8"}},
-			wantAddr:   "5.6.7.8",		},
+			wantAddr:   "5.6.7.8",
+		},
 		{
 			name:       "no header keeps RemoteAddr",
 			remoteAddr: "172.18.0.2:4000",
@@ -84,12 +89,14 @@ func TestRealIPMiddleware(t *testing.T) {
 			headers:    []string{"CF-Connecting-IP"},
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9"}, "Cf-Connecting-Ip": {"2001:db8::1"}},
-			wantAddr:   "2001:db8::1",		},
+			wantAddr:   "2001:db8::1",
+		},
 		{
 			name:       "IPv4-mapped peer and client are unmapped",
 			remoteAddr: "[::ffff:10.0.0.1]:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"::ffff:1.2.3.4"}},
-			wantAddr:   "1.2.3.4",		},
+			wantAddr:   "1.2.3.4",
+		},
 	}
 
 	for _, tt := range tests {
