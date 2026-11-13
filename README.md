@@ -259,7 +259,10 @@ Behind a reverse proxy every request comes from the proxy's address. To log the 
 "trustedProxies": ["172.18.0.0/16"]
 ```
 
-Behind Cloudflare and another proxy such as Traefik, either make that proxy trust Cloudflare's ranges (Traefik: `forwardedHeaders.trustedIPs`) and keep `X-Forwarded-For`, or set `remoteIPHeaders` to `["CF-Connecting-IP"]`. In the second case let only Cloudflare reach the proxy, otherwise a client that bypasses Cloudflare can set the header itself.
+**Cloudflare in front of another proxy** (e.g. Cloudflare → Traefik → OCAP): only the direct peer (Traefik) is checked against `trustedProxies`, so a header that proxy merely passes on is only as trustworthy as whoever reached it.
+
+- Recommended: keep `X-Forwarded-For`, let the proxy pass it on (Traefik: `forwardedHeaders.trustedIPs` with [Cloudflare's ranges](https://www.cloudflare.com/ips/)) and list both the proxy and Cloudflare's ranges in `trustedProxies`. Every hop appends its peer to the chain, so a client that bypasses Cloudflare ends up as the first untrusted entry and is logged as itself.
+- Simpler: `"remoteIPHeaders": ["CF-Connecting-IP"]` with only the proxy in `trustedProxies`. This header holds a single address that the proxy passes on unchecked, so let only Cloudflare reach the proxy (firewall), otherwise a client that bypasses Cloudflare can set it itself.
 
 ## Large Recording Support
 
