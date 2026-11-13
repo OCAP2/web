@@ -244,6 +244,23 @@ When `allowedOrigins` is empty the server responds with `Access-Control-Allow-Or
 }
 ```
 
+### Reverse Proxy
+
+Behind a reverse proxy every request comes from the proxy's address. To log the client's address instead, list the proxies the server should trust. Forwarding headers are read only from requests whose direct peer is one of them; by default no proxy is trusted and headers are ignored.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `trustedProxies` | `OCAP_TRUSTEDPROXIES` | IPs or CIDR ranges of trusted reverse proxies. Comma-separated in env var. | `[]` (trust none) |
+| `remoteIPHeaders` | `OCAP_REMOTEIPHEADERS` | Headers holding the client address, tried in order. Comma-separated in env var. | `["X-Forwarded-For", "X-Real-IP"]` |
+
+`X-Forwarded-For` is read right to left: trusted proxies are skipped and the first other address is the client, since entries further left can be sent by the client itself. The access log then shows the client in `remote_addr` and the proxy in `proxy_addr`.
+
+```json
+"trustedProxies": ["172.18.0.0/16"]
+```
+
+Behind Cloudflare and another proxy such as Traefik, either make that proxy trust Cloudflare's ranges (Traefik: `forwardedHeaders.trustedIPs`) and keep `X-Forwarded-For`, or set `remoteIPHeaders` to `["CF-Connecting-IP"]`. In the second case let only Cloudflare reach the proxy, otherwise a client that bypasses Cloudflare can set the header itself.
+
 ## Large Recording Support
 
 ### Overview

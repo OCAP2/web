@@ -57,6 +57,10 @@ func app() error {
 	logHandler := slog.NewJSONHandler(logOutput, &slog.HandlerOptions{Level: logLevel})
 	slog.SetDefault(slog.New(logHandler))
 
+	trustedProxies, err := server.ParseTrustedProxies(setting.TrustedProxies)
+	if err != nil {
+		return err
+	}
 	// Docker polls the healthcheck every 30s; keep it out of info-level logs.
 	healthcheckPath := strings.TrimRight(setting.PrefixURL, "/") + "/api/healthcheck"
 
@@ -80,7 +84,12 @@ func app() error {
 		fuego.WithLogHandler(logHandler),
 		// Replaced by server.AccessLogMiddleware.
 		fuego.WithLoggingMiddleware(fuego.LoggingConfig{DisableRequest: true, DisableResponse: true}),
-		fuego.WithGlobalMiddlewares(server.AccessLogMiddleware(healthcheckPath)),
+		// Each global middleware wraps the ones before it, so RealIP runs
+		// first and the access log and handlers see the client address.
+		fuego.WithGlobalMiddlewares(
+			server.AccessLogMiddleware(healthcheckPath),
+			server.RealIPMiddleware(trustedProxies, setting.RemoteIPHeaders),
+		),
 		fuego.WithoutAutoGroupTags(),
 		fuego.WithSecurity(server.OpenAPISecuritySchemes),
 		fuego.WithEngineOptions(
