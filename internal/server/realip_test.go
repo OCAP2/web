@@ -35,7 +35,6 @@ func TestRealIPMiddleware(t *testing.T) {
 		remoteAddr string
 		set        map[string][]string
 		wantAddr   string
-		wantProxy  string
 	}{
 		{
 			name:       "no trusted proxies ignores headers",
@@ -54,37 +53,27 @@ func TestRealIPMiddleware(t *testing.T) {
 			name:       "trusted peer uses X-Forwarded-For",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"1.2.3.4"}},
-			wantAddr:   "1.2.3.4",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "1.2.3.4",		},
 		{
 			name:       "spoofed left entries are skipped",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9, 1.2.3.4, 10.0.0.1"}},
-			wantAddr:   "1.2.3.4",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "1.2.3.4",		},
 		{
 			name:       "multiple header lines are joined",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9", "1.2.3.4"}},
-			wantAddr:   "1.2.3.4",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "1.2.3.4",		},
 		{
 			name:       "all entries trusted gives leftmost",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"172.18.0.9, 10.0.0.1"}},
-			wantAddr:   "172.18.0.9",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "172.18.0.9",		},
 		{
 			name:       "malformed header falls back to next header",
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"garbage"}, "X-Real-IP": {"5.6.7.8"}},
-			wantAddr:   "5.6.7.8",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "5.6.7.8",		},
 		{
 			name:       "no header keeps RemoteAddr",
 			remoteAddr: "172.18.0.2:4000",
@@ -95,16 +84,12 @@ func TestRealIPMiddleware(t *testing.T) {
 			headers:    []string{"CF-Connecting-IP"},
 			remoteAddr: "172.18.0.2:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"9.9.9.9"}, "Cf-Connecting-Ip": {"2001:db8::1"}},
-			wantAddr:   "2001:db8::1",
-			wantProxy:  "172.18.0.2:4000",
-		},
+			wantAddr:   "2001:db8::1",		},
 		{
 			name:       "IPv4-mapped peer and client are unmapped",
 			remoteAddr: "[::ffff:10.0.0.1]:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"::ffff:1.2.3.4"}},
-			wantAddr:   "1.2.3.4",
-			wantProxy:  "[::ffff:10.0.0.1]:4000",
-		},
+			wantAddr:   "1.2.3.4",		},
 	}
 
 	for _, tt := range tests {
@@ -114,10 +99,9 @@ func TestRealIPMiddleware(t *testing.T) {
 				tp, err = ParseTrustedProxies(tt.trusted)
 				require.NoError(t, err)
 			}
-			var gotAddr, gotProxy string
+			var gotAddr string
 			h := RealIPMiddleware(tp, tt.headers)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 				gotAddr = r.RemoteAddr
-				gotProxy, _ = ProxyAddr(r)
 			}))
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -130,7 +114,6 @@ func TestRealIPMiddleware(t *testing.T) {
 			h.ServeHTTP(httptest.NewRecorder(), req)
 
 			assert.Equal(t, tt.wantAddr, gotAddr)
-			assert.Equal(t, tt.wantProxy, gotProxy)
 		})
 	}
 }

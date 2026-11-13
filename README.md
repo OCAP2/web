@@ -253,7 +253,7 @@ Behind a reverse proxy every request comes from the proxy's address. To log the 
 | `trustedProxies` | `OCAP_TRUSTEDPROXIES` | IPs or CIDR ranges of trusted reverse proxies. Comma-separated in env var. | `[]` (trust none) |
 | `remoteIPHeaders` | `OCAP_REMOTEIPHEADERS` | Headers holding the client address, tried in order. Comma-separated in env var. | `["X-Forwarded-For", "X-Real-IP"]` |
 
-`X-Forwarded-For` is read right to left: trusted proxies are skipped and the first other address is the client, since entries further left can be sent by the client itself. The access log then shows the client in `remote_addr` and the proxy in `proxy_addr`.
+`X-Forwarded-For` is read right to left: trusted proxies are skipped and the first other address is the client, since entries further left can be sent by the client itself. The access log and the handlers then see the client in `remote_addr`.
 
 ```json
 "trustedProxies": ["172.18.0.0/16"]

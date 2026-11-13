@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,15 +12,6 @@ import (
 // DefaultRemoteIPHeaders are the headers read for the client address when the
 // request comes from a trusted proxy and remoteIPHeaders is not configured.
 var DefaultRemoteIPHeaders = []string{"X-Forwarded-For", "X-Real-IP"}
-
-type proxyAddrKey struct{}
-
-// ProxyAddr returns the address of the trusted proxy the request came through,
-// if RemoteAddr was replaced with the client address taken from a header.
-func ProxyAddr(r *http.Request) (string, bool) {
-	addr, ok := r.Context().Value(proxyAddrKey{}).(string)
-	return addr, ok
-}
 
 // ParseTrustedProxies parses IP addresses and CIDR ranges.
 func ParseTrustedProxies(entries []string) ([]netip.Prefix, error) {
@@ -99,9 +89,8 @@ func (c clientIPResolver) clientIP(r *http.Request) (string, bool) {
 }
 
 // RealIPMiddleware replaces r.RemoteAddr with the client address taken from
-// the forwarding headers when the request comes from a trusted proxy; the
-// proxy address stays available through ProxyAddr. With no trusted proxies
-// headers are never read.
+// the forwarding headers when the request comes from a trusted proxy. With no
+// trusted proxies headers are never read.
 func RealIPMiddleware(trusted []netip.Prefix, headers []string) func(http.Handler) http.Handler {
 	if len(headers) == 0 {
 		headers = DefaultRemoteIPHeaders
@@ -113,7 +102,6 @@ func RealIPMiddleware(trusted []netip.Prefix, headers []string) func(http.Handle
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if ip, ok := resolver.clientIP(r); ok {
-				r = r.WithContext(context.WithValue(r.Context(), proxyAddrKey{}, r.RemoteAddr))
 				r.RemoteAddr = ip
 			}
 			next.ServeHTTP(w, r)

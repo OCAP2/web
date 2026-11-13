@@ -58,7 +58,7 @@ func TestAccessLogMiddleware(t *testing.T) {
 		return rec
 	}
 
-	t.Run("info logs response with client and proxy address", func(t *testing.T) {
+	t.Run("info logs response with client address", func(t *testing.T) {
 		buf := captureLogs(t, slog.LevelInfo)
 		rec := serve("/missing", http.Header{"X-Forwarded-For": {"1.2.3.4"}})
 
@@ -70,7 +70,6 @@ func TestAccessLogMiddleware(t *testing.T) {
 		assert.EqualValues(t, http.StatusNotFound, e["status_code"])
 		assert.Equal(t, "/missing", e["path"])
 		assert.Equal(t, "1.2.3.4", e["remote_addr"])
-		assert.Equal(t, "172.18.0.2:4000", e["proxy_addr"])
 		assert.NotEmpty(t, e["request_id"])
 		assert.Equal(t, e["request_id"], rec.Header().Get("X-Request-ID"))
 	})
@@ -92,7 +91,6 @@ func TestAccessLogMiddleware(t *testing.T) {
 		assert.Equal(t, "DEBUG", entries[1]["level"])
 		assert.EqualValues(t, http.StatusOK, entries[1]["status_code"])
 		assert.Equal(t, "172.18.0.2:4000", entries[1]["remote_addr"])
-		assert.NotContains(t, entries[1], "proxy_addr")
 		assert.Equal(t, "req-1", rec.Header().Get("X-Request-ID"))
 	})
 }

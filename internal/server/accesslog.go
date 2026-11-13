@@ -104,9 +104,6 @@ func AccessLogMiddleware(quietPaths ...string) func(http.Handler) http.Handler {
 				"request_id", requestID,
 				"remote_addr", r.RemoteAddr,
 			}
-			if proxy, ok := ProxyAddr(r); ok {
-				attrs = append(attrs, "proxy_addr", proxy)
-			}
 			slog.Log(ctx, level, "outgoing response", attrs...)
 		})
 	}
