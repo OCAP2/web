@@ -11,6 +11,7 @@
 	"fonts": "assets/fonts",
 	"maps": "maps",
 	"logger": false,
+	"logLevel": "info",
 	"customize": {
 		"disableKillCount": false,
 		"enabled": false,

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -674,4 +675,37 @@ func TestNewSetting_AuthPasswordMode(t *testing.T) {
 
 	assert.Equal(t, "password", setting.Auth.Mode)
 	assert.Equal(t, "hunter2", setting.Auth.Password)
+}
+
+func TestNewSetting_Logging(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "setting.json"), []byte(`{"secret": "base-secret"}`), 0644))
+	load := func(t *testing.T) (Setting, error) {
+		t.Helper()
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.AddConfigPath(dir)
+		return NewSetting()
+	}
+
+	t.Run("defaults to info", func(t *testing.T) {
+		setting, err := load(t)
+		require.NoError(t, err)
+		assert.Equal(t, "info", setting.LogLevel)
+	})
+
+	t.Run("env var", func(t *testing.T) {
+		t.Setenv("OCAP_LOGLEVEL", "debug")
+		setting, err := load(t)
+		require.NoError(t, err)
+		level, err := setting.SlogLevel()
+		require.NoError(t, err)
+		assert.Equal(t, slog.LevelDebug, level)
+	})
+
+	t.Run("invalid log level", func(t *testing.T) {
+		t.Setenv("OCAP_LOGLEVEL", "verbose")
+		_, err := load(t)
+		assert.ErrorContains(t, err, "logLevel")
+	})
 }

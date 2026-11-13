@@ -122,7 +122,8 @@ The configuration file is called `setting.json`. All settings can also be set vi
 | `listen` | `OCAP_LISTEN` | Server address | `127.0.0.1:5000` |
 | `prefixURL` | `OCAP_PREFIXURL` | URL prefix for all routes | `""` |
 | `secret` | `OCAP_SECRET` | Shared secret — authenticates record uploads and signs admin session JWTs | *required* |
-| `logger` | `OCAP_LOGGER` | Enable request logging to STDOUT | `false` |
+| `logger` | `OCAP_LOGGER` | Also write logs to `ocap.log` (they always go to STDOUT) | `false` |
+| `logLevel` | `OCAP_LOGLEVEL` | Minimum log level: `debug`, `info`, `warn`, `error`. Healthcheck requests are logged at `debug` | `info` |
 
 ### Paths
 

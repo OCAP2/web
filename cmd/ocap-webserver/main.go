@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -49,8 +50,15 @@ func app() error {
 	}
 
 	// Set up slog with JSON handler for consistent logging
-	logHandler := slog.NewJSONHandler(logOutput, nil)
+	logLevel, err := setting.SlogLevel()
+	if err != nil {
+		return err
+	}
+	logHandler := slog.NewJSONHandler(logOutput, &slog.HandlerOptions{Level: logLevel})
 	slog.SetDefault(slog.New(logHandler))
+
+	// Docker polls the healthcheck every 30s; keep it out of info-level logs.
+	healthcheckPath := strings.TrimRight(setting.PrefixURL, "/") + "/api/healthcheck"
 
 	operation, err := server.NewRepoOperationWithDataDir(setting.DB, setting.Data)
 	if err != nil {
@@ -70,6 +78,9 @@ func app() error {
 	s := fuego.NewServer(
 		fuego.WithAddr(setting.Listen),
 		fuego.WithLogHandler(logHandler),
+		// Replaced by server.AccessLogMiddleware.
+		fuego.WithLoggingMiddleware(fuego.LoggingConfig{DisableRequest: true, DisableResponse: true}),
+		fuego.WithGlobalMiddlewares(server.AccessLogMiddleware(healthcheckPath)),
 		fuego.WithoutAutoGroupTags(),
 		fuego.WithSecurity(server.OpenAPISecuritySchemes),
 		fuego.WithEngineOptions(

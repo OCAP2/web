@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -25,6 +26,7 @@ type Setting struct {
 	Static     string     `json:"static" yaml:"static"`
 	Tmp        string     `json:"tmp" yaml:"tmp"`
 	Logger     bool       `json:"logger" yaml:"logger"`
+	LogLevel   string     `json:"logLevel" yaml:"logLevel"`
 	Customize  Customize  `json:"customize" yaml:"customize"`
 	Conversion Conversion `json:"conversion" yaml:"conversion"`
 	Streaming  Streaming  `json:"streaming" yaml:"streaming"`
@@ -114,6 +116,7 @@ func NewSetting() (setting Setting, err error) {
 	viper.SetDefault("static", "")
 	viper.SetDefault("tmp", "")
 	viper.SetDefault("logger", false)
+	viper.SetDefault("logLevel", "info")
 	viper.SetDefault("customize.enabled", false)
 	viper.SetDefault("customize.websiteURL", "")
 	viper.SetDefault("customize.websiteLogo", "")
@@ -162,6 +165,10 @@ func NewSetting() (setting Setting, err error) {
 		return
 	}
 
+	if _, err = setting.SlogLevel(); err != nil {
+		return
+	}
+
 	// Viper can't unmarshal a JSON string env var into map[string]string,
 	// so parse OCAP_CUSTOMIZE_CSSOVERRIDES manually if set. Env var takes
 	// precedence over config file.
@@ -204,6 +211,15 @@ func NewSetting() (setting Setting, err error) {
 	}
 
 	return
+}
+
+// SlogLevel parses LogLevel: debug, info, warn or error.
+func (s Setting) SlogLevel() (slog.Level, error) {
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(s.LogLevel)); err != nil {
+		return level, fmt.Errorf("logLevel %q is not valid, must be one of: debug, info, warn, error", s.LogLevel)
+	}
+	return level, nil
 }
 
 func validateAuthConfig(auth Auth) error {
