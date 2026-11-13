@@ -15,13 +15,13 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.16.0",
+    "@bufbuild/protobuf": "^2.17.0",
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@solidjs/router": "^0.16.3",
-    "@tanstack/solid-virtual": "^3.13.50",
+    "@tanstack/solid-virtual": "^3.13.53",
     "leaflet": "^1.9.0",
     "leaflet-rotatedmarker": "^0.2.0",
-    "maplibre-gl": "^6.16.0",
+    "maplibre-gl": "^6.17.0",
     "pmtiles": "^4.5.0",
     "solid-js": "^1.9.18"
   },
