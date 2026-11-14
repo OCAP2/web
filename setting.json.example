@@ -12,6 +12,8 @@
 	"maps": "maps",
 	"logger": false,
 	"logLevel": "info",
+	"trustedProxies": [],
+	"remoteIPHeaders": ["X-Forwarded-For", "X-Real-IP"],
 	"customize": {
 		"disableKillCount": false,
 		"enabled": false,

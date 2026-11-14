@@ -244,6 +244,26 @@ When `allowedOrigins` is empty the server responds with `Access-Control-Allow-Or
 }
 ```
 
+### Reverse Proxy
+
+Behind a reverse proxy every request comes from the proxy's address. To log the client's address instead, list the proxies the server should trust. Forwarding headers are read only from requests whose direct peer is one of them; by default no proxy is trusted and headers are ignored.
+
+| Setting | Env Var | Description | Default |
+|---------|---------|-------------|---------|
+| `trustedProxies` | `OCAP_TRUSTEDPROXIES` | IPs or CIDR ranges of trusted reverse proxies. Comma-separated in env var. | `[]` (trust none) |
+| `remoteIPHeaders` | `OCAP_REMOTEIPHEADERS` | Headers holding the client address, tried in order. Comma-separated in env var. | `["X-Forwarded-For", "X-Real-IP"]` |
+
+`X-Forwarded-For` is read right to left: trusted proxies are skipped and the first other address is the client, since entries further left can be sent by the client itself. The access log and the handlers then see the client in `remote_addr`.
+
+```json
+"trustedProxies": ["172.18.0.0/16"]
+```
+
+**Cloudflare in front of another proxy** (e.g. Cloudflare → Traefik → OCAP): only the direct peer (Traefik) is checked against `trustedProxies`, so a header that proxy merely passes on is only as trustworthy as whoever reached it.
+
+- Recommended: keep `X-Forwarded-For`, let the proxy pass it on (Traefik: `forwardedHeaders.trustedIPs` with [Cloudflare's ranges](https://www.cloudflare.com/ips/)) and list both the proxy and Cloudflare's ranges in `trustedProxies`. Every hop appends its peer to the chain, so a client that bypasses Cloudflare ends up as the first untrusted entry and is logged as itself.
+- Simpler: `"remoteIPHeaders": ["CF-Connecting-IP"]` with only the proxy in `trustedProxies`. This header holds a single address that the proxy passes on unchecked, so let only Cloudflare reach the proxy (firewall), otherwise a client that bypasses Cloudflare can set it itself.
+
 ## Large Recording Support
 
 ### Overview

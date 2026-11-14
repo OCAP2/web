@@ -677,7 +677,7 @@ func TestNewSetting_AuthPasswordMode(t *testing.T) {
 	assert.Equal(t, "hunter2", setting.Auth.Password)
 }
 
-func TestNewSetting_Logging(t *testing.T) {
+func TestNewSetting_LoggingAndProxies(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "setting.json"), []byte(`{"secret": "base-secret"}`), 0644))
 	load := func(t *testing.T) (Setting, error) {
@@ -688,24 +688,36 @@ func TestNewSetting_Logging(t *testing.T) {
 		return NewSetting()
 	}
 
-	t.Run("defaults to info", func(t *testing.T) {
+	t.Run("defaults trust no proxy", func(t *testing.T) {
 		setting, err := load(t)
 		require.NoError(t, err)
 		assert.Equal(t, "info", setting.LogLevel)
+		assert.Empty(t, setting.TrustedProxies)
+		assert.Equal(t, []string{"X-Forwarded-For", "X-Real-IP"}, setting.RemoteIPHeaders)
 	})
 
-	t.Run("env var", func(t *testing.T) {
+	t.Run("env vars", func(t *testing.T) {
 		t.Setenv("OCAP_LOGLEVEL", "debug")
+		t.Setenv("OCAP_TRUSTEDPROXIES", "172.18.0.0/16,10.0.0.5")
+		t.Setenv("OCAP_REMOTEIPHEADERS", "CF-Connecting-IP")
 		setting, err := load(t)
 		require.NoError(t, err)
 		level, err := setting.SlogLevel()
 		require.NoError(t, err)
 		assert.Equal(t, slog.LevelDebug, level)
+		assert.Equal(t, []string{"172.18.0.0/16", "10.0.0.5"}, setting.TrustedProxies)
+		assert.Equal(t, []string{"CF-Connecting-IP"}, setting.RemoteIPHeaders)
 	})
 
 	t.Run("invalid log level", func(t *testing.T) {
 		t.Setenv("OCAP_LOGLEVEL", "verbose")
 		_, err := load(t)
 		assert.ErrorContains(t, err, "logLevel")
+	})
+
+	t.Run("invalid trusted proxy", func(t *testing.T) {
+		t.Setenv("OCAP_TRUSTEDPROXIES", "proxy.local")
+		_, err := load(t)
+		assert.ErrorContains(t, err, "trusted proxy")
 	})
 }

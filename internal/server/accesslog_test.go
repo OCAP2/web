@@ -35,6 +35,8 @@ func logEntries(t *testing.T, buf *bytes.Buffer) []map[string]any {
 }
 
 func TestAccessLogMiddleware(t *testing.T) {
+	trusted, err := ParseTrustedProxies([]string{"172.18.0.0/16"})
+	require.NoError(t, err)
 	handler := AccessLogMiddleware("/api/healthcheck")(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/missing" {
@@ -44,6 +46,8 @@ func TestAccessLogMiddleware(t *testing.T) {
 			w.Write([]byte("ok"))
 		}),
 	)
+	// Same order as main: RealIP wraps the access log.
+	handler = RealIPMiddleware(trusted, nil)(handler)
 
 	serve := func(path string, header http.Header) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -54,9 +58,9 @@ func TestAccessLogMiddleware(t *testing.T) {
 		return rec
 	}
 
-	t.Run("info logs response", func(t *testing.T) {
+	t.Run("info logs response with client address", func(t *testing.T) {
 		buf := captureLogs(t, slog.LevelInfo)
-		rec := serve("/missing", nil)
+		rec := serve("/missing", http.Header{"X-Forwarded-For": {"1.2.3.4"}})
 
 		entries := logEntries(t, buf)
 		require.Len(t, entries, 1)
@@ -65,7 +69,7 @@ func TestAccessLogMiddleware(t *testing.T) {
 		assert.Equal(t, "INFO", e["level"])
 		assert.EqualValues(t, http.StatusNotFound, e["status_code"])
 		assert.Equal(t, "/missing", e["path"])
-		assert.Equal(t, "172.18.0.2:4000", e["remote_addr"])
+		assert.Equal(t, "1.2.3.4", e["remote_addr"])
 		assert.NotEmpty(t, e["request_id"])
 		assert.Equal(t, e["request_id"], rec.Header().Get("X-Request-ID"))
 	})
@@ -86,6 +90,7 @@ func TestAccessLogMiddleware(t *testing.T) {
 		assert.Equal(t, "outgoing response", entries[1]["msg"])
 		assert.Equal(t, "DEBUG", entries[1]["level"])
 		assert.EqualValues(t, http.StatusOK, entries[1]["status_code"])
+		assert.Equal(t, "172.18.0.2:4000", entries[1]["remote_addr"])
 		assert.Equal(t, "req-1", rec.Header().Get("X-Request-ID"))
 	})
 }
