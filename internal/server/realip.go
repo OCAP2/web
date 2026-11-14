@@ -26,6 +26,14 @@ func ParseTrustedProxies(entries []string) ([]netip.Prefix, error) {
 			if err != nil {
 				return nil, fmt.Errorf("trusted proxy %q: %w", entry, err)
 			}
+			// Addresses are unmapped before matching, so an IPv4-mapped
+			// prefix must become the equivalent IPv4 prefix.
+			if p.Addr().Is4In6() {
+				if p.Bits() < 96 {
+					return nil, fmt.Errorf("trusted proxy %q: IPv4-mapped prefix must be at least /96", entry)
+				}
+				p = netip.PrefixFrom(p.Addr().Unmap(), p.Bits()-96)
+			}
 			prefixes = append(prefixes, p.Masked())
 			continue
 		}

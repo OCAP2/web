@@ -10,15 +10,21 @@ import (
 )
 
 func TestParseTrustedProxies(t *testing.T) {
-	prefixes, err := ParseTrustedProxies([]string{" 172.18.0.0/16 ", "10.0.0.5", "::ffff:192.168.1.1", "fd00::/8", ""})
+	prefixes, err := ParseTrustedProxies([]string{
+		" 172.18.0.0/16 ", "10.0.0.5", "::ffff:192.168.1.1", "fd00::/8", "",
+		"::ffff:172.19.0.2/128", "::ffff:172.20.0.0/112", "::ffff:0.0.0.0/96",
+	})
 	require.NoError(t, err)
 	got := make([]string, len(prefixes))
 	for i, p := range prefixes {
 		got[i] = p.String()
 	}
-	assert.Equal(t, []string{"172.18.0.0/16", "10.0.0.5/32", "192.168.1.1/32", "fd00::/8"}, got)
+	assert.Equal(t, []string{
+		"172.18.0.0/16", "10.0.0.5/32", "192.168.1.1/32", "fd00::/8",
+		"172.19.0.2/32", "172.20.0.0/16", "0.0.0.0/0",
+	}, got)
 
-	for _, bad := range []string{"proxy.local", "10.0.0.0/33", "300.1.1.1"} {
+	for _, bad := range []string{"proxy.local", "10.0.0.0/33", "300.1.1.1", "::ffff:0.0.0.0/95"} {
 		_, err := ParseTrustedProxies([]string{bad})
 		assert.Error(t, err, bad)
 	}
@@ -95,6 +101,20 @@ func TestRealIPMiddleware(t *testing.T) {
 			name:       "IPv4-mapped peer and client are unmapped",
 			remoteAddr: "[::ffff:10.0.0.1]:4000",
 			set:        map[string][]string{"X-Forwarded-For": {"::ffff:1.2.3.4"}},
+			wantAddr:   "1.2.3.4",
+		},
+		{
+			name:       "IPv4-mapped /128 trusted entry",
+			trusted:    []string{"::ffff:172.18.0.2/128"},
+			remoteAddr: "[::ffff:172.18.0.2]:4000",
+			set:        map[string][]string{"X-Forwarded-For": {"1.2.3.4"}},
+			wantAddr:   "1.2.3.4",
+		},
+		{
+			name:       "IPv4-mapped subnet trusted entry",
+			trusted:    []string{"::ffff:172.18.0.0/112"},
+			remoteAddr: "172.18.0.2:4000",
+			set:        map[string][]string{"X-Forwarded-For": {"1.2.3.4, 172.18.5.5"}},
 			wantAddr:   "1.2.3.4",
 		},
 	}
