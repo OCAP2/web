@@ -21,7 +21,7 @@
     "@tanstack/solid-virtual": "^3.13.53",
     "leaflet": "^1.9.0",
     "leaflet-rotatedmarker": "^0.2.0",
-    "maplibre-gl": "^6.17.0",
+    "maplibre-gl": "^6.19.0",
     "pmtiles": "^4.5.0",
     "solid-js": "^1.9.18"
   },
